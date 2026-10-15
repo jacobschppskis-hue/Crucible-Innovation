@@ -12,6 +12,6 @@ export const site = {
     // TODO(jakob): confirm.
     email: 'jacob@crucibleinnovation.com',
   },
-  // TODO(jakob): create a Formspree form and set NEXT_PUBLIC_FORMSPREE_ID in Vercel.
+  // TODO(jakob): create a Formspree form and add its ID as the FORMSPREE_ID repo variable (see README).
   formspreeId: process.env.NEXT_PUBLIC_FORMSPREE_ID ?? '',
 } as const;

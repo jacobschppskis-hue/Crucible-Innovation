@@ -9,7 +9,8 @@ import { ventures, type Venture } from '@/data/ventures';
 const pages = (ventures as readonly Venture[]).filter((v) => v.status === 'live' && !v.href);
 
 export const dynamicParams = false;
-export const generateStaticParams = () => pages.map(({ slug }) => ({ slug }));
+// A static export needs at least one param; with no such ventures yet, a placeholder renders the 404.
+export const generateStaticParams = () => (pages.length ? pages.map(({ slug }) => ({ slug })) : [{ slug: 'none' }]);
 
 type Props = { params: Promise<{ slug: string }> };
 

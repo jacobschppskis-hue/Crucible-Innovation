@@ -1,7 +1,7 @@
 # crucibleinnovation.com
 
 Crucible (the studio) at `/` and Crucible Sites (the money page) at `/sites`.
-Next.js 15 (App Router) · TypeScript · Tailwind CSS v4 · Vercel. Every route is prerendered as static HTML.
+Next.js 15 (App Router, static export) · TypeScript · Tailwind CSS v4 · GitHub Pages. `npm run build` writes the whole site as plain files to `out/`.
 
 ```bash
 npm install
@@ -16,7 +16,7 @@ Search the code for `TODO(jakob)`. The ones that matter:
 
 | What | Where |
 |---|---|
-| Formspree form ID: set `NEXT_PUBLIC_FORMSPREE_ID` in Vercel → Project → Environment Variables | `data/site.ts` |
+| Formspree form ID: add a repo variable `FORMSPREE_ID` (Settings → Secrets and variables → Actions → Variables) | `data/site.ts` |
 | Contact email (currently `jacob@crucibleinnovation.com`) | `data/site.ts` |
 | Spark / Forge / Alloy prices (`$TBD`) | `data/pricing.ts` |
 | Budget bands in the quote form | `components/QuoteForm.tsx` |
@@ -42,17 +42,23 @@ The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />
 node showcase-src/render.mjs
 ```
 
-The favicon (`public/favicon.svg`) and `public/apple-icon.png` are generated from the same Split Ring geometry. OpenGraph images are built at compile time by `app/opengraph-image.tsx` and `app/sites/opengraph-image.tsx`.
+The favicon (`public/favicon.svg`) and `public/apple-icon.png` are generated from the same Split Ring geometry (`lib/splitRing.ts`). The OpenGraph images are `app/opengraph-image.png` and `app/sites/opengraph-image.png`.
 
 ## Analytics and `?ref=`
 
-Vercel Web Analytics is included (enable it in the Vercel dashboard). The business card QR should point to `https://crucibleinnovation.com/sites?ref=card`. `components/RefTracker.tsx` stores the `ref` for the session, sends a `Referral` custom event, and the quote form submits it as a `ref` field, so every lead from a card arrives tagged. (Custom events need a Vercel plan that includes them; the form field works regardless.)
+The business card QR should point to `https://crucibleinnovation.com/sites?ref=card`. `components/RefTracker.tsx` keeps the `ref` for the visit and the quote form submits it as a `ref` field, so every lead from a card arrives tagged.
 
-## Deploy
+For traffic stats, create a site at plausible.io and add a repo variable `PLAUSIBLE_DOMAIN` = `crucibleinnovation.com`. Plausible reports `?ref=card` as the visit's source automatically. Until the variable exists no analytics script is loaded.
 
-1. Import the repo in Vercel (framework preset: Next.js, no settings to change).
-2. Add `NEXT_PUBLIC_FORMSPREE_ID`.
-3. Add both `crucibleinnovation.com` and `www.crucibleinnovation.com` under Domains. `next.config.ts` also 301-redirects `www` to the apex.
+## Deploy (GitHub Pages)
+
+`.github/workflows/deploy.yml` builds the site and publishes `out/` on every push to `main`.
+
+1. **One time:** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Keep the custom domain `crucibleinnovation.com` and tick *Enforce HTTPS*.
+2. Add the repo variables `FORMSPREE_ID` (and later `PLAUSIBLE_DOMAIN`), then re-run the workflow (Actions → Deploy to GitHub Pages → Run workflow).
+3. For `www`, add a `CNAME` DNS record `www → jacobschppskis-hue.github.io`. GitHub Pages then redirects it to the apex.
+
+The root `index.html` is the old "coming soon" page. It is only shown while Pages is still set to deploy from a branch, and can be deleted once the source is switched to GitHub Actions.
 
 ## Motion and performance notes
 
@@ -60,4 +66,4 @@ Vercel Web Analytics is included (enable it in the Vercel dashboard). The busine
 - `prefers-reduced-motion` turns off loops, the word reveal, tilt, the heat field drift, smooth scrolling and the before/after sweep. Simple fades stay.
 - Without JS every section is visible, the FAQ works (native `<details>`) and the form posts straight to Formspree.
 - The heat field canvas draws one static frame immediately and only starts drifting once the page is idle. It pauses off-screen and in background tabs.
-- First-load JS: `/sites` ≈ 120 KB gzipped, `/` ≈ 110 KB.
+- First-load JS: `/sites` ≈ 119 KB gzipped, `/` ≈ 110 KB. Images are served as-is (GitHub Pages has no image optimizer), so keep screenshots ≈1440px wide WebP.

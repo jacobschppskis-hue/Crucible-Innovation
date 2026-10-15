@@ -1,20 +1,10 @@
 import type { NextConfig } from 'next';
 
+// Static export: `next build` writes plain HTML/CSS/JS to `out/`, which GitHub Pages serves
+// (see .github/workflows/deploy.yml). GitHub Pages handles the custom domain and the www redirect.
 const nextConfig: NextConfig = {
-  // Every route is statically prerendered at build time (see `next build` output).
-  // We don't use `output: 'export'` so Vercel can still optimize images and apply the redirect below.
-  poweredByHeader: false,
-  images: { formats: ['image/avif', 'image/webp'] },
-  async redirects() {
-    return [
-      {
-        source: '/:path*',
-        has: [{ type: 'host', value: 'www.crucibleinnovation.com' }],
-        destination: 'https://crucibleinnovation.com/:path*',
-        permanent: true,
-      },
-    ];
-  },
+  output: 'export',
+  images: { unoptimized: true },
 };
 
 export default nextConfig;

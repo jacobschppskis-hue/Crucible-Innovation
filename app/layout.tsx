@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from 'next';
 import { Archivo, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
-import { Analytics } from '@vercel/analytics/next';
 import { Grain } from '@/components/Grain';
 import { InView } from '@/components/InView';
 import { RefTracker } from '@/components/RefTracker';
@@ -35,6 +34,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={`${archivo.variable} ${instrument.variable} ${instrumentUpright.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add('js')` }} />
+        {/* TODO(jakob): create a Plausible site and set the PLAUSIBLE_DOMAIN repo variable to turn analytics on.
+            Plausible records ?ref=card as the visit's source automatically. */}
+        {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
+          <script defer data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" />
+        )}
         <noscript>
           <style dangerouslySetInnerHTML={{ __html: noJs }} />
         </noscript>
@@ -48,7 +52,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <InView />
         <SmoothScroll />
         <RefTracker />
-        <Analytics />
       </body>
     </html>
   );
