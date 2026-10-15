@@ -17,7 +17,7 @@ Search the code for `TODO(jakob)`. The ones that matter:
 | What | Where |
 |---|---|
 | Formspree form ID: set `NEXT_PUBLIC_FORMSPREE_ID` in Vercel → Project → Environment Variables | `data/site.ts` |
-| Contact email (currently `hello@crucibleinnovation.com`) | `data/site.ts` |
+| Contact email (currently `jacob@crucibleinnovation.com`) | `data/site.ts` |
 | Spark / Forge / Alloy prices (`$TBD`) | `data/pricing.ts` |
 | Budget bands in the quote form | `components/QuoteForm.tsx` |
 | Your photo (`founder.photo`) and 2–3 sentence bio | `data/site.ts`, `app/sites/page.tsx` |
