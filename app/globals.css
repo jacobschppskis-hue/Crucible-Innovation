@@ -92,7 +92,10 @@ html.lenis body {
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    padding-right: 0.06em; /* keeps the italic overhang inside the clip */
+    /* background-clip: text only paints inside the box, so pad it out to cover the italic overhang and
+       the deep g/y descenders, then cancel the padding with negative margins so layout doesn't shift. */
+    padding: 0 0.1em 0.3em 0;
+    margin: 0 -0.1em -0.3em 0;
   }
 }
 
