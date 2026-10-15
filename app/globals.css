@@ -93,9 +93,9 @@ html.lenis body {
     background-clip: text;
     color: transparent;
     /* background-clip: text only paints inside the box, so pad it out to cover the italic overhang and
-       the deep g/y descenders, then cancel the padding with negative margins so layout doesn't shift. */
-    padding: 0 0.1em 0.3em 0;
-    margin: 0 -0.1em -0.3em 0;
+       the deep g/y descenders on every side, then cancel the padding with negative margins so layout doesn't shift. */
+    padding: 0 0.1em 0.3em 0.2em; /* left too: the italic g's lower loop swings left of its box */
+    margin: 0 -0.1em -0.3em -0.2em;
   }
 }
 
