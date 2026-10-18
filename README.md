@@ -8,7 +8,10 @@ npm install
 npm run dev        # http://localhost:3000
 npm run build      # production build (prints per-route JS sizes)
 npm run typecheck
+npm test           # Playwright smoke tests against out/ (build first)
 ```
+
+Pull requests run `.github/workflows/ci.yml`: typecheck, build, the Playwright tests (phone and desktop) and Lighthouse CI (`lighthouserc.json`). Accessibility, SEO and best practices must score ≥ 95, and performance below 90 shows as a warning.
 
 ## Before launch
 
@@ -42,7 +45,13 @@ The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />
 node showcase-src/render.mjs
 ```
 
+It also writes 640px and 960px copies (`name-640.webp`, `name-960.webp`), which `lib/imageLoader.ts` serves to smaller screens because GitHub Pages can't resize images.
+
 The favicon (`public/favicon.svg`) and `public/apple-icon.png` are generated from the same Split Ring geometry (`lib/splitRing.ts`). The OpenGraph images are `app/opengraph-image.png` and `app/sites/opengraph-image.png`.
+
+## Business card
+
+`brand/business-card.pdf` is print-ready: two pages (front and back), 3.5 × 2 in trim with 0.125 in bleed on every side. The QR opens `https://crucibleinnovation.com/sites?ref=card`. Edit `brand/business-card.html`, then run `node brand/render-card.mjs`.
 
 ## Analytics and `?ref=`
 
@@ -66,4 +75,4 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
 - `prefers-reduced-motion` turns off loops, the word reveal, tilt, the heat field drift, smooth scrolling and the before/after sweep. Simple fades stay.
 - Without JS every section is visible, the FAQ works (native `<details>`) and the form posts straight to Formspree.
 - The heat field canvas draws one static frame immediately and only starts drifting once the page is idle. It pauses off-screen and in background tabs.
-- First-load JS: `/sites` ≈ 119 KB gzipped, `/` ≈ 110 KB. Images are served as-is (GitHub Pages has no image optimizer), so keep screenshots ≈1440px wide WebP.
+- First-load JS: `/sites` ≈ 119 KB gzipped, `/` ≈ 110 KB.

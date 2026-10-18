@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Footer } from '@/components/Footer';
+import { JsonLd } from '@/components/JsonLd';
 import { HeatField } from '@/components/HeatField';
 import { ArrowRight } from '@/components/Icons';
 import { KelvinCounter } from '@/components/KelvinCounter';
@@ -108,6 +109,7 @@ export default function Home() {
         </section>
       </main>
       <Footer />
+      <JsonLd page="home" />
     </>
   );
 }

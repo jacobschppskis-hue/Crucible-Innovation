@@ -4,6 +4,7 @@ import { BeforeAfter } from '@/components/BeforeAfter';
 import { BrowserFrame } from '@/components/BrowserFrame';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
+import { JsonLd } from '@/components/JsonLd';
 import { HeatField } from '@/components/HeatField';
 import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
@@ -232,6 +233,7 @@ export default function SitesPage() {
         </section>
       </main>
       <Footer />
+      <JsonLd page="sites" />
     </>
   );
 }
