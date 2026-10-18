@@ -18,7 +18,7 @@ export const faq = [
   },
   {
     q: 'What does monthly care include?',
-    a: 'Hosting, updates and small edits each month, like new hours, menu changes or fresh photos. One flat monthly price, confirmed in your quote.',
+    a: 'Hosting, updates and small edits each month, like new hours, menu changes or fresh photos. One flat $50 a month.',
   },
   {
     q: 'How do I pay?',

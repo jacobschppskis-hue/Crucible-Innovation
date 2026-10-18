@@ -11,11 +11,12 @@ export function PricingCard({ pkg }: { pkg: Package }) {
         {pkg.featured && <span className="label rounded-full border border-line-strong px-2.5 py-1 text-bone">Most popular</span>}
       </div>
       <p className="mt-3 min-h-12 text-[0.9375rem] leading-relaxed text-bone-dim">{pkg.summary}</p>
-      <p className="mt-6 flex items-baseline gap-1 font-mono">
+      <p className="mt-6 flex items-baseline gap-2 font-mono">
+        <span className="text-xs uppercase tracking-[0.14em] text-bone-dim">From</span>
         <span className="text-4xl tracking-tight text-bone">{pkg.price}</span>
-        {pkg.cadence && <span className="text-bone-dim">{pkg.cadence}</span>}
       </p>
-      <ul className="mt-6 space-y-3 border-t border-line pt-6 text-[0.9375rem]">
+      <p className="mt-1.5 min-h-5 font-mono text-sm text-bone-dim">{pkg.care ?? 'One-time'}</p>
+      <ul className="mt-5 space-y-3 border-t border-line pt-6 text-[0.9375rem]">
         {pkg.features.map((f) => (
           <li key={f} className="flex gap-3">
             <Check className="mt-1 size-4 shrink-0 text-bone-dim" />

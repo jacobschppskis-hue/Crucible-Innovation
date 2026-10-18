@@ -21,8 +21,6 @@ Search the code for `TODO(jakob)`. The ones that matter:
 |---|---|
 | Formspree form ID: add a repo variable `FORMSPREE_ID` (Settings → Secrets and variables → Actions → Variables) | `data/site.ts` |
 | Contact email (currently `jacob@crucibleinnovation.com`) | `data/site.ts` |
-| Spark / Forge / Alloy prices (`$TBD`) | `data/pricing.ts` |
-| Budget bands in the quote form | `components/QuoteForm.tsx` |
 | Your photo (`founder.photo`) and 2–3 sentence bio | `data/site.ts`, `app/sites/page.tsx` |
 | FAQ answers | `data/faq.ts` |
 | Showcase: concept sites until real clients exist | `data/work.ts` |
