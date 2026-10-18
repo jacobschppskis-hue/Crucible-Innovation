@@ -1,3 +1,4 @@
+import { priceRange } from '@/data/pricing';
 import { site } from '@/data/site';
 
 const founder = { '@type': 'Person', name: site.founder.name, jobTitle: site.founder.role, email: site.founder.email };
@@ -19,6 +20,7 @@ export function JsonLd({ page }: { page: 'home' | 'sites' }) {
           founder,
           parentOrganization: studio,
           serviceType: 'Website design and development',
+          priceRange,
         };
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />;
 }

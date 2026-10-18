@@ -5,8 +5,8 @@ import { getRef } from './RefTracker';
 import { ArrowRight } from './Icons';
 
 const needs = ['New site', 'Redesign', 'Not sure'];
-// TODO(jakob): adjust budget bands once prices are set.
-const budgets = ['Under $1k', '$1k–$2.5k', '$2.5k–$5k', '$5k+', 'Not sure yet'];
+// Bands line up with the packages in data/pricing.ts.
+const budgets = ['Under $300', '$300–$600', '$600–$1,000', '$1,000+', 'Not sure yet'];
 
 type Status = 'idle' | 'sending' | 'sent' | 'error';
 
