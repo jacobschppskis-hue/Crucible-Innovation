@@ -16,6 +16,8 @@ for (const name of pages) {
   await page.evaluate(() => document.fonts.ready);
   const png = await page.screenshot({ type: 'png' });
   await sharp(png).webp({ quality: 82 }).toFile(join(out, `${name}.webp`));
+  // Smaller copies for phones (GitHub Pages can't resize on the fly; see lib/imageLoader.ts).
+  for (const w of [640, 960]) await sharp(png).resize(w).webp({ quality: 80 }).toFile(join(out, `${name}-${w}.webp`));
   console.log('rendered', name);
 }
 await browser.close();
