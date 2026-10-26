@@ -14,7 +14,7 @@ export const faq = [
   },
   {
     q: 'Can I edit it myself?',
-    a: 'Yes, if you want to. We’ll show you how to make simple changes like hours, prices and photos. If you’d rather not touch it, monthly care covers edits for you.',
+    a: 'The easiest way is to send us the change, like new hours, prices or photos, and we’ll make it. With monthly care, small edits are included. If you’d rather edit it yourself, tell us at the start and we’ll plan the build around that.',
   },
   {
     q: 'What does monthly care include?',

@@ -33,7 +33,7 @@ export const packages: Package[] = [
     summary: 'A custom build, then we keep it running for you.',
     price: '$800',
     care: '+ $50/mo care',
-    features: ['Custom build', 'Monthly edits', 'Hosting included', 'Updates and monitoring'],
+    features: ['Custom build', 'Monthly edits', 'Hosting included', 'Updates and fixes'],
   },
 ];
 
