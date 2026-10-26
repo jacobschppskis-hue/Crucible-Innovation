@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import { BeforeAfter } from '@/components/BeforeAfter';
 import { BrowserFrame } from '@/components/BrowserFrame';
+import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
@@ -12,11 +13,9 @@ import { PricingCard } from '@/components/PricingCard';
 import { Process } from '@/components/Process';
 import { QuoteForm } from '@/components/QuoteForm';
 import { Reveal } from '@/components/Reveal';
-import { SplitRing } from '@/components/SplitRing';
 import { SpotlightCard } from '@/components/SpotlightCard';
 import { WordReveal, type Segment } from '@/components/WordReveal';
 import { packages, pricingNote } from '@/data/pricing';
-import { site } from '@/data/site';
 import { work } from '@/data/work';
 
 const title = 'Crucible Sites: websites for local businesses';
@@ -48,7 +47,6 @@ function SectionHead({ label, title, sub, className = '' }: { label: string; tit
 
 export default function SitesPage() {
   const after = work.find((w) => w.slug === 'landscaper')!;
-  const { founder } = site;
 
   return (
     <>
@@ -166,44 +164,8 @@ export default function SitesPage() {
           <p className="mt-8 text-center text-bone-dim">{pricingNote}</p>
         </section>
 
-        {/* 7. Who you'll work with */}
-        <section aria-labelledby="who" className="container-x pb-24 sm:pb-32">
-          <div className="grid items-center gap-10 md:grid-cols-[0.8fr_1fr] md:gap-16">
-            <Reveal>
-              <div className="relative mx-auto aspect-[4/5] max-w-sm overflow-hidden rounded-2xl border border-line bg-ground-2 shadow-[inset_-1px_0_0_rgba(255,91,31,0.35)] md:max-w-none">
-                {founder.photo ? (
-                  <Image src={founder.photo} alt={`Portrait of ${founder.name}`} fill sizes="(min-width: 768px) 40vw, 90vw" className="object-cover grayscale contrast-110" />
-                ) : (
-                  <div className="absolute inset-0 grid place-items-center">
-                    <SplitRing size="38%" title="" />
-                  </div>
-                )}
-                {/* faint ember rim light */}
-                <div aria-hidden className="absolute inset-0 bg-[radial-gradient(90%_70%_at_105%_40%,rgba(255,91,31,0.18),transparent_60%)] mix-blend-screen" />
-              </div>
-            </Reveal>
-            <div>
-              <p className="label">Who you&rsquo;ll work with</p>
-              <h2 id="who" className="h-section mt-4">
-                Hi, I&rsquo;m {founder.name}.
-              </h2>
-              {/* TODO(jakob): replace with your own 2–3 sentence bio. */}
-              <Reveal>
-                <div className="mt-6 max-w-xl space-y-4 text-lg leading-relaxed text-bone-dim">
-                  <p>I started Crucible Sites because the businesses that make a town worth living in usually have the worst websites in it.</p>
-                  <p>
-                    I design and build every site myself, and you talk to me directly, from the first call to launch day. No account managers, no
-                    handoffs.
-                  </p>
-                </div>
-                <p className="mt-6 font-serif text-2xl italic text-bone">Talk soon, {founder.firstName}.</p>
-                <a href="#start" className="btn btn-ghost mt-8">
-                  Talk to me directly <ArrowRight />
-                </a>
-              </Reveal>
-            </div>
-          </div>
-        </section>
+        {/* 7. Who you'll work with (data/team.ts) */}
+        <Builders />
 
         {/* 8. FAQ */}
         <section id="faq" className="container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
@@ -218,7 +180,7 @@ export default function SitesPage() {
               <p className="label">Start a project</p>
               <WordReveal segments={[{ t: 'Tell us about your' }, { t: 'business.', className: 'accent' }]} className="h-section mt-4" />
               <p className="mt-5 text-lg leading-relaxed text-bone-dim">
-                Takes two minutes. {founder.firstName} reads every message personally and replies within 24 hours.
+                Takes two minutes. A real person reads every request, and you’ll hear back within 24 hours.
               </p>
               <ul className="mt-8 space-y-3 font-mono text-[0.8125rem] uppercase tracking-[0.12em] text-bone-dim">
                 <li>→ A real person, not a sales team</li>
