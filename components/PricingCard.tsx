@@ -1,10 +1,11 @@
 import type { Package } from '@/data/pricing';
 import { SpotlightCard } from './SpotlightCard';
 import { Check } from './Icons';
+import { QuoteLink } from './QuoteLink';
 
 export function PricingCard({ pkg }: { pkg: Package }) {
   return (
-    <SpotlightCard as="article" className={`flex h-full flex-col p-7 sm:p-8 ${pkg.featured ? 'bg-[#1a1913]' : ''}`}>
+    <SpotlightCard as="article" tilt className={`flex h-full flex-col p-7 sm:p-8 ${pkg.featured ? 'bg-[#1a1913]' : ''}`}>
       {pkg.featured && <span aria-hidden className="beam" />}
       <div className="flex items-center justify-between">
         <h3 className="font-display text-2xl font-semibold tracking-[-0.02em]">{pkg.name}</h3>
@@ -24,9 +25,9 @@ export function PricingCard({ pkg }: { pkg: Package }) {
           </li>
         ))}
       </ul>
-      <a href="#start" className={`btn mt-8 w-full ${pkg.featured ? 'btn-primary' : 'btn-ghost'}`}>
+      <QuoteLink pkg={pkg.id} className={`btn mt-8 w-full ${pkg.featured ? 'btn-primary' : 'btn-ghost'}`}>
         Get a quote
-      </a>
+      </QuoteLink>
     </SpotlightCard>
   );
 }

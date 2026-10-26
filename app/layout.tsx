@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from 'next';
 import { Archivo, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
 import { Grain } from '@/components/Grain';
 import { InView } from '@/components/InView';
+import { Magnetic } from '@/components/Magnetic';
+import { ScrollDriver } from '@/components/ScrollDriver';
 import { RefTracker } from '@/components/RefTracker';
 import { SmoothScroll } from '@/components/SmoothScroll';
 import { site } from '@/data/site';
@@ -34,10 +36,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning className={`${archivo.variable} ${instrument.variable} ${instrumentUpright.variable} ${mono.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add('js')` }} />
-        {/* TODO(jakob): create a Plausible site and set the PLAUSIBLE_DOMAIN repo variable to turn analytics on.
-            Plausible records ?ref=card as the visit's source automatically. */}
-        {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
-          <script defer data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN} src="https://plausible.io/js/script.js" />
+        {/* Analytics (Umami): set the UMAMI_WEBSITE_ID repo variable to turn it on. See README. */}
+        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <script defer src="https://cloud.umami.is/script.js" data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID} />
         )}
         <noscript>
           <style dangerouslySetInnerHTML={{ __html: noJs }} />
@@ -50,6 +51,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Grain />
         {children}
         <InView />
+        <ScrollDriver />
+        <Magnetic />
         <SmoothScroll />
         <RefTracker />
       </body>

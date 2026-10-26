@@ -34,7 +34,11 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
 
   useEffect(() => {
     const el = ref.current!;
-    const onScroll = () => el.toggleAttribute('data-scrolled', scrollY > 24);
+    const onScroll = () => {
+      el.toggleAttribute('data-scrolled', scrollY > 24);
+      const max = document.documentElement.scrollHeight - innerHeight;
+      el.style.setProperty('--sp', (max > 0 ? scrollY / max : 0).toFixed(4));
+    };
     onScroll();
     addEventListener('scroll', onScroll, { passive: true });
     return () => removeEventListener('scroll', onScroll);
@@ -42,6 +46,7 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
 
   return (
     <header ref={ref} className="nav fixed inset-x-0 top-0 z-50">
+      <div aria-hidden className="nav-progress" />
       <nav aria-label="Main" className="container-x flex h-[var(--nav-h)] items-center justify-between gap-4">
         <Link href={c.home} className="flex items-center gap-2.5 rounded-md text-[1.375rem]">
           <SplitRing size={26} title="" />

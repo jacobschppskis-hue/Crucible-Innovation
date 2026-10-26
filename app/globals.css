@@ -10,6 +10,7 @@
   --ember: #ff5b1f;
   --ember-hot: #ffb347; /* only inside gradients, for the molten core */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --nav-h: 4rem;
   color-scheme: dark;
   interpolate-size: allow-keywords;
@@ -235,11 +236,17 @@ html.lenis body {
   white-space: nowrap;
   overflow: hidden;
   isolation: isolate;
+  translate: var(--mx-px, 0px) var(--my-px, 0px);
   transition:
     box-shadow 200ms ease,
     background-color 200ms ease,
     border-color 200ms ease,
-    color 200ms ease;
+    color 200ms ease,
+    translate 600ms var(--ease-spring),
+    scale 180ms ease;
+}
+.btn:active {
+  scale: 0.97;
 }
 .btn-sm {
   height: 2.25rem;
@@ -364,12 +371,14 @@ html.lenis body {
 /* ---------- Section reveals: fade + 16px rise (only hidden when JS runs) ---------- */
 [data-reveal] {
   transition:
-    opacity 700ms var(--ease-out) var(--delay, 0s),
-    transform 700ms var(--ease-out) var(--delay, 0s);
+    opacity 1000ms var(--ease-spring) var(--delay, 0s),
+    transform 1100ms var(--ease-spring) var(--delay, 0s),
+    filter 1000ms var(--ease-spring) var(--delay, 0s);
 }
 .js [data-reveal]:not([data-in]) {
   opacity: 0;
-  transform: translateY(16px);
+  transform: translateY(28px) scale(0.985);
+  filter: blur(6px);
 }
 
 /* ---------- Word-by-word blur-in ---------- */
@@ -380,14 +389,14 @@ html.lenis body {
   opacity: 0;
 }
 .words[data-in] .w {
-  animation: word-in 800ms var(--ease-out) both;
-  animation-delay: calc(var(--d, 0ms) + var(--i) * 40ms);
+  animation: word-in 1000ms var(--ease-spring) both;
+  animation-delay: calc(var(--d, 0ms) + var(--i) * 45ms);
 }
 @keyframes word-in {
   from {
     opacity: 0;
     filter: blur(8px);
-    transform: translateY(12px);
+    transform: translateY(0.32em);
   }
   to {
     opacity: 1;
@@ -499,5 +508,457 @@ textarea.field {
   .faq::details-content,
   .faq .faq-icon {
     transition: none;
+  }
+}
+
+/* =====================================================================================
+   Scroll-driven motion. `--p` (0 → 1) is written by lib/scroll.ts; every default below is the
+   finished state, so the page reads correctly without JS and with reduced motion.
+   ===================================================================================== */
+
+:where(.ring-svg) {
+  color: var(--bone);
+}
+.ring-dark {
+  color: var(--ground);
+}
+
+/* ---------- Nav: thin reading-progress hairline ---------- */
+.nav-progress {
+  position: absolute;
+  inset: auto 0 -1px 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(232, 228, 216, 0.15), rgba(232, 228, 216, 0.7));
+  transform-origin: left;
+  transform: scaleX(var(--sp, 0));
+  opacity: 0;
+  transition: opacity 300ms ease;
+}
+.nav[data-scrolled] .nav-progress {
+  opacity: 1;
+}
+
+/* ---------- Hero: copy drifts up, ring swells, frame recedes as you scroll away ---------- */
+.hero-out {
+  --o: clamp(0, (var(--p, 0.5) - 0.5) * 2, 1);
+}
+.hero-out-copy {
+  transform: translate3d(0, calc(var(--o) * -90px), 0);
+  opacity: calc(1 - var(--o) * 1.3);
+}
+.hero-out-ring {
+  transform: translate3d(0, calc(var(--o) * -30px), 0) scale(calc(1 + var(--o) * 0.35));
+  opacity: calc(1 - var(--o) * 1.1);
+}
+.hero-out-frame {
+  perspective: 1600px;
+  transform: translate3d(0, calc(var(--o) * -60px), 0) scale(calc(1 - var(--o) * 0.06));
+}
+.scroll-cue {
+  opacity: calc(1 - var(--o, 0) * 5);
+}
+.scroll-cue span {
+  animation: cue 2.4s var(--ease-spring) infinite;
+}
+@keyframes cue {
+  0% {
+    transform: translateY(-100%);
+  }
+  65%,
+  100% {
+    transform: translateY(200%);
+  }
+}
+
+/* Browser mockup rises and un-tilts into place on load (transform only, so it paints immediately). */
+.frame-in {
+  transform-origin: 50% 100%;
+  animation: frame-in 1600ms var(--ease-spring) 200ms both;
+}
+@keyframes frame-in {
+  from {
+    transform: translateY(60px) rotateX(24deg) scale(0.92);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* ---------- Pinned scenes ---------- */
+.pin-sticky {
+  min-height: 100svh;
+}
+.js .pin-tall .pin-sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+.js .fx {
+  height: 340vh;
+}
+.js .thesis {
+  height: 230vh;
+}
+
+/* Fusion story: --a draws the human half, --b assembles the machine half, --c ignites the core. */
+.fx {
+  --a: 1;
+  --b: 1;
+  --c: 1;
+  --t1: 0;
+  --t2: 0;
+  --t3: 1;
+}
+.fx-ring {
+  transform: scale(calc(0.94 + var(--c) * 0.06));
+}
+.fx-human {
+  transform: translateX(calc((1 - var(--a)) * -12px));
+  opacity: calc(0.15 + var(--a) * 0.85);
+}
+.fx-human path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: calc(1 - var(--a));
+}
+.fx-px {
+  --bi: clamp(0, var(--b) * 1.6 - var(--k) * 0.6, 1);
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: translate(calc(var(--dx) * (1 - var(--bi)) * 1px), calc(var(--dy) * (1 - var(--bi)) * 1px))
+    rotate(calc(var(--dr) * (1 - var(--bi)) * 1deg)) scale(calc(0.5 + var(--bi) * 0.5));
+  opacity: calc(0.12 + var(--bi) * 0.88);
+}
+.fx-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  transform: scale(calc(0.2 + var(--c) * 0.8));
+  opacity: var(--c);
+}
+.fx-glow {
+  position: absolute;
+  left: 50%;
+  top: 38%;
+  width: min(110vw, 46rem);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: radial-gradient(circle, rgba(255, 91, 31, 0.42) 0%, rgba(255, 179, 71, 0.1) 26%, rgba(255, 91, 31, 0) 62%);
+  filter: blur(10px);
+  opacity: var(--c);
+  transform: scale(calc(0.45 + var(--c) * 0.6));
+  pointer-events: none;
+}
+.fx-line {
+  grid-area: 1 / 1;
+}
+.fx-t1,
+.fx-t2,
+.fx-t3 {
+  will-change: opacity, transform;
+}
+.fx-t1 {
+  opacity: var(--t1);
+  transform: translateY(calc((1 - var(--t1)) * 20px));
+  filter: blur(calc((1 - var(--t1)) * 6px));
+}
+.fx-t2 {
+  opacity: var(--t2);
+  transform: translateY(calc((1 - var(--t2)) * 20px));
+  filter: blur(calc((1 - var(--t2)) * 6px));
+}
+.fx-t3 {
+  opacity: var(--t3);
+  transform: translateY(calc((1 - var(--t3)) * 28px)) scale(calc(0.97 + var(--t3) * 0.03));
+  filter: blur(calc((1 - var(--t3)) * 8px));
+}
+.fx-steps {
+  color: var(--bone);
+}
+.fx-s1 {
+  opacity: calc(0.7 + 0.3 * clamp(0, var(--a) * 2 - 1, 1) * (1 - clamp(0, var(--b) * 2 - 1, 1)));
+}
+.fx-s2 {
+  opacity: calc(0.7 + 0.3 * clamp(0, var(--b) * 2 - 1, 1) * (1 - clamp(0, var(--c) * 2 - 1, 1)));
+}
+.fx-s3 {
+  opacity: calc(0.7 + 0.3 * clamp(0, var(--c) * 2 - 1, 1));
+}
+
+/* Sayings gallery: a swipeable row, pinned and driven sideways by vertical scroll once JS measures it. */
+.gallery-sticky {
+  min-height: 100svh;
+}
+.gallery-track {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+.gallery-track::-webkit-scrollbar {
+  display: none;
+}
+.gallery-track > * {
+  scroll-snap-align: start;
+}
+.gallery[data-pinned] .gallery-sticky {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+.gallery[data-pinned] .gallery-track {
+  overflow: visible;
+  transform: translate3d(calc(var(--p, 0) * var(--ov, 0px) * -1), 0, 0);
+  will-change: transform;
+}
+.gallery-progress > div {
+  transform: scaleX(var(--p, 0));
+}
+.saying {
+  transition:
+    transform 700ms var(--ease-spring),
+    box-shadow 700ms var(--ease-spring);
+}
+@media (hover: hover) {
+  .saying:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9);
+  }
+}
+
+/* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. */
+.thesis {
+  --k: 1;
+  --xa: 1;
+  --xb: 1;
+}
+.thesis-a {
+  opacity: calc(1 - var(--xa));
+  transform: translateY(calc(var(--xa) * -36px));
+  filter: blur(calc(var(--xa) * 8px));
+}
+.thesis-b {
+  opacity: var(--xb);
+  transform: translateY(calc((1 - var(--xb)) * 36px));
+  filter: blur(calc((1 - var(--xb)) * 8px));
+}
+.thesis-bar {
+  background: linear-gradient(90deg, var(--bone), var(--ember) 72%, var(--ember-hot));
+  transform: scaleX(var(--k));
+}
+.thesis-glow {
+  position: absolute;
+  right: -20vw;
+  top: 50%;
+  width: 80vw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: 0 -50%;
+  background: radial-gradient(circle, rgba(255, 91, 31, 0.2) 0%, rgba(255, 179, 71, 0.05) 32%, rgba(255, 91, 31, 0) 64%);
+  opacity: var(--k);
+  transform: scale(calc(0.6 + var(--k) * 0.5));
+  pointer-events: none;
+}
+
+/* ---------- Process: heat runs down the rail with a spark at its leading edge ---------- */
+.process {
+  --heat: 1;
+}
+.process-fill {
+  background: linear-gradient(to bottom, rgba(232, 228, 216, 0.7), var(--ember));
+  transform-origin: top;
+  transform: scaleY(var(--heat));
+}
+.process-spark {
+  position: absolute;
+  left: 5.5px;
+  top: calc(0.5rem + var(--heat) * (100% - 1rem));
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: radial-gradient(circle, #fff6e6 0%, var(--ember-hot) 35%, var(--ember) 75%);
+  box-shadow:
+    0 0 12px 2px rgba(255, 91, 31, 0.7),
+    0 0 30px 6px rgba(255, 91, 31, 0.25);
+  opacity: calc(min(1, var(--heat) * 40) * (1 - max(0, (var(--heat) - 0.98) * 50)));
+  pointer-events: none;
+}
+@media (min-width: 768px) {
+  .process-fill {
+    background: linear-gradient(to right, rgba(232, 228, 216, 0.7), var(--ember));
+    transform-origin: left;
+    transform: scaleX(var(--heat));
+  }
+  .process-spark {
+    top: 5.5px;
+    left: calc(var(--heat) * 100%);
+  }
+}
+.process-step {
+  --on: clamp(0, (var(--heat) - var(--t)) * 14, 1);
+}
+.process-step h3 {
+  color: color-mix(in srgb, var(--bone) calc(62% + var(--on) * 38%), var(--ground));
+  translate: 0 calc((1 - var(--on)) * 6px);
+}
+.process-node {
+  border: 1px solid rgba(232, 228, 216, 0.3);
+  background: var(--ground);
+  transition:
+    background-color 500ms var(--ease-spring),
+    border-color 500ms var(--ease-spring),
+    box-shadow 700ms var(--ease-spring);
+}
+.process-step[data-on] .process-node {
+  background: var(--bone);
+  border-color: var(--bone);
+}
+.process-step[data-current] .process-node {
+  background: var(--ember);
+  border-color: var(--ember);
+  box-shadow:
+    0 0 0 4px rgba(255, 91, 31, 0.14),
+    0 0 18px rgba(255, 91, 31, 0.55);
+}
+.process-step[data-current] .process-node::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 50%;
+  border: 1px solid var(--ember);
+  animation: ripple 1300ms var(--ease-spring) forwards;
+}
+@keyframes ripple {
+  from {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  to {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+
+/* ---------- Cards: lean toward the cursor and lift ---------- */
+.spot-tilt {
+  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
+  transition:
+    transform 700ms var(--ease-spring),
+    box-shadow 700ms var(--ease-spring);
+}
+@media (hover: hover) {
+  .spot-tilt:hover {
+    --lift: -4px;
+    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.85);
+  }
+}
+
+/* Showcase screenshots drift inside their frames as you scroll, and zoom a touch on hover. */
+.parallax-inner {
+  inset: -8% 0;
+  transform: translate3d(0, calc((var(--p, 0.5) - 0.5) * -12%), 0);
+  scale: 1;
+  transition: scale 1000ms var(--ease-spring);
+}
+.group:hover .parallax-inner {
+  scale: 1.04;
+}
+
+/* Before/after tilts up into place as it scrolls in. */
+.tilt-in {
+  perspective: 1600px;
+}
+.tilt-in > .ba {
+  transform-origin: 50% 100%;
+  transform: translateY(calc((1 - var(--p, 1)) * 48px)) rotateX(calc((1 - var(--p, 1)) * 22deg)) scale(calc(0.9 + var(--p, 1) * 0.1));
+  opacity: calc(0.35 + var(--p, 1) * 0.65);
+}
+.ba-label-before {
+  opacity: clamp(0, (var(--posn, 50) - 12) / 12, 1);
+}
+.ba-label-after {
+  opacity: clamp(0, (88 - var(--posn, 50)) / 12, 1);
+}
+.ba-knob {
+  transition: scale 400ms var(--ease-spring);
+}
+.ba[data-dragging] .ba-knob {
+  scale: 1.12;
+}
+
+/* Quote: the send panel arrives with the same rise as everything else. */
+.send-panel {
+  animation: rise 900ms var(--ease-spring) both;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+    filter: blur(6px);
+  }
+}
+
+/* Live venture dot breathes. */
+.live-dot {
+  animation: live 2.6s ease-in-out infinite;
+}
+@keyframes live {
+  50% {
+    box-shadow: 0 0 0 5px rgba(255, 91, 31, 0.18);
+  }
+}
+
+/* ---------- Footer: the wordmark rises out of the bottom edge ---------- */
+.footer-giant {
+  height: 19.5vw;
+  margin-top: 1rem;
+}
+.footer-giant-inner {
+  transform: translateY(calc((1 - var(--p, 1)) * 55%));
+  opacity: calc(0.15 + var(--p, 1) * 0.85);
+}
+.footer-giant-inner [aria-hidden],
+.footer-giant-inner .spark-i {
+  background: linear-gradient(180deg, rgba(232, 228, 216, 0.16), rgba(232, 228, 216, 0) 88%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .js .fx,
+  .js .thesis {
+    height: auto;
+  }
+  .js .pin-tall .pin-sticky {
+    position: relative;
+    height: auto;
+  }
+  .hero-out-copy,
+  .hero-out-ring,
+  .hero-out-frame,
+  .tilt-in > .ba,
+  .footer-giant-inner {
+    transform: none;
+    opacity: 1;
+  }
+  .frame-in,
+  .scroll-cue span,
+  .live-dot,
+  .send-panel {
+    animation: none;
+  }
+  .parallax-inner,
+  .spot-tilt {
+    transform: none;
+  }
+  .btn {
+    translate: none;
+  }
+  .process-step[data-current] .process-node::after {
+    display: none;
+  }
+  .js [data-reveal]:not([data-in]) {
+    transform: none;
+    filter: none;
   }
 }
