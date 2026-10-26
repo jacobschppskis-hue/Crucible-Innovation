@@ -10,6 +10,7 @@ const config = {
   home: {
     home: '/',
     links: [
+      { href: '/#story', label: 'Story' },
       { href: '/#ventures', label: 'Ventures' },
       { href: '/sites', label: 'Sites' },
     ],

@@ -14,10 +14,10 @@ export const builders: Builder[] = [
   {
     name: 'Jacob Schopp',
     role: 'Founder, Crucible Sites',
-    // TODO(jakob): add your real "why" here (a sentence or two), and a photo.
+    // TODO(jakob): add a photo.
     bio: [
-      'When you work with Crucible Sites, you talk to the people actually building your site, from the first call to launch day. No account managers, no handoffs.',
-      'Tell me about your business and I’ll get back to you within 24 hours.',
+      'I am still in high school, and Crucible is the name I build my ventures under. Crucible Sites is the first of them, and I build the sites with Charlie. Our first ones are already lined up.',
+      'When you work with us, you talk directly to the people building your site, from the first call until the day it goes live. Tell me about your business and I will get back to you within 24 hours.',
     ],
     signoff: 'Talk soon, Jacob.',
   },
