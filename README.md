@@ -78,7 +78,7 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
 - **Home page:**
   - The hero drifts away as you scroll.
   - `FusionStory` is a pinned scene in which the Split Ring assembles itself: arcs draw, pixels fly in, then the core ignites.
-  - `SayingsGallery` is a pinned sideways scroll through the brand sayings, kept in `data/sayings.ts`.
+  - `Story` ("Where it started.") is Jacob's own account, kept in `data/story.ts`.
   - `Thesis` heats from 293 K to 1811 K as you scroll.
   - A giant wordmark rises into the footer.
 - **`/sites`:**

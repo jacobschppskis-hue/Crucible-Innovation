@@ -684,46 +684,6 @@ textarea.field {
   opacity: calc(0.7 + 0.3 * clamp(0, var(--c) * 2 - 1, 1));
 }
 
-/* Sayings gallery: a swipeable row, pinned and driven sideways by vertical scroll once JS measures it. */
-.gallery-sticky {
-  min-height: 100svh;
-}
-.gallery-track {
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scrollbar-width: none;
-}
-.gallery-track::-webkit-scrollbar {
-  display: none;
-}
-.gallery-track > * {
-  scroll-snap-align: start;
-}
-.gallery[data-pinned] .gallery-sticky {
-  position: sticky;
-  top: 0;
-  height: 100svh;
-}
-.gallery[data-pinned] .gallery-track {
-  overflow: visible;
-  transform: translate3d(calc(var(--p, 0) * var(--ov, 0px) * -1), 0, 0);
-  will-change: transform;
-}
-.gallery-progress > div {
-  transform: scaleX(var(--p, 0));
-}
-.saying {
-  transition:
-    transform 700ms var(--ease-spring),
-    box-shadow 700ms var(--ease-spring);
-}
-@media (hover: hover) {
-  .saying:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.9);
-  }
-}
-
 /* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. */
 .thesis {
   --k: 1;

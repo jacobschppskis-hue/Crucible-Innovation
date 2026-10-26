@@ -162,6 +162,14 @@ export default function SitesPage() {
             ))}
           </ul>
           <p className="mt-8 text-center text-bone-dim">{pricingNote}</p>
+          <Reveal className="mx-auto mt-20 max-w-xl text-center">
+            <p className="font-serif-upright text-4xl leading-tight text-bone sm:text-5xl">
+              Entropy is the <span className="accent">default.</span>
+            </p>
+            <p className="mt-4 font-mono text-xs leading-relaxed text-balance text-bone-dim">
+              Order only lasts where someone keeps spending energy. That is what monthly care is for.
+            </p>
+          </Reveal>
         </section>
 
         {/* 7. Who you'll work with (data/team.ts) */}
