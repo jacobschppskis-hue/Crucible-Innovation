@@ -20,7 +20,6 @@ Search the code for `TODO(jakob)`. The ones that matter:
 | What | Where |
 |---|---|
 | Contact email (currently `jacob@crucibleinnovation.com`) | `data/site.ts` |
-| Your photo (`founder.photo`) and 2–3 sentence bio | `data/site.ts`, `app/sites/page.tsx` |
 | FAQ answers | `data/faq.ts` |
 | Showcase: concept sites until real clients exist | `data/work.ts` |
 

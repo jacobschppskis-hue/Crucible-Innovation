@@ -6,9 +6,7 @@ export const site = {
   founder: {
     name: 'Jacob Schopp',
     firstName: 'Jacob',
-    role: 'Founder, Crucible Sites',
-    // TODO(jakob): add a photo (e.g. '/jacob.webp', 4:5, ~1000px tall). Until then a Split Ring placeholder shows.
-    photo: undefined as string | undefined,
+    role: 'Founder, Crucible',
     // TODO(jakob): confirm.
     email: 'jacob@crucibleinnovation.com',
   },

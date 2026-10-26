@@ -1,21 +1,29 @@
-import Image from 'next/image';
 import { builders, type Builder } from '@/data/team';
+import { asciiSvg } from '@/lib/ascii';
 import { ArrowRight } from './Icons';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
-function Portrait({ b, sizes }: { b: Builder; sizes: string }) {
+function Portrait({ b }: { b: Builder }) {
+  const art = b.ascii ? asciiSvg(b.ascii) : null;
   return (
     <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-line bg-ground-2 shadow-[inset_-1px_0_0_rgba(255,91,31,0.35)]">
-      {b.photo ? (
-        <Image src={b.photo} alt={`Portrait of ${b.name}`} fill sizes={sizes} className="object-cover grayscale contrast-110" />
+      {art ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={art.src}
+          width={art.width}
+          height={art.height}
+          alt={`ASCII portrait of ${b.name}`}
+          className="absolute inset-0 m-auto h-[92%] w-[92%] object-contain"
+        />
       ) : (
         <div className="absolute inset-0 grid place-items-center">
           <SplitRing size="38%" title="" />
         </div>
       )}
       {/* faint ember rim light */}
-      <div aria-hidden className="absolute inset-0 bg-[radial-gradient(90%_70%_at_105%_40%,rgba(255,91,31,0.18),transparent_60%)] mix-blend-screen" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_105%_40%,rgba(255,91,31,0.16),transparent_60%)] mix-blend-screen" />
     </div>
   );
 }
@@ -43,7 +51,7 @@ export function Builders() {
       <section aria-labelledby="who" className="container-x pb-24 sm:pb-32">
         <div className="grid items-center gap-10 md:grid-cols-[0.8fr_1fr] md:gap-16">
           <Reveal className="mx-auto w-full max-w-sm md:max-w-none">
-            <Portrait b={b} sizes="(min-width: 768px) 40vw, 90vw" />
+            <Portrait b={b} />
           </Reveal>
           <div>
             <p className="label">Who you&rsquo;ll work with</p>
@@ -71,11 +79,16 @@ export function Builders() {
       <ul className="mt-12 grid gap-12 md:grid-cols-2 md:gap-10">
         {builders.map((b, i) => (
           <Reveal as="li" key={b.name} delay={i * 0.1}>
-            <div className="max-w-xs">
-              <Portrait b={b} sizes="(min-width: 768px) 20rem, 80vw" />
+            <div className="max-w-sm">
+              <Portrait b={b} />
             </div>
             <h3 className="mt-8 font-display text-2xl font-semibold tracking-[-0.02em]">{b.name}</h3>
             <p className="label mt-2">{b.role}</p>
+            {b.email && (
+              <a href={`mailto:${b.email}`} className="mt-2 inline-block font-mono text-xs text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+                {b.email}
+              </a>
+            )}
             <Bio b={b} />
           </Reveal>
         ))}
