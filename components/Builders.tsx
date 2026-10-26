@@ -1,27 +1,30 @@
+import Image from 'next/image';
 import { builders, type Builder } from '@/data/team';
-import { asciiSvg } from '@/lib/ascii';
 import { ArrowRight } from './Icons';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
 function Portrait({ b }: { b: Builder }) {
-  const art = b.ascii ? asciiSvg(b.ascii) : null;
-  return (
-    <div className="relative aspect-[4/5] overflow-hidden rounded-2xl border border-line bg-ground-2 shadow-[inset_-1px_0_0_rgba(255,91,31,0.35)]">
-      {art ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={art.src}
-          width={art.width}
-          height={art.height}
+  if (b.portrait) {
+    // ASCII portraits are drawn as dark ink, so they sit on a bone card like the light cards in the brand sheet.
+    return (
+      <div className="relative aspect-[5/6] overflow-hidden rounded-2xl bg-bone">
+        <Image
+          src={b.portrait}
           alt={`ASCII portrait of ${b.name}`}
-          className="absolute inset-0 m-auto h-[92%] w-[92%] object-contain"
+          width={800}
+          height={956}
+          sizes="(min-width: 768px) 24rem, 90vw"
+          className="absolute inset-0 h-full w-full object-contain p-[4%]"
         />
-      ) : (
-        <div className="absolute inset-0 grid place-items-center">
-          <SplitRing size="38%" title="" />
-        </div>
-      )}
+      </div>
+    );
+  }
+  return (
+    <div className="relative aspect-[5/6] overflow-hidden rounded-2xl border border-line bg-ground-2 shadow-[inset_-1px_0_0_rgba(255,91,31,0.35)]">
+      <div className="absolute inset-0 grid place-items-center">
+        <SplitRing size="38%" title="" />
+      </div>
       {/* faint ember rim light */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_70%_at_105%_40%,rgba(255,91,31,0.16),transparent_60%)] mix-blend-screen" />
     </div>
