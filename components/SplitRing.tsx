@@ -19,20 +19,20 @@ export function SplitRing({ size = 64, animated = false, pixel = 'square', class
       width={animated ? undefined : size}
       height={animated ? undefined : size}
       {...(title ? { role: 'img', 'aria-label': title } : { 'aria-hidden': true })}
-      className={animated ? 'ring-anim relative block h-full w-full' : className}
+      className={animated ? 'ring-svg ring-anim relative block h-full w-full' : `ring-svg ${className ?? ''}`}
     >
       {rings.map(({ r, n }) => (
         <g key={r}>
-          <path className="ring-arc" d={arcPath(r)} pathLength={1} fill="none" stroke="var(--bone)" strokeWidth={stroke} strokeLinecap="butt" />
+          <path className="ring-arc" d={arcPath(r)} pathLength={1} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="butt" />
           {pixels(r, n).map(({ x, y, deg }, i) => {
             const style = { '--i': k++ } as React.CSSProperties;
             // The CSS pop-in animates the <g>, so it never fights the rect's own SVG rotate().
             return (
               <g key={i} className="ring-px" style={style}>
                 {pixel === 'dot' ? (
-                  <circle cx={x} cy={y} r={px / 2} fill="var(--bone)" />
+                  <circle cx={x} cy={y} r={px / 2} fill="currentColor" />
                 ) : (
-                  <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="var(--bone)" transform={`rotate(${deg} ${x} ${y})`} />
+                  <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" transform={`rotate(${deg} ${x} ${y})`} />
                 )}
               </g>
             );

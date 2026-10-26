@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const pages = [
-  { path: '/', h1: /Exceptional people/ },
+  { path: '/', h1: /Intelligence, alloyed/ },
   { path: '/sites', h1: /actually looks good/ },
 ];
 
@@ -57,30 +57,50 @@ test('the gradient accent paints every glyph (nothing clipped)', async ({ page }
   expect(clipped).toBe(0);
 });
 
-test('quote form submits with the ?ref= tag', async ({ page }) => {
+test('quote form: price card preselects the package, and the request is written for the visitor', async ({ page }) => {
   let body = '';
   await page.route('https://formspree.io/**', async (route) => {
     body = route.request().postData() ?? '';
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
   });
   await page.goto('/sites?ref=card', { waitUntil: 'networkidle' });
+  // "Get a quote" on Alloy jumps to the form with Alloy selected.
+  await page.locator('#pricing article').filter({ hasText: 'Alloy' }).getByRole('link', { name: 'Get a quote' }).click();
   const form = page.locator('#start form');
+  await expect(form.locator('input[name=package][value^="Alloy"]')).toBeChecked();
   await expect(form.locator('input[name=_gotcha]')).toHaveCount(1);
-  // The form only posts when a Formspree ID was set at build time; otherwise it shows the email fallback.
   const configured = (await form.getAttribute('action'))?.includes('formspree.io');
   await form.locator('input[name=name]').fill('Test Person');
   await form.locator('input[name=business]').fill('Test Co');
   await form.locator('input[name=email]').fill('test@example.com');
   await form.getByText('Redesign').click();
-  await form.getByText('Not sure yet').click();
   await form.locator('textarea[name=message]').fill('Hello');
   await form.locator('button[type=submit]').click();
   if (configured) {
     await expect(page.getByText('Got it.')).toBeVisible();
     expect(body).toContain('card');
-  } else {
-    await expect(form.getByRole('alert')).toContainText('didn’t send');
+    return;
   }
+  // No Formspree: the email is composed and offered via mail app, Gmail, Outlook or copy.
+  await expect(page.getByText('Send it your way.')).toBeVisible();
+  const mailto = await page.getByRole('link', { name: 'Mail app' }).getAttribute('href');
+  expect(mailto).toMatch(/^mailto:jacob@crucibleinnovation\.com\?subject=/);
+  const decoded = decodeURIComponent(mailto!);
+  expect(decoded).toContain('Quote request: Alloy · Test Co');
+  expect(decoded).toContain('Looking for: Redesign');
+  expect(decoded).toContain('ref: card');
+  expect(await page.getByRole('link', { name: 'Gmail' }).getAttribute('href')).toContain('mail.google.com');
+  expect(await page.getByRole('link', { name: 'Outlook' }).getAttribute('href')).toContain('outlook.live.com');
+});
+
+test('scroll scenes reach their finished state', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.waitForTimeout(500);
+  // Thesis reads 1811 K and the second line is showing once you're past it.
+  await expect(page.locator('.thesis [aria-hidden] >> nth=0')).toBeAttached();
+  const t = await page.locator('.thesis').evaluate((el) => getComputedStyle(el).getPropertyValue('--xb').trim());
+  expect(Number(t)).toBeGreaterThan(0.99);
 });
 
 test('404 page', async ({ page }) => {

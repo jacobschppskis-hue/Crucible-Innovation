@@ -55,11 +55,11 @@ export default function SitesPage() {
       <Nav variant="sites" />
       <main id="main">
         {/* 1. Hero */}
-        <section className="relative overflow-hidden pt-[calc(var(--nav-h)+3rem)] pb-20 sm:pb-28 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-[var(--nav-h)]">
+        <section data-scroll="view" className="hero-out relative overflow-hidden pt-[calc(var(--nav-h)+3rem)] pb-20 sm:pb-28 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-[var(--nav-h)]">
           <HeatField origin={[0.76, 0.52]} originMobile={[0.5, 0.78]} />
           <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ground" />
           <div className="container-x relative grid items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
-            <div>
+            <div className="hero-out-copy">
               <p className="label">Crucible Sites · Websites for local businesses</p>
               <WordReveal
                 as="h1"
@@ -79,7 +79,9 @@ export default function SitesPage() {
                 </a>
               </div>
             </div>
-            <BrowserFrame items={work} />
+            <div className="hero-out-frame">
+              <BrowserFrame items={work} />
+            </div>
           </div>
         </section>
 
@@ -102,13 +104,13 @@ export default function SitesPage() {
             title={[{ t: 'Same business.' }, { t: 'Different decade.', className: 'accent' }]}
             sub="Drag the handle. Same services, same phone number. One of these gets the call."
           />
-          <Reveal className="mt-12">
+          <div data-scroll="enter" className="tilt-in mt-12">
             <BeforeAfter
               before={{ src: '/showcase/before.webp', alt: 'A dated small-business website: tiled background, cramped table layout, tiny blue links and a visitor counter.' }}
               after={{ src: after.image, alt: after.alt }}
             />
             <p className="mt-4 text-sm text-bone-dim">Illustrative mock. Both versions are a fictional business, not a real client.</p>
-          </Reveal>
+          </div>
         </section>
 
         {/* 4. Process */}
@@ -121,21 +123,17 @@ export default function SitesPage() {
         <section id="work" className="container-x pb-24 sm:pb-32">
           <SectionHead
             label="Work"
-            title={[{ t: 'A taste of what we' }, { t: 'make.', className: 'accent' }]}
-            sub="Concept builds for the kinds of businesses we love working with. Real client work lands here as it ships."
+            title={[{ t: 'Think in' }, { t: 'kelvin.', className: 'accent' }]}
+            sub="Measure from absolute zero, not from where everyone else starts. Every concept here began as a blank page, not a template. Real client work lands here as it ships."
           />
           <ul className="mt-12 grid gap-5 md:grid-cols-3">
             {work.map((w, i) => (
               <Reveal as="li" key={w.slug} delay={i * 0.08}>
-                <SpotlightCard as="article" className="group h-full p-2.5">
-                  <div className="relative aspect-[16/10] overflow-hidden rounded-xl border border-line">
-                    <Image
-                      src={w.image}
-                      alt={w.alt}
-                      fill
-                      sizes="(min-width: 768px) 33vw, 94vw"
-                      className="object-cover object-top transition-transform duration-700 ease-out group-hover:scale-[1.03]"
-                    />
+                <SpotlightCard as="article" tilt className="group h-full p-2.5">
+                  <div data-scroll="view" className="parallax relative aspect-[16/10] overflow-hidden rounded-xl border border-line">
+                    <div className="parallax-inner absolute inset-0">
+                      <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top" />
+                    </div>
                   </div>
                   <div className="flex items-start justify-between gap-4 px-3 pb-3 pt-5">
                     <div>

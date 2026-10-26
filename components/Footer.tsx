@@ -44,6 +44,12 @@ export function Footer() {
       <div className="container-x">
         <p className="border-t border-line py-6 font-mono text-xs text-bone-dim">© {new Date().getFullYear()} Crucible</p>
       </div>
+      {/* The wordmark rises out of the bottom edge as you reach the end of the page. */}
+      <div aria-hidden data-scroll="reveal" className="footer-giant overflow-hidden">
+        <div className="footer-giant-inner flex justify-center text-[24vw] leading-[0.8]">
+          <Wordmark />
+        </div>
+      </div>
     </footer>
   );
 }

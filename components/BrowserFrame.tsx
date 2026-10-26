@@ -57,7 +57,7 @@ export function BrowserFrame({ items }: { items: Work[] }) {
   }, []);
 
   return (
-    <div className="[perspective:1400px]" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
+    <div className="frame-in [perspective:1400px]" onPointerEnter={() => setHovered(true)} onPointerLeave={() => setHovered(false)}>
       <div
         ref={ref}
         className="relative transition-transform duration-700 ease-out [transform:rotateX(var(--rx,0deg))_rotateY(var(--ry,0deg))] [transform-style:preserve-3d]"
