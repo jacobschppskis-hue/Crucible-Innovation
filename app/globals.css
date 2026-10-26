@@ -108,7 +108,8 @@ html.lenis body {
 .spark-i::after {
   content: '';
   position: absolute;
-  left: 50%;
+  /* The ı box is narrowed by the wordmark's -0.03em tracking, so its centre sits half that left of the stem. */
+  left: calc(50% + 0.015em);
   top: 0.115em;
   width: 0.14em; /* ~1.15× Archivo's own tittle */
   height: 0.14em;
