@@ -103,6 +103,12 @@ test('scroll scenes reach their finished state', async ({ page }) => {
   expect(Number(t)).toBeGreaterThan(0.99);
 });
 
+test('on /sites the logo goes to Crucible and "sites" goes to Crucible Sites', async ({ page }) => {
+  await page.goto('/sites');
+  await expect(page.getByRole('link', { name: 'Crucible home' })).toHaveAttribute('href', '/');
+  await expect(page.getByRole('link', { name: 'Crucible Sites home' })).toHaveAttribute('href', '/sites');
+});
+
 test('404 page', async ({ page }) => {
   const res = await page.goto('/this-does-not-exist');
   expect(res?.status()).toBe(404);

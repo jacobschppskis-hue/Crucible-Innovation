@@ -10,6 +10,7 @@ const config = {
   home: {
     home: '/',
     links: [
+      { href: '/#story', label: 'Story' },
       { href: '/#ventures', label: 'Ventures' },
       { href: '/sites', label: 'Sites' },
     ],
@@ -48,10 +49,22 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
     <header ref={ref} className="nav fixed inset-x-0 top-0 z-50">
       <div aria-hidden className="nav-progress" />
       <nav aria-label="Main" className="container-x flex h-[var(--nav-h)] items-center justify-between gap-4">
-        <Link href={c.home} className="flex items-center gap-2.5 rounded-md text-[1.375rem]">
-          <SplitRing size={26} title="" />
-          <Wordmark sites={variant === 'sites'} />
-        </Link>
+        {/* The ring and "crucible" always go to the Crucible home page; "sites" goes to the Crucible Sites home. */}
+        <div className="flex items-baseline gap-[0.4em] text-[1.375rem]">
+          <Link href="/" aria-label="Crucible home" className="flex items-baseline gap-2.5 rounded-md">
+            <SplitRing size={26} title="" className="self-center" />
+            <Wordmark />
+          </Link>
+          {variant === 'sites' && (
+            <Link
+              href="/sites"
+              aria-label="Crucible Sites home"
+              className="rounded-md font-mono text-[0.62em] uppercase leading-none tracking-[0.14em] text-bone-dim transition-colors duration-200 hover:text-bone"
+            >
+              sites
+            </Link>
+          )}
+        </div>
         <div className="flex items-center gap-1 sm:gap-2">
           <ul className="hidden items-center gap-1 md:flex">
             {c.links.map((l) => (

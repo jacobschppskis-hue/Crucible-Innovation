@@ -7,8 +7,8 @@ import { HeatField } from '@/components/HeatField';
 import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
 import { Reveal } from '@/components/Reveal';
-import { SayingsGallery } from '@/components/SayingsGallery';
 import { SplitRing } from '@/components/SplitRing';
+import { Story } from '@/components/Story';
 import { SpotlightCard } from '@/components/SpotlightCard';
 import { Thesis } from '@/components/Thesis';
 import { WordReveal } from '@/components/WordReveal';
@@ -64,6 +64,9 @@ export default function Home() {
         {/* The ring assembles itself as you scroll */}
         <FusionStory />
 
+        {/* Jacob's story: why Crucible exists and where the name comes from */}
+        <Story />
+
         {/* Ventures */}
         <section id="ventures" className="container-x py-24 sm:py-32">
           <div className="flex flex-wrap items-end justify-between gap-6">
@@ -105,8 +108,6 @@ export default function Home() {
             ))}
           </ul>
         </section>
-
-        <SayingsGallery />
 
         <Thesis />
       </main>
