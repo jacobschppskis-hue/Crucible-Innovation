@@ -87,6 +87,13 @@ export function Ignition() {
   useEffect(() => {
     const el = ref.current!;
     if (reducedMotion()) return;
+    // Once the pour is done, take it out of the page for good. Hiding it isn't enough everywhere: some engines keep
+    // a hidden element's composited layers on screen, and its dots would show through when the ring melts.
+    const pour = el.querySelector<HTMLElement>('.ig-pour');
+    const poured = () => pour?.style.setProperty('display', 'none');
+    const onPoured = (e: AnimationEvent) => e.target === pour && e.animationName === 'ig-gone' && poured();
+    pour?.addEventListener('animationend', onPoured);
+    const pourTimer = setTimeout(poured, (document.documentElement.dataset.intro === 'quick' ? 0.45 : 1) * 4600 + 500);
     const set = (k: string, v: number) => el.style.setProperty(k, v.toFixed(4));
     const s = state.current;
     const off = trackScroll(el, 'pin', (p) => {
@@ -134,6 +141,8 @@ export function Ignition() {
       dead = true;
       off();
       stop?.();
+      pour?.removeEventListener('animationend', onPoured);
+      clearTimeout(pourTimer);
     };
   }, []);
 

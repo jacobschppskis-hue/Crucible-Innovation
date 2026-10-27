@@ -960,9 +960,10 @@ textarea.field {
   .js[data-intro='quick'] {
     --T: 0.45;
   }
+  /* Fades out once the solid ring is up; Ignition then takes it out of the page. */
   .js .ig-pour {
     display: block;
-    animation: ig-gone 1ms linear calc(4500ms * var(--T)) forwards;
+    animation: ig-gone calc(250ms * var(--T)) linear calc(4300ms * var(--T)) forwards;
   }
   .js .ig-svg {
     animation: ig-solid calc(420ms * var(--T)) ease calc(3950ms * var(--T)) backwards;
@@ -1065,6 +1066,7 @@ textarea.field {
 }
 @keyframes ig-gone {
   to {
+    opacity: 0;
     visibility: hidden;
   }
 }
