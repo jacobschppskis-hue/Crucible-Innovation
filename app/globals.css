@@ -594,95 +594,494 @@ textarea.field {
   top: 0;
   height: 100svh;
 }
-.js .fx {
-  height: 340vh;
-}
 .js .thesis {
   height: 230vh;
 }
 
-/* Fusion story: --a draws the human half, --b assembles the machine half, --c ignites the core. */
-.fx {
-  --a: 1;
-  --b: 1;
-  --c: 1;
+/* ---------- Ignition: the home opening (components/Ignition.tsx) ----------
+   Defaults are the finished state (no JS, reduced motion, short landscape screens). The intro runs once on load
+   (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --f, --t1..--t3 from lib/scroll.ts. */
+.ig {
+  --o: 0;
+  --sm: 0;
+  --sh: 0;
+  --core: 1;
+  --flare: 0;
+  --f: 1;
   --t1: 0;
   --t2: 0;
   --t3: 1;
+  --T: 1; /* intro tempo: 1 on the first visit of a session, faster after that */
 }
-.fx-ring {
-  transform: scale(calc(0.94 + var(--c) * 0.06));
+.ig-stage {
+  min-height: 100svh;
 }
-.fx-human {
-  transform: translateX(calc((1 - var(--a)) * -12px));
-  opacity: calc(0.15 + var(--a) * 0.85);
+.ig-ring-area {
+  container-type: size;
+  min-height: 9rem;
 }
-.fx-human path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: calc(1 - var(--a));
+.ig-ring {
+  --rs: min(74vw, 40svh);
+  position: relative;
+  width: min(var(--rs), 100cqh);
+  aspect-ratio: 1;
+  color: var(--bone);
 }
-.fx-px {
-  --bi: clamp(0, var(--b) * 1.6 - var(--k) * 0.6, 1);
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: translate(calc(var(--dx) * (1 - var(--bi)) * 1px), calc(var(--dy) * (1 - var(--bi)) * 1px))
-    rotate(calc(var(--dr) * (1 - var(--bi)) * 1deg)) scale(calc(0.5 + var(--bi) * 0.5));
-  opacity: calc(0.12 + var(--bi) * 0.88);
+@media (min-width: 1024px) {
+  .ig-ring {
+    --rs: min(30vw, 46svh);
+  }
 }
-.fx-core {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(calc(0.2 + var(--c) * 0.8));
-  opacity: var(--c);
+.ig-glow {
+  position: absolute;
+  inset: -80%;
+  pointer-events: none;
 }
-.fx-glow {
+.ig-glow span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 91, 31, 0.46) 0%,
+    rgba(255, 179, 71, 0.13) 15%,
+    rgba(255, 91, 31, 0.05) 32%,
+    rgba(255, 91, 31, 0) 56%
+  );
+}
+.ig-shock {
   position: absolute;
   left: 50%;
-  top: 38%;
-  width: min(110vw, 46rem);
+  top: 50%;
+  width: 16%;
   aspect-ratio: 1;
   border-radius: 50%;
   translate: -50% -50%;
-  background: radial-gradient(circle, rgba(255, 91, 31, 0.42) 0%, rgba(255, 179, 71, 0.1) 26%, rgba(255, 91, 31, 0) 62%);
-  filter: blur(10px);
-  opacity: var(--c);
-  transform: scale(calc(0.45 + var(--c) * 0.6));
+  border: 1px solid var(--ember-hot);
+  box-shadow: 0 0 24px rgba(255, 91, 31, 0.5);
+  opacity: 0;
   pointer-events: none;
 }
-.fx-line {
-  grid-area: 1 / 1;
+/* Ignition: a white-hot bloom blows out from the core and a thin streak of light crosses it, both gone in a second. */
+.ig-flare {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(140vw, 90rem);
+  height: 2px;
+  margin: -1px 0 0 calc(min(140vw, 90rem) / -2);
+  background: linear-gradient(90deg, transparent, rgba(255, 179, 71, 0.5) 30%, #fff3df 50%, rgba(255, 179, 71, 0.5) 70%, transparent);
+  box-shadow: 0 0 12px rgba(255, 91, 31, 0.6);
+  opacity: 0;
+  pointer-events: none;
 }
-.fx-t1,
-.fx-t2,
-.fx-t3 {
+.ig-spark {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 46%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  translate: -50% -50%;
+  background: radial-gradient(circle, #fff3df 0%, rgba(255, 179, 71, 0.85) 12%, rgba(255, 91, 31, 0.35) 30%, rgba(255, 91, 31, 0) 62%);
+  opacity: 0;
+  pointer-events: none;
+}
+.ig-gl {
+  opacity: 0;
+  transition: opacity 700ms ease;
+}
+.ig[data-gl] .ig-gl {
+  opacity: 1;
+}
+.ig-svg {
+  transition: opacity 900ms ease;
+}
+.ig[data-gl] .ig-svg {
+  opacity: 0;
+}
+
+/* Sized so "Intelligence," spans ~90% of the container (Archivo sets it at ~5.05em wide), capped by height. */
+.ig-title {
+  font-size: min((100vw - 2rem) / 5.4, 15svh);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+@media (min-width: 640px) {
+  .ig-title {
+    font-size: min((100vw - 3rem) / 5.6, 19svh);
+  }
+}
+@media (min-width: 1024px) {
+  .ig-title {
+    font-size: min((min(100vw, 76rem) - 4rem) / 5.6, 21svh);
+  }
+}
+/* Each line is its own mask; padding (cancelled by margins) keeps italic overhangs and descenders inside it. */
+.ig-line {
+  display: block;
+  overflow: clip;
+  padding: 0.04em 0.14em 0.24em 0.08em;
+  margin: -0.04em -0.14em -0.24em -0.08em;
+}
+.ig-in {
+  display: inline-block;
+}
+.ig-l2 .accent {
+  font-size: 1.14em;
+  letter-spacing: -0.02em;
+}
+/* "alloyed." cools from white-hot to bone as it arrives (finished state: bone). */
+.ig-cool {
+  background-image: linear-gradient(90deg, var(--bone) 0 34%, var(--ember) 50%, var(--ember-hot) 61%, #fff3df 74% 100%);
+  background-size: 300% 100%;
+  background-position: 0 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding: 0 0.1em 0.3em 0.2em;
+  margin: 0 -0.1em -0.3em -0.2em;
+}
+
+.ig-fuse {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+  padding-block: 6rem;
+}
+.ig-fl {
   will-change: opacity, transform;
 }
-.fx-t1 {
-  opacity: var(--t1);
-  transform: translateY(calc((1 - var(--t1)) * 20px));
-  filter: blur(calc((1 - var(--t1)) * 6px));
+.ig-t1,
+.ig-t2 {
+  color: var(--bone-dim);
 }
-.fx-t2 {
-  opacity: var(--t2);
-  transform: translateY(calc((1 - var(--t2)) * 20px));
-  filter: blur(calc((1 - var(--t2)) * 6px));
+.ig-steps {
+  display: none;
 }
-.fx-t3 {
-  opacity: var(--t3);
-  transform: translateY(calc((1 - var(--t3)) * 28px)) scale(calc(0.97 + var(--t3) * 0.03));
-  filter: blur(calc((1 - var(--t3)) * 8px));
+.ig-cue {
+  display: none;
 }
-.fx-steps {
-  color: var(--bone);
+
+/* Intro: the core sparks, a heat pulse rolls out, arcs draw, pixels are stamped hot and cool, the lines rise. */
+@media (prefers-reduced-motion: no-preference) {
+  .js[data-intro='quick'] .ig {
+    --T: 0.45;
+  }
+  .js .ig-core {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ig-core calc(1100ms * var(--T)) var(--ease-out) both;
+  }
+  .js .ig-spark {
+    animation: ig-spark calc(1300ms * var(--T)) cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .js .ig-shock {
+    animation: ig-shock calc(1500ms * var(--T)) cubic-bezier(0.25, 0.5, 0.4, 1) calc(90ms * var(--T)) both;
+  }
+  .js .ig-flare {
+    animation: ig-flare calc(1100ms * var(--T)) cubic-bezier(0.2, 0.7, 0.2, 1) calc(40ms * var(--T)) both;
+  }
+  .js .ig-glow span {
+    animation:
+      ig-glow calc(1800ms * var(--T)) ease-out calc(60ms * var(--T)) both,
+      breathe 4.5s ease-in-out calc(2600ms * var(--T)) infinite;
+  }
+  .js .ig-arc {
+    stroke-dasharray: 1 2; /* the long gap stops a sliver showing at the far end before the draw */
+    stroke-dashoffset: 1;
+    animation:
+      ig-draw calc(1050ms * var(--T)) cubic-bezier(0.45, 0.05, 0.2, 1) calc((140ms + var(--ri) * 130ms) * var(--T)) forwards,
+      ig-cool-ink calc(1600ms * var(--T)) ease-out calc((400ms + var(--ri) * 130ms) * var(--T)) both;
+  }
+  .js .ig-pop {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: ig-pop calc(700ms * var(--T)) var(--ease-out) calc((400ms + var(--i) * 32ms) * var(--T)) both;
+  }
+  .js .ig-in {
+    animation: ig-rise calc(1250ms * var(--T)) cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ld, 0ms) * var(--T)) both;
+  }
+  .js .ig-l1 .ig-in {
+    --ld: 300ms;
+  }
+  .js .ig-l2 .ig-in {
+    --ld: 430ms;
+  }
+  .js .ig-cool {
+    animation: ig-cool calc(2600ms * var(--T)) cubic-bezier(0.3, 0.1, 0.3, 1) calc(520ms * var(--T)) both;
+  }
+  .js .ig-meta > * {
+    animation: rise calc(1000ms * var(--T)) var(--ease-spring) calc((820ms + var(--mi, 0) * 110ms) * var(--T)) both;
+  }
+  .js .ig-meta > :nth-child(2) {
+    --mi: 1;
+  }
+  .js .ig-heat {
+    animation: ig-heat calc(2200ms * var(--T)) ease-out calc(260ms * var(--T)) both;
+  }
+  .js .nav-intro {
+    animation: ig-nav calc(1000ms * var(--T)) var(--ease-out) calc(900ms * var(--T)) both;
+  }
 }
-.fx-s1 {
-  opacity: calc(0.7 + 0.3 * clamp(0, var(--a) * 2 - 1, 1) * (1 - clamp(0, var(--b) * 2 - 1, 1)));
+@keyframes ig-core {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+    fill: #fff3df;
+  }
+  14% {
+    opacity: 1;
+    transform: scale(1.1);
+    fill: #fff3df;
+  }
+  60% {
+    fill: var(--ember-hot);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    fill: var(--ember);
+  }
 }
-.fx-s2 {
-  opacity: calc(0.7 + 0.3 * clamp(0, var(--b) * 2 - 1, 1) * (1 - clamp(0, var(--c) * 2 - 1, 1)));
+@keyframes ig-spark {
+  0% {
+    opacity: 0;
+    transform: scale(0.05);
+  }
+  7% {
+    opacity: 1;
+    transform: scale(0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.6);
+  }
 }
-.fx-s3 {
-  opacity: calc(0.7 + 0.3 * clamp(0, var(--c) * 2 - 1, 1));
+@keyframes ig-shock {
+  0% {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+  5% {
+    opacity: 0.9;
+  }
+  55% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(9);
+  }
+}
+@keyframes ig-flare {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.05);
+  }
+  12% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+}
+@keyframes ig-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ig-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes ig-cool-ink {
+  from {
+    color: var(--ember-hot);
+  }
+  to {
+    color: var(--bone);
+  }
+}
+@keyframes ig-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.1);
+    color: #fff3df;
+  }
+  35% {
+    opacity: 1;
+    transform: scale(1.35);
+    color: var(--ember-hot);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    color: var(--bone);
+  }
+}
+@keyframes ig-rise {
+  from {
+    transform: translate3d(0, 140%, 0); /* clear of the mask's bottom padding too */
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes ig-cool {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+@keyframes ig-heat {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ig-nav {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Scroll story: only where it can pin (motion allowed, tall enough to fit the stage). */
+@media (prefers-reduced-motion: no-preference) and (min-height: 540px) {
+  .js .ig {
+    height: 420vh;
+    --f: 0;
+    --t3: 0;
+  }
+  .js .ig-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+  }
+  .js .ig-ring {
+    transform: translate3d(0, calc(var(--o) * 2svh), 0) scale(calc(1 + var(--o) * 0.14));
+  }
+  .js .ig-l1 {
+    transform: translate3d(calc(var(--o) * -24vw), 0, 0);
+    opacity: calc(1 - var(--o) * 1.3);
+  }
+  .js .ig-l2 {
+    transform: translate3d(calc(var(--o) * 24vw), 0, 0);
+    opacity: calc(1 - var(--o) * 1.3);
+  }
+  .js .ig-meta {
+    transform: translate3d(0, calc(var(--o) * 3rem), 0);
+    opacity: calc(1 - var(--o) * 2.2);
+  }
+  .js .ig[data-out] .ig-copy {
+    visibility: hidden;
+  }
+  .js .ig-human {
+    transform: translateX(calc(var(--sh) * -8px));
+    opacity: calc(1 - var(--sh) * 0.85);
+  }
+  .js .ig-px {
+    --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px)) rotate(calc(var(--dr) * var(--q) * 1deg))
+      scale(calc(1 - var(--q) * 0.45));
+    opacity: calc(1 - var(--q) * 0.82);
+  }
+  .js .ig-core-g {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(calc(0.2 + min(1, var(--core)) * 0.8 + var(--flare) * 0.7));
+    opacity: min(1, var(--core));
+  }
+  .js .ig-glow {
+    opacity: calc(min(1, var(--core)) * 0.85 + var(--flare) * 0.9);
+    transform: scale(calc(0.55 + min(1, var(--core)) * 0.45 + var(--flare) * 0.55));
+  }
+  .js .ig-fuse {
+    position: absolute;
+    inset-inline: 0;
+    bottom: max(4.5rem, 10svh);
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  .js .ig-fl {
+    grid-area: 1 / 1;
+  }
+  .js .ig-t1,
+  .js .ig-t2 {
+    color: var(--bone);
+  }
+  .js .ig-t1 {
+    opacity: var(--t1);
+    transform: translateY(calc((1 - var(--t1)) * 22px));
+    filter: blur(calc((1 - var(--t1)) * 6px));
+  }
+  .js .ig-t2 {
+    opacity: var(--t2);
+    transform: translateY(calc((1 - var(--t2)) * 22px));
+    filter: blur(calc((1 - var(--t2)) * 6px));
+  }
+  .js .ig-t3 {
+    opacity: var(--t3);
+    transform: translateY(calc((1 - var(--t3)) * 30px)) scale(calc(0.97 + var(--t3) * 0.03));
+    filter: blur(calc((1 - var(--t3)) * 8px));
+  }
+  .js .ig-steps {
+    position: absolute;
+    bottom: 1.75rem;
+    left: 50%;
+    translate: -50% 0;
+    display: flex;
+    gap: 1.5rem;
+    white-space: nowrap;
+    opacity: var(--f);
+  }
+  .js .ig-s1 {
+    opacity: calc(0.45 + 0.55 * var(--sm));
+  }
+  .js .ig-s2 {
+    opacity: calc(0.45 + 0.55 * var(--sh));
+  }
+  .js .ig-s3 {
+    opacity: calc(0.45 + 0.55 * var(--t3));
+  }
+  .js .ig-cue {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    display: block;
+    width: 1px;
+    height: 2.5rem;
+    overflow: hidden;
+    background: var(--line-strong);
+    opacity: calc(1 - var(--o) * 5);
+  }
+  .js .ig-cue span {
+    display: block;
+    height: 50%;
+    background: var(--bone);
+    animation: cue 2.4s var(--ease-spring) infinite;
+  }
 }
 
 /* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. */
@@ -886,7 +1285,6 @@ textarea.field {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .js .fx,
   .js .thesis {
     height: auto;
   }

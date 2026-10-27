@@ -7,6 +7,7 @@ import { ScrollDriver } from '@/components/ScrollDriver';
 import { RefTracker } from '@/components/RefTracker';
 import { SmoothScroll } from '@/components/SmoothScroll';
 import { site } from '@/data/site';
+import { TIER_SCRIPT } from '@/lib/tier';
 import './globals.css';
 
 const archivo = Archivo({ subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
@@ -35,7 +36,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${archivo.variable} ${instrument.variable} ${instrumentUpright.variable} ${mono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add('js')` }} />
+        {/* Sets html.js, the visual tier and the intro tempo before first paint (see lib/tier.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: TIER_SCRIPT }} />
         {/* Analytics (Umami): set the UMAMI_WEBSITE_ID repo variable to turn it on. See README. */}
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script defer src="https://cloud.umami.is/script.js" data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID} />
