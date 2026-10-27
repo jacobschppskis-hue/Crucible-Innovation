@@ -62,6 +62,15 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   await ctx.close();
 });
 
+test('ventures: the live one pours in a labelled concept site; the rest are still forging', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  const cast = page.locator('#ventures [data-cast]');
+  await cast.scrollIntoViewIfNeeded();
+  await expect(cast).toHaveAttribute('data-in', '');
+  await expect(cast.getByText('Concept')).toBeVisible();
+  await expect(page.locator('#ventures .forging-mark')).toHaveCount(2);
+});
+
 test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
@@ -86,16 +95,25 @@ test.describe('rich tier', () => {
     expect(errors).toEqual([]);
   });
 
-  test('light tier never downloads the WebGL code', async ({ page }) => {
-    const urls: string[] = [];
-    page.on('request', (r) => urls.push(r.url()));
-    await page.goto('/?tier=light', { waitUntil: 'networkidle' });
-    await page.waitForTimeout(2500);
-    await expect(page.locator('section.ig')).not.toHaveAttribute('data-gl', '');
-    const js = await Promise.all(
-      urls.filter((u) => u.endsWith('.js')).map((u) => page.evaluate((x) => fetch(x).then((r) => r.text()), u)),
-    );
-    expect(js.some((src) => src.includes('gl_PointSize')), 'shader source fetched').toBe(false);
+  test('light tier never downloads any WebGL code, on either page', async ({ page }) => {
+    for (const path of ['/', '/sites']) {
+      const urls: string[] = [];
+      page.on('request', (r) => urls.push(r.url()));
+      await page.goto(`${path}?tier=light`, { waitUntil: 'networkidle' });
+      await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+      await page.waitForTimeout(2500);
+      await expect(page.locator('[data-gl]')).toHaveCount(0);
+      const js = await Promise.all(urls.filter((u) => u.endsWith('.js')).map((u) => page.evaluate((x) => fetch(x).then((r) => r.text()), u)));
+      expect(js.some((src) => src.includes('gl_FragColor')), `${path}: shader source fetched`).toBe(false);
+      page.removeAllListeners('request');
+    }
+  });
+
+  test('forced rich: the Thesis runs molten iron once it is on screen', async ({ page }) => {
+    await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
+    await page.locator('section.thesis').scrollIntoViewIfNeeded();
+    await page.evaluate(() => scrollBy(0, 200));
+    await expect(page.locator('section.thesis')).toHaveAttribute('data-gl', '', { timeout: 15000 });
   });
 
   test('no WebGL: the SVG ring stays and nothing breaks', async ({ page }) => {

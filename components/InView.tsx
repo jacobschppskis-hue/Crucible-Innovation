@@ -2,7 +2,7 @@
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
 
-/** One shared IntersectionObserver for every [data-reveal] / [data-words] element: sets data-in at 15% visibility. */
+/** One shared IntersectionObserver for every [data-reveal] / [data-words] / [data-cast] element: sets data-in at 15% visibility. */
 export function InView() {
   const pathname = usePathname();
   useEffect(() => {
@@ -16,7 +16,7 @@ export function InView() {
       },
       { threshold: 0.15 },
     );
-    document.querySelectorAll('[data-reveal]:not([data-in]), [data-words]:not([data-in])').forEach((el) => io.observe(el));
+    document.querySelectorAll('[data-reveal]:not([data-in]), [data-words]:not([data-in]), [data-cast]:not([data-in])').forEach((el) => io.observe(el));
     return () => io.disconnect();
   }, [pathname]);
   return null;

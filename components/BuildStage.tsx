@@ -72,8 +72,8 @@ export function BuildStage() {
     const type = q('.bs-type');
     const cast = [2, 3].map((n) => {
       const root = q(`.bs-c${n}`);
-      const layer = (k: string) => [q(`.bs-c${n} .${k}`), q(`.bs-c${n} .${k} > .bs-in`)] as const;
-      return { root, bp: layer('bs-bpl'), fin: layer('bs-fin'), track: q(`.bs-c${n} .bs-track`) };
+      const layer = (k: string) => [q(`.bs-c${n} .${k}`), q(`.bs-c${n} .${k} > .cast-in`)] as const;
+      return { root, bp: layer('bs-bpl'), fin: layer('bs-fin'), track: q(`.bs-c${n} .cast-track`) };
     });
     const mq = matchMedia(PINNED);
 
@@ -173,7 +173,7 @@ export function BuildStage() {
       const { startSparks } = await import('@/lib/gl/sparks');
       if (dead) return;
       const el = ref.current!;
-      stop = startSparks({ canvas: el.querySelector('.bs-sparks')!, fronts: () => [...el.querySelectorAll<HTMLElement>('.bs-front')] });
+      stop = startSparks({ canvas: el.querySelector('.bs-sparks')!, fronts: () => [...el.querySelectorAll<HTMLElement>('.cast-front')] });
     });
     return () => {
       dead = true;
@@ -271,19 +271,19 @@ export function BuildStage() {
                     {casts.map((c, i) =>
                       i === 0 || more ? (
                         <div key={c.theme} className={`bs-cast bs-c${i + 1}`} hidden={i > 0}>
-                          <div className="bs-layer bs-bpl">
-                            <div className="bs-in">
+                          <div className="cast-layer bs-bpl">
+                            <div className="cast-in">
                               <LiveSite theme={c.theme} blueprint />
                             </div>
                           </div>
-                          <div className="bs-layer bs-fin">
-                            <div className="bs-in">
+                          <div className="cast-layer bs-fin">
+                            <div className="cast-in">
                               <LiveSite theme={c.theme} />
                             </div>
                           </div>
-                          <div className="bs-track">
-                            <div className="bs-band" />
-                            <div className="bs-front" />
+                          <div className="cast-track">
+                            <div className="cast-band" />
+                            <div className="cast-front" />
                           </div>
                         </div>
                       ) : null,
