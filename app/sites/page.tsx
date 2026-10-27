@@ -6,7 +6,6 @@ import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
-import { LiveSite, isTheme } from '@/components/LiveSite';
 import { Nav } from '@/components/Nav';
 import { PricingCard } from '@/components/PricingCard';
 import { Process } from '@/components/Process';
@@ -100,19 +99,9 @@ export default function SitesPage() {
               <Reveal as="li" key={w.slug} delay={i * 0.08}>
                 <SpotlightCard as="article" tilt className="group h-full p-2.5">
                   <div data-scroll="view" className="parallax relative aspect-[16/10] overflow-hidden rounded-xl border border-line">
-                    {isTheme(w.slug) ? (
-                      // Concepts are live HTML (components/LiveSite.tsx): hover the buttons, the coffee turns, the pole spins.
-                      <div role="img" aria-label={w.alt} className="parallax-inner ls-vp absolute inset-0">
-                        {/* the parallax layer overscans by 8% top and bottom; keep the site's nav in the frame */}
-                        <div aria-hidden className="absolute inset-x-0 bottom-0 top-[7%]">
-                          <LiveSite theme={w.slug} />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="parallax-inner absolute inset-0">
-                        <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top" />
-                      </div>
-                    )}
+                    <div className="parallax-inner absolute inset-0">
+                      <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top" />
+                    </div>
                   </div>
                   <div className="flex items-start justify-between gap-4 px-3 pb-3 pt-5">
                     <div>

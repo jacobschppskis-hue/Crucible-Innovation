@@ -146,7 +146,9 @@ export function Ignition() {
             </span>{' '}
             <span className="ig-line ig-l2">
               <span className="ig-in">
-                <span className="accent ig-cool">alloyed.</span>
+                <span className="accent ig-cool" data-text="alloyed.">
+                  alloyed.
+                </span>
               </span>
             </span>
           </h1>

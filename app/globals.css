@@ -736,16 +736,26 @@ textarea.field {
   font-size: 1.14em;
   letter-spacing: -0.02em;
 }
-/* "alloyed." cools from white-hot to bone as it arrives (finished state: bone). */
+/* "alloyed." cools from white-hot to bone as it arrives: a hot copy sits on the bone word and fades off it, so the
+   whole effect is one composited opacity animation (finished state: bone). The copy is hidden from screen readers. */
 .ig-cool {
-  background-image: linear-gradient(90deg, var(--bone) 0 34%, var(--ember) 50%, var(--ember-hot) 61%, #fff3df 74% 100%);
-  background-size: 300% 100%;
-  background-position: 0 0;
+  position: relative;
+  display: inline-block; /* one line box, shared exactly by the copy */
+  color: var(--bone);
+}
+.ig-cool::after {
+  content: attr(data-text) / '';
+  position: absolute;
+  left: -0.2em;
+  top: 0;
+  padding: 0 0.1em 0.3em 0.2em;
+  background-image: linear-gradient(100deg, #fff3df 15%, var(--ember-hot) 50%, var(--ember) 85%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  padding: 0 0.1em 0.3em 0.2em;
-  margin: 0 -0.1em -0.3em -0.2em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .ig-fuse {
@@ -813,8 +823,9 @@ textarea.field {
   .js .ig-l2 .ig-in {
     --ld: 430ms;
   }
-  .js .ig-cool {
-    animation: ig-cool calc(2600ms * var(--T)) cubic-bezier(0.3, 0.1, 0.3, 1) calc(520ms * var(--T)) both;
+  .js .ig-cool::after {
+    will-change: opacity;
+    animation: ig-cool calc(2400ms * var(--T)) cubic-bezier(0.4, 0, 0.6, 1) calc(400ms * var(--T)) both;
   }
   .js .ig-meta > * {
     animation: rise calc(1000ms * var(--T)) var(--ease-spring) calc((820ms + var(--mi, 0) * 110ms) * var(--T)) both;
@@ -945,11 +956,12 @@ textarea.field {
   }
 }
 @keyframes ig-cool {
-  from {
-    background-position: 100% 0;
+  0%,
+  25% {
+    opacity: 1;
   }
-  to {
-    background-position: 0 0;
+  100% {
+    opacity: 0;
   }
 }
 @keyframes ig-heat {
@@ -1197,6 +1209,36 @@ textarea.field {
   text-transform: uppercase;
   color: var(--bone);
 }
+/* the live card's mold: a blueprint of a page (grid, a headline bar, a picture box), cast over by the screenshot */
+.venture-mold {
+  background-color: #12110e;
+  background-image:
+    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
+    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
+    linear-gradient(rgba(232, 228, 216, 0.09), rgba(232, 228, 216, 0.09)),
+    linear-gradient(rgba(232, 228, 216, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 228, 216, 0.05) 1px, transparent 1px);
+  background-size:
+    38% 9%,
+    30% 9%,
+    26% 4%,
+    16px 16px,
+    16px 16px;
+  background-position:
+    6% 30%,
+    6% 43%,
+    6% 58%,
+    0 0,
+    0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+}
+.venture-mold::after {
+  content: '';
+  position: absolute;
+  inset: 16% 6% 22% 54%;
+  border: 1px dashed rgba(232, 228, 216, 0.3);
+  border-radius: 8%;
+}
 .forging-mark {
   width: min(9rem, 60%);
   color: rgba(232, 228, 216, 0.22);
@@ -1240,16 +1282,18 @@ textarea.field {
   background: var(--bone);
 }
 
-/* ---------- Reading heat (components/HeatText.tsx): words warm from dim to bone as the block is read ----------
-   --p comes from data-scroll="read"; the glow front is ~8 words wide. Dim is 0.56 opacity, which still clears AA.
-   Body copy settles a little below full bone so long reading stays comfortable. */
+/* ---------- Reading heat (components/HeatText.tsx + ReadingHeat.tsx): words warm from dim to bone as they're read ----------
+   --p comes from data-scroll="read", --n/--i from the word wrapper; the glow front is ~8 words wide. Dim is 56% bone,
+   which still clears AA. Body copy settles a little below full bone so long reading stays comfortable. */
 .heat-text {
   --lo: 0.56;
   --hi: 1;
   color: var(--bone);
 }
+/* body copy settles at 82% bone; its dim state is the same 56% as everything else */
 .heat-text.heat-body {
-  --hi: 0.82;
+  --lo: 0.68;
+  color: rgba(232, 228, 216, 0.82);
 }
 .heat-text span {
   opacity: calc(var(--lo) + (var(--hi) - var(--lo)) * clamp(0, (var(--p, 1) * (var(--n) + 10) - var(--i)) / 8, 1));

@@ -47,7 +47,8 @@ test('reduced motion: no pinning, every part finished and visible', async ({ bro
   await expect(page.locator('h1')).toBeVisible();
   for (const name of ['Not the person.', 'Not the model.']) await expect(page.getByText(name)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
-  await expect(page.locator('.ig-cool')).toHaveCSS('background-position', /^0(px|%) 0(px|%)$/);
+  // "alloyed." has finished cooling: the hot copy over it is gone.
+  expect(await page.locator('.ig-cool').evaluate((el) => getComputedStyle(el, '::after').opacity)).toBe('0');
   await ctx.close();
 });
 

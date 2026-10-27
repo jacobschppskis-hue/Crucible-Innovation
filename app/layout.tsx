@@ -4,11 +4,15 @@ import { Grain } from '@/components/Grain';
 import { InView } from '@/components/InView';
 import { Magnetic } from '@/components/Magnetic';
 import { ScrollDriver } from '@/components/ScrollDriver';
+import { ReadingHeat } from '@/components/ReadingHeat';
 import { RefTracker } from '@/components/RefTracker';
 import { SmoothScroll } from '@/components/SmoothScroll';
 import { site } from '@/data/site';
 import { TIER_SCRIPT } from '@/lib/tier';
 import './globals.css';
+// Bundled with the global CSS (one stylesheet request per page; these are only ~4 KB gzipped).
+import '@/components/LiveSite.css';
+import '@/components/BuildStage.css';
 
 const archivo = Archivo({ subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
 // Italic is above the fold (hero accents); upright only appears further down, so it isn't preloaded.
@@ -53,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Grain />
         {children}
         <InView />
+        <ReadingHeat />
         <ScrollDriver />
         <Magnetic />
         <SmoothScroll />

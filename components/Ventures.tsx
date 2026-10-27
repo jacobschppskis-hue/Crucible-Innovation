@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { RING, arcPath, pixels } from '@/lib/splitRing';
 import { ventures, ventureHref } from '@/data/ventures';
+import { work } from '@/data/work';
 import { ArrowRight } from './Icons';
-import { LiveSite } from './LiveSite';
 import { Reveal } from './Reveal';
 import { SpotlightCard } from './SpotlightCard';
 import { WordReveal } from './WordReveal';
@@ -27,8 +27,9 @@ function Forging({ progress }: { progress: number }) {
   );
 }
 
-/** Ventures: the live one shows a concept site being cast as it scrolls in; the rest are still being forged. */
+/** Ventures: the live one has a concept site cast into its card as it scrolls in; the rest are still being forged. */
 export function Ventures() {
+  const cafe = work.find((w) => w.slug === 'cafe')!;
   const live = ventures.filter((v) => v.status === 'live').length;
   let forging = 0;
   return (
@@ -47,20 +48,30 @@ export function Ventures() {
           <Reveal as="li" key={v.slug} delay={i * 0.08}>
             {v.status === 'live' ? (
               <SpotlightCard as="article" tilt className="group relative flex h-full min-h-72 flex-col p-2.5">
-                <div data-cast="" aria-hidden className="ls-vp relative aspect-[16/10] overflow-hidden rounded-xl border border-line bg-ground">
-                  <div className="cast-in">
-                    <LiveSite theme="cafe" blueprint />
-                  </div>
+                <div data-cast="" className="venture-mold relative aspect-[16/10] overflow-hidden rounded-xl border border-line">
                   <div className="cast-layer cast-piece">
                     <div className="cast-in">
-                      <LiveSite theme="cafe" />
+                      {/* A plain lazy <img> (pre-sized variants, see lib/imageLoader.ts) keeps next/image's client code off this page. */}
+                      <img
+                        src={cafe.image.replace('.webp', '-640.webp')}
+                        srcSet={`${cafe.image.replace('.webp', '-640.webp')} 640w, ${cafe.image.replace('.webp', '-960.webp')} 960w`}
+                        sizes="(min-width: 768px) 30vw, 92vw"
+                        alt={cafe.alt}
+                        width={640}
+                        height={400}
+                        loading="lazy"
+                        decoding="async"
+                        className="absolute inset-0 h-full w-full object-cover object-top"
+                      />
                     </div>
                   </div>
                   <div className="cast-track">
                     <div className="cast-band" />
                     <div className="cast-front" />
                   </div>
-                  <span className="venture-concept">Concept</span>
+                  <span aria-hidden className="venture-concept">
+                    Concept
+                  </span>
                 </div>
                 <div className="flex flex-1 flex-col px-4.5 pb-4.5 pt-6">
                   <div className="flex items-center justify-between">

@@ -6,7 +6,6 @@ import { HeatField } from './HeatField';
 import { ArrowRight } from './Icons';
 import { LiveSite, type Theme } from './LiveSite';
 import { WordReveal } from './WordReveal';
-import './BuildStage.css';
 
 const casts: { theme: Theme; type: string }[] = [
   { theme: 'cafe', type: 'Café' },
