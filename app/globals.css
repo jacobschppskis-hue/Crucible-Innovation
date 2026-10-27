@@ -1080,8 +1080,8 @@ textarea.field {
     transform-box: fill-box;
     transform-origin: center;
     transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px)) rotate(calc(var(--dr) * var(--q) * 1deg))
-      scale(calc(1 - var(--q) * 0.45));
-    opacity: calc(1 - var(--q) * 0.82);
+      scale(calc(1 - var(--q) * 0.2));
+    opacity: calc(1 - var(--q) * 0.45);
   }
   .js .ig-core-g {
     transform-box: fill-box;
@@ -1654,6 +1654,22 @@ textarea.field {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+/* the Ember dot only lights once the wordmark has fully risen */
+.footer-giant-inner .spark-i::after {
+  opacity: clamp(0, var(--p, 1) * 3 - 2, 1);
+  box-shadow: 0 0 calc(var(--p, 1) * 2.5vw) rgba(255, 91, 31, 0.45);
+}
+/* 404: a ring that went cold. Its pixels have drifted loose and the core is out. */
+.cold-ring {
+  width: 6rem;
+  color: rgba(232, 228, 216, 0.4);
+  overflow: visible;
+}
+.cold-ring circle {
+  fill: none;
+  stroke: rgba(232, 228, 216, 0.35);
+  stroke-width: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {

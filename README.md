@@ -28,7 +28,7 @@ Search the code for `TODO(jakob)`. The ones that matter:
 Copy lives in `data/*.ts`, so most changes are one edit:
 
 - **`ventures.ts`**: add a venture by adding one entry. `status: 'forging'` renders a dimmed card with no link. A `live` entry without `href` automatically gets a page at `/ventures/[slug]`.
-- **`work.ts`**: showcase cards and the hero browser mockup. Keep `label: 'Concept'` on anything that isn't a paying client.
+- **`work.ts`**: showcase cards (and the café screenshot in the home page's Crucible Sites card). Keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
 - **`pricing.ts`**, **`faq.ts`**, **`site.ts`** (name, founder, email).
 
 The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />` (geometry is in `lib/splitRing.ts`).
@@ -73,19 +73,39 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
 
 ## Motion and performance notes
 
-- **Scroll engine.** `lib/scroll.ts` runs one listener for every scroll effect. Each tracked element gets a `--p` CSS variable (0 → 1), and all reads happen before all writes on each frame. Mark an element with `data-scroll="view|enter|pin|reveal"` and style it with `var(--p)`, or call `trackScroll()` for a callback.
+- **Scroll engine.** `lib/scroll.ts` runs one listener for every scroll effect. Each tracked element gets a `--p` CSS variable (0 → 1), and all reads happen before all writes on each frame. Mark an element with `data-scroll="view|enter|pin|reveal|read"` and style it with `var(--p)`, or call `trackScroll()` for a callback.
+- **Two tiers** (`lib/tier.ts`):
+  - **Light** is the default. It uses only CSS, SVG and a 2D canvas.
+  - **Rich** adds WebGL. An inline script in `<head>` makes a provisional call before first paint: light on reduced motion, Save-Data, a slow connection, little memory or few cores.
+  - After load and idle, `richTier()` confirms rich with a real WebGL context (no software renderer), the measured download speed of the page's own files (this works in Safari, which has no Network Information API) and a frame-time probe.
+  - WebGL code (`lib/gl/*`) is only downloaded once rich is confirmed. Each scene lowers its resolution, then hands back to the light version, if frames run long.
+  - Add `?tier=rich` or `?tier=light` to any URL to force a tier.
 - **Home page:**
-  - The hero drifts away as you scroll.
-  - `FusionStory` is a pinned scene in which the Split Ring assembles itself: arcs draw, pixels fly in, then the core ignites.
-  - `Story` ("Where it started.") is Jacob's own account, kept in `data/story.ts`.
-  - `Thesis` heats from 293 K to 1811 K as you scroll.
-  - A giant wordmark rises into the footer.
+  - `Ignition` is the opening and the first scroll, one pinned scene.
+    - On load the Ember core sparks, the Split Ring draws itself hot and cools, and the headline rises out of its masks.
+    - Scrolling parts the headline and tells "Not the person / Not the model / Neither, alone" on the same ring.
+    - Rich tier: the ring becomes WebGL particles (`lib/gl/ringParticles.ts`).
+  - `Story` is Jacob's own account (`data/story.ts`). It warms from dim to bone as it's read (`HeatText` and `ReadingHeat`).
+  - `Ventures`: the live venture's card has a concept site cast into it on first view. Forging ventures show an unfinished ring.
+  - `Thesis` heats from 293 K to 1811 K as you scroll. A furnace glow rises in CSS, and the rich tier adds molten iron (`lib/gl/molten.ts`).
+  - A giant wordmark rises into the footer, and its Ember dot lights at the end.
 - **`/sites`:**
-  - The browser mockup tilts into place on load.
+  - `BuildStage` is the opening and the first scroll, built around live HTML versions of the concept sites (`LiveSite`).
+    - On load the café is cast: its blueprint pours in and the finished site follows behind an Ember heat front.
+    - Scrolling turns the frame into a phone (the site really reflows), then recasts it as the barbershop and the landscaper.
+    - Rich tier: sparks fly off the front (`lib/gl/sparks.ts`).
   - The before/after slider tilts up as it scrolls in, and its handle follows the pointer on a spring.
   - Heat runs along the process rail with a spark at its tip.
   - Showcase images drift inside their frames, and cards lean toward the cursor.
-- **Everywhere:** primary buttons lean slightly toward the cursor, and the nav has a reading-progress hairline.
-- **Reduced motion and no JS.** `prefers-reduced-motion` turns off loops, pinning, parallax, tilt, word reveals and smooth scrolling; every scene shows its finished state and simple fades remain. Without JS every scene also renders finished, the FAQ still works (native `<details>`), and the form opens a mail app.
+  - The builders' portraits are cast in on first view (`[data-cast]`).
+- **Everywhere:**
+  - Primary buttons lean slightly toward the cursor, and the nav has a reading-progress hairline.
+  - Moving between pages pours the next page in (`RouteTransition`).
+- **Reduced motion and no JS.**
+  - `prefers-reduced-motion` turns off loops, pinning, parallax, tilt, word reveals, page transitions, WebGL and smooth scrolling. Every scene shows its finished state and simple fades remain.
+  - Without JS every scene also renders finished, the FAQ still works (native `<details>`), and the form opens a mail app.
+  - Pinned scenes are also unpinned on very short screens (landscape phones).
 - **Heat field.** The canvas draws one static frame immediately and only starts drifting once the page is idle. It pauses off-screen and in background tabs.
-- **JS size.** First-load JS is about 122 KB gzipped on `/sites` and 113 KB on `/`. There is no animation library.
+- **Weight.**
+  - First-load JS is about 127 KB gzipped on `/sites` and 114 KB on `/`. The rich tier's WebGL modules (a few KB each) load only on capable devices. There is no animation library.
+  - Below-the-fold sections on `/sites` use `content-visibility: auto`.
