@@ -10,7 +10,7 @@ Read this first, every session. Newest notes at the bottom of each section.
 
 | # | Started (UTC) | Heartbeat (UTC) | Ended (UTC) | Summary |
 |---|---|---|---|---|
-| 1 | 2026-10-27 01:01 | 2026-10-27 03:20 | | Setup: branch, PRD, PROGRESS, scheduled task. Then research + the "/" opening. |
+| 1 | 2026-10-27 01:01 | 2026-10-27 03:23 | 2026-10-27 03:23 | Everything in 'Status' below: both openings, rich tier, the rest of both pages, performance pass, tests, recordings, MORNING.md. Marked DONE. |
 
 ## Plan
 
@@ -56,30 +56,30 @@ Read this first, every session. Newest notes at the bottom of each section.
 ## Known issues
 
 - Headless Chrome has no GPU, so rich-tier visuals were verified with SwiftShader (slow but correct). Real-device frame rates are not measured here; each WebGL scene steps down on long frames and hands back to light if needed.
-- Lighthouse numbers vary run to run locally (home 95–96, /sites 91–96 performance). CI is the source of truth.
+- Lighthouse numbers vary by a few points run to run locally (both pages 92–94 performance in interleaved runs; main 91–97). CI passes every Lighthouse assertion, including performance ≥ 90.
 
-## Status (session 1, 02:30 UTC)
+## Status (session 1, final)
 
 Done and pushed:
 - **"/":**
-  - Ignition opening and scroll story, with the particle ring in the rich tier.
+  - Ignition opening and scroll story, with technical-drawing callouts. Rich tier: particle ring.
   - Story reading heat.
   - Ventures cast/forging.
-  - Thesis furnace, with molten iron in the rich tier.
+  - Thesis furnace. Rich tier: molten iron.
+  - Footer dot ignition and a cold ring on the 404.
 - **"/sites":**
   - Live concept site cast on load.
   - Phone morph and recasts on scroll.
-  - Sparks in the rich tier.
-- **Tooling:** overnight/tools/capture.mjs, probe.mjs, shot.mjs, record.mjs (see headers).
-- **Tests:** 50+ Playwright tests, all green locally. CI green through a1ff430's parent.
+  - Rich tier: sparks.
+  - Portraits cast in.
+  - content-visibility on the lower sections.
+- **Everywhere:** the page transition, and a performance pass measured against main.
+- **Docs:** README, CLAUDE.md and overnight/MORNING.md.
+- **Tests:** 52 Playwright runs (26 tests × phone/desktop), green locally and in CI.
+- overnight/DONE created and the scheduled task disabled.
 
-## What's next
+## What's next (only if Jacob asks)
 
-1. /sites lower sections:
-   - Builders portraits cast in behind the heat front.
-   - Work cards (maybe live previews or a hover cast).
-   - Process / pricing polish.
-2. A page transition between / and /sites (heat wipe), if it can stay light.
-3. A critical pass over both openings at 390 and 1440. Check the rich-tier handoff timing.
-4. Lighthouse on CI. Refresh the PR recordings (`node overnight/tools/record.mjs ...`) and description.
-5. MORNING.md, disable the scheduled task, DONE.
+- Check the rich tier on real devices (Mac, iPhone, a mid-range Android) and tune particle counts or the probe thresholds.
+- A mobile nav menu.
+- Delete overnight/ after merging if the recordings shouldn't stay in the repo.
