@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { RING, arcPath, pixels } from '@/lib/splitRing';
 import { ventures, ventureHref } from '@/data/ventures';
 import { work } from '@/data/work';
+import { Furnace } from './Furnace';
 import { ArrowRight } from './Icons';
 import { Reveal } from './Reveal';
 import { SpotlightCard } from './SpotlightCard';
@@ -33,11 +34,11 @@ export function Ventures() {
   const live = ventures.filter((v) => v.status === 'live').length;
   let forging = 0;
   return (
-    <section id="ventures" className="container-x py-24 sm:py-32">
+    <section id="ventures" data-heat="" className="container-x py-24 sm:py-32">
       <div className="flex flex-wrap items-end justify-between gap-6">
         <div className="max-w-2xl">
           <p className="label">Ventures</p>
-          <WordReveal segments={[{ t: 'Everything new was once' }, { t: 'molten.', className: 'accent' }]} className="h-section mt-4" />
+          <WordReveal segments={[{ t: 'Everything new was once' }, { t: 'molten.', className: 'accent molten-flow' }]} className="h-section mt-4" />
         </div>
         <p className="label">
           {String(live).padStart(2, '0')} live · {String(ventures.length - live).padStart(2, '0')} forging
@@ -90,7 +91,9 @@ export function Ventures() {
                 </div>
               </SpotlightCard>
             ) : (
-              <article className="forging relative flex h-full min-h-72 flex-col overflow-hidden rounded-[1.25rem] border border-dashed border-line-strong p-7">
+              <article className="forging relative isolate flex h-full min-h-72 flex-col overflow-hidden rounded-[1.25rem] border border-dashed border-line-strong p-7">
+                {/* still in the furnace */}
+                <Furnace heat={0.55} reach="65%" />
                 <span className="font-mono text-xs uppercase tracking-[0.14em] text-bone-dim">Forging</span>
                 <div className="grid flex-1 place-items-center py-8">
                   <Forging progress={++forging === 1 ? 0.62 : 0.3} />

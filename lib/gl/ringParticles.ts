@@ -1,19 +1,21 @@
 // Rich tier: the Split Ring as molten metal (WebGL 1, no libraries).
 //
 // The same dot matrix the intro pours (lib/splitRing.ts `dotRows`/`pixels`): three rows of dots along each arc and a
-// 3 × 3 grid in each pixel. At rest the solid SVG ring shows; as the scroll story starts the ring melts into these
-// dots (glowing orange on the way), the pixels come apart dot by dot, the line's dots drift along it, and at the
+// 3 × 3 grid in each pixel. At rest the solid SVG ring shows, and only the metal around the cursor melts: there the
+// SVG is masked away and its dots glow molten and part around the cursor. As the scroll story starts the whole ring
+// melts into dots (glowing orange on the way), the pixels fly off dot by dot, then the line leaves, and at the
 // fusion it sets solid again. Everything is computed in the vertex shader from per-dot constants plus a handful of
 // uniforms, so there's no per-frame CPU work beyond one rect read, and nothing is drawn while the ring is solid.
 import { RING, dotRows, pixels } from '@/lib/splitRing';
 import { dropToLight, richForced } from '@/lib/tier';
 
 type State = { sm: number; sh: number; core: number; flare: number; out: number; melt: number };
-type Options = { canvas: HTMLCanvasElement; ring: Element; state: State; onReady?: () => void; onFail?: () => void };
+type Options = { canvas: HTMLCanvasElement; ring: SVGSVGElement; state: State; onReady?: () => void; onFail?: () => void };
 
 const { core: CORE_R, rings: RINGS } = RING;
 const DOT = 0.82; // dot diameter in ring units, as in the intro's mask
 const FLOW = 0.9; // dots per second drifting along the arcs
+const HOVER_R = 9; // ring units: how far around the cursor the metal melts
 const f1 = (n: number) => n.toFixed(4);
 const VERT = `
 precision highp float;
@@ -22,7 +24,7 @@ attribute vec4 aInfo;   // group (0,1 arc dots · 2 pixel dots · 3 core · 4 sp
 attribute vec2 aScat;
 uniform vec2 uCenter, uView;
 uniform float uScale, uDpr, uTime, uMaxPoint;
-uniform float uSm, uSh, uCore, uFlare, uBloom, uHeat;
+uniform float uSm, uSh, uCore, uFlare, uBloom, uHeat, uMelt, uLocal;
 uniform vec3 uMouse;
 varying vec4 vCol;
 varying float vSize;
@@ -43,6 +45,12 @@ void main() {
   float g = aInfo.x, ord = aInfo.y, r1 = aInfo.z, r2 = aInfo.w;
   vec2 p = aHome;
   float heat = uHeat, alpha = 1.0, size = ${f1(DOT)};
+  // Melted here? Everywhere once the story starts (uMelt); before that, only around the cursor (uLocal), measured
+  // from the dot's home so the edge of the molten patch doesn't shimmer as dots move.
+  vec2 dh = aHome - uMouse.xy;
+  float local = uLocal * (1.0 - smoothstep(${f1(HOVER_R * 0.55)}, ${f1(HOVER_R)}, length(dh)));
+  float vis = max(uMelt, local);
+  heat += local * 0.62;
   // Molten shimmer: each dot flickers a little on its own (no travelling pulses).
   float shimmer = 0.5 + 0.5 * sin(uTime * (1.3 + r1 * 1.7) + r2 * 40.0);
 
@@ -54,16 +62,16 @@ void main() {
     p = vec2(cos(a), sin(a)) * length(aHome);
     alpha *= smoothstep(0.0, 1.0 / n, o) * smoothstep(1.0, 1.0 - 1.0 / n, o);
     heat += shimmer * 0.06;
-    // "Not the model.": the human half leaves to the left.
+    // "Not the model.": the human half leaves to the left, dot by dot, and is gone.
     float q = clamp(uSh * 1.5 - r1 * 0.5, 0.0, 1.0);
-    p += vec2(-9.0 - r2 * 6.0, (r1 - 0.5) * 6.0) * q;
-    alpha *= 1.0 - 0.82 * uSh;
+    p += vec2(-30.0 - r2 * 26.0, (r1 - 0.5) * 16.0) * q * q;
+    alpha *= 1.0 - smoothstep(0.3, 0.95, q);
   } else if (g < 2.5) {
     // Machine: each pixel's grid comes apart dot by dot ("Not the person.").
     float q = clamp(uSm * 1.6 - ord * 0.6, 0.0, 1.0);
     q = q * q * (3.0 - 2.0 * q);
     p += (aScat + vec2(sin(uTime * 0.7 + r1 * 9.0), cos(uTime * 0.6 + r2 * 9.0)) * 2.0 * q) * q;
-    alpha *= 1.0 - 0.55 * q;
+    alpha *= 1.0 - 0.9 * smoothstep(0.35, 1.0, q);
     heat += q * 0.15 + shimmer * 0.06;
   } else if (g < 3.5) {
     // Core: a molten pool, scaled by uCore, swelling with the fusion flare.
@@ -75,6 +83,7 @@ void main() {
     alpha *= uCore * 0.6;
     size = 1.0 - rc * 0.35;
   } else {
+    vis = 1.0; // sparks only show with the fusion flare
     // Sparks: thrown off the core by the fusion flare, rising and cooling.
     float speed = 0.18 + r1 * 0.22;
     float age = fract(uTime * speed + r2);
@@ -85,9 +94,10 @@ void main() {
     size = 0.35 + (1.0 - age) * 0.25;
   }
 
+  alpha *= vis;
   // The cursor stirs the metal: dots part around it and heat up.
   vec2 d = p - uMouse.xy;
-  float f = exp(-dot(d, d) / 40.0) * uMouse.z;
+  float f = exp(-dot(d, d) / 40.0) * max(uMouse.z, uLocal);
   p += d / (length(d) + 0.001) * f * 3.0;
   heat += f * 0.7;
 
@@ -222,7 +232,7 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
   attr('aInfo', data.info, 4);
   attr('aScat', data.scat, 2);
   const u = Object.fromEntries(
-    ['uCenter', 'uView', 'uScale', 'uDpr', 'uTime', 'uSm', 'uSh', 'uCore', 'uFlare', 'uBloom', 'uHeat', 'uMouse', 'uMaxPoint'].map((n) => [n, gl.getUniformLocation(prog, n)]),
+    ['uCenter', 'uView', 'uScale', 'uDpr', 'uTime', 'uSm', 'uSh', 'uCore', 'uFlare', 'uBloom', 'uHeat', 'uMelt', 'uLocal', 'uMouse', 'uMaxPoint'].map((n) => [n, gl.getUniformLocation(prog, n)]),
   );
   gl.enable(gl.BLEND);
   gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
@@ -248,14 +258,22 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
   ro.observe(canvas);
 
   // Cursor in page coordinates; its strength rises while it moves and fades when it rests.
-  const mouse = { x: -1e4, y: -1e4, s: 0, target: 0, moved: 0 };
+  // `hover` rises while the cursor is over the ring (it melts the metal there), `s` while it moves (it stirs).
+  const mouse = { x: -1e4, y: -1e4, s: 0, target: 0, moved: 0, hover: 0 };
   const onMove = (e: PointerEvent) => {
     if (e.pointerType !== 'mouse') return;
     mouse.x = e.clientX;
     mouse.y = e.clientY;
     mouse.moved = performance.now();
+    loop();
+  };
+  const onOut = (e: MouseEvent) => {
+    if (e.relatedTarget) return;
+    mouse.x = mouse.y = -1e4;
+    loop();
   };
   addEventListener('pointermove', onMove, { passive: true });
+  document.addEventListener('mouseout', onOut);
   // While the ring is solid nothing runs; a scroll wakes the loop, which then runs until the ring has set again.
   let scrolled = 0;
   const onScroll = () => {
@@ -271,6 +289,7 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
   let ready = false;
   let lost = false;
   let drawn = true; // whether the canvas has anything on it
+  let hole = false; // whether the SVG has a hole masked out around the cursor
   let melting = 0; // ms the ring has been molten, for the frame-time check
   const io = new IntersectionObserver(([e]) => {
     visible = e.isIntersecting;
@@ -295,13 +314,32 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
       ready = true;
       onReady?.();
     }
-    // Solid ring: the SVG shows and there's nothing to draw. Sleep once the scrolling has settled.
-    if (state.melt < 0.002) {
+    const r = ring.getBoundingClientRect();
+    const scale = r.width / 64;
+    const mx = (mouse.x - (r.left + r.width / 2)) / scale;
+    const my = (mouse.y - (r.top + r.height / 2)) / scale;
+    // Before the story starts, the cursor melts the metal it's over (and nothing else).
+    const over = Math.hypot(mx, my) < 36 && state.out < 0.25 ? 1 : 0;
+    mouse.hover += (over - mouse.hover) * Math.min(1, dt / (over ? 160 : 420));
+    if (mouse.hover < 0.002) mouse.hover = 0;
+    const local = mouse.hover * Math.max(0, 1 - state.out * 4);
+    // Cut the SVG away where the dots take over (feathered to match their fade-in).
+    if (local > 0) {
+      ring.style.setProperty('--hx', `${(mx * scale + r.width / 2).toFixed(1)}px`);
+      ring.style.setProperty('--hy', `${(my * scale + r.height / 2).toFixed(1)}px`);
+      ring.style.setProperty('--hr', `${(HOVER_R * scale * Math.min(1, local * 1.6)).toFixed(1)}px`);
+      hole = true;
+    } else if (hole) {
+      ring.style.setProperty('--hr', '0px');
+      hole = false;
+    }
+    // Solid ring: the SVG shows and there's nothing to draw. Sleep once the scrolling and the cursor have settled.
+    if (state.melt < 0.002 && local === 0) {
       if (drawn) gl.clear(gl.COLOR_BUFFER_BIT);
       drawn = false;
       melting = 0;
       last = 0;
-      if (now - scrolled < 1500) raf = requestAnimationFrame(frame);
+      if (now - scrolled < 1500 || now - mouse.moved < 600) raf = requestAnimationFrame(frame);
       return;
     }
     raf = requestAnimationFrame(frame);
@@ -318,9 +356,7 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
       resize();
     }
 
-    const r = ring.getBoundingClientRect();
     const cr = canvas.getBoundingClientRect();
-    const scale = r.width / 64;
     const cx = r.left + r.width / 2 - cr.left;
     const cy = r.top + r.height / 2 - cr.top;
     mouse.target = now - mouse.moved < 900 ? 1 : 0;
@@ -340,7 +376,9 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
     gl.uniform1f(u.uCore, Math.min(1, state.core));
     gl.uniform1f(u.uFlare, state.flare);
     gl.uniform1f(u.uHeat, heat);
-    gl.uniform3f(u.uMouse, (mouse.x - (r.left + r.width / 2)) / scale, (mouse.y - (r.top + r.height / 2)) / scale, mouse.s);
+    gl.uniform1f(u.uMelt, m);
+    gl.uniform1f(u.uLocal, local);
+    gl.uniform3f(u.uMouse, mx, my, mouse.s);
     gl.uniform1f(u.uBloom, 1);
     gl.drawArrays(gl.POINTS, 0, data.count);
     gl.uniform1f(u.uBloom, 0);
@@ -361,7 +399,9 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
     io.disconnect();
     ro.disconnect();
     removeEventListener('pointermove', onMove);
+    document.removeEventListener('mouseout', onOut);
     removeEventListener('scroll', onScroll);
+    ring.style.removeProperty('--hr');
     document.removeEventListener('visibilitychange', onVis);
     canvas.removeEventListener('webglcontextlost', onLost);
   }

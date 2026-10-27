@@ -632,15 +632,19 @@ textarea.field {
     rgba(255, 91, 31, 0) 56%
   );
 }
-/* Rich tier: the ring melts into the WebGL dots for the scroll story (--melt, 0 → 1) and is solid SVG otherwise. */
+/* Rich tier: the ring melts into the WebGL dots for the scroll story (--melt, 0 → 1) and is solid SVG otherwise,
+   except around the cursor, where lib/gl/ringParticles.ts masks a feathered hole (--hx, --hy, --hr) out of the SVG
+   and draws molten dots in it. */
 .ig-gl {
   opacity: 0;
 }
 .ig[data-gl] .ig-gl {
-  opacity: var(--melt);
+  opacity: 1;
 }
 .ig[data-gl] .ig-svg {
   opacity: calc(1 - var(--melt));
+  -webkit-mask: radial-gradient(circle at var(--hx, 50%) var(--hy, 50%), transparent calc(var(--hr, 0px) * 0.55), #000 var(--hr, 0px));
+  mask: radial-gradient(circle at var(--hx, 50%) var(--hy, 50%), transparent calc(var(--hr, 0px) * 0.55), #000 var(--hr, 0px));
 }
 
 /* ---------- The pour (components/Ignition.tsx Pour): everything is in ring units, as % of the ring's box ----------
@@ -1413,8 +1417,8 @@ textarea.field {
     visibility: hidden;
   }
   .js .ig-human {
-    transform: translateX(calc(var(--sh) * -8px));
-    opacity: calc(1 - var(--sh) * 0.85);
+    transform: translateX(calc(var(--sh) * -30px));
+    opacity: calc(1 - var(--sh));
   }
   .js .ig-px {
     --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
@@ -1422,7 +1426,7 @@ textarea.field {
     transform-origin: center;
     transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px)) rotate(calc(var(--dr) * var(--q) * 1deg))
       scale(calc(1 - var(--q) * 0.2));
-    opacity: calc(1 - var(--q) * 0.45);
+    opacity: calc(1 - var(--q) * 0.9);
   }
   .js .ig-core-g {
     transform-box: fill-box;
@@ -1838,6 +1842,117 @@ textarea.field {
   opacity: var(--k);
   transform: scale(calc(0.6 + var(--k) * 0.5));
   pointer-events: none;
+}
+
+/* ---------- Furnace (components/Furnace.tsx): the Thesis's heat in small doses ----------
+   A low glow off the floor and heat rising from it in soft waves (a tile of blurred sine lines drifting up and
+   sideways, faded out with height). Everything moves by transform or opacity, and only while on screen. */
+.furnace {
+  --heat: 1;
+  --reach: 80%; /* how high the waves rise before they fade out */
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.furnace::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(75% 85% at 50% 120%, rgba(255, 150, 70, 0.3), rgba(255, 91, 31, 0.12) 40%, rgba(130, 22, 0, 0.05) 66%, rgba(130, 22, 0, 0) 86%);
+  opacity: var(--heat);
+}
+.furnace-waves {
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--heat) * 0.8);
+  -webkit-mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
+  mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
+}
+.furnace-waves i {
+  position: absolute;
+  inset: 0 0 -160px -400px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cfilter id='b' x='-10%25' y='-60%25' width='120%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cg fill='none' filter='url(%23b)'%3E%3Cpath stroke='%23ff9a4a' stroke-opacity='.3' stroke-width='16' d='M0 50Q50 32 100 50T200 50T300 50T400 50'/%3E%3Cpath stroke='%23ff6a2a' stroke-opacity='.22' stroke-width='12' d='M0 122Q66.7 140 133.3 122T266.7 122T400 122'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 400px 160px repeat;
+}
+.furnace-waves i + i {
+  inset: 0 -560px -220px 0;
+  background-size: 560px 220px;
+  opacity: 0.6;
+}
+.furnace-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+.furnace[data-gl] .furnace-gl {
+  opacity: 0.6;
+}
+.furnace[data-gl] .furnace-waves {
+  opacity: calc(var(--heat) * 0.4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .furnace::before {
+    animation: furnace-breathe 5.5s ease-in-out infinite paused;
+  }
+  .furnace-waves i {
+    animation: heat-rise 5s linear infinite paused;
+  }
+  .furnace-waves i + i {
+    animation-name: heat-rise-wide;
+    animation-duration: 8s;
+  }
+  .furnace[data-live]::before,
+  .furnace[data-live] .furnace-waves i {
+    animation-play-state: running;
+  }
+}
+@keyframes furnace-breathe {
+  50% {
+    opacity: calc(var(--heat) * 0.72);
+  }
+}
+/* one tile up and one tile across per loop, so it never jumps */
+@keyframes heat-rise {
+  to {
+    translate: 400px -160px;
+  }
+}
+@keyframes heat-rise-wide {
+  to {
+    translate: -560px -220px;
+  }
+}
+/* "molten." in the Ventures heading: the word is the metal, with brighter heat flowing through it. */
+.molten-flow {
+  background: linear-gradient(100deg, var(--ember) 0%, var(--ember-hot) 18%, #fff0d4 26%, var(--ember-hot) 34%, var(--ember) 52%, #ff7a2e 74%, var(--ember) 100%) 0 0 / 250% 100% repeat-x;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  padding: 0 0.1em 0.3em 0.2em; /* as .molten: cover the italic overhang and descenders */
+  margin: 0 -0.1em -0.3em -0.2em;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* runs alongside the word's own reveal (same list), only while the heading is on screen */
+  .words[data-in] .w.molten-flow {
+    animation:
+      word-in 1000ms var(--ease-spring) both,
+      molten-flow 7s linear infinite;
+    animation-delay: calc(var(--d, 0ms) + var(--i) * 45ms), 0s;
+    animation-play-state: running, paused;
+  }
+  [data-live] .words[data-in] .w.molten-flow {
+    animation-play-state: running, running;
+  }
+}
+/* one whole gradient width per loop: 250% wide, so -166.67% moves it by exactly its own width */
+@keyframes molten-flow {
+  to {
+    background-position: -166.667% 0;
+  }
 }
 
 /* ---------- Process: heat runs down the rail with a spark at its leading edge ---------- */
