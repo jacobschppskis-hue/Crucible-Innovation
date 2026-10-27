@@ -667,6 +667,45 @@ textarea.field {
   opacity: 0;
   pointer-events: none;
 }
+/* Callouts beside the ring (desktop only): a leader line and two labels each side. */
+.ig-note {
+  position: absolute;
+  top: 50%;
+  display: none;
+  flex-direction: column;
+  gap: 0.35rem;
+  translate: 0 -50%;
+  white-space: nowrap;
+}
+.ig-note-h {
+  right: calc(100% + 1.25rem);
+  align-items: flex-end;
+  text-align: right;
+}
+.ig-note-m {
+  left: calc(100% + 1.25rem);
+  align-items: flex-start;
+}
+.ig-note-line {
+  position: absolute;
+  top: 50%;
+  width: clamp(2.5rem, 5vw, 5rem);
+  height: 1px;
+  background: var(--line-strong);
+}
+.ig-note-h .ig-note-line {
+  left: calc(100% + 0.75rem);
+  transform-origin: right;
+}
+.ig-note-m .ig-note-line {
+  right: calc(100% + 0.75rem);
+  transform-origin: left;
+}
+@media (min-width: 1024px) {
+  .ig-note {
+    display: flex;
+  }
+}
 /* Ignition: a white-hot bloom blows out from the core and a thin streak of light crosses it, both gone in a second. */
 .ig-flare {
   position: absolute;
@@ -836,6 +875,15 @@ textarea.field {
   .js .ig-heat {
     animation: ig-heat calc(2200ms * var(--T)) ease-out calc(260ms * var(--T)) both;
   }
+  .js .ig-note > .label {
+    animation: rise calc(900ms * var(--T)) var(--ease-spring) calc(1500ms * var(--T)) both;
+  }
+  .js .ig-note > .label + .label {
+    animation-delay: calc(1600ms * var(--T));
+  }
+  .js .ig-note-line {
+    animation: ig-line calc(800ms * var(--T)) var(--ease-out) calc(1350ms * var(--T)) both;
+  }
   .js .nav-intro {
     animation: ig-nav calc(1000ms * var(--T)) var(--ease-out) calc(900ms * var(--T)) both;
   }
@@ -974,6 +1022,11 @@ textarea.field {
     transform: none;
   }
 }
+@keyframes ig-line {
+  from {
+    transform: scaleX(0);
+  }
+}
 @keyframes ig-nav {
   from {
     opacity: 0;
@@ -1014,6 +1067,13 @@ textarea.field {
   .js .ig-human {
     transform: translateX(calc(var(--sh) * -8px));
     opacity: calc(1 - var(--sh) * 0.85);
+  }
+  /* while one half stands alone, its callout stays lit and the other's dims */
+  .js .ig-note-h {
+    opacity: calc(1 - var(--sh) * 0.75);
+  }
+  .js .ig-note-m {
+    opacity: calc(1 - var(--sm) * 0.75);
   }
   .js .ig-px {
     --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
