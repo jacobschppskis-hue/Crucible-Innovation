@@ -582,6 +582,7 @@ textarea.field {
    (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --f, --t1..--t3 from lib/scroll.ts. */
 .ig {
   --o: 0;
+  --melt: 0;
   --sm: 0;
   --sh: 0;
   --core: 1;
@@ -590,20 +591,22 @@ textarea.field {
   --t1: 0;
   --t2: 0;
   --t3: 1;
-  --T: 1; /* intro tempo: 1 on the first visit of a session, faster after that */
+}
+/* Intro tempo (the nav uses it too): 1 on the first visit of a session, faster after that. */
+:root {
+  --T: 1;
 }
 .ig-stage {
   min-height: 100svh;
 }
 .ig-ring-area {
-  container-type: size;
   min-height: 9rem;
 }
 .ig-ring {
   --rs: min(74vw, 40svh);
   position: relative;
-  width: var(--rs); /* browsers without container units */
-  width: min(var(--rs), 100cqh);
+  container-type: inline-size; /* 1cqw = 1% of the ring, for the pour's sparks */
+  width: var(--rs);
   aspect-ratio: 1;
   color: var(--bone);
 }
@@ -629,55 +632,246 @@ textarea.field {
     rgba(255, 91, 31, 0) 56%
   );
 }
-.ig-shock {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 16%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  translate: -50% -50%;
-  border: 1px solid var(--ember-hot);
-  box-shadow: 0 0 24px rgba(255, 91, 31, 0.5);
-  opacity: 0;
-  pointer-events: none;
-}
-/* Ignition: a white-hot bloom blows out from the core and a thin streak of light crosses it, both gone in a second. */
-.ig-flare {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: min(140vw, 90rem);
-  height: 2px;
-  margin: -1px 0 0 calc(min(140vw, 90rem) / -2);
-  background: linear-gradient(90deg, transparent, rgba(255, 179, 71, 0.5) 30%, #fff3df 50%, rgba(255, 179, 71, 0.5) 70%, transparent);
-  box-shadow: 0 0 12px rgba(255, 91, 31, 0.6);
-  opacity: 0;
-  pointer-events: none;
-}
-.ig-spark {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 46%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(circle, #fff3df 0%, rgba(255, 179, 71, 0.85) 12%, rgba(255, 91, 31, 0.35) 30%, rgba(255, 91, 31, 0) 62%);
-  opacity: 0;
-  pointer-events: none;
-}
+/* Rich tier: the ring melts into the WebGL dots for the scroll story (--melt, 0 → 1) and is solid SVG otherwise. */
 .ig-gl {
   opacity: 0;
-  transition: opacity 700ms ease;
 }
 .ig[data-gl] .ig-gl {
-  opacity: 1;
-}
-.ig-svg {
-  transition: opacity 900ms ease;
+  opacity: var(--melt);
 }
 .ig[data-gl] .ig-svg {
+  opacity: calc(1 - var(--melt));
+}
+
+/* ---------- The pour (components/Ignition.tsx Pour): everything is in ring units, as % of the ring's box ----------
+   Shown only with JS and motion allowed; the solid ring underneath is what everyone else sees. */
+.ig-pour {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+.ig-pour > *,
+.ig-pour svg {
+  position: absolute;
+  overflow: visible;
+}
+.ig-trickle,
+.ig-trickle > div,
+.ig-melt,
+.ig-melt-glow,
+.ig-sparks {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ig-svg {
+  z-index: 1;
+}
+.ig-trickle,
+.ig-cfill,
+.ig-stream,
+.ig-cru,
+.ig-sparks {
+  z-index: 2;
+}
+/* The mould: hairlines, like a technical drawing, scanned in from the top by a bright line. */
+.ig-mould {
+  overflow: hidden;
+  -webkit-mask: var(--mould) center / 100% 100% no-repeat;
+  mask: var(--mould) center / 100% 100% no-repeat;
+}
+.ig-mould i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 200%;
+  background: linear-gradient(to bottom, rgba(232, 228, 216, 0.42) 46%, #ffe3b8 49.6%, rgba(255, 227, 184, 0) 50%);
+}
+/* The metal: a tall heat gradient (clear above the surface, white-hot at it, orange below, bone far below) seen
+   through the dot matrix. Moving it up fills the mould and then cools it, all on the compositor. */
+.ig-melt {
+  position: absolute;
+  overflow: hidden;
+  -webkit-mask: var(--dots) center / 100% 100% no-repeat;
+  mask: var(--dots) center / 100% 100% no-repeat;
+}
+.ig-lvl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 312.5%; /* 200 units: 64 clear, then the gradient */
+  translate: 0 -30.5%; /* surface at y = 3, the top of the mould */
+}
+.ig-lvl > i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 248, 234, 0) 31.6%,
+    #fff8ea 32%,
+    #ffe3a6 32.75%,
+    #ffc061 34.5%,
+    #ff9338 38%,
+    #ff6c27 43%,
+    #ff5b1f 49%,
+    #ff5b1f 57%,
+    var(--bone) 68%
+  );
+}
+.ig-melt-glow {
+  filter: blur(5px);
+}
+.ig-melt-glow .ig-lvl > i {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 240, 214, 0) 31.6%,
+    rgba(255, 240, 214, 0.95) 32%,
+    rgba(255, 190, 100, 0.8) 34.5%,
+    rgba(255, 120, 40, 0.55) 40%,
+    rgba(255, 91, 31, 0.28) 50%,
+    rgba(255, 91, 31, 0) 60%
+  );
+}
+/* Metal running down the arcs' channels ahead of the fill: each arc's centre line (a mask), uncovered from the top
+   by a half-plane turning about the centre. */
+.ig-trickle {
+  filter: drop-shadow(0 0 3px rgba(255, 120, 40, 0.9));
+}
+.ig-trickle > div {
+  position: absolute;
+  overflow: hidden;
+  -webkit-mask: var(--tr) center / 100% 100% no-repeat;
+  mask: var(--tr) center / 100% 100% no-repeat;
+}
+.ig-trickle i {
+  position: absolute;
+  left: 50%;
+  top: -50%;
+  width: 100%;
+  height: 200%;
+  transform-origin: 0 50%;
+  background: #ffe2ae;
+}
+/* The core cavity, filling from the bottom. */
+.ig-cfill {
+  overflow: hidden;
+  border-radius: 50%;
+}
+.ig-cfill i,
+.ig-cfill i::after {
+  position: absolute;
+  inset: 0;
+}
+.ig-cfill i {
+  background: radial-gradient(circle at 50% 30%, #fff6e2, #ffc061 45%, #ff7a2e 85%);
+  translate: 0 100%;
+}
+.ig-cfill i::after {
+  content: '';
+  background: var(--ember);
+  opacity: 0;
+}
+/* The stream: narrowing as it falls, with streaks running down it. */
+.ig-stream {
+  transform-origin: 50% 0;
+  scale: 1 0;
+  filter: drop-shadow(0 0 4px rgba(255, 120, 40, 0.85));
+}
+.ig-stream > div {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  clip-path: polygon(0 0, 100% 0, 72% 100%, 28% 100%);
+  background: linear-gradient(90deg, rgba(255, 110, 40, 0), #ff8a3a 18%, #ffd27e 38%, #fff6e2 50%, #ffd27e 62%, #ff8a3a 82%, rgba(255, 110, 40, 0));
+}
+.ig-stream i {
+  position: absolute;
+  inset: -100% 0 0;
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.35) 1.2%, rgba(255, 255, 255, 0) 2.6%, rgba(255, 255, 255, 0) 5%);
+}
+/* The crucible: turns about its lip; the molten pool inside stays level as it tips. */
+.ig-cru {
+  transform-origin: 90.3226% 11.3208%;
+}
+.ig-cru > * {
+  position: absolute;
+  inset: 0;
+}
+.ig-cru-glow {
+  inset: -30% -45% -55%;
+  background: radial-gradient(closest-side, rgba(255, 120, 40, 0.42), rgba(255, 91, 31, 0.12) 55%, rgba(255, 91, 31, 0));
+  opacity: 0;
+}
+.ig-cru-drop i {
+  position: absolute;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: #a8a294;
+  transform-origin: 50% 100%;
+}
+/* Heating: a strip of colours (cold, dull red, orange, white-hot) slides through each pixel. */
+.ig-cru-drop i::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 400%;
+  background: linear-gradient(#a8a294 22%, #8a3417 38%, #ff6a24 58%, #ffc061 74%, #fff1d6 90%);
+}
+.ig-pool-r {
+  position: absolute;
+  left: -200%;
+  top: -200%;
+  width: 500%;
+  height: 500%;
+  transform-origin: 58.0645% 42.2642%; /* the lip */
+}
+.ig-pool {
+  position: absolute;
+  left: 0;
+  top: 42.2642%;
+  width: 100%;
+  height: 57.7358%;
+  translate: 0 24.84%; /* empty */
+  background: linear-gradient(to bottom, #fff6e0, #ffd58a 1.6%, #ffb347 4.6%, #ff7a2e 11.4%, var(--ember) 23%, #e04a14);
+}
+.ig-cru-art {
+  width: 100%;
+  height: 100%;
+  color: var(--bone);
+}
+.ig-cru-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.16;
+  stroke-linejoin: round;
+}
+.ig-cru-inner {
+  stroke-width: 0.1;
+  opacity: 0.55;
+}
+.ig-cru-wall {
+  fill: url(#ig-hatch);
+}
+#ig-hatch path {
+  stroke: currentColor;
+  stroke-width: 0.07;
+  opacity: 0.6;
+}
+/* Sparks: each one a parabola, as keyframes (one element, one animation each). */
+.ig-sparks i {
+  position: absolute;
+  left: 48.6%;
+  top: 43.6%;
+  width: 2.8%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6e6 0 18%, #ffc061 30%, rgba(255, 110, 40, 0.5) 46%, rgba(255, 91, 31, 0) 70%);
   opacity: 0;
 }
 
@@ -757,41 +951,89 @@ textarea.field {
   display: none;
 }
 
-/* Intro: the core sparks, a heat pulse rolls out, arcs draw, pixels are stamped hot and cool, the lines rise. */
+/* Intro: the pour (see the Ignition docblock). Times are for the first visit (--T: 1); repeat visits run at 0.45. */
 @media (prefers-reduced-motion: no-preference) {
-  .js[data-intro='quick'] .ig {
+  .js[data-intro='quick'] {
     --T: 0.45;
   }
-  .js .ig-core {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: ig-core calc(1100ms * var(--T)) var(--ease-out) both;
+  .js .ig-pour {
+    display: block;
+    animation: ig-gone 1ms linear calc(4500ms * var(--T)) forwards;
   }
-  .js .ig-spark {
-    animation: ig-spark calc(1300ms * var(--T)) cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  .js .ig-svg {
+    animation: ig-solid calc(420ms * var(--T)) ease calc(3950ms * var(--T)) backwards;
   }
-  .js .ig-shock {
-    animation: ig-shock calc(1500ms * var(--T)) cubic-bezier(0.25, 0.5, 0.4, 1) calc(90ms * var(--T)) both;
+  /* 0.0 s: the mould is scanned in. */
+  .js .ig-mould {
+    animation: ig-out calc(550ms * var(--T)) ease calc(3450ms * var(--T)) forwards;
   }
-  .js .ig-flare {
-    animation: ig-flare calc(1100ms * var(--T)) cubic-bezier(0.2, 0.7, 0.2, 1) calc(40ms * var(--T)) both;
+  .js .ig-mould i {
+    animation: ig-scan calc(800ms * var(--T)) cubic-bezier(0.45, 0, 0.35, 1) backwards;
+  }
+  /* 0.15 s: the crucible; 0.3 s: three pixels drop into it; 0.7 s: they glow and melt into a pool. */
+  .js .ig-cru {
+    animation: ig-cru calc(3570ms * var(--T)) linear calc(150ms * var(--T)) both;
+  }
+  .js .ig-pool-r {
+    animation: ig-untip calc(3570ms * var(--T)) linear calc(150ms * var(--T)) both;
+  }
+  .js .ig-pool {
+    animation: ig-pool calc(2300ms * var(--T)) linear calc(750ms * var(--T)) both;
+  }
+  .js .ig-cru-glow {
+    animation: ig-cru-glow calc(2700ms * var(--T)) ease calc(800ms * var(--T)) both;
+  }
+  .js .ig-cru-drop i {
+    animation: ig-ingot calc(1120ms * var(--T)) linear calc((300ms + var(--n) * 90ms) * var(--T)) both;
+  }
+  .js .ig-cru-drop i::after {
+    animation: ig-heat-up calc(560ms * var(--T)) linear calc(620ms * var(--T)) both;
+  }
+  /* 1.5 s: it pours. The stream falls down the sprue into the core, throwing sparks; metal runs down the channels. */
+  .js .ig-stream {
+    animation: ig-stream calc(1550ms * var(--T)) linear calc(1500ms * var(--T)) both;
+  }
+  .js .ig-stream > div {
+    animation: ig-scale-out calc(260ms * var(--T)) cubic-bezier(0.5, 0, 0.9, 0.5) calc(3000ms * var(--T)) forwards;
+  }
+  .js .ig-stream i {
+    animation: ig-flow calc(300ms * var(--T)) linear calc(1500ms * var(--T)) 6;
+  }
+  .js .ig-cfill i {
+    animation: ig-cfill calc(520ms * var(--T)) cubic-bezier(0.3, 0.1, 0.4, 1) calc(1780ms * var(--T)) forwards;
+  }
+  .js .ig-cfill i::after {
+    animation: ig-on calc(1100ms * var(--T)) ease calc(2700ms * var(--T)) forwards;
+  }
+  .js .ig-trickle {
+    animation: ig-out calc(400ms * var(--T)) ease calc(2100ms * var(--T)) forwards;
+  }
+  .js .ig-trickle i {
+    animation: ig-sweep calc(var(--tm) * var(--T)) cubic-bezier(0.55, 0, 0.9, 0.6) calc(var(--td) * var(--T)) both;
+  }
+  .js .ig-trickle > div {
+    --tm: 380ms;
+    --td: 1680ms;
+  }
+  .js .ig-trickle > div + div {
+    --tm: 280ms;
+    --td: 1750ms;
+  }
+  .js .ig-sparks i {
+    animation: ig-spark calc(var(--ms) * var(--T)) linear calc((1800ms + var(--dl)) * var(--T)) both;
   }
   .js .ig-glow span {
     animation:
-      ig-glow calc(1800ms * var(--T)) ease-out calc(60ms * var(--T)) both,
-      breathe 4.5s ease-in-out calc(2600ms * var(--T)) infinite;
+      ig-glow calc(1800ms * var(--T)) ease-out calc(1800ms * var(--T)) both,
+      breathe 4.5s ease-in-out calc(4400ms * var(--T)) infinite;
   }
-  .js .ig-arc {
-    stroke-dasharray: 1 2; /* the long gap stops a sliver showing at the far end before the draw */
-    stroke-dashoffset: 1;
-    animation:
-      ig-draw calc(1050ms * var(--T)) cubic-bezier(0.45, 0.05, 0.2, 1) calc((140ms + var(--ri) * 130ms) * var(--T)) forwards,
-      ig-cool-ink calc(1600ms * var(--T)) ease-out calc((400ms + var(--ri) * 130ms) * var(--T)) both;
+  /* 2.0 s: the metal rises through the mould, white-hot at the surface. 2.85 s: it cools to orange, then bone,
+     the first metal in first. 3.95 s: it sets solid. */
+  .js .ig-lvl {
+    animation: ig-metal calc(2100ms * var(--T)) linear calc(2000ms * var(--T)) both;
   }
-  .js .ig-pop {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: ig-pop calc(700ms * var(--T)) var(--ease-out) calc((400ms + var(--i) * 32ms) * var(--T)) both;
+  .js .ig-heat {
+    animation: ig-heat calc(2000ms * var(--T)) ease-out calc(2000ms * var(--T)) both;
   }
   .js .ig-in {
     animation: ig-rise calc(1250ms * var(--T)) cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ld, 0ms) * var(--T)) both;
@@ -802,9 +1044,10 @@ textarea.field {
   .js .ig-l2 .ig-in {
     --ld: 430ms;
   }
+  /* "alloyed." stays white-hot while the metal pours and cools with it. */
   .js .ig-cool::after {
     will-change: opacity;
-    animation: ig-cool calc(2400ms * var(--T)) cubic-bezier(0.4, 0, 0.6, 1) calc(400ms * var(--T)) both;
+    animation: ig-cool calc(3700ms * var(--T)) cubic-bezier(0.4, 0, 0.6, 1) calc(400ms * var(--T)) both;
   }
   .js .ig-meta > * {
     animation: rise calc(1000ms * var(--T)) var(--ease-spring) calc((820ms + var(--mi, 0) * 110ms) * var(--T)) both;
@@ -812,74 +1055,282 @@ textarea.field {
   .js .ig-meta > :nth-child(2) {
     --mi: 1;
   }
-  .js .ig-heat {
-    animation: ig-heat calc(2200ms * var(--T)) ease-out calc(260ms * var(--T)) both;
-  }
   .js .nav-intro {
     animation: ig-nav calc(1000ms * var(--T)) var(--ease-out) calc(900ms * var(--T)) both;
   }
 }
-@keyframes ig-core {
-  0% {
-    opacity: 0;
-    transform: scale(0);
-    fill: #fff3df;
-  }
-  14% {
-    opacity: 1;
-    transform: scale(1.1);
-    fill: #fff3df;
-  }
-  60% {
-    fill: var(--ember-hot);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-    fill: var(--ember);
+@keyframes ig-gone {
+  to {
+    visibility: hidden;
   }
 }
+@keyframes ig-on {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ig-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ig-solid {
+  from {
+    opacity: 0;
+  }
+}
+/* The crucible, 0.15 s → 3.72 s: drops in (to 0.53 s); tips until the metal reaches the lip (24° at 1.5 s); keeps
+   tipping as it pours so the pool drains steadily (66° at 3.0 s); is righted (3.35 s) and lifted away. ig-untip
+   mirrors the turn, keeping the pool's surface level. */
+@keyframes ig-cru {
+  0% {
+    opacity: 0;
+    translate: 0 -30%;
+    rotate: 0deg;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  10.6% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  30.8% {
+    rotate: 0deg;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  37.8% {
+    rotate: 24deg;
+    animation-timing-function: cubic-bezier(0.25, 0, 0.6, 1);
+  }
+  79.8% {
+    rotate: 66deg;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  }
+  88.2% {
+    opacity: 1;
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
+  }
+  89.6% {
+    rotate: 6deg;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -45%;
+    rotate: 6deg;
+  }
+}
+@keyframes ig-untip {
+  0%,
+  30.8% {
+    rotate: 0deg;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  37.8% {
+    rotate: -24deg;
+    animation-timing-function: cubic-bezier(0.25, 0, 0.6, 1);
+  }
+  79.8% {
+    rotate: -66deg;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  }
+  89.6%,
+  100% {
+    rotate: -6deg;
+  }
+}
+/* The pool's surface, as a distance below the lip: empty → melted → at the lip while it pours → a residue. */
+@keyframes ig-pool {
+  0% {
+    translate: 0 24.84%;
+    animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  }
+  26% {
+    translate: 0 9.15%;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  33% {
+    translate: 0 0.16%;
+  }
+  97% {
+    translate: 0 0.16%;
+  }
+  100% {
+    translate: 0 23.86%;
+  }
+}
+@keyframes ig-cru-glow {
+  25% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ig-scan {
+  from {
+    translate: 0 -50%;
+  }
+}
+@keyframes ig-sweep {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: -180deg;
+  }
+}
+/* A pixel drops into the crucible (0 → 0.48 s, with a small bounce), sits, then slumps into the pool (from 0.7 s). */
+@keyframes ig-ingot {
+  0% {
+    translate: 0 -2600%;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  29% {
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0, 0.5, 0.5, 1);
+  }
+  36% {
+    translate: 0 -14%;
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.5);
+  }
+  43% {
+    translate: 0 0;
+  }
+  62.5% {
+    scale: 1;
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    translate: 0 0;
+    scale: 1.35 0.2;
+    opacity: 0;
+  }
+}
+@keyframes ig-heat-up {
+  to {
+    translate: 0 -75%;
+  }
+}
+/* The stream falls to the core (0.3 s), pours, and thins as the crucible empties. */
+@keyframes ig-stream {
+  0% {
+    scale: 1 0;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  19.4% {
+    scale: 1 1;
+  }
+  67.7% {
+    scale: 1 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    scale: 0.5 1;
+  }
+}
+@keyframes ig-scale-out {
+  to {
+    scale: 1 0;
+  }
+}
+@keyframes ig-flow {
+  to {
+    translate: 0 25%;
+  }
+}
+@keyframes ig-cfill {
+  to {
+    translate: 0 0;
+  }
+}
+/* x = dx·t, y = up·4t(1 − t) + dn·t² (up < 0 is the rise), in % of the ring. */
 @keyframes ig-spark {
   0% {
-    opacity: 0;
-    transform: scale(0.05);
-  }
-  7% {
-    opacity: 1;
-    transform: scale(0.7);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(2.6);
-  }
-}
-@keyframes ig-shock {
-  0% {
-    opacity: 0;
-    transform: scale(0.3);
-  }
-  5% {
-    opacity: 0.9;
-  }
-  55% {
+    translate: 0 0;
     opacity: 0;
   }
-  100% {
-    opacity: 0;
-    transform: scale(9);
-  }
-}
-@keyframes ig-flare {
-  0% {
-    opacity: 0;
-    transform: scaleX(0.05);
-  }
-  12% {
+  10% {
+    translate: calc(var(--dx) * 0.1cqw) calc((var(--up) * 0.36 + var(--dn) * 0.01) * 1cqw);
     opacity: 1;
   }
+  25% {
+    translate: calc(var(--dx) * 0.25cqw) calc((var(--up) * 0.75 + var(--dn) * 0.0625) * 1cqw);
+  }
+  45% {
+    translate: calc(var(--dx) * 0.45cqw) calc((var(--up) * 0.99 + var(--dn) * 0.2025) * 1cqw);
+  }
+  70% {
+    translate: calc(var(--dx) * 0.7cqw) calc((var(--up) * 0.84 + var(--dn) * 0.49) * 1cqw);
+  }
   100% {
+    translate: calc(var(--dx) * 1cqw) calc(var(--dn) * 1cqw);
     opacity: 0;
-    transform: scaleX(1);
+    scale: 0.45;
+  }
+}
+/* 2.0 s: the surface rises from below the mould (y = 62) to its top (y = 3, at 3.0 s); from 2.85 s the gradient
+   keeps moving up, so the metal cools from the bottom: orange, then bone (done at 4.1 s). */
+@keyframes ig-metal {
+  0.00% {
+    translate: 0 -1.00%;
+  }
+  4.76% {
+    translate: 0 -1.60%;
+  }
+  9.52% {
+    translate: 0 -3.57%;
+  }
+  14.29% {
+    translate: 0 -7.08%;
+  }
+  19.05% {
+    translate: 0 -11.94%;
+  }
+  23.81% {
+    translate: 0 -17.38%;
+  }
+  28.57% {
+    translate: 0 -22.33%;
+  }
+  33.33% {
+    translate: 0 -26.15%;
+  }
+  38.10% {
+    translate: 0 -28.69%;
+  }
+  42.86% {
+    translate: 0 -30.17%;
+  }
+  47.62% {
+    translate: 0 -31.36%;
+  }
+  52.38% {
+    translate: 0 -33.01%;
+  }
+  59.52% {
+    translate: 0 -37.31%;
+  }
+  66.67% {
+    translate: 0 -43.64%;
+  }
+  73.81% {
+    translate: 0 -50.86%;
+  }
+  80.95% {
+    translate: 0 -57.19%;
+  }
+  88.10% {
+    translate: 0 -61.49%;
+  }
+  95.24% {
+    translate: 0 -63.63%;
+  }
+  100.00% {
+    translate: 0 -64.00%;
   }
 }
 @keyframes ig-glow {
@@ -896,36 +1347,6 @@ textarea.field {
     transform: none;
   }
 }
-@keyframes ig-draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-@keyframes ig-cool-ink {
-  from {
-    color: var(--ember-hot);
-  }
-  to {
-    color: var(--bone);
-  }
-}
-@keyframes ig-pop {
-  0% {
-    opacity: 0;
-    transform: scale(0.1);
-    color: #fff3df;
-  }
-  35% {
-    opacity: 1;
-    transform: scale(1.35);
-    color: var(--ember-hot);
-  }
-  100% {
-    opacity: 1;
-    transform: none;
-    color: var(--bone);
-  }
-}
 @keyframes ig-rise {
   from {
     transform: translate3d(0, 140%, 0); /* clear of the mask's bottom padding too */
@@ -936,7 +1357,7 @@ textarea.field {
 }
 @keyframes ig-cool {
   0%,
-  25% {
+  68% {
     opacity: 1;
   }
   100% {
@@ -967,7 +1388,13 @@ textarea.field {
     top: 0;
     height: 100svh;
   }
+  /* The pinned stage has a definite height, so the ring can also shrink to fit what's left of it. (Unpinned, the
+     area has no definite height and 100cqh would be 0.) */
+  .js .ig-ring-area {
+    container-type: size;
+  }
   .js .ig-ring {
+    width: min(var(--rs), 100cqh);
     transform: translate3d(0, calc(var(--o) * 2svh), 0) scale(calc(1 + var(--o) * 0.14));
   }
   .js .ig-l1 {

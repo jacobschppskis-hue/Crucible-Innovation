@@ -5,6 +5,8 @@ export default defineConfig({
   testDir: 'tests',
   fullyParallel: true,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
+  // Scroll scenes ease toward the scroll position (lib/scroll.ts) and GPU-less runners draw a few frames a second.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: 'http://localhost:4173',
     launchOptions: {

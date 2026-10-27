@@ -18,6 +18,16 @@ test('a repeat visit in the same session plays the quick intro', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('data-intro', 'quick');
 });
 
+test('the intro pours the mark into a mould, then only the solid ring is left', async ({ page }) => {
+  await page.goto('/?tier=light');
+  const pour = page.locator('.ig-pour');
+  await expect(pour).toBeVisible();
+  await expect(pour.locator('.ig-cru')).toHaveCount(1);
+  // Done: the pour layers are hidden and the solid ring shows.
+  await expect(pour).toBeHidden({ timeout: 20_000 });
+  await expect.poll(() => page.locator('.ig-svg').evaluate((el) => Number(getComputedStyle(el).opacity))).toBe(1);
+});
+
 test('the scroll story ends fused: core lit, last line showing, headline out of the way', async ({ page }) => {
   await page.goto('/?tier=light', { waitUntil: 'networkidle' });
   const scene = page.locator('section.ig');
@@ -47,8 +57,10 @@ test('reduced motion: no pinning, every part finished and visible', async ({ bro
   await expect(page.locator('h1')).toBeVisible();
   for (const name of ['Not the person.', 'Not the model.']) await expect(page.getByText(name)).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
-  // "alloyed." has finished cooling: the hot copy over it is gone.
+  // "alloyed." has finished cooling: the hot copy over it is gone. No pour: the ring is simply there.
   expect(await page.locator('.ig-cool').evaluate((el) => getComputedStyle(el, '::after').opacity)).toBe('0');
+  await expect(page.locator('.ig-pour')).toBeHidden();
+  expect(await page.locator('.ig-svg').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   await ctx.close();
 });
 
@@ -59,6 +71,8 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
   await expect(page.getByRole('link', { name: /See Crucible Sites/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  await expect(page.locator('.ig-pour')).toBeHidden();
+  await expect(page.locator('.ig-svg')).toBeVisible();
   expect((await page.locator('section.ig').boundingBox())!.height).toBeLessThan(page.viewportSize()!.height * 2.5);
   await ctx.close();
 });
@@ -102,11 +116,21 @@ test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ bro
 
 test.describe('rich tier', () => {
   // Headless Chromium's WebGL is SwiftShader, which the tier check rightly rejects, so these force the tier.
-  test('forced rich: the particle ring takes over from the SVG after load', async ({ page }) => {
+  test('forced rich: solid at rest, melts into dots for the story, sets solid at the end', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
-    await expect(page.locator('section.ig')).toHaveAttribute('data-gl', '', { timeout: 15000 });
+    const scene = page.locator('section.ig');
+    await expect(scene).toHaveAttribute('data-gl', '', { timeout: 15000 });
+    const opacity = (sel: string) => page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
+    expect(await opacity('.ig-gl')).toBe(0);
+    const box = (await scene.boundingBox())!;
+    const vh = page.viewportSize()!.height;
+    await page.evaluate((y) => scrollTo(0, y), (box.height - vh) * 0.3);
+    await expect.poll(() => opacity('.ig-gl')).toBeGreaterThan(0.99);
+    expect(await opacity('.ig-svg')).toBeLessThan(0.01);
+    await page.evaluate((y) => scrollTo(0, y), box.height - vh);
+    await expect.poll(() => opacity('.ig-svg')).toBeGreaterThan(0.99);
     expect(errors).toEqual([]);
   });
 
