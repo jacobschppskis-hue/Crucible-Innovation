@@ -76,6 +76,11 @@ html.lenis body {
   .container-x {
     @apply mx-auto w-full max-w-[76rem] px-4 sm:px-6 lg:px-8;
   }
+  /* Below-the-fold sections: the browser skips their layout and paint until they come near the viewport. */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 1000px;
+  }
   .label {
     @apply font-mono text-[0.75rem] uppercase tracking-[0.14em] text-bone-dim;
   }
@@ -1222,6 +1227,17 @@ textarea.field {
   50% {
     fill: rgba(255, 179, 71, 0.22);
   }
+}
+
+/* ---------- Builders: the portrait's mold is a faint grid on the bone card ---------- */
+.portrait-mold {
+  background-image:
+    linear-gradient(rgba(13, 13, 11, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 13, 11, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.portrait-mold .cast-piece {
+  background: var(--bone);
 }
 
 /* ---------- Reading heat (components/HeatText.tsx): words warm from dim to bone as the block is read ----------

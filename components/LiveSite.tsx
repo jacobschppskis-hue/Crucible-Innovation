@@ -1,6 +1,7 @@
 import './LiveSite.css';
 
 export type Theme = 'cafe' | 'barber' | 'landscaper';
+export const isTheme = (s: string): s is Theme => s === 'cafe' || s === 'barber' || s === 'landscaper';
 
 /**
  * The three concept sites (fictional businesses, see data/work.ts) as real, responsive HTML instead of screenshots.

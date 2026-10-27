@@ -6,6 +6,7 @@ import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
+import { LiveSite, isTheme } from '@/components/LiveSite';
 import { Nav } from '@/components/Nav';
 import { PricingCard } from '@/components/PricingCard';
 import { Process } from '@/components/Process';
@@ -66,7 +67,7 @@ export default function SitesPage() {
         </section>
 
         {/* 3. Before / After */}
-        <section className="container-x py-24 sm:py-32">
+        <section className="cv-auto container-x py-24 sm:py-32">
           <SectionHead
             label="Before / After"
             title={[{ t: 'Same business.' }, { t: 'Different decade.', className: 'accent' }]}
@@ -82,13 +83,13 @@ export default function SitesPage() {
         </section>
 
         {/* 4. Process */}
-        <section id="process" className="container-x pb-24 sm:pb-32">
+        <section id="process" className="cv-auto container-x pb-24 sm:pb-32">
           <SectionHead label="Process" title={[{ t: 'From first call to live site in' }, { t: 'about a week.', className: 'accent' }]} className="mb-14 sm:mb-20" />
           <Process />
         </section>
 
         {/* 5. Work */}
-        <section id="work" className="container-x pb-24 sm:pb-32">
+        <section id="work" className="cv-auto container-x pb-24 sm:pb-32">
           <SectionHead
             label="Work"
             title={[{ t: 'Think in' }, { t: 'kelvin.', className: 'accent' }]}
@@ -99,9 +100,19 @@ export default function SitesPage() {
               <Reveal as="li" key={w.slug} delay={i * 0.08}>
                 <SpotlightCard as="article" tilt className="group h-full p-2.5">
                   <div data-scroll="view" className="parallax relative aspect-[16/10] overflow-hidden rounded-xl border border-line">
-                    <div className="parallax-inner absolute inset-0">
-                      <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top" />
-                    </div>
+                    {isTheme(w.slug) ? (
+                      // Concepts are live HTML (components/LiveSite.tsx): hover the buttons, the coffee turns, the pole spins.
+                      <div role="img" aria-label={w.alt} className="parallax-inner ls-vp absolute inset-0">
+                        {/* the parallax layer overscans by 8% top and bottom; keep the site's nav in the frame */}
+                        <div aria-hidden className="absolute inset-x-0 bottom-0 top-[7%]">
+                          <LiveSite theme={w.slug} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="parallax-inner absolute inset-0">
+                        <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top" />
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-start justify-between gap-4 px-3 pb-3 pt-5">
                     <div>
@@ -118,7 +129,7 @@ export default function SitesPage() {
         </section>
 
         {/* 6. Pricing */}
-        <section id="pricing" className="container-x pb-24 sm:pb-32">
+        <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32">
           <SectionHead
             label="Pricing"
             title={[{ t: 'Simple packages.' }, { t: 'Honest prices.', className: 'accent' }]}
@@ -146,13 +157,13 @@ export default function SitesPage() {
         <Builders />
 
         {/* 8. FAQ */}
-        <section id="faq" className="container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <section id="faq" className="cv-auto container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
           <SectionHead label="FAQ" title={[{ t: 'Questions,' }, { t: 'answered.', className: 'accent' }]} />
           <Faq />
         </section>
 
         {/* 9. Start a project */}
-        <section id="start" className="container-x pb-24 sm:pb-32">
+        <section id="start" className="cv-auto container-x pb-24 sm:pb-32">
           <div className="grid gap-12 rounded-3xl border border-line bg-ground-2 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:p-14">
             <div>
               <p className="label">Start a project</p>

@@ -7,16 +7,25 @@ import { SplitRing } from './SplitRing';
 function Portrait({ b }: { b: Builder }) {
   if (b.portrait) {
     // ASCII portraits are drawn as dark ink, so they sit on a bone card like the light cards in the brand sheet.
+    // On first view the ink is cast in behind the Ember front, over a faint grid (the mold).
     return (
-      <div className="relative aspect-[5/6] overflow-hidden rounded-2xl bg-bone">
-        <Image
-          src={b.portrait}
-          alt={`ASCII portrait of ${b.name}`}
-          width={800}
-          height={956}
-          sizes="(min-width: 768px) 24rem, 90vw"
-          className="absolute inset-0 h-full w-full object-contain p-[4%]"
-        />
+      <div data-cast="" className="portrait-mold relative aspect-[5/6] overflow-hidden rounded-2xl bg-bone">
+        <div className="cast-layer cast-piece">
+          <div className="cast-in">
+            <Image
+              src={b.portrait}
+              alt={`ASCII portrait of ${b.name}`}
+              width={800}
+              height={956}
+              sizes="(min-width: 768px) 24rem, 90vw"
+              className="absolute inset-0 h-full w-full object-contain p-[4%]"
+            />
+          </div>
+        </div>
+        <div aria-hidden className="cast-track">
+          <div className="cast-band" />
+          <div className="cast-front" />
+        </div>
       </div>
     );
   }
@@ -51,7 +60,7 @@ export function Builders() {
   if (solo) {
     const [b] = builders;
     return (
-      <section aria-labelledby="who" className="container-x pb-24 sm:pb-32">
+      <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32">
         <div className="grid items-center gap-10 md:grid-cols-[0.8fr_1fr] md:gap-16">
           <Reveal className="mx-auto w-full max-w-sm md:max-w-none">
             <Portrait b={b} />
@@ -74,7 +83,7 @@ export function Builders() {
   }
 
   return (
-    <section aria-labelledby="who" className="container-x pb-24 sm:pb-32">
+    <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32">
       <p className="label">Who you&rsquo;ll work with</p>
       <h2 id="who" className="h-section mt-4">
         Meet the <span className="accent">builders.</span>
