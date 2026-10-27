@@ -76,10 +76,16 @@ html.lenis body {
   .container-x {
     @apply mx-auto w-full max-w-[76rem] px-4 sm:px-6 lg:px-8;
   }
-  /* Below-the-fold sections: the browser skips their layout and paint until they come near the viewport. */
+  /* Below-the-fold sections: the browser skips their layout and paint until they come near the viewport. Each
+     section passes its rough height (--h-sm phone, --h-lg desktop) so the page doesn't change length as you scroll. */
   .cv-auto {
     content-visibility: auto;
-    contain-intrinsic-size: auto 1000px;
+    contain-intrinsic-size: auto var(--h-sm, 1000px);
+  }
+  @media (min-width: 1024px) {
+    .cv-auto {
+      contain-intrinsic-size: auto var(--h-lg, 1000px);
+    }
   }
   .label {
     @apply font-mono text-[0.75rem] uppercase tracking-[0.14em] text-bone-dim;

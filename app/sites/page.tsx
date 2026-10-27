@@ -66,7 +66,7 @@ export default function SitesPage() {
         </section>
 
         {/* 3. Before / After */}
-        <section className="cv-auto container-x py-24 sm:py-32">
+        <section className="cv-auto container-x py-24 sm:py-32" style={{ '--h-sm': '760px', '--h-lg': '1250px' } as React.CSSProperties}>
           <SectionHead
             label="Before / After"
             title={[{ t: 'Same business.' }, { t: 'Different decade.', className: 'accent' }]}
@@ -82,13 +82,13 @@ export default function SitesPage() {
         </section>
 
         {/* 4. Process */}
-        <section id="process" className="cv-auto container-x pb-24 sm:pb-32">
+        <section id="process" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '850px', '--h-lg': '510px' } as React.CSSProperties}>
           <SectionHead label="Process" title={[{ t: 'From first call to live site in' }, { t: 'about a week.', className: 'accent' }]} className="mb-14 sm:mb-20" />
           <Process />
         </section>
 
         {/* 5. Work */}
-        <section id="work" className="cv-auto container-x pb-24 sm:pb-32">
+        <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1450px', '--h-lg': '710px' } as React.CSSProperties}>
           <SectionHead
             label="Work"
             title={[{ t: 'Think in' }, { t: 'kelvin.', className: 'accent' }]}
@@ -118,7 +118,7 @@ export default function SitesPage() {
         </section>
 
         {/* 6. Pricing */}
-        <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32">
+        <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2120px', '--h-lg': '1100px' } as React.CSSProperties}>
           <SectionHead
             label="Pricing"
             title={[{ t: 'Simple packages.' }, { t: 'Honest prices.', className: 'accent' }]}
@@ -146,13 +146,13 @@ export default function SitesPage() {
         <Builders />
 
         {/* 8. FAQ */}
-        <section id="faq" className="cv-auto container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <section id="faq" className="cv-auto container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16" style={{ '--h-sm': '670px', '--h-lg': '600px' } as React.CSSProperties}>
           <SectionHead label="FAQ" title={[{ t: 'Questions,' }, { t: 'answered.', className: 'accent' }]} />
           <Faq />
         </section>
 
         {/* 9. Start a project */}
-        <section id="start" className="cv-auto container-x pb-24 sm:pb-32">
+        <section id="start" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1600px', '--h-lg': '1000px' } as React.CSSProperties}>
           <div className="grid gap-12 rounded-3xl border border-line bg-ground-2 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:p-14">
             <div>
               <p className="label">Start a project</p>

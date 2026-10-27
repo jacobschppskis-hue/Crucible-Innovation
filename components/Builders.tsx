@@ -60,7 +60,7 @@ export function Builders() {
   if (solo) {
     const [b] = builders;
     return (
-      <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32">
+      <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2100px', '--h-lg': '1200px' } as React.CSSProperties}>
         <div className="grid items-center gap-10 md:grid-cols-[0.8fr_1fr] md:gap-16">
           <Reveal className="mx-auto w-full max-w-sm md:max-w-none">
             <Portrait b={b} />
@@ -83,7 +83,7 @@ export function Builders() {
   }
 
   return (
-    <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32">
+    <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2100px', '--h-lg': '1200px' } as React.CSSProperties}>
       <p className="label">Who you&rsquo;ll work with</p>
       <h2 id="who" className="h-section mt-4">
         Meet the <span className="accent">builders.</span>
