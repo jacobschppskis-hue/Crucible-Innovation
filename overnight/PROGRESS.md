@@ -16,10 +16,10 @@ Read this first, every session. Newest notes at the bottom of each section.
 
 1. Setup (done in session 1).
 2. Research award sites; record takeaways below. (done)
-3. "/" opening animation + first scroll (priority 1). (first pass done: Ignition)
+3. "/" opening animation + first scroll (priority 1). (done: components/Ignition.tsx)
 4. Tier detection (rich vs light) + rich-tier WebGL layer, loaded after first paint. (done: lib/tier.ts, lib/gl/ringParticles.ts)
-5. "/sites" first scroll (priority 2).
-6. Rest of both pages to the same craft level.
+5. "/sites" first scroll (priority 2). (done: components/BuildStage.tsx + LiveSite.tsx, rich: lib/gl/sparks.ts)
+6. Rest of both pages to the same craft level. (home done: Story reading heat, Ventures cast/forging, Thesis furnace + rich molten iron; /sites lower sections next)
 7. Verify: Lighthouse mobile, 360px, reduced motion, no-JS, tests; recordings into the PR.
 8. MORNING.md, disable scheduled task, DONE.
 
@@ -43,11 +43,43 @@ Read this first, every session. Newest notes at the bottom of each section.
 - The session harness asked for branch `claude/eloquent-ride-3pjb5m`, but Jacob explicitly asked for `overnight/award-build` and gave permission to push there, so all work is on `overnight/award-build`.
 - Scheduled-task overlap rule: a session that runs longer than 100 minutes would otherwise look "stale" to the next fire, so each session refreshes a Heartbeat column on every push, and the next session stops if a session without an end has a start *or heartbeat* under 100 minutes old.
 
+- The /sites hero's screenshot frame (BrowserFrame) is replaced by live HTML versions of the three concept sites (components/LiveSite.tsx). The screenshots are still used by Before/After and the Work cards. The live versions use the site's own fonts (Archivo, Instrument Serif) instead of the concept pages' Fraunces/Anton/DM fonts, so nothing extra downloads. The barbershop headline is Archivo 800 rather than Anton.
+- New copy, all on /sites stage captions (no new claims, just the existing promises reworded):
+  - "Built for the phone in their pocket." / "Mobile-first. Every layout is drawn for the phone first, then opened up for the big screen."
+  - "Not a template." / "Same week, different business. Every concept here began as a blank page, not a template."
+  - "Then it’s yours." / "Your domain, your content, live in about a week. No payment until you’ve approved the design."
+- The home hero's second button still says "Our ventures". Forging ventures show an *unlit* core, so only the live venture gets Ember (this also keeps the Ember count down).
+- Recordings (GIF + MP4, ~14 MB) are committed in overnight/media/ so the PR can show them. They are not part of the site build. Delete the folder after merging if you don't want them in the repo.
+- `prefers-reduced-motion`, no JS and short landscape screens (< 540–560px tall) get unpinned, finished layouts.
+- Rich tier on phones: allowed when the phone passes the checks (e.g. recent iPhones). Particle counts and DPR are lower on touch devices.
+
 ## Known issues
+
+- Headless Chrome has no GPU, so rich-tier visuals were verified with SwiftShader (slow but correct). Real-device frame rates are not measured here; each WebGL scene steps down on long frames and hands back to light if needed.
+- Lighthouse numbers vary run to run locally (home 95–96, /sites 91–96 performance). CI is the source of truth.
+
+## Status (session 1, 02:30 UTC)
+
+Done and pushed:
+- **"/":**
+  - Ignition opening and scroll story, with the particle ring in the rich tier.
+  - Story reading heat.
+  - Ventures cast/forging.
+  - Thesis furnace, with molten iron in the rich tier.
+- **"/sites":**
+  - Live concept site cast on load.
+  - Phone morph and recasts on scroll.
+  - Sparks in the rich tier.
+- **Tooling:** overnight/tools/capture.mjs, probe.mjs, shot.mjs, record.mjs (see headers).
+- **Tests:** 50+ Playwright tests, all green locally. CI green through a1ff430's parent.
 
 ## What's next
 
-- Tests for the new scene and tiers (tier override, reduced motion, no-JS finished states, rich-tier canvas mounts, WebGL fallback).
-- Lighthouse locally (mobile) on / and /sites.
-- Polish the opening: ring annotations, check 360x640, quick intro on repeat visits.
-- Then the /sites first scroll (priority 2).
+1. /sites lower sections:
+   - Builders portraits cast in behind the heat front.
+   - Work cards (maybe live previews or a hover cast).
+   - Process / pricing polish.
+2. A page transition between / and /sites (heat wipe), if it can stay light.
+3. A critical pass over both openings at 390 and 1440. Check the rich-tier handoff timing.
+4. Lighthouse on CI. Refresh the PR recordings (`node overnight/tools/record.mjs ...`) and description.
+5. MORNING.md, disable the scheduled task, DONE.
