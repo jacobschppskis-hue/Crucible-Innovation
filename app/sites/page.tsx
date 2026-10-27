@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { BeforeAfter } from '@/components/BeforeAfter';
-import { BrowserFrame } from '@/components/BrowserFrame';
+import { BuildStage } from '@/components/BuildStage';
 import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
-import { HeatField } from '@/components/HeatField';
-import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
 import { PricingCard } from '@/components/PricingCard';
 import { Process } from '@/components/Process';
@@ -52,36 +50,8 @@ export default function SitesPage() {
     <>
       <Nav variant="sites" />
       <main id="main">
-        {/* 1. Hero */}
-        <section data-scroll="view" className="hero-out relative overflow-hidden pt-[calc(var(--nav-h)+3rem)] pb-20 sm:pb-28 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-[var(--nav-h)]">
-          <HeatField origin={[0.76, 0.52]} originMobile={[0.5, 0.78]} />
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ground" />
-          <div className="container-x relative grid items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
-            <div className="hero-out-copy">
-              <p className="label">Crucible Sites · Websites for local businesses</p>
-              <WordReveal
-                as="h1"
-                immediate
-                className="h-display mt-6 text-[2.625rem] sm:text-6xl xl:text-[4.5rem]"
-                segments={[{ t: 'Your business deserves a website that' }, { t: 'actually looks good.', className: 'accent molten text-[1.08em]' }]}
-              />
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-bone-dim sm:text-xl">
-                We design and build fast, beautiful websites for local businesses. Live in about a week.
-              </p>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <a href="#start" className="btn btn-primary">
-                  Get a quote <ArrowRight />
-                </a>
-                <a href="#work" className="btn btn-ghost">
-                  See our work
-                </a>
-              </div>
-            </div>
-            <div className="hero-out-frame">
-              <BrowserFrame items={work} />
-            </div>
-          </div>
-        </section>
+        {/* 1. Hero + first scroll: a live concept site is cast, turns into a phone, and is recast */}
+        <BuildStage />
 
         {/* 2. Proof bar: promises, not invented numbers */}
         <section aria-label="What you can count on" className="border-y border-line">
