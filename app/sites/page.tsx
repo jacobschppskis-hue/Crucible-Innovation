@@ -5,6 +5,7 @@ import { BuildStage } from '@/components/BuildStage';
 import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
+import { Furnace } from '@/components/Furnace';
 import { JsonLd } from '@/components/JsonLd';
 import { Nav } from '@/components/Nav';
 import { PricingCard } from '@/components/PricingCard';
@@ -153,7 +154,8 @@ export default function SitesPage() {
 
         {/* 9. Start a project */}
         <section id="start" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1600px', '--h-lg': '1000px' } as React.CSSProperties}>
-          <div className="grid gap-12 rounded-3xl border border-line bg-ground-2 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:p-14">
+          <div className="relative isolate grid gap-12 overflow-hidden rounded-3xl border border-line bg-ground-2 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:p-14">
+            <Furnace heat={0.45} reach="42%" />
             <div>
               <p className="label">Start a project</p>
               <WordReveal segments={[{ t: 'Tell us about your' }, { t: 'business.', className: 'accent' }]} className="h-section mt-4" />

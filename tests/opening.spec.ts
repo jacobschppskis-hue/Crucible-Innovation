@@ -77,6 +77,25 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   await ctx.close();
 });
 
+test('furnace floors: heat only moves while it is on screen, and never with reduced motion', async ({ page, browser }) => {
+  await page.goto('/?tier=light', { waitUntil: 'networkidle' });
+  const floor = page.locator('.footer-giant .furnace');
+  const waves = page.locator('.footer-giant .furnace-waves i').first();
+  await expect(floor).not.toHaveAttribute('data-live', '');
+  expect(await waves.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('paused');
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  await expect(floor).toHaveAttribute('data-live', '');
+  expect(await waves.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('running');
+
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const calm = await ctx.newPage();
+  await calm.goto('/', { waitUntil: 'networkidle' });
+  for (const sel of ['.footer-giant .furnace-waves i', '#ventures .molten-flow']) {
+    expect(await calm.locator(sel).first().evaluate((el) => getComputedStyle(el).animationName), sel).toBe('none');
+  }
+  await ctx.close();
+});
+
 test('ventures: the live one pours in a labelled concept site; the rest are still forging', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
   const cast = page.locator('#ventures [data-cast]');
@@ -123,12 +142,11 @@ test.describe('rich tier', () => {
     const scene = page.locator('section.ig');
     await expect(scene).toHaveAttribute('data-gl', '', { timeout: 15000 });
     const opacity = (sel: string) => page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
-    expect(await opacity('.ig-gl')).toBe(0);
+    expect(await opacity('.ig-svg')).toBe(1);
     const box = (await scene.boundingBox())!;
     const vh = page.viewportSize()!.height;
     await page.evaluate((y) => scrollTo(0, y), (box.height - vh) * 0.3);
-    await expect.poll(() => opacity('.ig-gl')).toBeGreaterThan(0.99);
-    expect(await opacity('.ig-svg')).toBeLessThan(0.01);
+    await expect.poll(() => opacity('.ig-svg')).toBeLessThan(0.01);
     await page.evaluate((y) => scrollTo(0, y), box.height - vh);
     await expect.poll(() => opacity('.ig-svg')).toBeGreaterThan(0.99);
     expect(errors).toEqual([]);
