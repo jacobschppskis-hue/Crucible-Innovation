@@ -1342,6 +1342,65 @@ textarea.field {
   background: var(--bone);
 }
 
+/* ---------- Page transition (components/RouteTransition.tsx): the next page is poured in ----------
+   A sheet of ground slides down over the page with the Ember front at its leading edge; the route changes under it;
+   then it carries on down, the front now at its top edge, uncovering the new page. */
+.route-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--ground);
+  transform: translateY(-101%);
+  visibility: hidden;
+  pointer-events: none;
+}
+.route-band {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 22vh;
+  background: linear-gradient(to bottom, rgba(255, 91, 31, 0), rgba(255, 91, 31, 0.14));
+}
+.route-front-leave {
+  top: auto;
+  bottom: -1px;
+}
+.route-front-arrive {
+  top: -1px;
+  opacity: 0;
+}
+[data-leaving] .route-sheet {
+  visibility: visible;
+  animation: route-cover 420ms cubic-bezier(0.6, 0, 0.35, 1) both;
+}
+[data-arriving] .route-sheet {
+  visibility: visible;
+  animation: route-uncover 760ms cubic-bezier(0.3, 0, 0.15, 1) both;
+}
+[data-arriving] .route-band,
+[data-arriving] .route-front-leave {
+  opacity: 0;
+}
+[data-arriving] .route-front-arrive {
+  opacity: 1;
+}
+@keyframes route-cover {
+  from {
+    transform: translateY(-101%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes route-uncover {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(101%);
+  }
+}
+
 /* ---------- Reading heat (components/HeatText.tsx + ReadingHeat.tsx): words warm from dim to bone as they're read ----------
    --p comes from data-scroll="read", --n/--i from the word wrapper; the glow front is ~8 words wide. Dim is 56% bone,
    which still clears AA. Body copy settles a little below full bone so long reading stays comfortable. */

@@ -72,6 +72,20 @@ test('ventures: the live one pours in a labelled concept site; the rest are stil
   await expect(page.locator('#ventures .forging-mark')).toHaveCount(2);
 });
 
+test('moving to /sites pours the next page in, then gets out of the way', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.getByRole('link', { name: /See Crucible Sites/ }).click();
+  await expect(page).toHaveURL(/\/sites$/);
+  await expect(page.locator('h1')).toHaveText(/actually looks good/);
+  await expect(page.locator('html')).not.toHaveAttribute('data-leaving', '');
+  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 3000 });
+  await expect(page.locator('.route-sheet')).toBeHidden();
+  // Back is ordinary navigation (no sheet).
+  await page.goBack();
+  await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
+  await expect(page.locator('.route-sheet')).toBeHidden();
+});
+
 test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ browser }) => {
   const ctx = await browser.newContext({ viewport: { width: 360, height: 640 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();

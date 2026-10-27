@@ -6,6 +6,7 @@ import { Magnetic } from '@/components/Magnetic';
 import { ScrollDriver } from '@/components/ScrollDriver';
 import { ReadingHeat } from '@/components/ReadingHeat';
 import { RefTracker } from '@/components/RefTracker';
+import { RouteTransition } from '@/components/RouteTransition';
 import { SmoothScroll } from '@/components/SmoothScroll';
 import { site } from '@/data/site';
 import { TIER_SCRIPT } from '@/lib/tier';
@@ -62,6 +63,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Magnetic />
         <SmoothScroll />
         <RefTracker />
+        <RouteTransition />
       </body>
     </html>
   );
