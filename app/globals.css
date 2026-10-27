@@ -634,6 +634,7 @@ textarea.field {
 .ig-ring {
   --rs: min(74vw, 40svh);
   position: relative;
+  width: var(--rs); /* browsers without container units */
   width: min(var(--rs), 100cqh);
   aspect-ratio: 1;
   color: var(--bone);

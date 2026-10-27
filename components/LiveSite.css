@@ -508,6 +508,23 @@
 [data-layout='phone'] .ls {
   --u: calc(100cqw / 390);
 }
+/* Browsers without container units (Safari < 16): approximate the frame's width from the viewport. */
+@supports not (width: 1cqw) {
+  .ls {
+    --u: calc(88vw / 1280);
+  }
+  [data-layout='phone'] .ls {
+    --u: calc(62vw / 390);
+  }
+  @media (min-width: 1024px) {
+    .ls {
+      --u: calc(min(46vw, 36rem) / 1280);
+    }
+    [data-layout='phone'] .ls {
+      --u: calc(19rem / 390);
+    }
+  }
+}
 [data-layout='phone'] .ls-nav {
   padding: calc(18 * var(--u)) calc(20 * var(--u));
 }
