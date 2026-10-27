@@ -2,6 +2,14 @@
 
 Everything from last night is on the branch `overnight/award-build`, in the draft PR **[#11](https://github.com/jacobschppskis-hue/Crucible-Innovation/pull/11)**. Nothing went to `main`, so the live site hasn't changed. CI (typecheck, build, 52 Playwright tests, Lighthouse) is green.
 
+## Changed after review (Jacob, the next morning)
+
+- **The home opening is now a pour.** A mould is scanned in, three pixels drop into a crucible and melt, it tips and pours into the core, and the metal rises through the mould as molten dots. It cools white-hot → orange → bone and sets solid. This replaces the ignition described below, and the labels next to the logo are gone.
+- **Background rings are centred on the logo.**
+- **Rich tier:** the ring stays solid at rest and only melts into dots for the scroll story. The orbiting orange pulses are gone.
+- **The mark:** the pixels are exactly as thick as the line and meet it flush. The favicon and apple-touch icon are updated; the OG images and business card still use the old geometry.
+- **Scroll scenes ease toward the scroll position with a top speed,** so jerky scrolling still plays smoothly.
+
 ## What was built
 
 ### "/": the first impression
