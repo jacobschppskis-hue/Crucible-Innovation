@@ -46,7 +46,7 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
   }, []);
 
   return (
-    <header ref={ref} className="nav fixed inset-x-0 top-0 z-50">
+    <header ref={ref} className={`nav fixed inset-x-0 top-0 z-50 ${variant === 'home' ? 'nav-intro' : ''}`}>
       <div aria-hidden className="nav-progress" />
       <nav aria-label="Main" className="container-x flex h-[var(--nav-h)] items-center justify-between gap-4">
         {/* The ring and "crucible" always go to the Crucible home page; "sites" goes to the Crucible Sites home. */}

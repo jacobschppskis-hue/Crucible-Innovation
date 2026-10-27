@@ -1,0 +1,718 @@
+/* Live concept sites (components/LiveSite.tsx). Every size is a multiple of --u, one design pixel: the desktop
+   design is 1280 units wide and scales fluidly with its frame (no JS needed). With data-layout="phone" on an
+   ancestor the same markup reflows into the phone layout, 390 units wide. Only the site's own fonts are used. */
+
+.ls-vp {
+  container-type: inline-size;
+}
+.ls {
+  --u: calc(100cqw / 1280);
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-size: calc(16 * var(--u));
+  line-height: 1.4;
+  letter-spacing: normal;
+  text-align: left;
+}
+.ls :where(p) {
+  margin: 0;
+}
+.ls-nav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(24 * var(--u));
+  padding: calc(28 * var(--u)) calc(64 * var(--u));
+}
+.ls-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(10 * var(--u));
+  white-space: nowrap;
+}
+.ls-links {
+  display: flex;
+  gap: calc(34 * var(--u));
+  font-size: calc(15 * var(--u));
+}
+.ls-btn,
+.ls-ghost {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: calc(14 * var(--u));
+  transition:
+    transform 300ms var(--ease-spring),
+    box-shadow 300ms ease,
+    background-color 300ms ease;
+}
+.ls-btn:hover,
+.ls-ghost:hover {
+  transform: translateY(calc(-2 * var(--u)));
+}
+.ls-burger {
+  display: none;
+  flex-direction: column;
+  gap: calc(6 * var(--u));
+  width: calc(24 * var(--u));
+}
+.ls-burger i {
+  display: block;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.ls-hero {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  gap: calc(36 * var(--u));
+  align-items: center;
+  padding: calc(44 * var(--u)) calc(64 * var(--u)) 0;
+}
+.ls-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(10 * var(--u));
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.ls-h1 {
+  margin-top: calc(22 * var(--u)) !important;
+  font-weight: 400;
+  line-height: 0.95;
+}
+.ls-lead {
+  margin-top: calc(24 * var(--u)) !important;
+  max-width: calc(440 * var(--u));
+  font-size: calc(18 * var(--u));
+  line-height: 1.55;
+}
+.ls-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: calc(12 * var(--u));
+  margin-top: calc(32 * var(--u));
+}
+
+/* ---------- Café ---------- */
+.ls-cafe {
+  background: #f4ede2;
+  color: #2b1d14;
+}
+.ls-cafe .ls-logo {
+  font-family: var(--font-instrument-upright), ui-serif, Georgia, serif;
+  font-size: calc(27 * var(--u));
+  letter-spacing: -0.01em;
+}
+.ls-cafe .ls-logo i {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  color: #b4552d;
+}
+.ls-cafe .ls-links {
+  color: #5b4636;
+}
+.ls-cafe .ls-btn {
+  padding: calc(13 * var(--u)) calc(24 * var(--u));
+  border-radius: calc(999 * var(--u));
+  background: #2b1d14;
+  color: #f4ede2;
+}
+.ls-cafe .ls-btn:hover {
+  box-shadow: 0 calc(10 * var(--u)) calc(24 * var(--u)) calc(-10 * var(--u)) rgba(43, 29, 20, 0.6);
+}
+.ls-cafe .ls-ghost {
+  padding: calc(12 * var(--u)) calc(22 * var(--u));
+  border: 1.5px solid #2b1d14;
+  border-radius: calc(999 * var(--u));
+}
+.ls-cafe .ls-tag {
+  color: #8a6a52;
+}
+.ls-cafe .ls-tag b {
+  width: calc(8 * var(--u));
+  height: calc(8 * var(--u));
+  border-radius: 50%;
+  background: #5e8c4a;
+}
+.ls-cafe .ls-h1 {
+  font-family: var(--font-instrument-upright), ui-serif, Georgia, serif;
+  font-size: calc(96 * var(--u));
+  letter-spacing: -0.03em;
+}
+.ls-cafe .ls-h1 em {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  color: #b4552d;
+}
+.ls-cafe .ls-lead {
+  color: #5b4636;
+}
+.ls-art {
+  position: relative;
+  height: calc(520 * var(--u));
+  border-radius: calc(28 * var(--u));
+  background: linear-gradient(160deg, #c98b5e, #8e4e2c);
+  overflow: hidden;
+}
+.ls-art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(95deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px calc(22 * var(--u)));
+}
+.cafe-saucer,
+.cafe-cup,
+.cafe-coffee,
+.cafe-handle {
+  position: absolute;
+  border-radius: 50%;
+}
+.cafe-saucer {
+  left: 50%;
+  top: 50%;
+  width: calc(380 * var(--u));
+  height: calc(380 * var(--u));
+  margin: calc(-190 * var(--u));
+  background: radial-gradient(circle, #efe6da 58%, #dccfbf 60%, #f3ebe0 70%);
+  box-shadow: 0 calc(40 * var(--u)) calc(60 * var(--u)) calc(-20 * var(--u)) rgba(40, 15, 0, 0.55);
+}
+.cafe-cup {
+  left: 50%;
+  top: 50%;
+  width: calc(264 * var(--u));
+  height: calc(264 * var(--u));
+  margin: calc(-132 * var(--u));
+  background: #fbf6ef;
+  box-shadow: inset 0 calc(-10 * var(--u)) calc(20 * var(--u)) rgba(0, 0, 0, 0.08);
+}
+.cafe-coffee {
+  inset: calc(20 * var(--u));
+  background: radial-gradient(circle, #f3e3cc 0 9%, #c99a6b 10% 13%, #f0dcc0 14% 19%, #b57c4c 20% 24%, #e9cfae 25% 29%, #9a5f33 31% 40%, #6b3517 52%, #4a230f 72%);
+  animation: cafe-swirl 24s linear infinite;
+}
+@keyframes cafe-swirl {
+  to {
+    rotate: 360deg;
+  }
+}
+.cafe-handle {
+  left: calc(50% + calc(124 * var(--u)));
+  top: calc(50% - calc(23 * var(--u)));
+  width: calc(74 * var(--u));
+  height: calc(46 * var(--u));
+  border-radius: calc(23 * var(--u));
+  background: #fbf6ef;
+}
+.ls-card {
+  position: absolute;
+  left: calc(24 * var(--u));
+  bottom: calc(24 * var(--u));
+  padding: calc(16 * var(--u)) calc(20 * var(--u));
+  border-radius: calc(16 * var(--u));
+  background: #f4ede2;
+  box-shadow: 0 calc(20 * var(--u)) calc(40 * var(--u)) calc(-20 * var(--u)) rgba(0, 0, 0, 0.4);
+}
+.ls-card small {
+  display: block;
+  font-size: calc(11 * var(--u));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8a6a52;
+}
+.ls-card strong {
+  font-family: var(--font-instrument-upright), ui-serif, Georgia, serif;
+  font-size: calc(22 * var(--u));
+  font-weight: 400;
+}
+.ls-strip {
+  display: flex;
+  gap: calc(48 * var(--u));
+  margin: calc(52 * var(--u)) calc(64 * var(--u)) 0;
+  padding-top: calc(22 * var(--u));
+  border-top: 1px solid #d9cbb8;
+  font-size: calc(15 * var(--u));
+  color: #5b4636;
+}
+.ls-strip b {
+  margin-right: calc(8 * var(--u));
+  font-family: var(--font-instrument-upright), ui-serif, Georgia, serif;
+  font-size: calc(20 * var(--u));
+  font-weight: 400;
+  color: #2b1d14;
+}
+
+/* ---------- Barbershop ---------- */
+.ls-barber {
+  background: #0f0f0f;
+  color: #f2eee6;
+}
+.ls-barber .ls-nav {
+  border-bottom: 1px solid #262626;
+}
+.ls-barber .ls-logo {
+  font-size: calc(26 * var(--u));
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.ls-barber .ls-logo i {
+  font-style: normal;
+  color: #c9a54a;
+}
+.ls-barber .ls-links {
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #a9a39a;
+}
+.ls-barber .ls-btn {
+  padding: calc(14 * var(--u)) calc(24 * var(--u));
+  background: #c9a54a;
+  color: #0f0f0f;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.ls-barber .ls-btn:hover {
+  background: #d8b65c;
+}
+.ls-barber .ls-ghost {
+  padding-bottom: calc(4 * var(--u));
+  border-bottom: 1px solid #c9a54a;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.ls-barber .ls-hero {
+  grid-template-columns: 1.25fr 0.9fr;
+  gap: calc(56 * var(--u));
+  align-items: start;
+  padding-top: calc(56 * var(--u));
+}
+.ls-barber .ls-tag {
+  letter-spacing: 0.24em;
+  color: #c9a54a;
+}
+.ls-barber .ls-h1 {
+  font-size: calc(118 * var(--u));
+  font-weight: 800;
+  line-height: 0.92;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+.ls-barber .ls-h1 em {
+  display: block;
+  font-style: normal;
+  color: transparent;
+  -webkit-text-stroke: 2px #f2eee6;
+}
+.ls-barber .ls-lead {
+  color: #a9a39a;
+}
+.ls-barber .ls-ctas {
+  align-items: center;
+  gap: calc(22 * var(--u));
+}
+.ls-panel {
+  position: relative;
+  padding: calc(32 * var(--u));
+  border: 1px solid #2a2a2a;
+  background: #181818;
+}
+.ls-panel small {
+  font-size: calc(12 * var(--u));
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8d877e;
+}
+.ls-panel .ls-h2 {
+  font-size: calc(30 * var(--u));
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+.barber-pole {
+  position: absolute;
+  right: calc(32 * var(--u));
+  top: calc(32 * var(--u));
+  width: calc(16 * var(--u));
+  height: calc(58 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: repeating-linear-gradient(135deg, #b3261e 0 calc(11 * var(--u)), #f2eee6 calc(11 * var(--u)) calc(22 * var(--u)), #1e4fa0 calc(22 * var(--u)) calc(33 * var(--u)), #f2eee6 calc(33 * var(--u)) calc(44 * var(--u)));
+  background-size: 100% calc(88 * var(--u));
+  box-shadow: 0 0 0 calc(4 * var(--u)) #2a2a2a;
+  animation: pole 3s linear infinite;
+}
+@keyframes pole {
+  to {
+    background-position: 0 calc(88 * var(--u));
+  }
+}
+.barber-row {
+  display: flex;
+  align-items: baseline;
+  gap: calc(12 * var(--u));
+  padding: calc(18 * var(--u)) 0;
+  border-bottom: 1px solid #2a2a2a;
+  font-size: calc(18 * var(--u));
+}
+.barber-row em {
+  display: block;
+  margin-top: calc(3 * var(--u));
+  font-size: calc(13 * var(--u));
+  font-style: normal;
+  color: #8d877e;
+}
+.barber-row i {
+  flex: 1;
+  border-bottom: 1px dotted #555;
+  transform: translateY(calc(-6 * var(--u)));
+}
+.barber-row b {
+  font-weight: 500;
+  color: #c9a54a;
+}
+.barber-foot {
+  margin-top: calc(22 * var(--u)) !important;
+  font-size: calc(13 * var(--u));
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8d877e;
+}
+
+/* ---------- Landscaper ---------- */
+.ls-landscaper {
+  background: #f3f1ea;
+  color: #16271d;
+}
+.land-top {
+  position: relative;
+  padding-bottom: calc(150 * var(--u));
+  background: linear-gradient(180deg, #dce6d3 0%, #eef0e4 60%);
+  overflow: hidden;
+}
+.land-sun {
+  position: absolute;
+  right: calc(210 * var(--u));
+  top: calc(130 * var(--u));
+  width: calc(132 * var(--u));
+  height: calc(132 * var(--u));
+  border-radius: 50%;
+  background: radial-gradient(circle, #f4d58d, #edb75a);
+  opacity: 0.9;
+}
+.land-hills {
+  position: absolute;
+  inset: auto 0 0 0;
+  width: 100%;
+  height: calc(210 * var(--u));
+}
+.ls-landscaper .ls-logo {
+  font-size: calc(19 * var(--u));
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.land-mark {
+  width: calc(28 * var(--u));
+  height: calc(28 * var(--u));
+  border-radius: calc(8 * var(--u)) calc(8 * var(--u)) calc(8 * var(--u)) 0;
+  background: #2e5a3c;
+}
+.ls-landscaper .ls-links {
+  font-weight: 500;
+  color: #3d5446;
+}
+.ls-landscaper .ls-btn {
+  padding: calc(14 * var(--u)) calc(22 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: #1f3a2b;
+  color: #f3f1ea;
+}
+.ls-landscaper .ls-ghost {
+  padding: calc(14 * var(--u)) calc(22 * var(--u));
+  border-radius: calc(12 * var(--u));
+  background: rgba(255, 255, 255, 0.7);
+}
+.ls-landscaper .ls-copy {
+  position: relative;
+  z-index: 2;
+  max-width: calc(760 * var(--u));
+  padding: calc(30 * var(--u)) calc(64 * var(--u)) 0;
+}
+.ls-landscaper .ls-tag {
+  padding: calc(8 * var(--u)) calc(16 * var(--u));
+  border-radius: calc(999 * var(--u));
+  background: #fff;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #2e5a3c;
+  box-shadow: 0 calc(4 * var(--u)) calc(16 * var(--u)) calc(-8 * var(--u)) rgba(0, 0, 0, 0.2);
+}
+.ls-landscaper .ls-h1 {
+  font-family: var(--font-instrument-upright), ui-serif, Georgia, serif;
+  font-size: calc(84 * var(--u));
+  letter-spacing: -0.02em;
+}
+.ls-landscaper .ls-h1 em {
+  font-family: var(--font-instrument), ui-serif, Georgia, serif;
+  color: #2e5a3c;
+}
+.ls-landscaper .ls-lead {
+  max-width: calc(500 * var(--u));
+  color: #3d5446;
+}
+.land-services {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: calc(16 * var(--u));
+  margin-top: calc(-56 * var(--u));
+  padding: 0 calc(64 * var(--u));
+}
+.land-card {
+  padding: calc(22 * var(--u));
+  border-radius: calc(16 * var(--u));
+  background: #fff;
+  box-shadow: 0 calc(20 * var(--u)) calc(40 * var(--u)) calc(-24 * var(--u)) rgba(22, 39, 29, 0.35);
+  transition: transform 300ms var(--ease-spring);
+}
+.land-card:hover {
+  transform: translateY(calc(-3 * var(--u)));
+}
+.land-card i {
+  display: block;
+  width: calc(34 * var(--u));
+  height: calc(34 * var(--u));
+  margin-bottom: calc(16 * var(--u));
+  border-radius: calc(10 * var(--u));
+  background: #e3ecdd;
+}
+.land-card b {
+  display: block;
+  font-size: calc(17 * var(--u));
+}
+.land-card span {
+  display: block;
+  margin-top: calc(6 * var(--u));
+  font-size: calc(14 * var(--u));
+  line-height: 1.45;
+  color: #5d7064;
+}
+
+/* ---------- Phones: the same sites, reflowed ---------- */
+[data-layout='phone'] .ls {
+  --u: calc(100cqw / 390);
+}
+/* Browsers without container units (Safari < 16): approximate the frame's width from the viewport. */
+@supports not (width: 1cqw) {
+  .ls {
+    --u: calc(88vw / 1280);
+  }
+  [data-layout='phone'] .ls {
+    --u: calc(62vw / 390);
+  }
+  @media (min-width: 1024px) {
+    .ls {
+      --u: calc(min(46vw, 36rem) / 1280);
+    }
+    [data-layout='phone'] .ls {
+      --u: calc(19rem / 390);
+    }
+  }
+}
+[data-layout='phone'] .ls-nav {
+  padding: calc(18 * var(--u)) calc(20 * var(--u));
+}
+[data-layout='phone'] .ls-links,
+[data-layout='phone'] .ls-nav-btn {
+  display: none;
+}
+[data-layout='phone'] .ls-burger {
+  display: flex;
+}
+[data-layout='phone'] .ls-hero {
+  grid-template-columns: 1fr;
+  gap: calc(26 * var(--u));
+  padding: calc(18 * var(--u)) calc(20 * var(--u)) 0;
+}
+[data-layout='phone'] .ls-tag {
+  font-size: calc(11 * var(--u));
+}
+[data-layout='phone'] .ls-h1 {
+  margin-top: calc(14 * var(--u)) !important;
+}
+[data-layout='phone'] .ls-lead {
+  margin-top: calc(14 * var(--u)) !important;
+  font-size: calc(15 * var(--u));
+}
+[data-layout='phone'] .ls-ctas {
+  margin-top: calc(20 * var(--u));
+}
+[data-layout='phone'] .ls-cafe .ls-logo {
+  font-size: calc(22 * var(--u));
+}
+[data-layout='phone'] .ls-cafe .ls-h1 {
+  font-size: calc(50 * var(--u));
+}
+[data-layout='phone'] .ls-art {
+  height: calc(250 * var(--u));
+  border-radius: calc(20 * var(--u));
+}
+[data-layout='phone'] .cafe-saucer {
+  width: calc(210 * var(--u));
+  height: calc(210 * var(--u));
+  margin: calc(-105 * var(--u));
+}
+[data-layout='phone'] .cafe-cup {
+  width: calc(146 * var(--u));
+  height: calc(146 * var(--u));
+  margin: calc(-73 * var(--u));
+}
+[data-layout='phone'] .cafe-coffee {
+  inset: calc(11 * var(--u));
+}
+[data-layout='phone'] .cafe-handle {
+  left: calc(50% + calc(68 * var(--u)));
+  top: calc(50% - calc(13 * var(--u)));
+  width: calc(42 * var(--u));
+  height: calc(26 * var(--u));
+}
+[data-layout='phone'] .ls-card {
+  left: calc(14 * var(--u));
+  bottom: calc(14 * var(--u));
+  padding: calc(10 * var(--u)) calc(14 * var(--u));
+}
+[data-layout='phone'] .ls-card strong {
+  font-size: calc(17 * var(--u));
+}
+[data-layout='phone'] .ls-strip {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: calc(12 * var(--u)) calc(16 * var(--u));
+  margin: calc(26 * var(--u)) calc(20 * var(--u)) 0;
+  font-size: calc(13 * var(--u));
+}
+[data-layout='phone'] .ls-strip b {
+  display: block;
+  font-size: calc(18 * var(--u));
+}
+[data-layout='phone'] .ls-barber .ls-logo {
+  font-size: calc(20 * var(--u));
+}
+[data-layout='phone'] .ls-barber .ls-hero {
+  gap: calc(28 * var(--u));
+  padding-top: calc(26 * var(--u));
+}
+[data-layout='phone'] .ls-barber .ls-h1 {
+  font-size: calc(62 * var(--u));
+}
+[data-layout='phone'] .ls-barber .ls-h1 em {
+  -webkit-text-stroke-width: 1.5px;
+}
+[data-layout='phone'] .ls-panel {
+  padding: calc(22 * var(--u));
+}
+[data-layout='phone'] .ls-panel .ls-h2 {
+  font-size: calc(24 * var(--u));
+}
+[data-layout='phone'] .barber-row {
+  padding: calc(13 * var(--u)) 0;
+  font-size: calc(16 * var(--u));
+}
+[data-layout='phone'] .barber-pole {
+  right: calc(22 * var(--u));
+  top: calc(22 * var(--u));
+  height: calc(46 * var(--u));
+}
+[data-layout='phone'] .land-top {
+  padding-bottom: calc(120 * var(--u));
+}
+[data-layout='phone'] .land-sun {
+  right: calc(28 * var(--u));
+  top: calc(330 * var(--u));
+  width: calc(70 * var(--u));
+  height: calc(70 * var(--u));
+}
+[data-layout='phone'] .land-hills {
+  height: calc(130 * var(--u));
+}
+[data-layout='phone'] .ls-landscaper .ls-copy {
+  padding: calc(14 * var(--u)) calc(20 * var(--u)) 0;
+}
+[data-layout='phone'] .ls-landscaper .ls-tag {
+  padding: calc(6 * var(--u)) calc(12 * var(--u));
+  font-size: calc(12 * var(--u));
+}
+[data-layout='phone'] .ls-landscaper .ls-h1 {
+  font-size: calc(48 * var(--u));
+}
+[data-layout='phone'] .land-services {
+  grid-template-columns: 1fr 1fr;
+  gap: calc(10 * var(--u));
+  margin-top: calc(-40 * var(--u));
+  padding: 0 calc(20 * var(--u));
+}
+[data-layout='phone'] .land-card {
+  padding: calc(14 * var(--u));
+}
+[data-layout='phone'] .land-card span {
+  font-size: calc(12.5 * var(--u));
+}
+
+/* ---------- Blueprint: the same markup as a wireframe ---------- */
+.ls-bp {
+  background-color: #12110e !important;
+  background-image:
+    linear-gradient(rgba(232, 228, 216, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 228, 216, 0.05) 1px, transparent 1px) !important;
+  background-size: calc(32 * var(--u)) calc(32 * var(--u)) !important;
+  color: transparent !important;
+}
+.ls-bp * {
+  color: transparent !important;
+  background: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-text-stroke-color: transparent !important;
+  animation: none !important;
+}
+.ls-bp .land-hills {
+  display: none;
+}
+/* greeked text: each line becomes a soft bar */
+.ls-bp .tx,
+.ls-bp .ls-links > span,
+.ls-bp .ls-strip > span,
+.ls-bp .barber-row > span,
+.ls-bp .land-card b,
+.ls-bp .land-card span,
+.ls-bp .ls-card > * {
+  background: rgba(232, 228, 216, 0.13) !important;
+  border-radius: calc(3 * var(--u));
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.ls-bp :is(.ls-btn, .ls-ghost, .ls-art, .ls-panel, .land-card, .land-sun, .ls-card, .cafe-saucer, .cafe-cup, .barber-pole, .land-mark) {
+  outline: 1px dashed rgba(232, 228, 216, 0.32);
+  outline-offset: calc(-1 * var(--u));
+}
+.ls-bp [data-bp] {
+  position: relative;
+  outline: 1px solid rgba(232, 228, 216, 0.22);
+  outline-offset: calc(4 * var(--u));
+}
+.ls-bp [data-bp]::after {
+  content: attr(data-bp);
+  position: absolute;
+  left: 0;
+  top: -1.7em;
+  font: max(7px, calc(11 * var(--u))) / 1 var(--font-jetbrains), ui-monospace, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(232, 228, 216, 0.55);
+}

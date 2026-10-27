@@ -4,10 +4,16 @@ import { Grain } from '@/components/Grain';
 import { InView } from '@/components/InView';
 import { Magnetic } from '@/components/Magnetic';
 import { ScrollDriver } from '@/components/ScrollDriver';
+import { ReadingHeat } from '@/components/ReadingHeat';
 import { RefTracker } from '@/components/RefTracker';
+import { RouteTransition } from '@/components/RouteTransition';
 import { SmoothScroll } from '@/components/SmoothScroll';
 import { site } from '@/data/site';
+import { TIER_SCRIPT } from '@/lib/tier';
 import './globals.css';
+// Bundled with the global CSS (one stylesheet request per page; these are only ~4 KB gzipped).
+import '@/components/LiveSite.css';
+import '@/components/BuildStage.css';
 
 const archivo = Archivo({ subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
 // Italic is above the fold (hero accents); upright only appears further down, so it isn't preloaded.
@@ -35,7 +41,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${archivo.variable} ${instrument.variable} ${instrumentUpright.variable} ${mono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add('js')` }} />
+        {/* Sets html.js, the visual tier and the intro tempo before first paint (see lib/tier.ts). */}
+        <script dangerouslySetInnerHTML={{ __html: TIER_SCRIPT }} />
         {/* Analytics (Umami): set the UMAMI_WEBSITE_ID repo variable to turn it on. See README. */}
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script defer src="https://cloud.umami.is/script.js" data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID} />
@@ -51,10 +58,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Grain />
         {children}
         <InView />
+        <ReadingHeat />
         <ScrollDriver />
         <Magnetic />
         <SmoothScroll />
         <RefTracker />
+        <RouteTransition />
       </body>
     </html>
   );

@@ -5,6 +5,8 @@ type Props = {
   /** Center of the isotherms as fractions of the canvas, per breakpoint. */
   origin?: [number, number];
   originMobile?: [number, number];
+  /** Selector of an element to center the isotherms on instead (measured on resize). */
+  anchor?: string;
   className?: string;
 };
 
@@ -18,7 +20,7 @@ const FRAME_MS_TOUCH = 1000 / 20;
  * Faint concentric isotherms: left halves are lines (human), right halves are pixel dots (machine),
  * drifting slowly outward. Canvas 2D; paused off-screen, in background tabs, and static with reduced motion.
  */
-export function HeatField({ origin = [0.5, 0.5], originMobile, className = '' }: Props) {
+export function HeatField({ origin = [0.5, 0.5], originMobile, anchor, className = '' }: Props) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -42,6 +44,13 @@ export function HeatField({ origin = [0.5, 0.5], originMobile, className = '' }:
       const [ox, oy] = w < 1024 && originMobile ? originMobile : origin;
       cx = w * ox;
       cy = h * oy;
+      const a = anchor && document.querySelector(anchor);
+      if (a) {
+        const r = a.getBoundingClientRect();
+        const cr = canvas.getBoundingClientRect();
+        cx = r.left + r.width / 2 - cr.left;
+        cy = r.top + r.height / 2 - cr.top;
+      }
       maxR = Math.hypot(Math.max(cx, w - cx), Math.max(cy, h - cy));
       gap = Math.max(touch ? 44 : 36, maxR / MAX_RINGS);
       draw();
@@ -89,6 +98,12 @@ export function HeatField({ origin = [0.5, 0.5], originMobile, className = '' }:
 
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
+    // Centered on an element: re-measure when it moves or resizes (layout settling, web fonts arriving).
+    const target = anchor ? document.querySelector(anchor) : null;
+    if (target) {
+      ro.observe(target);
+      document.fonts?.ready.then(resize);
+    }
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
       visible ? start() : stop();
@@ -117,7 +132,7 @@ export function HeatField({ origin = [0.5, 0.5], originMobile, className = '' }:
       io.disconnect();
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [origin, originMobile]);
+  }, [origin, originMobile, anchor]);
 
   return <canvas ref={ref} aria-hidden className={`pointer-events-none absolute inset-0 h-full w-full ${className}`} />;
 }

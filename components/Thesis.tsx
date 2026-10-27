@@ -1,22 +1,29 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
+import { richTier } from '@/lib/tier';
 
 const ROOM = 293;
 const IRON = 1811; // iron melts at 1811 K
 
-/** Scroll heats the section from room temperature (293 K) to iron's melting point (1811 K). */
+/**
+ * Scroll heats the section from room temperature (293 K) to iron's melting point (1811 K): a furnace glow rises from
+ * the floor (CSS), and on the rich tier a WebGL surface of iron goes from glowing cracks to flowing molten metal.
+ */
 export function Thesis() {
   const ref = useRef<HTMLElement>(null);
   const num = useRef<HTMLSpanElement>(null);
   const cap = useRef<HTMLSpanElement>(null);
+  const gl = useRef<HTMLCanvasElement>(null);
+  const heat = useRef(1);
 
   useEffect(() => {
     if (reducedMotion()) return;
     const el = ref.current!;
     let shown = -1;
-    return trackScroll(el, 'pin', (p) => {
+    const off = trackScroll(el, 'pin', (p) => {
       const k = ease.inOut(seg(p, 0.08, 0.78));
+      heat.current = k;
       el.style.setProperty('--k', k.toFixed(4));
       // One line fully leaves before the next arrives.
       el.style.setProperty('--xa', ease.inOut(seg(p, 0.34, 0.46)).toFixed(4));
@@ -28,11 +35,32 @@ export function Thesis() {
         cap.current!.textContent = t >= IRON ? 'Iron melts' : t <= ROOM ? 'Room temperature' : 'Heating';
       }
     });
+
+    let stop: (() => void) | undefined;
+    let dead = false;
+    richTier().then(async (ok) => {
+      if (!ok || dead) return;
+      const { startMolten } = await import('@/lib/gl/molten');
+      if (dead) return;
+      stop = startMolten({
+        canvas: gl.current!,
+        heat: () => heat.current,
+        onReady: () => el.setAttribute('data-gl', ''),
+        onFail: () => el.removeAttribute('data-gl'),
+      });
+    });
+    return () => {
+      dead = true;
+      off();
+      stop?.();
+    };
   }, []);
 
   return (
     <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative border-y border-line">
       <div className="pin-sticky relative flex items-center overflow-hidden">
+        <canvas ref={gl} aria-hidden className="thesis-gl" />
+        <div aria-hidden className="thesis-furnace" />
         <div aria-hidden className="thesis-glow" />
         <div className="container-x relative flex w-full flex-col gap-12 py-24 lg:flex-row lg:items-end lg:justify-between">
           <div className="thesis-lines relative grid max-w-4xl">

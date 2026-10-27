@@ -76,6 +76,17 @@ html.lenis body {
   .container-x {
     @apply mx-auto w-full max-w-[76rem] px-4 sm:px-6 lg:px-8;
   }
+  /* Below-the-fold sections: the browser skips their layout and paint until they come near the viewport. Each
+     section passes its rough height (--h-sm phone, --h-lg desktop) so the page doesn't change length as you scroll. */
+  .cv-auto {
+    content-visibility: auto;
+    contain-intrinsic-size: auto var(--h-sm, 1000px);
+  }
+  @media (min-width: 1024px) {
+    .cv-auto {
+      contain-intrinsic-size: auto var(--h-lg, 1000px);
+    }
+  }
   .label {
     @apply font-mono text-[0.75rem] uppercase tracking-[0.14em] text-bone-dim;
   }
@@ -539,38 +550,6 @@ textarea.field {
   opacity: 1;
 }
 
-/* ---------- Hero: copy drifts up, ring swells, frame recedes as you scroll away ---------- */
-.hero-out {
-  --o: clamp(0, (var(--p, 0.5) - 0.5) * 2, 1);
-}
-.hero-out-copy {
-  transform: translate3d(0, calc(var(--o) * -90px), 0);
-  opacity: calc(1 - var(--o) * 1.3);
-}
-.hero-out-ring {
-  transform: translate3d(0, calc(var(--o) * -30px), 0) scale(calc(1 + var(--o) * 0.35));
-  opacity: calc(1 - var(--o) * 1.1);
-}
-.hero-out-frame {
-  perspective: 1600px;
-  transform: translate3d(0, calc(var(--o) * -60px), 0) scale(calc(1 - var(--o) * 0.06));
-}
-.scroll-cue {
-  opacity: calc(1 - var(--o, 0) * 5);
-}
-.scroll-cue span {
-  animation: cue 2.4s var(--ease-spring) infinite;
-}
-@keyframes cue {
-  0% {
-    transform: translateY(-100%);
-  }
-  65%,
-  100% {
-    transform: translateY(200%);
-  }
-}
-
 /* Browser mockup rises and un-tilts into place on load (transform only, so it paints immediately). */
 .frame-in {
   transform-origin: 50% 100%;
@@ -594,95 +573,1204 @@ textarea.field {
   top: 0;
   height: 100svh;
 }
-.js .fx {
-  height: 340vh;
-}
 .js .thesis {
   height: 230vh;
 }
 
-/* Fusion story: --a draws the human half, --b assembles the machine half, --c ignites the core. */
-.fx {
-  --a: 1;
-  --b: 1;
-  --c: 1;
+/* ---------- Ignition: the home opening (components/Ignition.tsx) ----------
+   Defaults are the finished state (no JS, reduced motion, short landscape screens). The intro runs once on load
+   (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --f, --t1..--t3 from lib/scroll.ts. */
+.ig {
+  --o: 0;
+  --melt: 0;
+  --sm: 0;
+  --sh: 0;
+  --core: 1;
+  --flare: 0;
+  --f: 1;
   --t1: 0;
   --t2: 0;
   --t3: 1;
 }
-.fx-ring {
-  transform: scale(calc(0.94 + var(--c) * 0.06));
+/* Intro tempo (the nav uses it too): 1 on the first visit of a session, faster after that. */
+:root {
+  --T: 1;
 }
-.fx-human {
-  transform: translateX(calc((1 - var(--a)) * -12px));
-  opacity: calc(0.15 + var(--a) * 0.85);
+.ig-stage {
+  min-height: 100svh;
 }
-.fx-human path {
-  stroke-dasharray: 1;
-  stroke-dashoffset: calc(1 - var(--a));
+.ig-ring-area {
+  min-height: 9rem;
 }
-.fx-px {
-  --bi: clamp(0, var(--b) * 1.6 - var(--k) * 0.6, 1);
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: translate(calc(var(--dx) * (1 - var(--bi)) * 1px), calc(var(--dy) * (1 - var(--bi)) * 1px))
-    rotate(calc(var(--dr) * (1 - var(--bi)) * 1deg)) scale(calc(0.5 + var(--bi) * 0.5));
-  opacity: calc(0.12 + var(--bi) * 0.88);
-}
-.fx-core {
-  transform-box: fill-box;
-  transform-origin: center;
-  transform: scale(calc(0.2 + var(--c) * 0.8));
-  opacity: var(--c);
-}
-.fx-glow {
-  position: absolute;
-  left: 50%;
-  top: 38%;
-  width: min(110vw, 46rem);
+.ig-ring {
+  --rs: min(74vw, 40svh);
+  position: relative;
+  container-type: inline-size; /* 1cqw = 1% of the ring, for the pour's sparks */
+  width: var(--rs);
   aspect-ratio: 1;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(circle, rgba(255, 91, 31, 0.42) 0%, rgba(255, 179, 71, 0.1) 26%, rgba(255, 91, 31, 0) 62%);
-  filter: blur(10px);
-  opacity: var(--c);
-  transform: scale(calc(0.45 + var(--c) * 0.6));
-  pointer-events: none;
-}
-.fx-line {
-  grid-area: 1 / 1;
-}
-.fx-t1,
-.fx-t2,
-.fx-t3 {
-  will-change: opacity, transform;
-}
-.fx-t1 {
-  opacity: var(--t1);
-  transform: translateY(calc((1 - var(--t1)) * 20px));
-  filter: blur(calc((1 - var(--t1)) * 6px));
-}
-.fx-t2 {
-  opacity: var(--t2);
-  transform: translateY(calc((1 - var(--t2)) * 20px));
-  filter: blur(calc((1 - var(--t2)) * 6px));
-}
-.fx-t3 {
-  opacity: var(--t3);
-  transform: translateY(calc((1 - var(--t3)) * 28px)) scale(calc(0.97 + var(--t3) * 0.03));
-  filter: blur(calc((1 - var(--t3)) * 8px));
-}
-.fx-steps {
   color: var(--bone);
 }
-.fx-s1 {
-  opacity: calc(0.7 + 0.3 * clamp(0, var(--a) * 2 - 1, 1) * (1 - clamp(0, var(--b) * 2 - 1, 1)));
+@media (min-width: 1024px) {
+  .ig-ring {
+    --rs: min(30vw, 46svh);
+  }
 }
-.fx-s2 {
-  opacity: calc(0.7 + 0.3 * clamp(0, var(--b) * 2 - 1, 1) * (1 - clamp(0, var(--c) * 2 - 1, 1)));
+.ig-glow {
+  position: absolute;
+  inset: -80%;
+  pointer-events: none;
 }
-.fx-s3 {
-  opacity: calc(0.7 + 0.3 * clamp(0, var(--c) * 2 - 1, 1));
+.ig-glow span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 91, 31, 0.46) 0%,
+    rgba(255, 179, 71, 0.13) 15%,
+    rgba(255, 91, 31, 0.05) 32%,
+    rgba(255, 91, 31, 0) 56%
+  );
+}
+/* Rich tier: the ring melts into the WebGL dots for the scroll story (--melt, 0 → 1) and is solid SVG otherwise. */
+.ig-gl {
+  opacity: 0;
+}
+.ig[data-gl] .ig-gl {
+  opacity: var(--melt);
+}
+.ig[data-gl] .ig-svg {
+  opacity: calc(1 - var(--melt));
+}
+
+/* ---------- The pour (components/Ignition.tsx Pour): everything is in ring units, as % of the ring's box ----------
+   Shown only with JS and motion allowed; the solid ring underneath is what everyone else sees. */
+.ig-pour {
+  position: absolute;
+  inset: 0;
+  display: none;
+  pointer-events: none;
+}
+.ig-pour > *,
+.ig-pour svg {
+  position: absolute;
+  overflow: visible;
+}
+.ig-trickle,
+.ig-trickle > div,
+.ig-melt,
+.ig-melt-glow,
+.ig-sparks {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.ig-svg {
+  z-index: 1;
+}
+.ig-trickle,
+.ig-cfill,
+.ig-stream,
+.ig-cru,
+.ig-sparks {
+  z-index: 2;
+}
+/* The mould: hairlines, like a technical drawing, scanned in from the top by a bright line. */
+.ig-mould {
+  overflow: hidden;
+  -webkit-mask: var(--mould) center / 100% 100% no-repeat;
+  mask: var(--mould) center / 100% 100% no-repeat;
+}
+.ig-mould i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 200%;
+  background: linear-gradient(to bottom, rgba(232, 228, 216, 0.42) 46%, #ffe3b8 49.6%, rgba(255, 227, 184, 0) 50%);
+}
+/* The metal: a tall heat gradient (clear above the surface, white-hot at it, orange below, bone far below) seen
+   through the dot matrix. Moving it up fills the mould and then cools it, all on the compositor. */
+.ig-melt {
+  position: absolute;
+  overflow: hidden;
+  -webkit-mask: var(--dots) center / 100% 100% no-repeat;
+  mask: var(--dots) center / 100% 100% no-repeat;
+}
+.ig-lvl {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 312.5%; /* 200 units: 64 clear, then the gradient */
+  translate: 0 -30.5%; /* surface at y = 3, the top of the mould */
+}
+.ig-lvl > i {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 248, 234, 0) 31.6%,
+    #fff8ea 32%,
+    #ffe3a6 32.75%,
+    #ffc061 34.5%,
+    #ff9338 38%,
+    #ff6c27 43%,
+    #ff5b1f 49%,
+    #ff5b1f 57%,
+    var(--bone) 68%
+  );
+}
+.ig-melt-glow {
+  filter: blur(5px);
+}
+.ig-melt-glow .ig-lvl > i {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 240, 214, 0) 31.6%,
+    rgba(255, 240, 214, 0.95) 32%,
+    rgba(255, 190, 100, 0.8) 34.5%,
+    rgba(255, 120, 40, 0.55) 40%,
+    rgba(255, 91, 31, 0.28) 50%,
+    rgba(255, 91, 31, 0) 60%
+  );
+}
+/* Metal running down the arcs' channels ahead of the fill: each arc's centre line (a mask), uncovered from the top
+   by a half-plane turning about the centre. */
+.ig-trickle {
+  filter: drop-shadow(0 0 3px rgba(255, 120, 40, 0.9));
+}
+.ig-trickle > div {
+  position: absolute;
+  overflow: hidden;
+  -webkit-mask: var(--tr) center / 100% 100% no-repeat;
+  mask: var(--tr) center / 100% 100% no-repeat;
+}
+.ig-trickle i {
+  position: absolute;
+  left: 50%;
+  top: -50%;
+  width: 100%;
+  height: 200%;
+  transform-origin: 0 50%;
+  background: #ffe2ae;
+}
+/* The core cavity, filling from the bottom. */
+.ig-cfill {
+  overflow: hidden;
+  border-radius: 50%;
+}
+.ig-cfill i,
+.ig-cfill i::after {
+  position: absolute;
+  inset: 0;
+}
+.ig-cfill i {
+  background: radial-gradient(circle at 50% 30%, #fff6e2, #ffc061 45%, #ff7a2e 85%);
+  translate: 0 100%;
+}
+.ig-cfill i::after {
+  content: '';
+  background: var(--ember);
+  opacity: 0;
+}
+/* The stream: narrowing as it falls, with streaks running down it. */
+.ig-stream {
+  transform-origin: 50% 0;
+  scale: 1 0;
+  filter: drop-shadow(0 0 4px rgba(255, 120, 40, 0.85));
+}
+.ig-stream > div {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  transform-origin: 50% 100%;
+  clip-path: polygon(0 0, 100% 0, 72% 100%, 28% 100%);
+  background: linear-gradient(90deg, rgba(255, 110, 40, 0), #ff8a3a 18%, #ffd27e 38%, #fff6e2 50%, #ffd27e 62%, #ff8a3a 82%, rgba(255, 110, 40, 0));
+}
+.ig-stream i {
+  position: absolute;
+  inset: -100% 0 0;
+  background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0) 0, rgba(255, 255, 255, 0.35) 1.2%, rgba(255, 255, 255, 0) 2.6%, rgba(255, 255, 255, 0) 5%);
+}
+/* The crucible: turns about its lip; the molten pool inside stays level as it tips. */
+.ig-cru {
+  transform-origin: 90.3226% 11.3208%;
+}
+.ig-cru > * {
+  position: absolute;
+  inset: 0;
+}
+.ig-cru-glow {
+  inset: -30% -45% -55%;
+  background: radial-gradient(closest-side, rgba(255, 120, 40, 0.42), rgba(255, 91, 31, 0.12) 55%, rgba(255, 91, 31, 0));
+  opacity: 0;
+}
+.ig-cru-drop i {
+  position: absolute;
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: #a8a294;
+  transform-origin: 50% 100%;
+}
+/* Heating: a strip of colours (cold, dull red, orange, white-hot) slides through each pixel. */
+.ig-cru-drop i::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 400%;
+  background: linear-gradient(#a8a294 22%, #8a3417 38%, #ff6a24 58%, #ffc061 74%, #fff1d6 90%);
+}
+.ig-pool-r {
+  position: absolute;
+  left: -200%;
+  top: -200%;
+  width: 500%;
+  height: 500%;
+  transform-origin: 58.0645% 42.2642%; /* the lip */
+}
+.ig-pool {
+  position: absolute;
+  left: 0;
+  top: 42.2642%;
+  width: 100%;
+  height: 57.7358%;
+  translate: 0 24.84%; /* empty */
+  background: linear-gradient(to bottom, #fff6e0, #ffd58a 1.6%, #ffb347 4.6%, #ff7a2e 11.4%, var(--ember) 23%, #e04a14);
+}
+.ig-cru-art {
+  width: 100%;
+  height: 100%;
+  color: var(--bone);
+}
+.ig-cru-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 0.16;
+  stroke-linejoin: round;
+}
+.ig-cru-inner {
+  stroke-width: 0.1;
+  opacity: 0.55;
+}
+.ig-cru-wall {
+  fill: url(#ig-hatch);
+}
+#ig-hatch path {
+  stroke: currentColor;
+  stroke-width: 0.07;
+  opacity: 0.6;
+}
+/* Sparks: each one a parabola, as keyframes (one element, one animation each). */
+.ig-sparks i {
+  position: absolute;
+  left: 48.6%;
+  top: 43.6%;
+  width: 2.8%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff6e6 0 18%, #ffc061 30%, rgba(255, 110, 40, 0.5) 46%, rgba(255, 91, 31, 0) 70%);
+  opacity: 0;
+}
+
+/* Sized so "Intelligence," spans ~90% of the container (Archivo sets it at ~5.05em wide), capped by height. */
+.ig-title {
+  font-size: min((100vw - 2rem) / 5.4, 15svh);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+}
+@media (min-width: 640px) {
+  .ig-title {
+    font-size: min((100vw - 3rem) / 5.6, 19svh);
+  }
+}
+@media (min-width: 1024px) {
+  .ig-title {
+    font-size: min((min(100vw, 76rem) - 4rem) / 5.6, 21svh);
+  }
+}
+/* Each line is its own mask; padding (cancelled by margins) keeps italic overhangs and descenders inside it. */
+.ig-line {
+  display: block;
+  overflow: clip;
+  padding: 0.04em 0.14em 0.24em 0.08em;
+  margin: -0.04em -0.14em -0.24em -0.08em;
+}
+.ig-in {
+  display: inline-block;
+}
+.ig-l2 .accent {
+  font-size: 1.14em;
+  letter-spacing: -0.02em;
+}
+/* "alloyed." cools from white-hot to bone as it arrives: a hot copy sits on the bone word and fades off it, so the
+   whole effect is one composited opacity animation (finished state: bone). The copy is hidden from screen readers. */
+.ig-cool {
+  position: relative;
+  display: inline-block; /* one line box, shared exactly by the copy */
+  color: var(--bone);
+}
+.ig-cool::after {
+  content: attr(data-text) / '';
+  position: absolute;
+  left: -0.2em;
+  top: 0;
+  padding: 0 0.1em 0.3em 0.2em;
+  background-image: linear-gradient(100deg, #fff3df 15%, var(--ember-hot) 50%, var(--ember) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.ig-fuse,
+.ig-steps {
+  pointer-events: none;
+}
+.ig-fuse {
+  display: grid;
+  gap: 1.25rem;
+  justify-items: center;
+  padding-block: 6rem;
+}
+.ig-fl {
+  will-change: opacity, transform;
+}
+.ig-t1,
+.ig-t2 {
+  color: var(--bone-dim);
+}
+.ig-steps {
+  display: none;
+}
+.ig-cue {
+  display: none;
+}
+
+/* Intro: the pour (see the Ignition docblock). Times are for the first visit (--T: 1); repeat visits run at 0.45. */
+@media (prefers-reduced-motion: no-preference) {
+  .js[data-intro='quick'] {
+    --T: 0.45;
+  }
+  .js .ig-pour {
+    display: block;
+    animation: ig-gone 1ms linear calc(4500ms * var(--T)) forwards;
+  }
+  .js .ig-svg {
+    animation: ig-solid calc(420ms * var(--T)) ease calc(3950ms * var(--T)) backwards;
+  }
+  /* 0.0 s: the mould is scanned in. */
+  .js .ig-mould {
+    animation: ig-out calc(550ms * var(--T)) ease calc(3450ms * var(--T)) forwards;
+  }
+  .js .ig-mould i {
+    animation: ig-scan calc(800ms * var(--T)) cubic-bezier(0.45, 0, 0.35, 1) backwards;
+  }
+  /* 0.15 s: the crucible; 0.3 s: three pixels drop into it; 0.7 s: they glow and melt into a pool. */
+  .js .ig-cru {
+    animation: ig-cru calc(3570ms * var(--T)) linear calc(150ms * var(--T)) both;
+  }
+  .js .ig-pool-r {
+    animation: ig-untip calc(3570ms * var(--T)) linear calc(150ms * var(--T)) both;
+  }
+  .js .ig-pool {
+    animation: ig-pool calc(2300ms * var(--T)) linear calc(750ms * var(--T)) both;
+  }
+  .js .ig-cru-glow {
+    animation: ig-cru-glow calc(2700ms * var(--T)) ease calc(800ms * var(--T)) both;
+  }
+  .js .ig-cru-drop i {
+    animation: ig-ingot calc(1120ms * var(--T)) linear calc((300ms + var(--n) * 90ms) * var(--T)) both;
+  }
+  .js .ig-cru-drop i::after {
+    animation: ig-heat-up calc(560ms * var(--T)) linear calc(620ms * var(--T)) both;
+  }
+  /* 1.5 s: it pours. The stream falls down the sprue into the core, throwing sparks; metal runs down the channels. */
+  .js .ig-stream {
+    animation: ig-stream calc(1550ms * var(--T)) linear calc(1500ms * var(--T)) both;
+  }
+  .js .ig-stream > div {
+    animation: ig-scale-out calc(260ms * var(--T)) cubic-bezier(0.5, 0, 0.9, 0.5) calc(3000ms * var(--T)) forwards;
+  }
+  .js .ig-stream i {
+    animation: ig-flow calc(300ms * var(--T)) linear calc(1500ms * var(--T)) 6;
+  }
+  .js .ig-cfill i {
+    animation: ig-cfill calc(520ms * var(--T)) cubic-bezier(0.3, 0.1, 0.4, 1) calc(1780ms * var(--T)) forwards;
+  }
+  .js .ig-cfill i::after {
+    animation: ig-on calc(1100ms * var(--T)) ease calc(2700ms * var(--T)) forwards;
+  }
+  .js .ig-trickle {
+    animation: ig-out calc(400ms * var(--T)) ease calc(2100ms * var(--T)) forwards;
+  }
+  .js .ig-trickle i {
+    animation: ig-sweep calc(var(--tm) * var(--T)) cubic-bezier(0.55, 0, 0.9, 0.6) calc(var(--td) * var(--T)) both;
+  }
+  .js .ig-trickle > div {
+    --tm: 380ms;
+    --td: 1680ms;
+  }
+  .js .ig-trickle > div + div {
+    --tm: 280ms;
+    --td: 1750ms;
+  }
+  .js .ig-sparks i {
+    animation: ig-spark calc(var(--ms) * var(--T)) linear calc((1800ms + var(--dl)) * var(--T)) both;
+  }
+  .js .ig-glow span {
+    animation:
+      ig-glow calc(1800ms * var(--T)) ease-out calc(1800ms * var(--T)) both,
+      breathe 4.5s ease-in-out calc(4400ms * var(--T)) infinite;
+  }
+  /* 2.0 s: the metal rises through the mould, white-hot at the surface. 2.85 s: it cools to orange, then bone,
+     the first metal in first. 3.95 s: it sets solid. */
+  .js .ig-lvl {
+    animation: ig-metal calc(2100ms * var(--T)) linear calc(2000ms * var(--T)) both;
+  }
+  .js .ig-heat {
+    animation: ig-heat calc(2000ms * var(--T)) ease-out calc(2000ms * var(--T)) both;
+  }
+  .js .ig-in {
+    animation: ig-rise calc(1250ms * var(--T)) cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ld, 0ms) * var(--T)) both;
+  }
+  .js .ig-l1 .ig-in {
+    --ld: 300ms;
+  }
+  .js .ig-l2 .ig-in {
+    --ld: 430ms;
+  }
+  /* "alloyed." stays white-hot while the metal pours and cools with it. */
+  .js .ig-cool::after {
+    will-change: opacity;
+    animation: ig-cool calc(3700ms * var(--T)) cubic-bezier(0.4, 0, 0.6, 1) calc(400ms * var(--T)) both;
+  }
+  .js .ig-meta > * {
+    animation: rise calc(1000ms * var(--T)) var(--ease-spring) calc((820ms + var(--mi, 0) * 110ms) * var(--T)) both;
+  }
+  .js .ig-meta > :nth-child(2) {
+    --mi: 1;
+  }
+  .js .nav-intro {
+    animation: ig-nav calc(1000ms * var(--T)) var(--ease-out) calc(900ms * var(--T)) both;
+  }
+}
+@keyframes ig-gone {
+  to {
+    visibility: hidden;
+  }
+}
+@keyframes ig-on {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes ig-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes ig-solid {
+  from {
+    opacity: 0;
+  }
+}
+/* The crucible, 0.15 s → 3.72 s: drops in (to 0.53 s); tips until the metal reaches the lip (24° at 1.5 s); keeps
+   tipping as it pours so the pool drains steadily (66° at 3.0 s); is righted (3.35 s) and lifted away. ig-untip
+   mirrors the turn, keeping the pool's surface level. */
+@keyframes ig-cru {
+  0% {
+    opacity: 0;
+    translate: 0 -30%;
+    rotate: 0deg;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  10.6% {
+    opacity: 1;
+    translate: 0 0;
+  }
+  30.8% {
+    rotate: 0deg;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  37.8% {
+    rotate: 24deg;
+    animation-timing-function: cubic-bezier(0.25, 0, 0.6, 1);
+  }
+  79.8% {
+    rotate: 66deg;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  }
+  88.2% {
+    opacity: 1;
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
+  }
+  89.6% {
+    rotate: 6deg;
+  }
+  100% {
+    opacity: 0;
+    translate: 0 -45%;
+    rotate: 6deg;
+  }
+}
+@keyframes ig-untip {
+  0%,
+  30.8% {
+    rotate: 0deg;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  37.8% {
+    rotate: -24deg;
+    animation-timing-function: cubic-bezier(0.25, 0, 0.6, 1);
+  }
+  79.8% {
+    rotate: -66deg;
+    animation-timing-function: cubic-bezier(0.4, 0, 0.3, 1);
+  }
+  89.6%,
+  100% {
+    rotate: -6deg;
+  }
+}
+/* The pool's surface, as a distance below the lip: empty → melted → at the lip while it pours → a residue. */
+@keyframes ig-pool {
+  0% {
+    translate: 0 24.84%;
+    animation-timing-function: cubic-bezier(0.3, 0, 0.4, 1);
+  }
+  26% {
+    translate: 0 9.15%;
+    animation-timing-function: cubic-bezier(0.5, 0, 0.5, 1);
+  }
+  33% {
+    translate: 0 0.16%;
+  }
+  97% {
+    translate: 0 0.16%;
+  }
+  100% {
+    translate: 0 23.86%;
+  }
+}
+@keyframes ig-cru-glow {
+  25% {
+    opacity: 1;
+  }
+  85% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ig-scan {
+  from {
+    translate: 0 -50%;
+  }
+}
+@keyframes ig-sweep {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: -180deg;
+  }
+}
+/* A pixel drops into the crucible (0 → 0.48 s, with a small bounce), sits, then slumps into the pool (from 0.7 s). */
+@keyframes ig-ingot {
+  0% {
+    translate: 0 -2600%;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  29% {
+    translate: 0 0;
+    animation-timing-function: cubic-bezier(0, 0.5, 0.5, 1);
+  }
+  36% {
+    translate: 0 -14%;
+    animation-timing-function: cubic-bezier(0.5, 0, 1, 0.5);
+  }
+  43% {
+    translate: 0 0;
+  }
+  62.5% {
+    scale: 1;
+    opacity: 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    translate: 0 0;
+    scale: 1.35 0.2;
+    opacity: 0;
+  }
+}
+@keyframes ig-heat-up {
+  to {
+    translate: 0 -75%;
+  }
+}
+/* The stream falls to the core (0.3 s), pours, and thins as the crucible empties. */
+@keyframes ig-stream {
+  0% {
+    scale: 1 0;
+    animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45);
+  }
+  19.4% {
+    scale: 1 1;
+  }
+  67.7% {
+    scale: 1 1;
+    animation-timing-function: ease-in;
+  }
+  100% {
+    scale: 0.5 1;
+  }
+}
+@keyframes ig-scale-out {
+  to {
+    scale: 1 0;
+  }
+}
+@keyframes ig-flow {
+  to {
+    translate: 0 25%;
+  }
+}
+@keyframes ig-cfill {
+  to {
+    translate: 0 0;
+  }
+}
+/* x = dx·t, y = up·4t(1 − t) + dn·t² (up < 0 is the rise), in % of the ring. */
+@keyframes ig-spark {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  10% {
+    translate: calc(var(--dx) * 0.1cqw) calc((var(--up) * 0.36 + var(--dn) * 0.01) * 1cqw);
+    opacity: 1;
+  }
+  25% {
+    translate: calc(var(--dx) * 0.25cqw) calc((var(--up) * 0.75 + var(--dn) * 0.0625) * 1cqw);
+  }
+  45% {
+    translate: calc(var(--dx) * 0.45cqw) calc((var(--up) * 0.99 + var(--dn) * 0.2025) * 1cqw);
+  }
+  70% {
+    translate: calc(var(--dx) * 0.7cqw) calc((var(--up) * 0.84 + var(--dn) * 0.49) * 1cqw);
+  }
+  100% {
+    translate: calc(var(--dx) * 1cqw) calc(var(--dn) * 1cqw);
+    opacity: 0;
+    scale: 0.45;
+  }
+}
+/* 2.0 s: the surface rises from below the mould (y = 62) to its top (y = 3, at 3.0 s); from 2.85 s the gradient
+   keeps moving up, so the metal cools from the bottom: orange, then bone (done at 4.1 s). */
+@keyframes ig-metal {
+  0.00% {
+    translate: 0 -1.00%;
+  }
+  4.76% {
+    translate: 0 -1.60%;
+  }
+  9.52% {
+    translate: 0 -3.57%;
+  }
+  14.29% {
+    translate: 0 -7.08%;
+  }
+  19.05% {
+    translate: 0 -11.94%;
+  }
+  23.81% {
+    translate: 0 -17.38%;
+  }
+  28.57% {
+    translate: 0 -22.33%;
+  }
+  33.33% {
+    translate: 0 -26.15%;
+  }
+  38.10% {
+    translate: 0 -28.69%;
+  }
+  42.86% {
+    translate: 0 -30.17%;
+  }
+  47.62% {
+    translate: 0 -31.36%;
+  }
+  52.38% {
+    translate: 0 -33.01%;
+  }
+  59.52% {
+    translate: 0 -37.31%;
+  }
+  66.67% {
+    translate: 0 -43.64%;
+  }
+  73.81% {
+    translate: 0 -50.86%;
+  }
+  80.95% {
+    translate: 0 -57.19%;
+  }
+  88.10% {
+    translate: 0 -61.49%;
+  }
+  95.24% {
+    translate: 0 -63.63%;
+  }
+  100.00% {
+    translate: 0 -64.00%;
+  }
+}
+@keyframes ig-glow {
+  0% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  25% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes ig-rise {
+  from {
+    transform: translate3d(0, 140%, 0); /* clear of the mask's bottom padding too */
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes ig-cool {
+  0%,
+  68% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes ig-heat {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes ig-nav {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+
+/* Scroll story: only where it can pin (motion allowed, tall enough to fit the stage). */
+@media (prefers-reduced-motion: no-preference) and (min-height: 540px) {
+  .js .ig {
+    height: 420vh;
+    --f: 0;
+    --t3: 0;
+  }
+  .js .ig-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+  }
+  /* The pinned stage has a definite height, so the ring can also shrink to fit what's left of it. (Unpinned, the
+     area has no definite height and 100cqh would be 0.) */
+  .js .ig-ring-area {
+    container-type: size;
+  }
+  .js .ig-ring {
+    width: min(var(--rs), 100cqh);
+    transform: translate3d(0, calc(var(--o) * 2svh), 0) scale(calc(1 + var(--o) * 0.14));
+  }
+  .js .ig-l1 {
+    transform: translate3d(calc(var(--o) * -24vw), 0, 0);
+    opacity: calc(1 - var(--o) * 1.3);
+  }
+  .js .ig-l2 {
+    transform: translate3d(calc(var(--o) * 24vw), 0, 0);
+    opacity: calc(1 - var(--o) * 1.3);
+  }
+  .js .ig-meta {
+    transform: translate3d(0, calc(var(--o) * 3rem), 0);
+    opacity: calc(1 - var(--o) * 2.2);
+  }
+  .js .ig[data-out] .ig-copy {
+    visibility: hidden;
+  }
+  .js .ig-human {
+    transform: translateX(calc(var(--sh) * -8px));
+    opacity: calc(1 - var(--sh) * 0.85);
+  }
+  .js .ig-px {
+    --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px)) rotate(calc(var(--dr) * var(--q) * 1deg))
+      scale(calc(1 - var(--q) * 0.2));
+    opacity: calc(1 - var(--q) * 0.45);
+  }
+  .js .ig-core-g {
+    transform-box: fill-box;
+    transform-origin: center;
+    transform: scale(calc(0.2 + min(1, var(--core)) * 0.8 + var(--flare) * 0.7));
+    opacity: min(1, var(--core));
+  }
+  .js .ig-glow {
+    opacity: calc(min(1, var(--core)) * 0.85 + var(--flare) * 0.9);
+    transform: scale(calc(0.55 + min(1, var(--core)) * 0.45 + var(--flare) * 0.55));
+  }
+  .js .ig-fuse {
+    position: absolute;
+    inset-inline: 0;
+    bottom: max(4.5rem, 10svh);
+    display: grid;
+    place-items: center;
+    padding: 0;
+  }
+  .js .ig-fl {
+    grid-area: 1 / 1;
+  }
+  .js .ig-t1,
+  .js .ig-t2 {
+    color: var(--bone);
+  }
+  .js .ig-t1 {
+    opacity: var(--t1);
+    transform: translateY(calc((1 - var(--t1)) * 22px));
+    filter: blur(calc((1 - var(--t1)) * 6px));
+  }
+  .js .ig-t2 {
+    opacity: var(--t2);
+    transform: translateY(calc((1 - var(--t2)) * 22px));
+    filter: blur(calc((1 - var(--t2)) * 6px));
+  }
+  .js .ig-t3 {
+    opacity: var(--t3);
+    transform: translateY(calc((1 - var(--t3)) * 30px)) scale(calc(0.97 + var(--t3) * 0.03));
+    filter: blur(calc((1 - var(--t3)) * 8px));
+  }
+  .js .ig-steps {
+    position: absolute;
+    bottom: 1.75rem;
+    left: 50%;
+    translate: -50% 0;
+    display: flex;
+    gap: 1.5rem;
+    white-space: nowrap;
+    opacity: var(--f);
+  }
+  .js .ig-s1 {
+    opacity: calc(0.45 + 0.55 * var(--sm));
+  }
+  .js .ig-s2 {
+    opacity: calc(0.45 + 0.55 * var(--sh));
+  }
+  .js .ig-s3 {
+    opacity: calc(0.45 + 0.55 * var(--t3));
+  }
+  .js .ig-cue {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    display: none;
+    width: 1px;
+    height: 2.5rem;
+    overflow: hidden;
+    background: var(--line-strong);
+    opacity: calc(1 - var(--o) * 5);
+  }
+  @media (min-width: 1024px) {
+    .js .ig-cue {
+      display: block;
+    }
+  }
+  .js .ig-cue span {
+    display: block;
+    height: 50%;
+    background: var(--bone);
+    animation: cue 2.4s var(--ease-spring) infinite;
+  }
+}
+@keyframes cue {
+  0% {
+    transform: translateY(-100%);
+  }
+  65%,
+  100% {
+    transform: translateY(200%);
+  }
+}
+
+/* ---------- Casting: something is poured in behind an Ember heat front ----------
+   A .cast-layer is wiped in by two opposite translations (the layer slides down, its .cast-in content slides up
+   by the same amount), so the wipe is compositor-only and stays in step with the front on its .cast-track.
+   Used by the /sites stage (driven by scroll and on load) and by [data-cast] blocks, which pour in on first view. */
+.cast-layer,
+.cast-in {
+  position: absolute;
+  inset: 0;
+}
+.cast-layer {
+  overflow: hidden;
+}
+.cast-track {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+/* the cooling zone just behind the front glows faintly */
+.cast-band {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 100%;
+  height: 18%;
+  background: linear-gradient(to bottom, rgba(255, 91, 31, 0), rgba(255, 91, 31, 0.16));
+}
+.cast-front {
+  position: absolute;
+  inset-inline: 0;
+  top: -1px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 91, 31, 0), var(--ember) 12%, var(--ember-hot) 50%, var(--ember) 88%, rgba(255, 91, 31, 0));
+  box-shadow:
+    0 0 16px 3px rgba(255, 91, 31, 0.55),
+    0 0 56px 10px rgba(255, 91, 31, 0.22);
+}
+@keyframes cast-pour {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes cast-pour-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes cast-front {
+  0% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  4% {
+    opacity: 1;
+  }
+  92% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+}
+/* [data-cast]: the mold (.cast-mold) shows first, the piece (.cast-piece) pours in on first view (<InView />). */
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-cast] {
+    --cast-ms: 1700ms;
+  }
+  .js [data-cast]:not([data-in]) .cast-piece {
+    transform: translateY(-100%);
+  }
+  .js [data-cast]:not([data-in]) .cast-piece > .cast-in {
+    transform: translateY(100%);
+  }
+  .js [data-cast][data-in] .cast-piece {
+    animation: cast-pour var(--cast-ms) cubic-bezier(0.45, 0, 0.2, 1) var(--cast-delay, 150ms) both;
+  }
+  .js [data-cast][data-in] .cast-piece > .cast-in {
+    animation: cast-pour-in var(--cast-ms) cubic-bezier(0.45, 0, 0.2, 1) var(--cast-delay, 150ms) both;
+  }
+  .js [data-cast][data-in] .cast-track {
+    animation: cast-front var(--cast-ms) cubic-bezier(0.45, 0, 0.2, 1) var(--cast-delay, 150ms) both;
+  }
+}
+
+/* ---------- Ventures (components/Ventures.tsx) ---------- */
+.venture-concept {
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(13, 13, 11, 0.8);
+  font: 0.5625rem/1.4 var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bone);
+}
+/* the live card's mold: a blueprint of a page (grid, a headline bar, a picture box), cast over by the screenshot */
+.venture-mold {
+  background-color: #12110e;
+  background-image:
+    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
+    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
+    linear-gradient(rgba(232, 228, 216, 0.09), rgba(232, 228, 216, 0.09)),
+    linear-gradient(rgba(232, 228, 216, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 228, 216, 0.05) 1px, transparent 1px);
+  background-size:
+    38% 9%,
+    30% 9%,
+    26% 4%,
+    16px 16px,
+    16px 16px;
+  background-position:
+    6% 30%,
+    6% 43%,
+    6% 58%,
+    0 0,
+    0 0;
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
+}
+.venture-mold::after {
+  content: '';
+  position: absolute;
+  inset: 16% 6% 22% 54%;
+  border: 1px dashed rgba(232, 228, 216, 0.3);
+  border-radius: 8%;
+}
+.forging-mark {
+  width: min(9rem, 60%);
+  color: rgba(232, 228, 216, 0.22);
+  overflow: visible;
+}
+/* still in the furnace: the core isn't lit yet (only a live venture gets its Ember core); it just warms and cools */
+.forging-core {
+  fill: rgba(232, 228, 216, 0.16);
+}
+.forging::after {
+  content: '';
+  position: absolute;
+  inset: auto 10% -40% 10%;
+  height: 70%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 91, 31, 0.1), rgba(255, 91, 31, 0));
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .forging-core {
+    animation: smoulder 3.2s ease-in-out infinite;
+  }
+  li:nth-child(3) .forging-core {
+    animation-delay: -1.4s;
+  }
+}
+@keyframes smoulder {
+  50% {
+    fill: rgba(255, 179, 71, 0.22);
+  }
+}
+
+/* ---------- Builders: the portrait's mold is a faint grid on the bone card ---------- */
+.portrait-mold {
+  background-image:
+    linear-gradient(rgba(13, 13, 11, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(13, 13, 11, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.portrait-mold .cast-piece {
+  background: var(--bone);
+}
+
+/* ---------- Page transition (components/RouteTransition.tsx): the next page is poured in ----------
+   A sheet of ground slides down over the page with the Ember front at its leading edge; the route changes under it;
+   then it carries on down, the front now at its top edge, uncovering the new page. */
+.route-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--ground);
+  transform: translateY(-101%);
+  visibility: hidden;
+  pointer-events: none;
+}
+.route-band {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 22vh;
+  background: linear-gradient(to bottom, rgba(255, 91, 31, 0), rgba(255, 91, 31, 0.14));
+}
+.route-front-leave {
+  top: auto;
+  bottom: -1px;
+}
+.route-front-arrive {
+  top: -1px;
+  opacity: 0;
+}
+[data-leaving] .route-sheet {
+  visibility: visible;
+  animation: route-cover 420ms cubic-bezier(0.6, 0, 0.35, 1) both;
+}
+[data-arriving] .route-sheet {
+  visibility: visible;
+  animation: route-uncover 760ms cubic-bezier(0.3, 0, 0.15, 1) both;
+}
+[data-arriving] .route-band,
+[data-arriving] .route-front-leave {
+  opacity: 0;
+}
+[data-arriving] .route-front-arrive {
+  opacity: 1;
+}
+@keyframes route-cover {
+  from {
+    transform: translateY(-101%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes route-uncover {
+  from {
+    transform: none;
+  }
+  to {
+    transform: translateY(101%);
+  }
+}
+
+/* ---------- Reading heat (components/HeatText.tsx + ReadingHeat.tsx): words warm from dim to bone as they're read ----------
+   --p comes from data-scroll="read", --n/--i from the word wrapper; the glow front is ~8 words wide. Dim is 56% bone,
+   which still clears AA. Body copy settles a little below full bone so long reading stays comfortable. */
+.heat-text {
+  --lo: 0.56;
+  --hi: 1;
+  color: var(--bone);
+}
+/* body copy settles at 82% bone; its dim state is the same 56% as everything else */
+.heat-text.heat-body {
+  --lo: 0.68;
+  color: rgba(232, 228, 216, 0.82);
+}
+.heat-text span {
+  opacity: calc(var(--lo) + (var(--hi) - var(--lo)) * clamp(0, (var(--p, 1) * (var(--n) + 10) - var(--i)) / 8, 1));
+}
+@media (prefers-reduced-motion: reduce) {
+  .heat-text span {
+    opacity: var(--hi);
+  }
 }
 
 /* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. */
@@ -700,6 +1788,39 @@ textarea.field {
   opacity: var(--xb);
   transform: translateY(calc((1 - var(--xb)) * 36px));
   filter: blur(calc((1 - var(--xb)) * 8px));
+}
+/* the furnace: heat rises from the floor as the temperature climbs */
+.thesis-furnace {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 80%;
+  background: radial-gradient(85% 80% at 50% 118%, rgba(255, 150, 70, 0.34), rgba(255, 91, 31, 0.15) 36%, rgba(130, 22, 0, 0.07) 60%, rgba(130, 22, 0, 0) 80%);
+  opacity: var(--k);
+  transform-origin: 50% 100%;
+  transform: scaleY(calc(0.55 + var(--k) * 0.45));
+  pointer-events: none;
+}
+/* rich tier: molten iron (lib/gl/molten.ts) takes over from the CSS furnace */
+.thesis-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms ease;
+  pointer-events: none;
+}
+.thesis[data-gl] .thesis-gl {
+  opacity: 1;
+}
+.thesis[data-gl] .thesis-furnace {
+  opacity: calc(var(--k) * 0.3);
+}
+/* small type keeps a dark halo when molten metal runs behind it */
+.thesis[data-gl] :is(.label, .font-mono) {
+  text-shadow:
+    0 0 14px rgba(13, 13, 11, 0.95),
+    0 1px 3px rgba(13, 13, 11, 0.9);
 }
 .thesis-bar {
   background: linear-gradient(90deg, var(--bone), var(--ember) 72%, var(--ember-hot));
@@ -884,9 +2005,24 @@ textarea.field {
   background-clip: text;
   color: transparent;
 }
+/* the Ember dot only lights once the wordmark has fully risen */
+.footer-giant-inner .spark-i::after {
+  opacity: clamp(0, var(--p, 1) * 3 - 2, 1);
+  box-shadow: 0 0 calc(var(--p, 1) * 2.5vw) rgba(255, 91, 31, 0.45);
+}
+/* 404: a ring that went cold. Its pixels have drifted loose and the core is out. */
+.cold-ring {
+  width: 6rem;
+  color: rgba(232, 228, 216, 0.4);
+  overflow: visible;
+}
+.cold-ring circle {
+  fill: none;
+  stroke: rgba(232, 228, 216, 0.35);
+  stroke-width: 1;
+}
 
 @media (prefers-reduced-motion: reduce) {
-  .js .fx,
   .js .thesis {
     height: auto;
   }
@@ -894,16 +2030,12 @@ textarea.field {
     position: relative;
     height: auto;
   }
-  .hero-out-copy,
-  .hero-out-ring,
-  .hero-out-frame,
   .tilt-in > .ba,
   .footer-giant-inner {
     transform: none;
     opacity: 1;
   }
   .frame-in,
-  .scroll-cue span,
   .live-dot,
   .send-panel {
     animation: none;

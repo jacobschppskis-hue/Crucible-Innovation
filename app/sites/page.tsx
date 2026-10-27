@@ -1,13 +1,11 @@
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { BeforeAfter } from '@/components/BeforeAfter';
-import { BrowserFrame } from '@/components/BrowserFrame';
+import { BuildStage } from '@/components/BuildStage';
 import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { JsonLd } from '@/components/JsonLd';
-import { HeatField } from '@/components/HeatField';
-import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
 import { PricingCard } from '@/components/PricingCard';
 import { Process } from '@/components/Process';
@@ -52,36 +50,8 @@ export default function SitesPage() {
     <>
       <Nav variant="sites" />
       <main id="main">
-        {/* 1. Hero */}
-        <section data-scroll="view" className="hero-out relative overflow-hidden pt-[calc(var(--nav-h)+3rem)] pb-20 sm:pb-28 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-[var(--nav-h)]">
-          <HeatField origin={[0.76, 0.52]} originMobile={[0.5, 0.78]} />
-          <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ground" />
-          <div className="container-x relative grid items-center gap-14 lg:grid-cols-[1.05fr_1fr] lg:gap-16">
-            <div className="hero-out-copy">
-              <p className="label">Crucible Sites · Websites for local businesses</p>
-              <WordReveal
-                as="h1"
-                immediate
-                className="h-display mt-6 text-[2.625rem] sm:text-6xl xl:text-[4.5rem]"
-                segments={[{ t: 'Your business deserves a website that' }, { t: 'actually looks good.', className: 'accent molten text-[1.08em]' }]}
-              />
-              <p className="mt-6 max-w-lg text-lg leading-relaxed text-bone-dim sm:text-xl">
-                We design and build fast, beautiful websites for local businesses. Live in about a week.
-              </p>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <a href="#start" className="btn btn-primary">
-                  Get a quote <ArrowRight />
-                </a>
-                <a href="#work" className="btn btn-ghost">
-                  See our work
-                </a>
-              </div>
-            </div>
-            <div className="hero-out-frame">
-              <BrowserFrame items={work} />
-            </div>
-          </div>
-        </section>
+        {/* 1. Hero + first scroll: a live concept site is cast, turns into a phone, and is recast */}
+        <BuildStage />
 
         {/* 2. Proof bar: promises, not invented numbers */}
         <section aria-label="What you can count on" className="border-y border-line">
@@ -96,7 +66,7 @@ export default function SitesPage() {
         </section>
 
         {/* 3. Before / After */}
-        <section className="container-x py-24 sm:py-32">
+        <section className="cv-auto container-x py-24 sm:py-32" style={{ '--h-sm': '760px', '--h-lg': '1250px' } as React.CSSProperties}>
           <SectionHead
             label="Before / After"
             title={[{ t: 'Same business.' }, { t: 'Different decade.', className: 'accent' }]}
@@ -112,13 +82,13 @@ export default function SitesPage() {
         </section>
 
         {/* 4. Process */}
-        <section id="process" className="container-x pb-24 sm:pb-32">
+        <section id="process" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '850px', '--h-lg': '510px' } as React.CSSProperties}>
           <SectionHead label="Process" title={[{ t: 'From first call to live site in' }, { t: 'about a week.', className: 'accent' }]} className="mb-14 sm:mb-20" />
           <Process />
         </section>
 
         {/* 5. Work */}
-        <section id="work" className="container-x pb-24 sm:pb-32">
+        <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1450px', '--h-lg': '710px' } as React.CSSProperties}>
           <SectionHead
             label="Work"
             title={[{ t: 'Think in' }, { t: 'kelvin.', className: 'accent' }]}
@@ -148,7 +118,7 @@ export default function SitesPage() {
         </section>
 
         {/* 6. Pricing */}
-        <section id="pricing" className="container-x pb-24 sm:pb-32">
+        <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2120px', '--h-lg': '1100px' } as React.CSSProperties}>
           <SectionHead
             label="Pricing"
             title={[{ t: 'Simple packages.' }, { t: 'Honest prices.', className: 'accent' }]}
@@ -176,13 +146,13 @@ export default function SitesPage() {
         <Builders />
 
         {/* 8. FAQ */}
-        <section id="faq" className="container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <section id="faq" className="cv-auto container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16" style={{ '--h-sm': '670px', '--h-lg': '600px' } as React.CSSProperties}>
           <SectionHead label="FAQ" title={[{ t: 'Questions,' }, { t: 'answered.', className: 'accent' }]} />
           <Faq />
         </section>
 
         {/* 9. Start a project */}
-        <section id="start" className="container-x pb-24 sm:pb-32">
+        <section id="start" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1600px', '--h-lg': '1000px' } as React.CSSProperties}>
           <div className="grid gap-12 rounded-3xl border border-line bg-ground-2 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:p-14">
             <div>
               <p className="label">Start a project</p>
