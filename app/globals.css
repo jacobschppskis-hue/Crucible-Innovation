@@ -1069,12 +1069,17 @@ textarea.field {
     position: absolute;
     bottom: 1.5rem;
     left: 50%;
-    display: block;
+    display: none;
     width: 1px;
     height: 2.5rem;
     overflow: hidden;
     background: var(--line-strong);
     opacity: calc(1 - var(--o) * 5);
+  }
+  @media (min-width: 1024px) {
+    .js .ig-cue {
+      display: block;
+    }
   }
   .js .ig-cue span {
     display: block;

@@ -61,6 +61,10 @@ export function Ignition() {
     richTier().then(async (ok) => {
       if (!ok || dead) return;
       const { startRing } = await import('@/lib/gl/ringParticles');
+      // The particles start from the finished ring, so never take over while the SVG is still drawing itself.
+      const fcp = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0;
+      const introEnd = fcp + (document.documentElement.dataset.intro === 'quick' ? 0.45 : 1) * 2600;
+      await new Promise((r) => setTimeout(r, Math.max(0, introEnd - performance.now())));
       if (dead) return;
       stop = startRing({
         canvas: glRef.current!,

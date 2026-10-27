@@ -5,8 +5,15 @@ export default defineConfig({
   testDir: 'tests',
   fullyParallel: true,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
-  // PW_CHROMIUM_PATH: use an already-installed Chromium (e.g. cloud sessions whose browser is newer than the pinned Playwright).
-  use: { baseURL: 'http://localhost:4173', launchOptions: { executablePath: process.env.PW_CHROMIUM_PATH || undefined } },
+  use: {
+    baseURL: 'http://localhost:4173',
+    launchOptions: {
+      // An already-installed Chromium (e.g. cloud sessions whose browser is newer than the pinned Playwright).
+      executablePath: process.env.PW_CHROMIUM_PATH || undefined,
+      // Headless Chromium only has WebGL through SwiftShader; the rich-tier tests need it.
+      args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader'],
+    },
+  },
   webServer: { command: 'npx serve out -l 4173 --no-clipboard', url: 'http://localhost:4173', reuseExistingServer: !process.env.CI },
   projects: [
     { name: 'phone', use: { ...devices['Pixel 7'] } },
