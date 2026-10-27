@@ -98,6 +98,12 @@ export function HeatField({ origin = [0.5, 0.5], originMobile, anchor, className
 
     const ro = new ResizeObserver(resize);
     ro.observe(canvas);
+    // Centered on an element: re-measure when it moves or resizes (layout settling, web fonts arriving).
+    const target = anchor ? document.querySelector(anchor) : null;
+    if (target) {
+      ro.observe(target);
+      document.fonts?.ready.then(resize);
+    }
     const io = new IntersectionObserver(([e]) => {
       visible = e.isIntersecting;
       visible ? start() : stop();

@@ -99,17 +99,6 @@ export function Ignition() {
             <div aria-hidden className="ig-glow">
               <span />
             </div>
-            {/* Callouts, like a technical drawing (desktop): which half is which, in Jacob's words from the story. */}
-            <div aria-hidden className="ig-note ig-note-h">
-              <span className="ig-note-line" />
-              <span className="label text-bone">Human</span>
-              <span className="label">Continuous lines</span>
-            </div>
-            <div aria-hidden className="ig-note ig-note-m">
-              <span className="ig-note-line" />
-              <span className="label text-bone">Machine</span>
-              <span className="label">Pixels</span>
-            </div>
             <div aria-hidden className="ig-spark" />
             <div aria-hidden className="ig-flare" />
             <div aria-hidden className="ig-shock" />
