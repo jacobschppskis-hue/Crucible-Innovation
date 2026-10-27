@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ease, seg, trackScroll } from '@/lib/scroll';
+import { richTier } from '@/lib/tier';
 import { HeatField } from './HeatField';
 import { ArrowRight } from './Icons';
 import { LiveSite, type Theme } from './LiveSite';
@@ -163,6 +164,23 @@ export function BuildStage() {
     };
   }, [more]);
 
+  // Rich tier: sparks fly off the casting front.
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let dead = false;
+    richTier().then(async (ok) => {
+      if (!ok || dead) return;
+      const { startSparks } = await import('@/lib/gl/sparks');
+      if (dead) return;
+      const el = ref.current!;
+      stop = startSparks({ canvas: el.querySelector('.bs-sparks')!, fronts: () => [...el.querySelectorAll<HTMLElement>('.bs-front')] });
+    });
+    return () => {
+      dead = true;
+      stop?.();
+    };
+  }, []);
+
   // Cursor tilt on the device, max 5°. Mouse only, motion-safe.
   useEffect(() => {
     if (!matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches) return;
@@ -272,6 +290,7 @@ export function BuildStage() {
                     )}
                   </div>
                 </figure>
+                <canvas aria-hidden className="bs-sparks" />
                 <p className="bs-type label">
                   Concept ·{' '}
                   {casts.map((c) => (

@@ -1089,6 +1089,26 @@ textarea.field {
   }
 }
 
+/* ---------- Reading heat (components/HeatText.tsx): words warm from dim to bone as the block is read ----------
+   --p comes from data-scroll="read"; the glow front is ~8 words wide. Dim is 0.56 opacity, which still clears AA.
+   Body copy settles a little below full bone so long reading stays comfortable. */
+.heat-text {
+  --lo: 0.56;
+  --hi: 1;
+  color: var(--bone);
+}
+.heat-text.heat-body {
+  --hi: 0.82;
+}
+.heat-text span {
+  opacity: calc(var(--lo) + (var(--hi) - var(--lo)) * clamp(0, (var(--p, 1) * (var(--n) + 10) - var(--i)) / 8, 1));
+}
+@media (prefers-reduced-motion: reduce) {
+  .heat-text span {
+    opacity: var(--hi);
+  }
+}
+
 /* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. */
 .thesis {
   --k: 1;

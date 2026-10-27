@@ -166,6 +166,15 @@
     0 0 16px 3px rgba(255, 91, 31, 0.55),
     0 0 56px 10px rgba(255, 91, 31, 0.22);
 }
+/* Rich tier: sparks thrown off the front may fly out past the frame. */
+.bs-sparks {
+  position: absolute;
+  top: -35%;
+  left: -12%;
+  width: 124%;
+  height: 145%;
+  pointer-events: none;
+}
 .bs-type {
   position: absolute;
   top: 100%;

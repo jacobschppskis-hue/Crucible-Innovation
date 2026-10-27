@@ -6,8 +6,9 @@
 //   enter — 0 when the top enters the bottom of the viewport, 1 when the top reaches 40% from the top.
 //   pin   — for a tall section with a sticky child: 0 when it reaches the top, 1 when its end does.
 //   reveal — 0 when the top enters the bottom of the viewport, 1 once the whole element is on screen.
+//   read  — reading pace: 0 when the top is 85% down the viewport, 1 when the bottom is 45% down.
 
-export type Mode = 'view' | 'enter' | 'pin' | 'reveal';
+export type Mode = 'view' | 'enter' | 'pin' | 'reveal' | 'read';
 type Entry = { el: HTMLElement; mode: Mode; cb?: (p: number) => void; last: number };
 
 const entries = new Set<Entry>();
@@ -20,6 +21,7 @@ function progress(mode: Mode, r: DOMRect, vh: number) {
   if (mode === 'pin') return clamp(-r.top / Math.max(1, r.height - vh));
   if (mode === 'enter') return clamp((vh - r.top) / (vh * 0.6));
   if (mode === 'reveal') return clamp((vh - r.top) / Math.max(1, Math.min(r.height, vh)));
+  if (mode === 'read') return clamp((vh * 0.85 - r.top) / Math.max(1, r.height + vh * 0.4));
   return clamp((vh - r.top) / (vh + r.height));
 }
 
