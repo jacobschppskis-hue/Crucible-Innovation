@@ -123,7 +123,6 @@ export function BuildStage() {
       caps.forEach((cap, i) => {
         cap.style.opacity = String(shown[i]);
         cap.style.transform = `translateY(${((1 - shown[i]) * 24).toFixed(1)}px)`;
-        cap.style.visibility = shown[i] > 0.02 ? 'visible' : 'hidden';
       });
       dev.style.width = `${(g.dw + (g.pw - g.dw) * m).toFixed(1)}px`;
       dev.style.height = `${(g.dh + (g.ph - g.dh) * m).toFixed(1)}px`;

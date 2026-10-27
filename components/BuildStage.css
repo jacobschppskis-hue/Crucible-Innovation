@@ -220,9 +220,10 @@
   .js .bs-cap {
     align-self: start;
   }
+  /* hidden captions stay in the accessibility tree (no visibility: hidden) but never take a click */
   .js .bs-cap {
     opacity: 0;
-    visibility: hidden;
+    pointer-events: none;
   }
   .js .bs[data-out] .bs-hero {
     visibility: hidden;

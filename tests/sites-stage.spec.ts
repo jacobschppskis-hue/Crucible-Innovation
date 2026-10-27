@@ -3,6 +3,9 @@ import { expect, test } from '@playwright/test';
 // The /sites opening (components/BuildStage.tsx): a live concept site that is cast, turned into a phone and recast.
 
 const captions = ['Built for the phone in their pocket.', 'Not a template.', 'Then it’s yours.'];
+/** Which caption is showing (hidden ones stay in the accessibility tree at opacity 0). */
+const shown = (page: import('@playwright/test').Page, i: number) =>
+  expect.poll(() => page.locator('.bs-cap').nth(i).evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.9);
 
 test('one h1 on /sites (the live concept sites are decorative)', async ({ page }) => {
   await page.goto('/sites');
@@ -23,18 +26,20 @@ test('scrolling turns the frame into a phone, then recasts it as other businesse
   await expect(device).toHaveAttribute('data-layout', 'phone');
   const phone = (await device.boundingBox())!;
   expect(phone.height, 'phone is taller than wide').toBeGreaterThan(phone.width * 1.5);
-  await expect(page.getByRole('heading', { name: captions[0] })).toBeVisible();
+  await shown(page, 0);
   await expect(scene).toHaveAttribute('data-out', '');
 
   await to(0.6);
   await expect(scene).toHaveAttribute('data-theme', 'barber');
-  await expect(page.getByRole('heading', { name: captions[1] })).toBeVisible();
+  await shown(page, 1);
 
   await to(0.98);
   await expect(scene).toHaveAttribute('data-theme', 'landscaper');
   await expect(device).toHaveAttribute('data-layout', 'desktop');
-  await expect(page.getByRole('heading', { name: captions[2] })).toBeVisible();
+  await shown(page, 2);
   await expect(page.locator('.bs-type')).toContainText('Concept');
+  // Every caption is still a heading for screen readers, shown or not.
+  for (const c of captions) await expect(page.getByRole('heading', { name: c })).toHaveCount(1);
 });
 
 for (const mode of ['no JavaScript', 'reduced motion'] as const) {

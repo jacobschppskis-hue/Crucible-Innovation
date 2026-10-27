@@ -797,6 +797,10 @@ textarea.field {
   pointer-events: none;
 }
 
+.ig-fuse,
+.ig-steps {
+  pointer-events: none;
+}
 .ig-fuse {
   display: grid;
   gap: 1.25rem;
