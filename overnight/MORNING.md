@@ -33,7 +33,7 @@ Everything from last night is on the branch `overnight/award-build`, in the draf
 
   Everything stays labelled "Concept".
 - **Further down,** your and Charlie's ASCII portraits are cast in behind the heat front, like an engraving being printed.
-- **Between pages,** moving from `/` to `/sites` and back pours the next page in.
+- **Between pages,** clicking a link between `/` and `/sites` pours the next page in. The browser's back button stays ordinary.
 
 ### Two tiers
 

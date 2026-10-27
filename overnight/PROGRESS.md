@@ -3,7 +3,7 @@
 Read this first, every session. Newest notes at the bottom of each section.
 
 - Branch: `overnight/award-build` (from `main` at 3579c9d). Never push to main, never merge.
-- Scheduled task: `trig_018Qy59RkvbtFaG5654425W2` ("Overnight award build: crucibleinnovation.com"), cron `2 */2 * * *` UTC, fresh session per fire, notifications off. Disable it (update_trigger enabled=false) when `overnight/DONE` exists or after 10 sessions.
+- Scheduled task: `trig_018Qy59RkvbtFaG5654425W2` ("Overnight award build: crucibleinnovation.com"), cron `2 */2 * * *` UTC, fresh session per fire, notifications off. **Disabled** (work is done; see overnight/DONE).
 - Draft PR: https://github.com/jacobschppskis-hue/Crucible-Innovation/pull/11
 
 ## Sessions
@@ -76,7 +76,7 @@ Done and pushed:
 - **Everywhere:** the page transition, and a performance pass measured against main.
 - **Docs:** README, CLAUDE.md and overnight/MORNING.md.
 - **Tests:** 52 Playwright runs (26 tests × phone/desktop), green locally and in CI.
-- overnight/DONE created and the scheduled task disabled.
+- overnight/DONE created; the scheduled task was disabled at 03:27 UTC (update_trigger enabled=false). Its only other fire (02:03) stood down because this session's heartbeat was fresh.
 
 ## What's next (only if Jacob asks)
 
