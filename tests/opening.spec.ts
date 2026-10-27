@@ -23,8 +23,9 @@ test('the intro pours the mark into a mould, then only the solid ring is left', 
   const pour = page.locator('.ig-pour');
   await expect(pour).toBeVisible();
   await expect(pour.locator('.ig-cru')).toHaveCount(1);
-  // Done: the pour layers are hidden and the solid ring shows.
+  // Done: the pour layers are gone from the page (not just hidden) and the solid ring shows.
   await expect(pour).toBeHidden({ timeout: 20_000 });
+  await expect(pour).toHaveCSS('display', 'none');
   await expect.poll(() => page.locator('.ig-svg').evaluate((el) => Number(getComputedStyle(el).opacity))).toBe(1);
 });
 
