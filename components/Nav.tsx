@@ -21,7 +21,7 @@ const config = {
     links: [
       { href: '#work', label: 'Work' },
       { href: '#process', label: 'Process' },
-      { href: '#pricing', label: 'Pricing' },
+      { href: '#pricing', label: 'Packages' },
       { href: '#faq', label: 'FAQ' },
     ],
     cta: { href: '#start', label: 'Get a quote' },
