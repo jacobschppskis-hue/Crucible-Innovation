@@ -7,6 +7,7 @@ export type Package = {
   /** How it's billed, shown under the goal. Never a number. */
   care?: string;
   features: string[];
+  /** Highlighted card (border beam, Ember button): the monthly package, which is the one we want people to pick. */
   featured?: boolean;
 };
 
@@ -21,10 +22,9 @@ export const packages: Package[] = [
   {
     id: 'forge',
     name: 'Forge',
-    summary: 'The full storefront, and the one we recommend for most local businesses.',
+    summary: 'A multi-page site that shows what you offer and gets people in touch.',
     goal: 'Look established.',
     features: ['Up to 5 pages', 'Contact form', 'Google Maps embed', 'Google listing help', 'Two rounds of edits'],
-    featured: true,
   },
   {
     id: 'alloy',
@@ -33,6 +33,7 @@ export const packages: Package[] = [
     goal: 'Never think about it.',
     care: 'Build + monthly care',
     features: ['Custom build', 'Monthly edits', 'Hosting included', 'Updates and fixes'],
+    featured: true,
   },
 ];
 
