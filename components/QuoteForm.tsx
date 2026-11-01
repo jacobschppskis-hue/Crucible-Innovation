@@ -6,7 +6,7 @@ import { getRef } from './RefTracker';
 import { ArrowRight, Check } from './Icons';
 
 const needs = ['New site', 'Redesign', 'Not sure'];
-const packageOptions = [...packages.map((p) => `${p.name} (from ${p.price})`), 'Not sure yet'];
+const packageOptions = [...packages.map((p) => p.name), 'Not sure yet'];
 export const PACKAGE_EVENT = 'crucible:package';
 
 type Draft = { subject: string; body: string };
@@ -20,7 +20,7 @@ const fit = (s: string, max = 1600) => (s.length > max ? `${s.slice(0, max)}…`
 function compose(form: HTMLFormElement): Draft {
   const f = new FormData(form);
   const v = (k: string) => String(f.get(k) ?? '').trim();
-  const pkg = v('package').replace(/ \(.*\)$/, '') || 'Not sure yet';
+  const pkg = v('package') || 'Not sure yet';
   const lines = [
     `Hi ${site.founder.firstName},`,
     '',
@@ -162,7 +162,7 @@ export function QuoteForm() {
     const onPick = (e: Event) => {
       const id = (e as CustomEvent<string>).detail;
       const p = packages.find((x) => x.id === id);
-      if (p) setPkg(`${p.name} (from ${p.price})`);
+      if (p) setPkg(p.name);
     };
     addEventListener(PACKAGE_EVENT, onPick);
     return () => removeEventListener(PACKAGE_EVENT, onPick);

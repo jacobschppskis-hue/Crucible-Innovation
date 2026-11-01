@@ -121,8 +121,8 @@ export default function SitesPage() {
         {/* 6. Pricing */}
         <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2120px', '--h-lg': '1100px' } as React.CSSProperties}>
           <SectionHead
-            label="Pricing"
-            title={[{ t: 'Simple packages.' }, { t: 'Honest prices.', className: 'accent' }]}
+            label="Packages"
+            title={[{ t: 'Simple packages.' }, { t: 'Honest quotes.', className: 'accent' }]}
             sub="Pick a starting point. Every quote is tailored to your business."
           />
           <ul className="mt-12 grid gap-5 lg:grid-cols-3">

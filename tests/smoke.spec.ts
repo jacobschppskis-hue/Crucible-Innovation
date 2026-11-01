@@ -57,7 +57,7 @@ test('the gradient accent paints every glyph (nothing clipped)', async ({ page }
   expect(clipped).toBe(0);
 });
 
-test('quote form: price card preselects the package, and the request is written for the visitor', async ({ page }) => {
+test('quote form: package card preselects the package, and the request is written for the visitor', async ({ page }) => {
   let body = '';
   await page.route('https://formspree.io/**', async (route) => {
     body = route.request().postData() ?? '';
