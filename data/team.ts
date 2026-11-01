@@ -14,18 +14,18 @@ export type Builder = {
 export const builders: Builder[] = [
   {
     name: 'Jacob Schopp',
-    role: 'Founder, Crucible · Co-founder, Crucible Sites',
+    role: 'Co-founder, Crucible and Crucible Sites',
     email: 'jacob@crucibleinnovation.com',
     portrait: '/team/jacob.webp',
     bio: [
-      'I am still in high school, and Crucible is the name I build my ventures under. Crucible Sites is the first of them, and I build the sites with Charlie. Our first ones are already lined up.',
+      'I am still in high school, and Crucible is the name Charlie and I build our ventures under. Crucible Sites is the first of them, and the two of us build the sites together. Our first ones are already lined up.',
       'When you work with us, you talk directly to the people building your site, from the first call until the day it goes live. Tell me about your business and I will get back to you within 24 hours.',
     ],
     signoff: 'Talk soon, Jacob.',
   },
   {
     name: 'Charlie Rochford',
-    role: 'Co-founder, Crucible Sites',
+    role: 'Co-founder, Crucible and Crucible Sites',
     email: 'charles@crucibleinnovation.com',
     portrait: '/team/charlie.webp',
     // From Charlie's own answers.

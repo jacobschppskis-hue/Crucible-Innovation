@@ -4,8 +4,9 @@ import { ArrowRight } from './Icons';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
-function Portrait({ b }: { b: Builder }) {
-  if (b.portrait) {
+/** A builder's ASCII portrait cast in on a bone card, or the Split Ring when there is none. Also used by the home page Story. */
+export function Portrait({ name, src, sizes = '(min-width: 768px) 24rem, 90vw' }: { name: string; src?: string; sizes?: string }) {
+  if (src) {
     // ASCII portraits are drawn as dark ink, so they sit on a bone card like the light cards in the brand sheet.
     // On first view the ink is cast in behind the Ember front, over a faint grid (the mold).
     return (
@@ -13,11 +14,11 @@ function Portrait({ b }: { b: Builder }) {
         <div className="cast-layer cast-piece">
           <div className="cast-in">
             <Image
-              src={b.portrait}
-              alt={`ASCII portrait of ${b.name}`}
+              src={src}
+              alt={`ASCII portrait of ${name}`}
               width={800}
               height={956}
-              sizes="(min-width: 768px) 24rem, 90vw"
+              sizes={sizes}
               className="absolute inset-0 h-full w-full object-contain p-[4%]"
             />
           </div>
@@ -63,7 +64,7 @@ export function Builders() {
       <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2100px', '--h-lg': '1200px' } as React.CSSProperties}>
         <div className="grid items-center gap-10 md:grid-cols-[0.8fr_1fr] md:gap-16">
           <Reveal className="mx-auto w-full max-w-sm md:max-w-none">
-            <Portrait b={b} />
+            <Portrait name={b.name} src={b.portrait} />
           </Reveal>
           <div>
             <p className="label">Who you&rsquo;ll work with</p>
@@ -92,7 +93,7 @@ export function Builders() {
         {builders.map((b, i) => (
           <Reveal as="li" key={b.name} delay={i * 0.1}>
             <div className="max-w-sm">
-              <Portrait b={b} />
+              <Portrait name={b.name} src={b.portrait} />
             </div>
             <h3 className="mt-8 font-display text-2xl font-semibold tracking-[-0.02em]">{b.name}</h3>
             <p className="label mt-2">{b.role}</p>

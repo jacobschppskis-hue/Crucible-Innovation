@@ -29,7 +29,7 @@ Copy lives in `data/*.ts`, so most changes are one edit:
 
 - **`ventures.ts`**: add a venture by adding one entry. `status: 'forging'` renders a dimmed card with no link. A `live` entry without `href` automatically gets a page at `/ventures/[slug]`.
 - **`work.ts`**: showcase cards (and the café screenshot in the home page's Crucible Sites card). Keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
-- **`pricing.ts`**, **`faq.ts`**, **`site.ts`** (name, founder, email).
+- **`pricing.ts`**, **`faq.ts`**, **`site.ts`** (name, founders, email).
 
 The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />` (geometry is in `lib/splitRing.ts`).
 
@@ -85,7 +85,7 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
     - On load the Ember core sparks, the Split Ring draws itself hot and cools, and the headline rises out of its masks.
     - Scrolling parts the headline and tells "Not the person / Not the model / Neither, alone" on the same ring.
     - Rich tier: the ring becomes WebGL particles (`lib/gl/ringParticles.ts`).
-  - `Story` is Jacob's own account (`data/story.ts`). It warms from dim to bone as it's read (`HeatText` and `ReadingHeat`).
+  - `Story` is both co-founders in their own words, side by side (`data/story.ts`: Jacob's account and Charlie's). It warms from dim to bone as it's read (`HeatText` and `ReadingHeat`).
   - `Ventures`: the live venture's card has a concept site cast into it on first view. Forging ventures show an unfinished ring.
   - `Thesis` heats from 293 K to 1811 K as you scroll. A furnace glow rises in CSS, and the rich tier adds molten iron (`lib/gl/molten.ts`).
   - A giant wordmark rises into the footer, and its Ember dot lights at the end.
