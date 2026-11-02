@@ -1,6 +1,6 @@
 import { site } from '@/data/site';
 
-const founder = { '@type': 'Person', name: site.founder.name, jobTitle: site.founder.role, email: site.founder.email };
+const founder = site.founders.map((f) => ({ '@type': 'Person', name: f.name, jobTitle: f.role, email: f.email }));
 const studio = { '@type': 'Organization', '@id': `${site.url}/#crucible`, name: 'Crucible', url: site.url, email: site.email, founder };
 
 /** schema.org structured data so search engines know who we are. No address: Crucible doesn't list one. */

@@ -38,7 +38,7 @@ export function Footer() {
                 {site.email}
               </a>
             </li>
-            <li className="text-bone-dim">Founded by {site.founder.name}</li>
+            <li className="text-bone-dim">Founded by {site.founders.map((f) => f.name).join(' and ')}</li>
           </ul>
         </div>
       </div>

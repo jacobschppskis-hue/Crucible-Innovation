@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   title: { default: 'Crucible: a studio that ships ventures', template: '%s' },
   description: 'Crucible is a studio that builds and ships ventures. Exceptional people, serious machines, new things.',
   applicationName: 'Crucible',
-  authors: [{ name: site.founder.name }],
+  authors: site.founders.map((f) => ({ name: f.name })),
   icons: { icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }], apple: '/apple-icon.png' },
   openGraph: { type: 'website', siteName: 'Crucible', locale: 'en_US' },
   twitter: { card: 'summary_large_image' },
