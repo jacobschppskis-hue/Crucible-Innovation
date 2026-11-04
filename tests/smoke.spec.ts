@@ -41,22 +41,6 @@ test('no "LLC" anywhere and no payment details', async ({ page }) => {
   }
 });
 
-test('the gradient accent paints every glyph (nothing clipped)', async ({ page }) => {
-  await page.goto('/sites', { waitUntil: 'networkidle' });
-  // Each molten word's padded box must reach past its glyphs: compare the box to the word's ink via a Range.
-  const clipped = await page.locator('h1 .molten').evaluateAll((els) =>
-    els.filter((el) => {
-      const box = el.getBoundingClientRect();
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const ink = range.getBoundingClientRect();
-      const em = parseFloat(getComputedStyle(el).fontSize);
-      return box.bottom < ink.bottom + 0.15 * em || box.left > ink.left - 0.1 * em;
-    }).length,
-  );
-  expect(clipped).toBe(0);
-});
-
 test('quote form: package card preselects the package, and the request is written for the visitor', async ({ page }) => {
   let body = '';
   await page.route('https://formspree.io/**', async (route) => {

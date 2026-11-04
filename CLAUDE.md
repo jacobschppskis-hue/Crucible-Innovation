@@ -20,7 +20,8 @@ Marketing site for Crucible (studio, `/`) and Crucible Sites (websites for local
 ## Rules (from the PRD)
 - Never write "LLC", "incorporated", a street address, or any payment details (Venmo etc.). Payment copy: "No payment until you've approved the design."
 - No fabricated testimonials, client logos, reviews or stats. Showcase items stay labeled `Concept` until they are real clients.
-- Ember (`--ember`) is the only accent: about 3 Ember elements per screen at most. `--ember-hot` only inside gradients.
+- Colour means temperature. Ember (`--ember`) is the only accent and means hot (active, interactive, live): about 3 Ember elements per screen at most. `--ember-hot` only inside hot metal. Cooled surfaces flip to bone (`--cool`, `--ink`, `--ink-dim`, `--ember-deep` for Ember text on bone).
 - Placeholders are marked `// TODO(jakob)`.
 - Quality bar: Lighthouse mobile ≥ 95 on all four categories, `/sites` first-load JS well under 200 KB gzipped, no horizontal scroll at 360px, AA contrast, visible Ember focus rings.
-- Gradient text (`.molten`) uses `background-clip: text`; keep its padding/negative-margin so italic descenders aren't clipped (a test checks this).
+- No gradient text and no second display face: hierarchy comes from Archivo's size, weight and width (`.wide`, `.h-display`, `.h-section`). The one exception is "alloyed" in the home opening, which is cast white-hot and cools (`.ig-cool`).
+- Design rules live in `.claude/skills/unslop/SKILL.md`; `npm run unslop` checks what a machine can (headings without periods, no Instrument Serif or mono outside data, no wide-tracked caps, no decorative numbering, no dead zones on the home page).

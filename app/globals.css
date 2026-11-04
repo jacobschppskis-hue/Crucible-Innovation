@@ -118,16 +118,6 @@ html.lenis body {
   .accent {
     font: inherit;
   }
-  .molten {
-    background: linear-gradient(100deg, var(--ember) 10%, var(--ember-hot) 90%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    /* background-clip: text only paints inside the box, so pad it out to cover the italic overhang and
-       the deep g/y descenders on every side, then cancel the padding with negative margins so layout doesn't shift. */
-    padding: 0 0.1em 0.3em 0.2em; /* left too: the italic g's lower loop swings left of its box */
-    margin: 0 -0.1em -0.3em -0.2em;
-  }
 }
 
 /* ---------- Wordmark ("Spark") ---------- */
@@ -309,85 +299,10 @@ html.lenis body {
 }
 
 /* ---------- Spotlight cards (Linear style) ---------- */
-.spot {
-  position: relative;
-  isolation: isolate;
-  border-radius: 1.25rem;
-  background: var(--ground-2);
-  border: 1px solid var(--line);
-}
-.spot::before,
-.spot::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 300ms ease;
-}
 /* surface glow */
-.spot::before {
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 50%), rgba(232, 228, 216, 0.06), transparent 45%);
-}
 /* border glow, masked to the 1px edge */
-.spot::after {
-  inset: -1px;
-  z-index: 2;
-  padding: 1px;
-  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(232, 228, 216, 0.45), transparent 70%);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
-}
-@media (hover: hover) {
-  .spot:hover::before,
-  .spot:hover::after {
-    opacity: 1;
-  }
-}
 
 /* ---------- Border beam (featured pricing card) ---------- */
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-.beam {
-  position: absolute;
-  inset: -1px;
-  z-index: 3;
-  padding: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: conic-gradient(
-    from var(--beam-angle),
-    transparent 0%,
-    transparent 62%,
-    rgba(255, 91, 31, 0.9) 80%,
-    var(--ember-hot) 86%,
-    rgba(255, 91, 31, 0.6) 90%,
-    transparent 96%
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
-  animation: beam 6s linear infinite;
-}
-@keyframes beam {
-  to {
-    --beam-angle: 360deg;
-  }
-}
 
 /* ---------- Section reveals: fade + 16px rise (only hidden when JS runs) ---------- */
 [data-reveal] {
@@ -503,12 +418,8 @@ textarea.field {
   .ring-glow {
     animation: ring-glow-in 600ms ease-out forwards;
   }
-  .beam,
   .pulse-dot::after {
     animation: none;
-  }
-  .beam {
-    --beam-angle: 200deg;
   }
   .words .w,
   .js .words:not([data-in]) .w {
@@ -535,9 +446,6 @@ textarea.field {
 
 :where(.ring-svg) {
   color: var(--bone);
-}
-.ring-dark {
-  color: var(--ground);
 }
 
 /* ---------- Nav: thin reading-progress hairline ---------- */
@@ -1588,79 +1496,8 @@ textarea.field {
 }
 
 /* ---------- Ventures (components/Ventures.tsx) ---------- */
-.venture-concept {
-  position: absolute;
-  right: 0.5rem;
-  top: 0.5rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: rgba(13, 13, 11, 0.8);
-  font: 0.5625rem/1.4 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bone);
-}
 /* the live card's mold: a blueprint of a page (grid, a headline bar, a picture box), cast over by the screenshot */
-.venture-mold {
-  background-color: #12110e;
-  background-image:
-    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
-    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
-    linear-gradient(rgba(232, 228, 216, 0.09), rgba(232, 228, 216, 0.09)),
-    linear-gradient(rgba(232, 228, 216, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232, 228, 216, 0.05) 1px, transparent 1px);
-  background-size:
-    38% 9%,
-    30% 9%,
-    26% 4%,
-    16px 16px,
-    16px 16px;
-  background-position:
-    6% 30%,
-    6% 43%,
-    6% 58%,
-    0 0,
-    0 0;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
-}
-.venture-mold::after {
-  content: '';
-  position: absolute;
-  inset: 16% 6% 22% 54%;
-  border: 1px dashed rgba(232, 228, 216, 0.3);
-  border-radius: 8%;
-}
-.forging-mark {
-  width: min(9rem, 60%);
-  color: rgba(232, 228, 216, 0.22);
-  overflow: visible;
-}
 /* still in the furnace: the core isn't lit yet (only a live venture gets its Ember core); it just warms and cools */
-.forging-core {
-  fill: rgba(232, 228, 216, 0.16);
-}
-.forging::after {
-  content: '';
-  position: absolute;
-  inset: auto 10% -40% 10%;
-  height: 70%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 91, 31, 0.1), rgba(255, 91, 31, 0));
-  pointer-events: none;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .forging-core {
-    animation: smoulder 3.2s ease-in-out infinite;
-  }
-  li:nth-child(3) .forging-core {
-    animation-delay: -1.4s;
-  }
-}
-@keyframes smoulder {
-  50% {
-    fill: rgba(255, 179, 71, 0.22);
-  }
-}
 
 /* ---------- Builders: the portrait's mold is a faint grid on the bone card ---------- */
 .portrait-mold {
@@ -1936,33 +1773,10 @@ textarea.field {
   }
 }
 /* "molten." in the Ventures heading: the word is the metal, with brighter heat flowing through it. */
-.molten-flow {
-  background: linear-gradient(100deg, var(--ember) 0%, var(--ember-hot) 18%, #fff0d4 26%, var(--ember-hot) 34%, var(--ember) 52%, #ff7a2e 74%, var(--ember) 100%) 0 0 / 250% 100% repeat-x;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  padding: 0 0.1em 0.3em 0.2em; /* as .molten: cover the italic overhang and descenders */
-  margin: 0 -0.1em -0.3em -0.2em;
-}
 @media (prefers-reduced-motion: no-preference) {
   /* runs alongside the word's own reveal (same list), only while the heading is on screen */
-  .words[data-in] .w.molten-flow {
-    animation:
-      word-in 1000ms var(--ease-spring) both,
-      molten-flow 7s linear infinite;
-    animation-delay: calc(var(--d, 0ms) + var(--i) * 45ms), 0s;
-    animation-play-state: running, paused;
-  }
-  [data-live] .words[data-in] .w.molten-flow {
-    animation-play-state: running, running;
-  }
 }
 /* one whole gradient width per loop: 250% wide, so -166.67% moves it by exactly its own width */
-@keyframes molten-flow {
-  to {
-    background-position: -166.667% 0;
-  }
-}
 
 /* ---------- Process: heat runs down the rail with a spark at its leading edge ---------- */
 .process {
@@ -2045,18 +1859,6 @@ textarea.field {
 }
 
 /* ---------- Cards: lean toward the cursor and lift ---------- */
-.spot-tilt {
-  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
-  transition:
-    transform 700ms var(--ease-spring),
-    box-shadow 700ms var(--ease-spring);
-}
-@media (hover: hover) {
-  .spot-tilt:hover {
-    --lift: -4px;
-    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.85);
-  }
-}
 
 /* Showcase screenshots drift inside their frames as you scroll, and zoom a touch on hover. */
 .parallax-inner {
@@ -2197,8 +1999,7 @@ textarea.field {
   .send-panel {
     animation: none;
   }
-  .parallax-inner,
-  .spot-tilt {
+  .parallax-inner {
     transform: none;
   }
   .btn {
