@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
+import { MobileMenu } from './MobileMenu';
 import { SplitRing } from './SplitRing';
 import { Wordmark } from './Wordmark';
 
@@ -16,6 +17,13 @@ const config = {
       { href: '/sites', label: 'Sites' },
     ],
     cta: { href: '/sites#start', label: 'Start a project' },
+    menu: [
+      { href: '/', label: 'Studio' },
+      { href: '/sites', label: 'Crucible Sites' },
+      { href: '/ventures', label: 'Ventures' },
+      { href: '/work', label: 'Work' },
+      { href: '/#story', label: 'Story' },
+    ],
   },
   sites: {
     home: '/sites',
@@ -26,6 +34,13 @@ const config = {
       { href: '#faq', label: 'FAQ' },
     ],
     cta: { href: '#start', label: 'Get a quote' },
+    menu: [
+      { href: '#work', label: 'Work' },
+      { href: '#process', label: 'Process' },
+      { href: '#pricing', label: 'Packages' },
+      { href: '#faq', label: 'FAQ' },
+      { href: '/', label: 'Crucible studio' },
+    ],
   },
 } as const;
 
@@ -77,6 +92,7 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
               </li>
             ))}
           </ul>
+          <MobileMenu items={[...c.menu]} cta={c.cta} />
           <Link href={c.cta.href} className="btn btn-primary btn-sm">
             {c.cta.label}
           </Link>

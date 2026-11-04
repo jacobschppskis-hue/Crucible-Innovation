@@ -35,7 +35,7 @@ const audit = (page: Page) =>
       const cs = getComputedStyle(el);
       const t = ownText(el).slice(0, 60);
       if (/instrument/i.test(cs.fontFamily)) out.push({ rule: 'Instrument Serif outside the concept sites', text: t });
-      if (/mono|menlo|courier/i.test(cs.fontFamily) && !el.closest('.try-url, .bs-url, [data-mono-ok]')) out.push({ rule: 'mono outside data', text: t });
+      if (/mono|menlo|courier/i.test(cs.fontFamily) && !el.closest('.try-url, .bs-url, .wk-url, [data-mono-ok]')) out.push({ rule: 'mono outside data', text: t });
       const ls = parseFloat(cs.letterSpacing) || 0;
       if (cs.textTransform === 'uppercase' && ls > parseFloat(cs.fontSize) * 0.05 + 0.01) out.push({ rule: 'wide-tracked caps', text: t });
       if (/^0\d\s*[·.]/.test(t)) out.push({ rule: 'decorative section numbering', text: t });

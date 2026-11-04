@@ -29,3 +29,17 @@ test('reduced motion: no wake at all', async ({ browser }) => {
   await expect(page.locator('canvas.wake')).not.toHaveAttribute('data-on', '');
   await ctx.close();
 });
+
+test('phones get a menu with every page', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.getByRole('link', { name: 'Menu' }).click();
+  const menu = page.getByRole('dialog', { name: 'Menu' });
+  await expect(menu).toBeVisible();
+  for (const name of ['Crucible Sites', 'Ventures', 'Work']) await expect(menu.getByRole('link', { name, exact: true })).toBeVisible();
+  await menu.getByRole('link', { name: 'Work', exact: true }).click();
+  await expect(page).toHaveURL(/\/work$/);
+  await expect(page.getByRole('dialog', { name: 'Menu' })).toBeHidden();
+  await ctx.close();
+});
