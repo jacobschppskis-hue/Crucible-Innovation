@@ -22,7 +22,7 @@ export function Ventures() {
   const live = all.filter((v) => v.status === 'live').length;
   const next = all.length - live;
   return (
-    <section id="ventures" aria-labelledby="ventures-h" data-scroll="pin" className="vf relative">
+    <section id="ventures" aria-labelledby="ventures-h" data-scroll="pin" data-heat="" className="vf relative">
       <div className="vf-sticky">
         <div className="vf-track">
           <div className="vf-intro">

@@ -79,12 +79,21 @@
 [data-hot] .vf-mark {
   filter: drop-shadow(0 0 18px var(--ember)) drop-shadow(0 0 3px var(--ember-hot));
 }
+/* Still hot: the mark breathes, only while the floor is on screen (InView sets data-live on [data-heat]). */
 @media (prefers-reduced-motion: no-preference) {
   [data-hot] .vf-mark {
-    animation: smoulder 3.6s ease-in-out infinite;
+    animation: vf-smoulder 3.6s ease-in-out infinite paused;
+  }
+  [data-live] [data-hot] .vf-mark {
+    animation-play-state: running;
   }
   [data-hot]:nth-of-type(3) .vf-mark {
     animation-delay: -1.5s;
+  }
+}
+@keyframes vf-smoulder {
+  50% {
+    opacity: 0.72;
   }
 }
 

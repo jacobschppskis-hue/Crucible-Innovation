@@ -45,7 +45,7 @@ test('the scroll story ends fused: core lit, last line showing, headline out of 
   expect(await scene.evaluate(readVar, '--core')).toBeGreaterThan(0.99);
   expect(await scene.evaluate(readVar, '--sm')).toBeLessThan(0.01);
   expect(await scene.evaluate(readVar, '--sh')).toBeLessThan(0.01);
-  await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
 });
 
 test('reduced motion: no pinning, every part finished and visible', async ({ browser }) => {
@@ -56,8 +56,8 @@ test('reduced motion: no pinning, every part finished and visible', async ({ bro
   const h = (await page.locator('section.ig').boundingBox())!.height;
   expect(h).toBeLessThan(800 * 2);
   await expect(page.locator('h1')).toBeVisible();
-  for (const name of ['Not the person.', 'Not the model.']) await expect(page.getByText(name)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  for (const name of ['Not the person', 'Not the model']) await expect(page.getByText(name)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
   // "alloyed." has finished cooling: the hot copy over it is gone. No pour: the ring is simply there.
   expect(await page.locator('.ig-cool').evaluate((el) => getComputedStyle(el, '::after').opacity)).toBe('0');
   await expect(page.locator('.ig-pour')).toBeHidden();
@@ -70,45 +70,43 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   const page = await ctx.newPage();
   await page.goto('/');
   await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
-  await expect(page.getByRole('link', { name: /See Crucible Sites/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /See Crucible Sites/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
   await expect(page.locator('.ig-pour')).toBeHidden();
   await expect(page.locator('.ig-svg')).toBeVisible();
   expect((await page.locator('section.ig').boundingBox())!.height).toBeLessThan(page.viewportSize()!.height * 2.5);
   await ctx.close();
 });
 
-test('furnace floors: heat only moves while it is on screen, and never with reduced motion', async ({ page, browser }) => {
+test('heat loops only run while on screen, and never with reduced motion', async ({ page, browser }) => {
   await page.goto('/?tier=light', { waitUntil: 'networkidle' });
-  const floor = page.locator('.footer-giant .furnace');
-  const waves = page.locator('.footer-giant .furnace-waves i').first();
+  const floor = page.locator('#ventures');
+  const mark = page.locator('#ventures [data-hot] .vf-mark').first();
   await expect(floor).not.toHaveAttribute('data-live', '');
-  expect(await waves.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('paused');
-  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  expect(await mark.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('paused');
+  await mark.scrollIntoViewIfNeeded();
   await expect(floor).toHaveAttribute('data-live', '');
-  expect(await waves.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('running');
+  expect(await mark.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('running');
 
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const calm = await ctx.newPage();
   await calm.goto('/', { waitUntil: 'networkidle' });
-  for (const sel of ['.footer-giant .furnace-waves i', '#ventures .molten-flow']) {
-    expect(await calm.locator(sel).first().evaluate((el) => getComputedStyle(el).animationName), sel).toBe('none');
-  }
+  expect(await calm.locator('#ventures [data-hot] .vf-mark').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
   await ctx.close();
 });
 
-test('ventures: the live one pours in a labelled concept site; the rest are still forging', async ({ page }) => {
+test('ventures: the live one has set and links to /sites; the next ones glow in their moulds and have their own pages', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
-  const cast = page.locator('#ventures [data-cast]');
-  await cast.scrollIntoViewIfNeeded();
-  await expect(cast).toHaveAttribute('data-in', '');
-  await expect(cast.getByText('Concept')).toBeVisible();
-  await expect(page.locator('#ventures .forging-mark')).toHaveCount(2);
+  const panels = page.locator('#ventures .vf-panel');
+  await expect(panels).toHaveCount(3);
+  await expect(page.locator('#ventures [data-hot]')).toHaveCount(2);
+  await expect(page.locator('#ventures').getByRole('link', { name: 'See Crucible Sites' })).toHaveAttribute('href', '/sites');
+  for (const v of ['verge', 'trellis']) await expect(page.locator(`#ventures a.vf-link[href="/ventures/${v}"]`)).toHaveCount(1);
 });
 
 test('moving to /sites pours the next page in, then gets out of the way', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
-  await page.getByRole('link', { name: /See Crucible Sites/ }).click();
+  await page.getByRole('link', { name: /See Crucible Sites/ }).first().click();
   await expect(page).toHaveURL(/\/sites$/);
   await expect(page.locator('h1')).toHaveText(/actually looks good/);
   await expect(page.locator('html')).not.toHaveAttribute('data-leaving', '');

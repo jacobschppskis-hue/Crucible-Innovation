@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 
 // The /sites opening (components/BuildStage.tsx): a live concept site that is cast, turned into a phone and recast.
 
-const captions = ['Built for the phone in their pocket.', 'Not a template.', 'Then it’s yours.'];
+const captions = ['Built for the phone in their pocket', 'Not a template', 'Then it’s yours'];
 /** Which caption is showing (hidden ones stay in the accessibility tree at opacity 0). */
 const shown = (page: import('@playwright/test').Page, i: number) =>
   expect.poll(() => page.locator('.bs-cap').nth(i).evaluate((el) => Number(getComputedStyle(el).opacity))).toBeGreaterThan(0.9);
