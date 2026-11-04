@@ -24,7 +24,7 @@ export function Footer() {
         </a>
 
         <div className="mt-20 grid gap-12 text-[0.9375rem] sm:grid-cols-3">
-          <nav aria-label="Pages">
+          <nav id="pages" aria-label="Pages">
             <h2 className="text-ink-dim">Pages</h2>
             <ul className="mt-4 space-y-2">
               {pages.map((p) => (
