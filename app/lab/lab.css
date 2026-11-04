@@ -1,0 +1,137 @@
+/* Direction board only. */
+.lab-v {
+  --bg: #0d0d0b;
+  --ink: #e8e4d8;
+  --mute: #9a978e;
+  --hot: #ff5b1f;
+  --f-display: var(--lab-archivo), sans-serif;
+  --f-text: var(--lab-archivo), sans-serif;
+  --d-wdth: 125;
+  --d-wght: 600;
+  --d-track: -0.02em;
+  --d-case: none;
+  --d-lh: 0.92;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--f-text);
+  min-height: 100svh;
+  padding: 2rem clamp(1rem, 4vw, 4rem) 5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 4rem;
+}
+.lab-v[data-v='b'] {
+  --bg: #0a0a09;
+  --f-display: var(--lab-shoulders), sans-serif;
+  --d-wght: 800;
+  --d-track: 0;
+  --d-case: uppercase;
+  --d-lh: 0.86;
+}
+.lab-v[data-v='c'] {
+  --bg: #e8e4d8;
+  --ink: #16150f;
+  --mute: #5e5b52;
+  --hot: #c2410c;
+  --f-display: var(--lab-news), serif;
+  --d-wght: 400;
+  --d-track: -0.015em;
+  --d-lh: 1;
+}
+.lab-note {
+  font-size: 0.8125rem;
+  color: var(--mute);
+}
+.lab-hero {
+  display: grid;
+  gap: 2rem;
+}
+.lab-ring {
+  color: var(--ink);
+}
+.lab-display,
+.lab-h2 {
+  font-family: var(--f-display);
+  font-variation-settings: 'wdth' var(--d-wdth);
+  font-weight: var(--d-wght);
+  letter-spacing: var(--d-track);
+  text-transform: var(--d-case);
+  line-height: var(--d-lh);
+  text-wrap: balance;
+}
+.lab-display {
+  font-size: clamp(3.5rem, 11vw, 11rem);
+  max-width: 12ch;
+}
+.lab-intro {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+.lab-intro p {
+  max-width: 34ch;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--mute);
+}
+.lab-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 3rem;
+  padding: 0 1.4rem;
+  border-radius: 999px;
+  background: var(--hot);
+  color: #0d0d0b;
+  font-weight: 600;
+}
+.lab-v[data-v='c'] .lab-btn {
+  color: #f4f1e8;
+}
+.lab-h2 {
+  font-size: clamp(2.5rem, 7vw, 6.5rem);
+  max-width: 14ch;
+}
+.lab-ventures ul {
+  margin-top: 2.5rem;
+  display: grid;
+}
+.lab-ventures li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.25rem 2rem;
+  padding: 1.5rem 0;
+}
+.lab-vname {
+  font-family: var(--f-display);
+  font-variation-settings: 'wdth' var(--d-wdth);
+  font-weight: var(--d-wght);
+  text-transform: var(--d-case);
+  font-size: clamp(2rem, 5vw, 4rem);
+  line-height: 1;
+}
+.lab-vblurb {
+  grid-column: 1;
+  color: var(--mute);
+}
+.lab-vstatus {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: center;
+  font-size: 0.875rem;
+  color: var(--mute);
+}
+.lab-ventures li[data-hot] .lab-vstatus {
+  color: var(--hot);
+}
+.lab-data {
+  margin-top: 2rem;
+  color: var(--mute);
+}
+.lab-data span {
+  font-variant-numeric: tabular-nums;
+  font-size: 2.5rem;
+  color: var(--ink);
+  margin-right: 0.5rem;
+}
