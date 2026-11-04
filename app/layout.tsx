@@ -14,6 +14,7 @@ import './globals.css';
 // Bundled with the global CSS (one stylesheet request per page; these are only ~4 KB gzipped).
 import '@/components/LiveSite.css';
 import '@/components/BuildStage.css';
+import '@/components/Process.css';
 import '@/components/Story.css';
 import '@/components/Ventures.css';
 import '@/components/TryIt.css';

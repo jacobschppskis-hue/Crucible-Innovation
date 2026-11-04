@@ -72,9 +72,11 @@ export default function SitesPage() {
           </div>
         </section>
 
-        {/* 4. Process */}
-        <section id="process" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '850px', '--h-lg': '510px' } as React.CSSProperties}>
-          <SectionHead label="Process" title={[{ t: 'From first call to live site in' }, { t: 'about a week.', className: 'accent' }]} className="mb-14 sm:mb-20" />
+        {/* 4. Process: seven days you can scrub (pinned; no cv-auto, its height depends on whether it pins) */}
+        <section id="process" aria-labelledby="process-h" className="days-section pb-24 sm:pb-32">
+          <div className="container-x">
+            <WordReveal as="h2" id="process-h" segments={[{ t: 'From first call to live site in about a week' }]} className="h-section max-w-[16ch]" />
+          </div>
           <Process />
         </section>
 
