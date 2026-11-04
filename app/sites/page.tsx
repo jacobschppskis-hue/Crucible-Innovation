@@ -7,7 +7,6 @@ import { Builders } from '@/components/Builders';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { ArrowRight } from '@/components/Icons';
-import { Furnace } from '@/components/Furnace';
 import { JsonLd } from '@/components/JsonLd';
 import { Nav } from '@/components/Nav';
 import { PricingCard } from '@/components/PricingCard';

@@ -363,25 +363,6 @@ html.lenis body {
 }
 
 /* ---------- Form chips ---------- */
-.chip {
-  @apply inline-flex h-10 cursor-pointer select-none items-center rounded-full border border-line-strong px-4 text-sm text-bone-dim transition-colors duration-200;
-}
-.chip:hover {
-  @apply border-bone/30 text-bone;
-}
-input:checked + .chip {
-  @apply border-ember/70 bg-ember/10 text-bone;
-}
-input:focus-visible + .chip {
-  outline: 2px solid var(--ember);
-  outline-offset: 3px;
-}
-.field {
-  @apply h-12 w-full rounded-xl border border-line-strong bg-ground px-4 text-[1rem] text-bone transition-colors duration-200 placeholder:text-bone/40 hover:border-bone/25 focus:border-ember/70 focus:outline-none;
-}
-textarea.field {
-  @apply h-auto min-h-36 py-3 leading-relaxed;
-}
 
 /* ---------- Success pulse ---------- */
 .pulse-dot {
@@ -1693,85 +1674,7 @@ textarea.field {
 /* ---------- Furnace (components/Furnace.tsx): the Thesis's heat in small doses ----------
    A low glow off the floor and heat rising from it in soft waves (a tile of blurred sine lines drifting up and
    sideways, faded out with height). Everything moves by transform or opacity, and only while on screen. */
-.furnace {
-  --heat: 1;
-  --reach: 80%; /* how high the waves rise before they fade out */
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-.furnace::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(75% 85% at 50% 120%, rgba(255, 150, 70, 0.3), rgba(255, 91, 31, 0.12) 40%, rgba(130, 22, 0, 0.05) 66%, rgba(130, 22, 0, 0) 86%);
-  opacity: var(--heat);
-}
-.furnace-waves {
-  position: absolute;
-  inset: 0;
-  opacity: calc(var(--heat) * 0.8);
-  -webkit-mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
-  mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
-}
-.furnace-waves i {
-  position: absolute;
-  inset: 0 0 -160px -400px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cfilter id='b' x='-10%25' y='-60%25' width='120%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cg fill='none' filter='url(%23b)'%3E%3Cpath stroke='%23ff9a4a' stroke-opacity='.3' stroke-width='16' d='M0 50Q50 32 100 50T200 50T300 50T400 50'/%3E%3Cpath stroke='%23ff6a2a' stroke-opacity='.22' stroke-width='12' d='M0 122Q66.7 140 133.3 122T266.7 122T400 122'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 400px 160px repeat;
-}
-.furnace-waves i + i {
-  inset: 0 -560px -220px 0;
-  background-size: 560px 220px;
-  opacity: 0.6;
-}
-.furnace-gl {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 900ms ease;
-}
-.furnace[data-gl] .furnace-gl {
-  opacity: 0.6;
-}
-.furnace[data-gl] .furnace-waves {
-  opacity: calc(var(--heat) * 0.4);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .furnace::before {
-    animation: furnace-breathe 5.5s ease-in-out infinite paused;
-  }
-  .furnace-waves i {
-    animation: heat-rise 5s linear infinite paused;
-  }
-  .furnace-waves i + i {
-    animation-name: heat-rise-wide;
-    animation-duration: 8s;
-  }
-  .furnace[data-live]::before,
-  .furnace[data-live] .furnace-waves i {
-    animation-play-state: running;
-  }
-}
-@keyframes furnace-breathe {
-  50% {
-    opacity: calc(var(--heat) * 0.72);
-  }
-}
 /* one tile up and one tile across per loop, so it never jumps */
-@keyframes heat-rise {
-  to {
-    translate: 400px -160px;
-  }
-}
-@keyframes heat-rise-wide {
-  to {
-    translate: -560px -220px;
-  }
-}
 /* "molten." in the Ventures heading: the word is the metal, with brighter heat flowing through it. */
 @media (prefers-reduced-motion: no-preference) {
   /* runs alongside the word's own reveal (same list), only while the heading is on screen */
@@ -1894,14 +1797,11 @@ textarea.field {
 }
 
 /* Quote: the send panel arrives with the same rise as everything else. */
-.send-panel {
-  animation: rise 900ms var(--ease-spring) both;
-}
+
 @keyframes rise {
   from {
     opacity: 0;
     transform: translateY(20px);
-    filter: blur(6px);
   }
 }
 
@@ -1995,8 +1895,7 @@ textarea.field {
     transform: none;
   }
   .frame-in,
-  .live-dot,
-  .send-panel {
+  .live-dot {
     animation: none;
   }
   .parallax-inner {
