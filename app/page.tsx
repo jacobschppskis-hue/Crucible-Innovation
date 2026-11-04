@@ -21,7 +21,7 @@ export default function Home() {
       <Nav variant="home" />
       <main id="main">
         {/* The opening: ignition on load, then the ring comes apart and fuses as you scroll */}
-        <Ignition />
+        <Ignition film={filmInfo('ring')} />
 
         {/* Jacob's story: why Crucible exists and where the name comes from */}
         <Story />

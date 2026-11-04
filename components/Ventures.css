@@ -20,12 +20,22 @@
   overflow: hidden;
   background: var(--ground-2);
 }
+/* A rendered ingot lies on the page's own ground: shown whole (its edges are graded to the ground colour) and centred
+   in its frame, its rim dissolving into the dark, so it never reads as a photo in a box. */
+:is(.vf-visual, .vx-visual):has(> .vf-img) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
+  background: none;
+}
 .vf-img {
-  position: absolute;
-  inset: 0;
+  display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
+  aspect-ratio: 8 / 5;
+  -webkit-mask: radial-gradient(closest-side, #000 68%, rgba(0, 0, 0, 0.55) 84%, rgba(0, 0, 0, 0.15) 95%, transparent);
+  mask: radial-gradient(closest-side, #000 68%, rgba(0, 0, 0, 0.55) 84%, rgba(0, 0, 0, 0.15) 95%, transparent);
   transition: transform 1.2s var(--ease-out);
 }
 .vf-panel:hover .vf-img {
@@ -79,21 +89,43 @@
 [data-hot] .vf-mark {
   filter: drop-shadow(0 0 18px var(--ember)) drop-shadow(0 0 3px var(--ember-hot));
 }
-/* Still hot: the mark breathes, only while the floor is on screen (InView sets data-live on [data-heat]). */
+/* Still hot: the mark breathes, and a rendered ingot's molten face swells and ebbs (a glow over its middle, the same
+   box as the image), only while the floor is on screen (InView sets data-live on [data-heat]). */
+[data-hot] :is(.vf-visual, .vx-visual):has(> .vf-img)::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 auto;
+  aspect-ratio: 8 / 5;
+  translate: 0 -50%;
+  background: radial-gradient(34% 22% at 50% 52%, rgba(255, 140, 56, 0.5), rgba(255, 91, 31, 0.16) 60%, transparent);
+  mix-blend-mode: screen;
+  opacity: 0;
+  pointer-events: none;
+}
 @media (prefers-reduced-motion: no-preference) {
   [data-hot] .vf-mark {
     animation: vf-smoulder 3.6s ease-in-out infinite paused;
   }
-  [data-live] [data-hot] .vf-mark {
+  [data-hot] :is(.vf-visual, .vx-visual):has(> .vf-img)::after {
+    animation: vf-swell 4.2s ease-in-out infinite paused;
+  }
+  [data-live] [data-hot] .vf-mark,
+  [data-live] [data-hot] :is(.vf-visual, .vx-visual)::after {
     animation-play-state: running;
   }
-  [data-hot]:nth-of-type(3) .vf-mark {
+  [data-hot]:nth-of-type(3) .vf-mark,
+  [data-hot]:nth-of-type(3) :is(.vf-visual, .vx-visual)::after {
     animation-delay: -1.5s;
   }
 }
 @keyframes vf-smoulder {
   50% {
     opacity: 0.72;
+  }
+}
+@keyframes vf-swell {
+  50% {
+    opacity: 1;
   }
 }
 

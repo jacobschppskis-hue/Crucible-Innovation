@@ -476,6 +476,7 @@ html.lenis body {
    (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --f, --t1..--t3 from lib/scroll.ts. */
 .ig {
   --o: 0;
+  --fv: 0;
   --melt: 0;
   --sm: 0;
   --sh: 0;
@@ -539,6 +540,27 @@ html.lenis body {
   opacity: calc(1 - var(--melt));
   -webkit-mask: radial-gradient(circle at var(--hx, 50%) var(--hy, 50%), transparent calc(var(--hr, 0px) * 0.55), #000 var(--hr, 0px));
   mask: radial-gradient(circle at var(--hx, 50%) var(--hy, 50%), transparent calc(var(--hr, 0px) * 0.55), #000 var(--hr, 0px));
+}
+
+/* Rich tier with the rendered ring (film/ring.py → public/film/ring): for the scroll story the flat SVG hands over to
+   the cast object (--fv, 0 → 1), frame for frame with the story's beats. A frame spans the viewBox -16 -16 96 96, so
+   the canvas is the ring's box plus a quarter on each side and frame 0 lies exactly on the SVG. The frames' edges are
+   the ground colour; lighten lets the glow and isotherms behind show through their dark. */
+.ig-film {
+  position: absolute;
+  left: -25%;
+  top: -25%;
+  width: 150%;
+  height: 150%;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: lighten;
+}
+.ig[data-film] .ig-film {
+  opacity: var(--fv);
+}
+.ig[data-film] .ig-svg {
+  opacity: calc(1 - var(--fv));
 }
 
 /* ---------- The pour (components/Ignition.tsx Pour): everything is in ring units, as % of the ring's box ----------

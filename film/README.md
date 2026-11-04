@@ -48,12 +48,15 @@ Previews: add `--scale 0.25 --samples 8` (any frame list such as `0,40,70,95` wo
 
 ### Timings
 
-Measured on a shared 4-core CPU machine while other builds were running, so they vary roughly 2× with load:
+Measured on a shared 4-core CPU machine while other agents' builds were running (load 4–20), so expect ±2×:
 
-- iron: field bake ~4 min once; solid-phase keyframes 40–110 s, melt frames 120–240 s; ~1–1.5 h for all 46 keyframes.
-- ingots: about 15–25 min per still at 2400×1500 / 128 spp.
-- ring: ~20–30 s per 1200² frame at 40 spp (~40 min for 96); still ~8 min.
-- encode: about 2 minutes in all.
+- iron: field bake ~4 min, once; 46 keyframes at 1600×900 / 12 spp in ~50 min (solid 40–130 s, melt 45–240 s each).
+- ingots: 2400×1500 / 128 spp: sites 28 min, verge 15 min, trellis ~15 min.
+- ring: 96 frames at 1200² / 40 spp in 40 min (~25 s each); the 2400² / 160 spp still in under 5 min.
+- encode: ~2 min for iron, under a minute for the rest.
+
+Not made: **pour** (the optional 4 s loop). A first draft read as a flat graphic rather than footage, and there
+wasn't time to bring it up to the bar, so it was dropped rather than shipped weak.
 
 ## iron (Thesis)
 

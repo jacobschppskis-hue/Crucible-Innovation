@@ -79,19 +79,29 @@ test('without JavaScript the opening is static and complete', async ({ browser }
 });
 
 test('heat loops only run while on screen, and never with reduced motion', async ({ page, browser }) => {
+  // The next ventures are still hot: a rendered ingot's molten face swells (its frame's ::after), or the mark breathes.
+  const playState = (el: Element) => {
+    const glow = getComputedStyle(el.querySelector('.vf-visual')!, '::after');
+    if (glow.animationName !== 'none') return glow.animationPlayState;
+    const mark = el.querySelector('.vf-mark');
+    return mark ? getComputedStyle(mark).animationPlayState : 'none';
+  };
   await page.goto('/?tier=light', { waitUntil: 'networkidle' });
   const floor = page.locator('#ventures');
-  const mark = page.locator('#ventures [data-hot] .vf-mark').first();
+  const hot = page.locator('#ventures [data-hot]').first();
   await expect(floor).not.toHaveAttribute('data-live', '');
-  expect(await mark.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('paused');
-  await mark.scrollIntoViewIfNeeded();
+  expect(await hot.evaluate(playState)).toBe('paused');
+  await hot.scrollIntoViewIfNeeded();
   await expect(floor).toHaveAttribute('data-live', '');
-  expect(await mark.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('running');
+  expect(await hot.evaluate(playState)).toBe('running');
 
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const calm = await ctx.newPage();
   await calm.goto('/', { waitUntil: 'networkidle' });
-  expect(await calm.locator('#ventures [data-hot] .vf-mark').first().evaluate((el) => getComputedStyle(el).animationName)).toBe('none');
+  const still = await calm.locator('#ventures [data-hot]').first().evaluate((el) =>
+    [getComputedStyle(el.querySelector('.vf-visual')!, '::after').animationName, el.querySelector('.vf-mark') ? getComputedStyle(el.querySelector('.vf-mark')!).animationName : 'none'],
+  );
+  expect(still).toEqual(['none', 'none']);
   await ctx.close();
 });
 
@@ -134,18 +144,30 @@ test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ bro
 
 test.describe('rich tier', () => {
   // Headless Chromium's WebGL is SwiftShader, which the tier check rightly rejects, so these force the tier.
-  test('forced rich: solid at rest, melts into dots for the story, sets solid at the end', async ({ page }) => {
+  test('forced rich: solid at rest, hands over to the rendered ring for the story, solid again at the end', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
     const scene = page.locator('section.ig');
-    await expect(scene).toHaveAttribute('data-gl', '', { timeout: 15000 });
+    // public/film/ring exists, so the rendered ring (not the WebGL dots) tells the story.
+    await expect(scene).toHaveAttribute('data-film', '', { timeout: 15000 });
+    await expect(scene).not.toHaveAttribute('data-gl', '');
     const opacity = (sel: string) => page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
     expect(await opacity('.ig-svg')).toBe(1);
+    expect(await opacity('.ig-film')).toBe(0);
     const box = (await scene.boundingBox())!;
     const vh = page.viewportSize()!.height;
     await page.evaluate((y) => scrollTo(0, y), (box.height - vh) * 0.3);
     await expect.poll(() => opacity('.ig-svg')).toBeLessThan(0.01);
+    await expect.poll(() => opacity('.ig-film')).toBeGreaterThan(0.99);
+    // The frame on the canvas follows the scroll: something was drawn.
+    const lit = await page.locator('.ig-film').evaluate((c: HTMLCanvasElement) => {
+      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      let max = 0;
+      for (let i = 0; i < d.length; i += 4 * 97) max = Math.max(max, d[i]);
+      return max;
+    });
+    expect(lit, 'the film canvas shows the ring').toBeGreaterThan(120);
     await page.evaluate((y) => scrollTo(0, y), box.height - vh);
     await expect.poll(() => opacity('.ig-svg')).toBeGreaterThan(0.99);
     expect(errors).toEqual([]);
@@ -174,9 +196,9 @@ test.describe('rich tier', () => {
     await expect(page.locator('section.thesis')).not.toHaveAttribute('data-gl', '');
   });
 
-  test('light tier: the Thesis fades in the film poster and never downloads the frames', async ({ page }) => {
+  test('light tier: the Thesis fades in the film poster and no film frames are downloaded', async ({ page }) => {
     const frames: string[] = [];
-    page.on('request', (r) => /\/film\/iron\/\d+\//.test(r.url()) && frames.push(r.url()));
+    page.on('request', (r) => /\/film\/(iron|ring)\/\d+\//.test(r.url()) && frames.push(r.url()));
     await page.goto('/?tier=light', { waitUntil: 'networkidle' });
     await page.locator('section.thesis').scrollIntoViewIfNeeded();
     await page.evaluate(() => scrollBy(0, 400));

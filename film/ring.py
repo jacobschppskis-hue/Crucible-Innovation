@@ -173,7 +173,7 @@ def cast_metal():
     return m
 
 
-CORE_TE, CORE_GAIN = 1550.0, 0.5
+CORE_TE, CORE_GAIN = 1550.0, 0.6
 
 
 def core_metal():
@@ -189,14 +189,17 @@ def core_metal():
     ce = g.voronoi(g.v('ADD', P, g.v('SCALE', g.noise(P, 0.8).outputs['Color'], scale=0.6)), 1.4, 'DISTANCE_TO_EDGE').outputs['Distance']
     seam = g.sub(1.0, g.smooth(0.02, 0.09, ce))
     crust = g.mul(crust_v.outputs[0], g.smooth(0.2, 0.5, g.add(swirl, g.mul(seam, -0.6))))
-    T = g.add(g.sub(Tv.outputs[0], g.mul(g.smooth(1.0, 4.5, r), 110.0)), g.mul(g.sub(swirl, 0.5), 90.0))
-    T = g.sub(T, g.mul(crust, 350.0))
+    # a mottled skin of cooler oxide drifting on it, so it reads as molten metal rather than a glossy bead
+    sk = g.noise(g.v('ADD', P, (4, 1, 3)), 1.1, detail=3, rough=0.6, distortion=0.8).outputs['Fac']
+    skin = g.smooth(0.5, 0.68, sk)
+    T = g.add(g.sub(Tv.outputs[0], g.mul(g.smooth(1.0, 4.5, r), 120.0)), g.mul(g.sub(swirl, 0.5), 150.0))
+    T = g.sub(g.sub(T, g.mul(skin, 170.0)), g.mul(crust, 350.0))
     col, strength = heat_emission(g, T, C2 / CORE_TE, CORE_GAIN)
     h = g.add(g.mul(g.sub(swirl, 0.5), 0.05), g.mul(crust, g.mul(g.smooth(0.0, 0.2, ce), 0.06)))
     disp = g.node('ShaderNodeDisplacement', {'Height': h, 'Midlevel': 0.0, 'Scale': 0.001}, space='OBJECT')
     g.nt.links.new(disp.outputs[0], out.inputs['Displacement'])
-    bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': g.mix_rgb((0.22, 0.21, 0.2), (0.08, 0.07, 0.06), crust),
-                                               'Metallic': g.lerp(1.0, 0.3, crust), 'Roughness': g.lerp(0.16, 0.5, crust),
+    bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': g.mix_rgb((0.09, 0.085, 0.08), (0.06, 0.055, 0.05), crust),
+                                               'Metallic': g.lerp(0.8, 0.3, crust), 'Roughness': g.lerp(g.lerp(0.3, 0.5, skin), 0.55, crust),
                                                'Emission Color': col, 'Emission Strength': strength})
     g.nt.links.new(bsdf.outputs[0], out.inputs['Surface'])
     m.displacement_method = 'BUMP'

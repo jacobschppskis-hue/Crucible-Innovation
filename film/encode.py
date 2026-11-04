@@ -1,6 +1,6 @@
 """Turn raw renders into the web outputs in public/film/. Needs only numpy + Pillow (no Blender).
 
-    python3 film/encode.py <raw-dir> [iron] [ingots] [ring] [pour]
+    python3 film/encode.py <raw-dir> [iron] [ingots] [ring]
 
 <raw-dir> holds the renders: <raw>/iron/NNN.png, <raw>/ingots/<slug>.png, <raw>/ring/NNN.png, <raw>/ring-still/000.png.
 Every frame gets the house grade (film/grade.py): warm highlights, blacks lifted to the page colour, a vignette to
