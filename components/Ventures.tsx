@@ -8,7 +8,7 @@ import { WordReveal } from './WordReveal';
 
 // Rendered ingots (film/ingots.py → public/film/ingots/<slug>-<w>.webp). Checked at build time, so a venture without a
 // render falls back to its mark drawn in CSS: cool for a live venture, still glowing for one in the mould.
-const ingot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
+export const hasIngot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
 
 /**
  * The foundry floor. Each venture is a cast object: Crucible Sites has set and cooled; the next ones are still glowing
@@ -46,24 +46,11 @@ const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
 
 function VentureCast({ v }: { v: Venture }) {
   const live = v.status === 'live';
-  const rendered = ingot(v.ingot);
   const href = ventureHref(v);
   return (
     <article className="vf-panel group" data-hot={live ? undefined : ''} aria-labelledby={`v-${v.slug}`}>
       <Link href={href} tabIndex={-1} aria-hidden className="vf-visual" data-pull="14">
-        {rendered ? (
-          <img
-            src={`/film/ingots/${v.ingot}-1200.webp`}
-            srcSet={`/film/ingots/${v.ingot}-600.webp 600w, /film/ingots/${v.ingot}-1200.webp 1200w, /film/ingots/${v.ingot}-2400.webp 2400w`}
-            sizes="(min-width: 1024px) 44vw, 92vw"
-            alt=""
-            loading="lazy"
-            decoding="async"
-            className="vf-img"
-          />
-        ) : (
-          <MarkCast v={v} />
-        )}
+        <VentureObject v={v} />
       </Link>
       <div className="vf-text">
         <p className={`label flex items-center gap-2 ${live ? 'text-ember' : ''}`}>
@@ -82,8 +69,29 @@ function VentureCast({ v }: { v: Venture }) {
   );
 }
 
+/**
+ * A venture's cast object, decorative: its rendered ingot when one exists, else its mark in the mould. The caller sets
+ * the temperature (`data-hot` on an ancestor while the venture is still forging) and the frame's size. Also used by
+ * the /ventures pages.
+ */
+export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw' }: { v: Venture; sizes?: string }) {
+  return hasIngot(v.ingot) ? (
+    <img
+      src={`/film/ingots/${v.ingot}-1200.webp`}
+      srcSet={`/film/ingots/${v.ingot}-600.webp 600w, /film/ingots/${v.ingot}-1200.webp 1200w, /film/ingots/${v.ingot}-2400.webp 2400w`}
+      sizes={sizes}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      className="vf-img"
+    />
+  ) : (
+    <MarkCast v={v} />
+  );
+}
+
 /** The fallback visual: the venture's mark in its mould. */
-function MarkCast({ v }: { v: Venture }) {
+export function MarkCast({ v }: { v: Venture }) {
   return (
     <span className="vf-mould">
       {v.slug === 'sites' && <SplitRing size="42%" title="" />}

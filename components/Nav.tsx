@@ -11,7 +11,7 @@ const config = {
     home: '/',
     links: [
       { href: '/#story', label: 'Story' },
-      { href: '/#ventures', label: 'Ventures' },
+      { href: '/ventures', label: 'Ventures' },
       { href: '/sites', label: 'Sites' },
     ],
     cta: { href: '/sites#start', label: 'Start a project' },
