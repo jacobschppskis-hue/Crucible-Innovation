@@ -45,9 +45,18 @@ void main() {
   float g = aInfo.x, ord = aInfo.y, r1 = aInfo.z, r2 = aInfo.w;
   vec2 p = aHome;
   float heat = uHeat, alpha = 1.0, size = ${f1(DOT)};
-  // Melted here? Everywhere once the story starts (uMelt); before that, only around the cursor (uLocal), measured
-  // from the dot's home so the edge of the molten patch doesn't shimmer as dots move.
-  vec2 dh = aHome - uMouse.xy;
+  // Human: the arc rows drift slowly along the arc (top to bottom), so an arc dot is rarely at its home.
+  float n = 1.0, o = 0.0;
+  if (g < 1.5) {
+    n = g < 0.5 ? ${f1(dotRows(RINGS[0].r)[0].n)} : ${f1(dotRows(RINGS[1].r)[0].n)};
+    o = fract(ord + uTime * ${f1(FLOW)} / n);
+    float a = 4.712389 - o * 3.141593;
+    p = vec2(cos(a), sin(a)) * length(aHome);
+  }
+  // Melted here? Everywhere once the story starts (uMelt); before that, only around the cursor (uLocal). Measured
+  // from where the dot is now, after its drift (or the molten patch slides away from the cursor and the hole in the
+  // SVG it fills), but before the cursor stirs it, so the patch's edge doesn't shimmer as dots part.
+  vec2 dh = p - uMouse.xy;
   float local = uLocal * (1.0 - smoothstep(${f1(HOVER_R * 0.55)}, ${f1(HOVER_R)}, length(dh)));
   float vis = max(uMelt, local);
   heat += local * 0.62;
@@ -55,11 +64,7 @@ void main() {
   float shimmer = 0.5 + 0.5 * sin(uTime * (1.3 + r1 * 1.7) + r2 * 40.0);
 
   if (g < 1.5) {
-    // Human: the rows drift slowly along the arc (top to bottom), fading in and out at the ends.
-    float n = g < 0.5 ? ${f1(dotRows(RINGS[0].r)[0].n)} : ${f1(dotRows(RINGS[1].r)[0].n)};
-    float o = fract(ord + uTime * ${f1(FLOW)} / n);
-    float a = 4.712389 - o * 3.141593;
-    p = vec2(cos(a), sin(a)) * length(aHome);
+    // Fading in and out at the ends of the arc.
     alpha *= smoothstep(0.0, 1.0 / n, o) * smoothstep(1.0, 1.0 - 1.0 / n, o);
     heat += shimmer * 0.06;
     // "Not the model.": the human half leaves to the left, dot by dot, and is gone.
