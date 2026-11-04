@@ -39,3 +39,30 @@ export const work: Work[] = [
     label: 'Concept',
   },
 ];
+
+/**
+ * Published client sites, shown first on /work with a short description, a live embed and a link.
+ * Empty until the first ones launch: /work then shows the concepts and Crucible's own work instead.
+ * Only add a site once it is live and the client is happy for it to be shown.
+ */
+export type ClientSite = {
+  slug: string;
+  name: string;
+  /** e.g. 'Café'. */
+  type: string;
+  /** One or two sentences: what the business is and what the site does for it. */
+  description: string;
+  /** The live site. */
+  url: string;
+  /**
+   * Embed the live site in a frame. Some sites refuse to be framed (X-Frame-Options / CSP frame-ancestors);
+   * set false for those and add a screenshot as `image` instead.
+   */
+  embed: boolean;
+  /** Optional screenshot (public/work/<slug>.webp), used when the embed is off and as the poster before it loads. */
+  image?: string;
+};
+
+// TODO(jakob): add the three sites here as they go live, e.g.
+// { slug: 'example', name: 'Example Bakery', type: 'Bakery', description: '…', url: 'https://example.com', embed: true },
+export const clientSites: ClientSite[] = [];

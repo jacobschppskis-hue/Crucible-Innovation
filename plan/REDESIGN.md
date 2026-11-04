@@ -242,7 +242,20 @@ How it runs:
 - Every item ends committed and pushed, with the site shippable. If credits run out mid-list, everything above the cut is finished.
 - The direction board (item 3) is the only planned stop.
 
-## Open questions for Jacob
+## Decisions (Jacob, 2026-11-04)
+
+- **Keep everything above** except item 23 (Higgsfield): Blender does all imagery. Sound (33) is skipped.
+- **Ventures:**
+  - **Verge**: "an AI coach for endurance sport. The algorithms behind it took a long time to build, the goal being coaching good enough for an athlete to rely on. Coming soon."
+  - **Trellis**: "an AI-powered planner, made to help people sort out what they need to do and when they need to do it. Coming soon."
+- **Work:**
+  - No sites are published yet. Three are close.
+  - `/work` gets client slots: name, short description, an embed, and a link. Jacob will send the URLs.
+  - Until then, the page shows what exists: the concept sites (labelled Concept), this site, the card and the mark.
+- **Portraits:** no real photos. Claude's call is **engraved line portraits**, made from the existing ASCII ones. Engraving is metalwork, so it fits the concept.
+- **Founders:** shown separately, as chapters, and described as co-founders, with **Jacob first**.
+
+## Open questions (answered above)
 
 1. **Ventures.** This session can't read Jacob's claude.ai chats. Google Drive has two candidates:
    - **Cadence**, a day planner app (PRD, September). Its pitch: "the day planner that actually fits".
