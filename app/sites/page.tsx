@@ -136,20 +136,11 @@ export default function SitesPage() {
         </section>
 
         {/* 9. Start a project */}
-        <section id="start" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1600px', '--h-lg': '1000px' } as React.CSSProperties}>
-          <div className="relative isolate grid gap-12 overflow-hidden rounded-3xl border border-line bg-ground-2 p-6 sm:p-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16 lg:p-14">
-            <Furnace heat={0.45} reach="42%" />
+        <section id="start" aria-labelledby="start-h" className="cv-auto container-x pt-8 pb-28 sm:pt-16 sm:pb-40" style={{ '--h-sm': '620px', '--h-lg': '530px' } as React.CSSProperties}>
+          <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20">
             <div>
-              <p className="label">Start a project</p>
-              <WordReveal segments={[{ t: 'Tell us about your' }, { t: 'business.', className: 'accent' }]} className="h-section mt-4" />
-              <p className="mt-5 text-lg leading-relaxed text-bone-dim">
-                Takes two minutes. A real person reads every request, and you’ll hear back within 24 hours.
-              </p>
-              <ul className="mt-8 space-y-3 font-mono text-[0.8125rem] uppercase tracking-[0.12em] text-bone-dim">
-                <li>→ A real person, not a sales team</li>
-                <li>→ A reply within 24 hours</li>
-                <li>→ No payment until you approve</li>
-              </ul>
+              <WordReveal id="start-h" segments={[{ t: 'Tell us about your business' }]} className="h-section qf-head" />
+              <p className="mt-6 max-w-sm text-lg leading-relaxed text-bone-dim">It takes two minutes. A real person reads every request and replies within 24 hours.</p>
             </div>
             <QuoteForm />
           </div>
