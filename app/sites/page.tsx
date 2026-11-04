@@ -88,7 +88,7 @@ export default function SitesPage() {
             {work.map((w, i) => (
               <Reveal as="li" key={w.slug} delay={i * 0.08}>
                 <article className="group">
-                  <div data-scroll="view" className="parallax relative aspect-[16/10] overflow-hidden bg-ground-2">
+                  <div data-scroll="view" data-pull="10" className="parallax relative aspect-[16/10] overflow-hidden bg-ground-2">
                     <div className="parallax-inner absolute inset-0">
                       <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top transition-transform duration-[1200ms] ease-[var(--ease-out)] group-hover:scale-[1.03]" />
                     </div>

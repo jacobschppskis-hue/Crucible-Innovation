@@ -102,3 +102,21 @@
     transform: translateY(0.6em);
   }
 }
+
+/* ---------- The heat wake (components/Wake.tsx): behind everything, never over content ---------- */
+.wake {
+  position: fixed;
+  left: -8px;
+  top: -8px;
+  z-index: -1;
+  pointer-events: none;
+  image-rendering: auto;
+  /* the grid is coarse (8–10px cells): blur it into a smooth surface */
+  filter: blur(7px);
+}
+
+/* Large visuals drawn toward the cursor (components/Magnetic.tsx) */
+[data-pull] {
+  translate: var(--pull-x, 0px) var(--pull-y, 0px);
+  transition: translate 900ms var(--ease-spring);
+}

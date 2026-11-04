@@ -33,7 +33,7 @@ function Chapter({ s, first }: { s: FounderStory; first: boolean }) {
   return (
     <article aria-labelledby={id} className="story-chapter container-x mt-24 grid gap-10 sm:mt-36 lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:gap-20">
       <header className="story-side">
-        <div className="w-full max-w-[18rem] lg:max-w-none">
+        <div className="w-full max-w-[18rem] lg:max-w-none" data-pull="10">
           <Portrait name={s.name} src={s.portrait} sizes="(min-width: 1024px) 22rem, 18rem" />
         </div>
         <h3 id={id} className="wide mt-6 font-display text-3xl font-semibold leading-none tracking-[-0.015em]">

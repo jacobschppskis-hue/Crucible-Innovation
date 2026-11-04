@@ -50,7 +50,7 @@ function VentureCast({ v }: { v: Venture }) {
   const href = ventureHref(v);
   return (
     <article className="vf-panel group" data-hot={live ? undefined : ''} aria-labelledby={`v-${v.slug}`}>
-      <Link href={href} tabIndex={-1} aria-hidden className="vf-visual">
+      <Link href={href} tabIndex={-1} aria-hidden className="vf-visual" data-pull="14">
         {rendered ? (
           <img
             src={`/film/ingots/${v.ingot}-1200.webp`}

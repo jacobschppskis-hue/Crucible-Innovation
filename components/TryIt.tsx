@@ -76,7 +76,7 @@ export function TryIt() {
         </a>
       </div>
 
-      <div className="try-stage">
+      <div className="try-stage" data-pull="12">
         <figure className="try-desk" aria-label={`Concept website for ${brand || 'a fictional business'}, ${trades.find((t) => t.theme === theme)!.label.toLowerCase()} design, on a laptop.`}>
           <div aria-hidden className="try-bar">
             <span className="try-dots">

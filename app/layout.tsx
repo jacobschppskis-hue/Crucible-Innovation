@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Archivo } from 'next/font/google';
 import { InView } from '@/components/InView';
 import { Magnetic } from '@/components/Magnetic';
+import { Wake } from '@/components/Wake';
 import { ScrollDriver } from '@/components/ScrollDriver';
 import { ReadingHeat } from '@/components/ReadingHeat';
 import { RefTracker } from '@/components/RefTracker';
@@ -58,6 +59,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
         {children}
+        <Wake />
         <InView />
         <ReadingHeat />
         <ScrollDriver />
