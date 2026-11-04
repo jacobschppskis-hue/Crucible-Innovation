@@ -711,7 +711,7 @@
   position: absolute;
   left: 0;
   top: -1.7em;
-  font: max(7px, calc(11 * var(--u))) / 1 var(--font-jetbrains), ui-monospace, monospace;
+  font: max(7px, calc(11 * var(--u))) / 1 var(--font-mono);
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: rgba(232, 228, 216, 0.55);

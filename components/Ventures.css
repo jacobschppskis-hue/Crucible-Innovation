@@ -1,0 +1,140 @@
+/* The foundry floor (components/Ventures.tsx). Vertical list by default; a pinned sideways track on wide screens. */
+.vf-track {
+  display: grid;
+  gap: 5rem;
+  padding: 7rem 1rem;
+}
+@media (min-width: 640px) {
+  .vf-track {
+    padding-inline: 1.5rem;
+  }
+}
+.vf-panel {
+  display: grid;
+  gap: 2rem;
+}
+.vf-visual {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--ground-2);
+}
+.vf-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 1.2s var(--ease-out);
+}
+.vf-panel:hover .vf-img {
+  transform: scale(1.03);
+}
+.vf-name {
+  margin-top: 1rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(3rem, 6vw, 6.25rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'wdth' 125;
+}
+.vf-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  color: var(--bone);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 0.35em;
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
+}
+.vf-link:hover {
+  color: var(--ember);
+  text-decoration-color: var(--ember);
+}
+
+/* The fallback: the mark in its mould. A live venture's has cooled; the rest still glow. */
+.vf-mould {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--bone);
+  background: radial-gradient(60% 60% at 50% 55%, #1d1b15, var(--ground-2));
+  box-shadow: inset 0 2px 24px #050504;
+}
+.vf-mark {
+  width: 42%;
+  fill: currentColor;
+}
+[data-hot] .vf-mould {
+  color: var(--ember);
+  background: radial-gradient(55% 55% at 50% 55%, #2a1309, #120c08 70%);
+}
+[data-hot] .vf-mark {
+  filter: drop-shadow(0 0 18px var(--ember)) drop-shadow(0 0 3px var(--ember-hot));
+}
+@media (prefers-reduced-motion: no-preference) {
+  [data-hot] .vf-mark {
+    animation: smoulder 3.6s ease-in-out infinite;
+  }
+  [data-hot]:nth-of-type(3) .vf-mark {
+    animation-delay: -1.5s;
+  }
+}
+
+/* Wide screens with motion: pin the floor and scroll it sideways (--p from data-scroll="pin"). */
+@media (min-width: 1024px) and (min-height: 600px) and (prefers-reduced-motion: no-preference) {
+  .js .vf {
+    height: calc(100svh + 170vw);
+  }
+  .js .vf-sticky {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+  }
+  .js .vf-track {
+    display: flex;
+    align-items: stretch;
+    gap: 5vw;
+    width: max-content;
+    padding: calc(var(--nav-h) + 2rem) 6vw 3rem;
+    transform: translate3d(calc(var(--p, 0) * (100vw - 100%)), 0, 0);
+    will-change: transform;
+  }
+  .js .vf-intro {
+    flex: none;
+    width: 30vw;
+    align-self: center;
+  }
+  .js .vf-intro .h-section {
+    font-size: clamp(2.75rem, 4.4vw, 5.25rem);
+  }
+  .js .vf-panel {
+    flex: none;
+    width: 68vw;
+    height: min(74svh, 44rem);
+    grid-template-columns: 1.3fr 1fr;
+    gap: 3.5vw;
+    align-items: end;
+  }
+  .js .vf-visual {
+    aspect-ratio: auto;
+    height: 100%;
+  }
+}
+@media (min-width: 1024px) {
+  html:not(.js) .vf-panel,
+  .vf-panel {
+    grid-template-columns: 1.3fr 1fr;
+    align-items: end;
+  }
+}

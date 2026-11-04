@@ -1,110 +1,109 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import Link from 'next/link';
-import { RING, arcPath, pixels } from '@/lib/splitRing';
-import { ventures, ventureHref } from '@/data/ventures';
-import { work } from '@/data/work';
-import { Furnace } from './Furnace';
+import { ventures, ventureHref, type Venture } from '@/data/ventures';
 import { ArrowRight } from './Icons';
-import { Reveal } from './Reveal';
-import { SpotlightCard } from './SpotlightCard';
+import { SplitRing } from './SplitRing';
 import { WordReveal } from './WordReveal';
 
-/** A Split Ring still in the furnace: part of each arc drawn, a few pixels set, the core not lit yet. */
-function Forging({ progress }: { progress: number }) {
-  const { c, px, stroke, rings } = RING;
+// Rendered ingots (film/ingots.py → public/film/ingots/<slug>-<w>.webp). Checked at build time, so a venture without a
+// render falls back to its mark drawn in CSS: cool for a live venture, still glowing for one in the mould.
+const ingot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
+
+/**
+ * The foundry floor. Each venture is a cast object: Crucible Sites has set and cooled; the next ones are still glowing
+ * in their moulds. On wide screens the floor is a pinned horizontal track that scrolls sideways; on phones, with
+ * reduced motion and without JS it's a plain vertical list.
+ */
+const WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
+
+export function Ventures() {
+  const all = ventures as readonly Venture[];
+  const live = all.filter((v) => v.status === 'live').length;
+  const next = all.length - live;
   return (
-    <svg aria-hidden viewBox="0 0 64 64" className="forging-mark">
-      {rings.map(({ r, n }) => (
-        <g key={r}>
-          <path d={arcPath(r)} pathLength={1} fill="none" stroke="currentColor" strokeWidth={stroke} strokeDasharray={`${progress} 2`} />
-          {pixels(r, n)
-            .slice(0, Math.round(n * progress * 0.7))
-            .map(({ x, y, deg }, i) => (
-              <rect key={i} x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" transform={`rotate(${deg} ${x} ${y})`} />
-            ))}
-        </g>
-      ))}
-      <circle className="forging-core" cx={c} cy={c} r={RING.core} />
-    </svg>
+    <section id="ventures" aria-labelledby="ventures-h" data-scroll="pin" className="vf relative">
+      <div className="vf-sticky">
+        <div className="vf-track">
+          <div className="vf-intro">
+            <WordReveal as="h2" id="ventures-h" segments={[{ t: 'Everything new was once molten' }]} className="h-section max-w-[11ch]" />
+            <p className="mt-6 max-w-sm text-lg leading-relaxed text-bone-dim">
+              {`What Crucible is building. ${cap(WORDS[live] ?? String(live))} ${live === 1 ? 'venture is' : 'ventures are'} live${
+                next > 0 ? `; the next ${next === 1 ? 'one is' : `${WORDS[next] ?? next} are`} still in the mould` : ''
+              }.`}
+            </p>
+          </div>
+          {(ventures as readonly Venture[]).map((v) => (
+            <VentureCast key={v.slug} v={v} />
+          ))}
+        </div>
+      </div>
+    </section>
   );
 }
 
-/** Ventures: the live one has a concept site cast into its card as it scrolls in; the rest are still being forged. */
-export function Ventures() {
-  const cafe = work.find((w) => w.slug === 'cafe')!;
-  const live = ventures.filter((v) => v.status === 'live').length;
-  let forging = 0;
+const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
+
+function VentureCast({ v }: { v: Venture }) {
+  const live = v.status === 'live';
+  const rendered = ingot(v.ingot);
+  const href = ventureHref(v);
   return (
-    <section id="ventures" data-heat="" className="container-x py-24 sm:py-32">
-      <div className="flex flex-wrap items-end justify-between gap-6">
-        <div className="max-w-2xl">
-          <p className="label">Ventures</p>
-          <WordReveal segments={[{ t: 'Everything new was once' }, { t: 'molten.', className: 'accent molten-flow' }]} className="h-section mt-4" />
-        </div>
-        <p className="label">
-          {String(live).padStart(2, '0')} live · {String(ventures.length - live).padStart(2, '0')} forging
+    <article className="vf-panel group" data-hot={live ? undefined : ''} aria-labelledby={`v-${v.slug}`}>
+      <Link href={href} tabIndex={-1} aria-hidden className="vf-visual">
+        {rendered ? (
+          <img
+            src={`/film/ingots/${v.ingot}-1200.webp`}
+            srcSet={`/film/ingots/${v.ingot}-600.webp 600w, /film/ingots/${v.ingot}-1200.webp 1200w, /film/ingots/${v.ingot}-2400.webp 2400w`}
+            sizes="(min-width: 1024px) 44vw, 92vw"
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="vf-img"
+          />
+        ) : (
+          <MarkCast v={v} />
+        )}
+      </Link>
+      <div className="vf-text">
+        <p className={`label flex items-center gap-2 ${live ? 'text-ember' : ''}`}>
+          {live && <span aria-hidden className="live-dot size-1.5 rounded-full bg-ember" />}
+          {live ? 'Live' : 'Coming soon'}
         </p>
+        <h3 id={`v-${v.slug}`} className="vf-name">
+          {v.name}
+        </h3>
+        <p className="mt-4 max-w-sm text-lg leading-relaxed text-bone-dim">{v.tagline ? `${v.tagline}. ${v.blurb}` : v.blurb}</p>
+        <Link href={href} className="vf-link mt-8">
+          {live ? `See ${v.name}` : `About ${v.name}`} <ArrowRight />
+        </Link>
       </div>
-      <ul className="mt-12 grid gap-5 md:grid-cols-3">
-        {ventures.map((v, i) => (
-          <Reveal as="li" key={v.slug} delay={i * 0.08}>
-            {v.status === 'live' ? (
-              <SpotlightCard as="article" tilt className="group relative flex h-full min-h-72 flex-col p-2.5">
-                <div data-cast="" className="venture-mold relative aspect-[16/10] overflow-hidden rounded-xl border border-line">
-                  <div className="cast-layer cast-piece">
-                    <div className="cast-in">
-                      {/* A plain lazy <img> (pre-sized variants, see lib/imageLoader.ts) keeps next/image's client code off this page. */}
-                      <img
-                        src={cafe.image.replace('.webp', '-640.webp')}
-                        srcSet={`${cafe.image.replace('.webp', '-640.webp')} 640w, ${cafe.image.replace('.webp', '-960.webp')} 960w`}
-                        sizes="(min-width: 768px) 30vw, 92vw"
-                        alt={cafe.alt}
-                        width={640}
-                        height={400}
-                        loading="lazy"
-                        decoding="async"
-                        className="absolute inset-0 h-full w-full object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                  <div className="cast-track">
-                    <div className="cast-band" />
-                    <div className="cast-front" />
-                  </div>
-                  <span aria-hidden className="venture-concept">
-                    Concept
-                  </span>
-                </div>
-                <div className="flex flex-1 flex-col px-4.5 pb-4.5 pt-6">
-                  <div className="flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.14em] text-ember">
-                      <span aria-hidden className="live-dot size-1.5 rounded-full bg-ember" />
-                      Live
-                    </span>
-                    <ArrowRight className="size-5 text-bone-dim transition-transform duration-500 ease-[var(--ease-spring)] group-hover:translate-x-1 group-hover:text-bone" />
-                  </div>
-                  <h3 className="mt-auto pt-8 font-display text-3xl font-semibold tracking-[-0.025em]">
-                    <Link href={ventureHref(v)} className="rounded-md after:absolute after:inset-0 after:rounded-[1.25rem]">
-                      {v.name}
-                    </Link>
-                  </h3>
-                  <p className="mt-3 text-bone-dim">{v.blurb}</p>
-                </div>
-              </SpotlightCard>
-            ) : (
-              <article className="forging relative isolate flex h-full min-h-72 flex-col overflow-hidden rounded-[1.25rem] border border-dashed border-line-strong p-7">
-                {/* still in the furnace */}
-                <Furnace heat={0.55} reach="65%" />
-                <span className="font-mono text-xs uppercase tracking-[0.14em] text-bone-dim">Forging</span>
-                <div className="grid flex-1 place-items-center py-8">
-                  <Forging progress={++forging === 1 ? 0.62 : 0.3} />
-                </div>
-                <h3 className="font-display text-3xl font-semibold tracking-[-0.025em] text-bone-dim">Next venture</h3>
-                <p className="mt-3 text-bone-dim">{v.blurb}</p>
-              </article>
-            )}
-          </Reveal>
-        ))}
-      </ul>
-    </section>
+    </article>
+  );
+}
+
+/** The fallback visual: the venture's mark in its mould. */
+function MarkCast({ v }: { v: Venture }) {
+  return (
+    <span className="vf-mould">
+      {v.slug === 'sites' && <SplitRing size="42%" title="" />}
+      {v.slug === 'trellis' && (
+        <svg viewBox="192 192 640 640" className="vf-mark" aria-hidden>
+          {[296, 480, 664].map((y) => (
+            <rect key={y} x="192" y={y} width="640" height="64" />
+          ))}
+          {[336, 624].map((x) => (
+            <rect key={x} x={x} y="192" width="64" height="640" />
+          ))}
+        </svg>
+      )}
+      {v.slug === 'verge' && (
+        <svg viewBox="0 0 512 512" className="vf-mark" aria-hidden>
+          <text x="256" y="400" fontFamily="Georgia, 'Times New Roman', serif" fontSize="460" fontWeight="600" textAnchor="middle" fill="currentColor">
+            V
+          </text>
+        </svg>
+      )}
+    </span>
   );
 }

@@ -5,8 +5,9 @@ import { Footer } from '@/components/Footer';
 import { Nav } from '@/components/Nav';
 import { ventures, type Venture } from '@/data/ventures';
 
-// One page per live venture that doesn't have its own route (no `href` in data/ventures.ts).
-const pages = (ventures as readonly Venture[]).filter((v) => v.status === 'live' && !v.href);
+// One page per venture that doesn't have its own route (no `href` in data/ventures.ts): live ones, and teasers for the
+// ones still in the mould.
+const pages = (ventures as readonly Venture[]).filter((v) => !v.href);
 
 export const dynamicParams = false;
 // A static export needs at least one param; with no such ventures yet, a placeholder renders the 404.

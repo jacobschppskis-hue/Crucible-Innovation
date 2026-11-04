@@ -31,7 +31,7 @@ export function Thesis() {
       const t = Math.round(ROOM + k * (IRON - ROOM));
       if (t !== shown) {
         shown = t;
-        num.current!.textContent = String(t).padStart(4, '0');
+        num.current!.textContent = String(t);
         cap.current!.textContent = t >= IRON ? 'Iron melts' : t <= ROOM ? 'Room temperature' : 'Heating';
       }
     });
@@ -57,7 +57,7 @@ export function Thesis() {
   }, []);
 
   return (
-    <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative border-y border-line">
+    <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative">
       <div className="pin-sticky relative flex items-center overflow-hidden">
         <canvas ref={gl} aria-hidden className="thesis-gl" />
         <div aria-hidden className="thesis-furnace" />
@@ -65,21 +65,17 @@ export function Thesis() {
         <div className="container-x relative flex w-full flex-col gap-12 py-24 lg:flex-row lg:items-end lg:justify-between">
           <div className="thesis-lines relative grid max-w-4xl">
             <div className="thesis-a [grid-area:1/1]">
-              <p className="font-serif-upright text-[2.75rem] leading-[1.02] tracking-[-0.015em] text-balance sm:text-7xl lg:text-[5.75rem]">
-                Nothing new happens at <span className="accent">293 K.</span>
-              </p>
-              <p className="mt-6 font-mono text-xs text-bone-dim">293 K is room temperature.</p>
+              <p className="h-display text-[2.75rem] sm:text-7xl lg:text-[5.5rem]">Nothing new happens at 293 K</p>
+              <p className="mt-6 text-bone-dim">293 K is room temperature.</p>
             </div>
             <div className="thesis-b [grid-area:1/1]">
-              <p className="font-serif-upright text-[2.75rem] leading-[1.02] tracking-[-0.015em] text-balance sm:text-7xl lg:text-[5.75rem]">
-                An alloy is stronger than its <span className="accent">metals.</span>
-              </p>
-              <p className="mt-6 font-mono text-xs text-bone-dim">Steel is harder than iron. Bronze is harder than copper.</p>
+              <p className="h-display text-[2.75rem] sm:text-7xl lg:text-[5.5rem]">An alloy is stronger than its metals</p>
+              <p className="mt-6 text-bone-dim">Steel is harder than iron. Bronze is harder than copper.</p>
             </div>
           </div>
-          <div className="w-full shrink-0 border-l border-line pl-5 sm:w-64 lg:mb-3">
-            <p className="label">Fe · Temperature</p>
-            <p className="mt-2 font-mono text-4xl tabular-nums text-bone sm:text-5xl">
+          <div className="w-full shrink-0 sm:w-64 lg:mb-3">
+            <p className="label">Temperature</p>
+            <p className="wide mt-2 font-display text-5xl font-semibold tabular-nums text-bone sm:text-6xl">
               <span className="sr-only">Heating from 293 kelvin, room temperature, to 1811 kelvin, the melting point of iron.</span>
               <span aria-hidden ref={num}>
                 {IRON}

@@ -198,13 +198,13 @@ export function Ignition() {
             </span>{' '}
             <span className="ig-line ig-l2">
               <span className="ig-in">
-                <span className="accent ig-cool" data-text="alloyed.">
-                  alloyed.
+                <span className="ig-cool" data-text="alloyed">
+                  alloyed
                 </span>
               </span>
             </span>
           </h1>
-          <div className="ig-meta mt-6 flex flex-col gap-6 lg:absolute lg:bottom-14 lg:right-8 lg:mt-0 lg:max-w-[23rem]">
+          <div className="ig-meta mt-6 flex flex-col gap-6 lg:absolute lg:bottom-6 lg:right-8 lg:mt-0 lg:max-w-[22rem]">
             <p className="text-base leading-relaxed text-bone-dim sm:text-lg">
               Human judgment and machine range, fused into one material. Crucible is a studio that builds and ships ventures.
             </p>
@@ -222,24 +222,16 @@ export function Ignition() {
         {/* Fusion lines: the scroll story told under the ring. */}
         <div className="ig-fuse px-4 text-center">
           <p className="ig-fl ig-t1 h-display text-4xl sm:text-6xl">
-            Not the <span className="accent">person.</span>
+            Not the person
           </p>
           <p className="ig-fl ig-t2 h-display text-4xl sm:text-6xl">
-            Not the <span className="accent">model.</span>
+            Not the model
           </p>
           <div className="ig-fl ig-t3">
-            <h2 className="h-display text-5xl sm:text-7xl">
-              Neither, <span className="accent">alone.</span>
-            </h2>
-            <p className="label mt-5">Not the person · Not the model · The mix</p>
+            <h2 className="h-display text-5xl sm:text-7xl">Neither, alone</h2>
           </div>
         </div>
 
-        <ol aria-hidden className="ig-steps label">
-          <li className="ig-s1">01 Person</li>
-          <li className="ig-s2">02 Model</li>
-          <li className="ig-s3">03 Mix</li>
-        </ol>
         <div aria-hidden className="ig-cue">
           <span />
         </div>

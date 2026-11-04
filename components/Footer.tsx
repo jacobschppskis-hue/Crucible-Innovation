@@ -1,54 +1,64 @@
 import Link from 'next/link';
 import { site } from '@/data/site';
-import { ventures, ventureHref } from '@/data/ventures';
-import { Furnace } from './Furnace';
-import { SplitRing } from './SplitRing';
+import { ventures, ventureHref, type Venture } from '@/data/ventures';
 import { Wordmark } from './Wordmark';
 
+const pages = [
+  { href: '/', label: 'Studio' },
+  { href: '/sites', label: 'Crucible Sites' },
+  { href: '/work', label: 'Work' },
+  { href: '/ventures', label: 'Ventures' },
+];
+
+/**
+ * The end of every page: the metal has cooled. The page flips to bone behind a hot front that cools as it comes into
+ * view, and the giant wordmark sets in ink; its Ember dot lights last.
+ */
 export function Footer() {
-  const live = ventures.filter((v) => v.status === 'live');
-  const forging = ventures.length - live.length;
   return (
-    <footer className="border-t border-line">
-      <div className="container-x grid gap-12 py-16 sm:grid-cols-[1.4fr_1fr_1fr]">
-        <div>
-          <Link href="/" className="inline-flex items-center gap-2.5 rounded-md text-2xl">
-            <SplitRing size={30} title="" />
-            <Wordmark />
-          </Link>
+    <footer data-scroll="enter" className="foot relative isolate">
+      <div className="container-x pt-24 pb-10 sm:pt-32">
+        <p className="text-ink-dim">Write to us</p>
+        <a href={`mailto:${site.email}`} className="foot-mail wide mt-3 inline-block font-display font-semibold">
+          {site.email}
+        </a>
+
+        <div className="mt-20 grid gap-12 text-[0.9375rem] sm:grid-cols-3">
+          <nav aria-label="Pages">
+            <h2 className="text-ink-dim">Pages</h2>
+            <ul className="mt-4 space-y-2">
+              {pages.map((p) => (
+                <li key={p.href}>
+                  <Link href={p.href} className="foot-link">
+                    {p.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </nav>
+          <div>
+            <h2 className="text-ink-dim">Ventures</h2>
+            <ul className="mt-4 space-y-2">
+              {(ventures as readonly Venture[]).map((v) => (
+                <li key={v.slug} className="flex items-baseline justify-between gap-4 sm:justify-start">
+                  <Link href={ventureHref(v)} className="foot-link">
+                    {v.name}
+                  </Link>
+                  <span className={v.status === 'live' ? 'text-ember-deep' : 'text-ink-dim'}>{v.status === 'live' ? 'Live' : 'Coming soon'}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <h2 className="text-ink-dim">Founders</h2>
+            <p className="mt-4 leading-relaxed">{site.founders.map((f) => f.name).join(' and ')}, co-founders</p>
+          </div>
         </div>
-        <div>
-          <h2 className="label">Ventures</h2>
-          <ul className="mt-4 space-y-2.5 text-sm">
-            {live.map((v) => (
-              <li key={v.slug}>
-                <Link href={ventureHref(v)} className="text-bone transition-colors hover:text-ember">
-                  {v.name}
-                </Link>
-              </li>
-            ))}
-            {forging > 0 && <li className="text-bone-dim">{forging} more in the furnace</li>}
-          </ul>
-        </div>
-        <div>
-          <h2 className="label">Contact</h2>
-          <ul className="mt-4 space-y-2.5 text-sm">
-            <li>
-              <a href={`mailto:${site.email}`} className="text-bone transition-colors hover:text-ember">
-                {site.email}
-              </a>
-            </li>
-            <li className="text-bone-dim">Founded by {site.founders.map((f) => f.name).join(' and ')}</li>
-          </ul>
-        </div>
+        <p className="mt-16 text-sm text-ink-dim">© {new Date().getFullYear()} Crucible</p>
       </div>
-      <div className="container-x">
-        <p className="border-t border-line py-6 font-mono text-xs text-bone-dim">© {new Date().getFullYear()} Crucible</p>
-      </div>
-      {/* The wordmark rises out of the bottom edge, off a furnace floor, as you reach the end of the page. */}
-      <div aria-hidden data-scroll="reveal" className="footer-giant relative isolate overflow-hidden">
-        <Furnace heat={0.75} reach="95%" molten={0.38} />
-        <div className="footer-giant-inner flex justify-center text-[24vw] leading-[0.8]">
+
+      <div aria-hidden data-scroll="reveal" className="foot-giant relative overflow-hidden">
+        <div className="foot-giant-inner flex justify-center text-[24vw] leading-[0.8]">
           <Wordmark />
         </div>
       </div>

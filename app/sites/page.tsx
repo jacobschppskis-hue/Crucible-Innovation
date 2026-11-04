@@ -16,6 +16,7 @@ import { SpotlightCard } from '@/components/SpotlightCard';
 import { WordReveal, type Segment } from '@/components/WordReveal';
 import { packages, pricingNote } from '@/data/pricing';
 import { work } from '@/data/work';
+import { conceptFonts } from '@/lib/conceptFonts';
 
 const title = 'Crucible Sites: websites for local businesses';
 const description = 'We design and build fast, beautiful websites for local businesses. Live in about a week. No payment until you’ve approved the design.';
@@ -50,7 +51,7 @@ export default function SitesPage() {
   return (
     <>
       <Nav variant="sites" />
-      <main id="main">
+      <main id="main" className={conceptFonts}>
         {/* 1. Hero + first scroll: a live concept site is cast, turns into a phone, and is recast */}
         <BuildStage />
 
