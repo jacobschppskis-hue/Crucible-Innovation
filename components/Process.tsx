@@ -64,7 +64,7 @@ export function Process() {
             role="img"
             aria-label="A concept website for a fictional landscaper building itself over a week: the notes from the call on a blank page, a wireframe, the first draft, two rounds of edits to the headline, the photo and the colour, then live at its own address."
           >
-            <div aria-hidden className="days-frame">
+            <div aria-hidden data-unslop-ok className="days-frame">
               <div className="days-bar">
                 <span className="days-dots">
                   <i />

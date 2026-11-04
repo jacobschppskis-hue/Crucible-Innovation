@@ -1683,84 +1683,6 @@ html.lenis body {
 /* one whole gradient width per loop: 250% wide, so -166.67% moves it by exactly its own width */
 
 /* ---------- Process: heat runs down the rail with a spark at its leading edge ---------- */
-.process {
-  --heat: 1;
-}
-.process-fill {
-  background: linear-gradient(to bottom, rgba(232, 228, 216, 0.7), var(--ember));
-  transform-origin: top;
-  transform: scaleY(var(--heat));
-}
-.process-spark {
-  position: absolute;
-  left: 5.5px;
-  top: calc(0.5rem + var(--heat) * (100% - 1rem));
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(circle, #fff6e6 0%, var(--ember-hot) 35%, var(--ember) 75%);
-  box-shadow:
-    0 0 12px 2px rgba(255, 91, 31, 0.7),
-    0 0 30px 6px rgba(255, 91, 31, 0.25);
-  opacity: calc(min(1, var(--heat) * 40) * (1 - max(0, (var(--heat) - 0.98) * 50)));
-  pointer-events: none;
-}
-@media (min-width: 768px) {
-  .process-fill {
-    background: linear-gradient(to right, rgba(232, 228, 216, 0.7), var(--ember));
-    transform-origin: left;
-    transform: scaleX(var(--heat));
-  }
-  .process-spark {
-    top: 5.5px;
-    left: calc(var(--heat) * 100%);
-  }
-}
-.process-step {
-  --on: clamp(0, (var(--heat) - var(--t)) * 14, 1);
-}
-.process-step h3 {
-  color: color-mix(in srgb, var(--bone) calc(62% + var(--on) * 38%), var(--ground));
-  translate: 0 calc((1 - var(--on)) * 6px);
-}
-.process-node {
-  border: 1px solid rgba(232, 228, 216, 0.3);
-  background: var(--ground);
-  transition:
-    background-color 500ms var(--ease-spring),
-    border-color 500ms var(--ease-spring),
-    box-shadow 700ms var(--ease-spring);
-}
-.process-step[data-on] .process-node {
-  background: var(--bone);
-  border-color: var(--bone);
-}
-.process-step[data-current] .process-node {
-  background: var(--ember);
-  border-color: var(--ember);
-  box-shadow:
-    0 0 0 4px rgba(255, 91, 31, 0.14),
-    0 0 18px rgba(255, 91, 31, 0.55);
-}
-.process-step[data-current] .process-node::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 50%;
-  border: 1px solid var(--ember);
-  animation: ripple 1300ms var(--ease-spring) forwards;
-}
-@keyframes ripple {
-  from {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  to {
-    transform: scale(3.6);
-    opacity: 0;
-  }
-}
 
 /* ---------- Cards: lean toward the cursor and lift ---------- */
 
@@ -1904,9 +1826,6 @@ html.lenis body {
   }
   .btn {
     translate: none;
-  }
-  .process-step[data-current] .process-node::after {
-    display: none;
   }
   .js [data-reveal]:not([data-in]) {
     transform: none;
