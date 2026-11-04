@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { ease, seg, trackScroll } from '@/lib/scroll';
-import { richTier } from '@/lib/tier';
+import { firstUse, richTier } from '@/lib/tier';
 import { HeatField } from './HeatField';
 import { ArrowRight } from './Icons';
 import { LiveSite, type Theme } from './LiveSite';
@@ -162,12 +162,15 @@ export function BuildStage() {
     };
   }, [more]);
 
-  // Rich tier: sparks fly off the casting front.
+  // Rich tier: sparks fly off the casting front. They follow the front as the visitor scrolls it, so they start on the
+  // first scroll or touch rather than on load.
   useEffect(() => {
     let stop: (() => void) | undefined;
     let dead = false;
     richTier().then(async (ok) => {
       if (!ok || dead) return;
+      await firstUse();
+      if (dead) return;
       const { startSparks } = await import('@/lib/gl/sparks');
       if (dead) return;
       const el = ref.current!;

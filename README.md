@@ -89,10 +89,9 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
 
 - **Scroll engine.** `lib/scroll.ts` runs one listener for every scroll effect. Each tracked element gets a `--p` CSS variable (0 → 1), and all reads happen before all writes on each frame. Mark an element with `data-scroll="view|enter|pin|reveal|read"` and style it with `var(--p)`, or call `trackScroll()` for a callback.
 - **Two tiers** (`lib/tier.ts`):
-  - **Light** is the default. It uses only CSS, SVG and a 2D canvas.
-  - **Rich** adds WebGL. An inline script in `<head>` makes a provisional call before first paint: light on reduced motion, Save-Data, a slow connection, little memory or few cores.
-  - After load and idle, `richTier()` confirms rich with a real WebGL context (no software renderer), the measured download speed of the page's own files (this works in Safari, which has no Network Information API) and a frame-time probe.
-  - WebGL code (`lib/gl/*`) is only downloaded once rich is confirmed. Each scene lowers its resolution, then hands back to the light version, if frames run long.
+  - **Rich** is what every visitor gets: the rendered films (`public/film`, scrubbed on a 2D canvas by `lib/film.ts`) and the WebGL scenes (`lib/gl/*`). There's deliberately no low-bandwidth version. Rich effects load after the page's load and idle, so they never hold back the first paint, and the film frames load only as each scene comes up.
+  - **Light** (CSS, SVG, the films' posters) is what's left with reduced motion, without JS, or when a scene can't start at all (no WebGL, a lost context).
+  - On slow frames a scene lowers its own quality (resolution, spark count) and keeps going.
   - Add `?tier=rich` or `?tier=light` to any URL to force a tier.
 - **Home page:** one continuous casting, top to bottom.
   - `Ignition` is the opening and the first scroll: the pour into a mould, then "Not the person / Not the model / Neither, alone" on the same ring. Rich tier: for the story the flat ring hands over to the rendered cast ring (`public/film/ring/`, frame = scroll progress × 95, first and last frames lying exactly on the SVG), or to WebGL particles (`lib/gl/ringParticles.ts`) without it. The cursor can knock the ring's pixels loose at rest (`lib/knock.ts`) on both tiers.
@@ -101,7 +100,7 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
   - `Thesis` heats from 293 K to 1811 K as you scroll. Rich tier: the rendered film of iron melting (`public/film/iron/`, drawn by `lib/film.ts`), or the WebGL surface (`lib/gl/molten.ts`) until it exists. Light tier: its poster fades in.
   - The footer is the cooled bone surface: a hot edge that cools as it comes in, and the wordmark set in ink.
 - **`/sites`:**
-  - `BuildStage` is the opening and the first scroll, built around live HTML versions of the concept sites (`LiveSite`): the café is cast, turned into a phone and recast as the barbershop and the landscaper. Rich tier: sparks (`lib/gl/sparks.ts`).
+  - `BuildStage` is the opening and the first scroll, built around live HTML versions of the concept sites (`LiveSite`): the café is cast, turned into a phone and recast as the barbershop and the landscaper. Rich tier: sparks (`lib/gl/sparks.ts`), from the first scroll or touch.
   - `TryIt`: the visitor types their business name and picks a trade; the live concept site is recast with it on a laptop and a phone. Nothing leaves the browser.
   - The before/after is a renovation: scrolling it in sweeps the new site across the old one behind a hot divider; then the handle can be dragged.
 - **Film.** `film/*.py` are Blender scenes (rendered in the cloud with the `bpy` module); see `film/README.md`. Frame sequences in `public/film/<name>/<width>/NNN.webp` are scrubbed on a canvas by `lib/film.ts`, which loads them sparse-first and draws only on change. `lib/filmAssets.ts` checks at build time whether a sequence exists, so pages fall back until it's rendered.
@@ -114,5 +113,5 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
   - Pinned scenes are also unpinned on very short screens (landscape phones).
 - **Heat field.** The canvas draws one static frame immediately and only starts drifting once the page is idle. It pauses off-screen and in background tabs.
 - **Weight.**
-  - First-load JS is about 127 KB gzipped on `/sites` and 114 KB on `/`. The rich tier's WebGL modules (a few KB each) load only on capable devices. There is no animation library.
+  - First-load JS is about 127 KB gzipped on `/sites` and 114 KB on `/`. The rich tier's WebGL modules (a few KB each) and film frames load after the page is up. There is no animation library.
   - Below-the-fold sections on `/sites` use `content-visibility: auto`.

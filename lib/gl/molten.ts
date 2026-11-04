@@ -3,7 +3,7 @@
 // One fullscreen fragment shader: domain-warped noise for the metal, coloured on a blackbody ramp. Cold, only the
 // cracks glow dull red; as it heats the whole surface brightens and starts to flow. It is hottest at the floor and
 // fades out toward the top so the type stays clean. Rendered at reduced resolution, only while on screen.
-import { dropToLight, richForced } from '@/lib/tier';
+import { dropToLight } from '@/lib/tier';
 
 type Options = { canvas: HTMLCanvasElement; heat: () => number; onReady?: () => void; onFail?: () => void };
 
@@ -127,10 +127,11 @@ export function startMolten({ canvas, heat, onReady, onFail }: Options): () => v
     slow = dt > 26 ? slow + dt : Math.max(0, slow - dt * 0.5);
     if (slow > 1500 && now - t0 > 2000) {
       slow = 0;
+      // Slow: render at a lower resolution (down to the last step, where it stays).
       if (q + 1 < scales.length) {
         q++;
         resize();
-      } else if (!richForced()) return fail();
+      }
     }
     mouse.s += ((now - mouse.moved < 900 ? 1 : 0) - mouse.s) * Math.min(1, dt / 300);
     gl.uniform2f(uRes, canvas.width, canvas.height);
