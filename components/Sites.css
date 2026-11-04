@@ -6,3 +6,17 @@
 .pkg-hot {
   border-top: 2px solid var(--ember);
 }
+
+/* Before/after: the divider is the hot front of the renovation */
+.ba-line {
+  background: var(--bone);
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease;
+}
+.ba[data-hot] .ba-line {
+  background: var(--ember-hot);
+  box-shadow:
+    0 0 14px 2px var(--ember),
+    0 0 44px 6px var(--ember);
+}

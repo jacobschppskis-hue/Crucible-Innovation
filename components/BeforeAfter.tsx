@@ -1,12 +1,12 @@
 'use client';
 import Image from 'next/image';
 import { useEffect, useRef } from 'react';
-import { ease, reducedMotion } from '@/lib/scroll';
+import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
 
 type Props = { before: { src: string; alt: string }; after: { src: string; alt: string } };
 
 /**
- * Drag to compare. The handle follows the pointer on a spring (it glides rather than snapping), drag works
+ * Scroll it in and the new site is swept across the old one; then drag to compare. The handle follows the pointer on a spring (it glides rather than snapping), drag works
  * anywhere on the image while vertical page scroll still works on touch, and a real range input underneath
  * gives keyboard and screen reader control. Labels fade as the handle covers them.
  */
@@ -35,35 +35,29 @@ export function BeforeAfter({ before, after }: Props) {
     s.raf = requestAnimationFrame(step);
   };
 
-  // One gentle sweep the first time it's half in view, so it's obvious the handle moves.
+  // The renovation: until the visitor takes the handle, scrolling it into view sweeps the new site across the old
+  // one. The divider is the hot front: Ember while it moves, cooling to bone when it stops.
   useEffect(() => {
     const el = root.current!;
     if (reducedMotion()) return;
-    let raf = 0;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (!e.isIntersecting) return;
-        io.disconnect();
-        const frames = [50, 26, 72, 50];
-        const t0 = performance.now() + 350;
-        const tick = (now: number) => {
-          if (state.current.touched) return;
-          const p = Math.max(0, Math.min(1, (now - t0) / 2600));
-          const e2 = ease.inOut(p) * (frames.length - 1);
-          const i = Math.min(frames.length - 2, Math.floor(e2));
-          const v = frames[i] + (frames[i + 1] - frames[i]) * (e2 - i);
-          state.current.pos = state.current.target = v;
-          paint(v);
-          if (p < 1) raf = requestAnimationFrame(tick);
-        };
-        raf = requestAnimationFrame(tick);
-      },
-      { threshold: 0.5 },
-    );
-    io.observe(el);
+    let last = -1;
+    let cool = 0;
+    const off = trackScroll(el, 'reveal', (p) => {
+      const s = state.current;
+      if (s.touched) return;
+      const v = 96 - ease.inOut(seg(p, 0.1, 1)) * 76;
+      s.pos = s.target = v;
+      paint(v);
+      if (last >= 0 && Math.abs(v - last) > 0.08) {
+        el.dataset.hot = '';
+        clearTimeout(cool);
+        cool = window.setTimeout(() => delete el.dataset.hot, 260);
+      }
+      last = v;
+    });
     return () => {
-      io.disconnect();
-      cancelAnimationFrame(raf);
+      off();
+      clearTimeout(cool);
     };
   }, []);
 
@@ -75,7 +69,7 @@ export function BeforeAfter({ before, after }: Props) {
   return (
     <div
       ref={root}
-      className="ba group relative aspect-[5/4] touch-pan-y select-none overflow-hidden rounded-2xl border border-line-strong bg-ground-2 [--pos:50%] sm:aspect-[16/10]"
+      className="ba group relative aspect-[5/4] touch-pan-y select-none overflow-hidden bg-ground-2 [--pos:50%] sm:aspect-[16/10]"
       onPointerDown={(e) => {
         state.current.touched = true;
         e.currentTarget.setPointerCapture(e.pointerId);
@@ -98,7 +92,7 @@ export function BeforeAfter({ before, after }: Props) {
         After
       </span>
 
-      <div aria-hidden className="pointer-events-none absolute inset-y-0 left-[var(--pos)] w-px -translate-x-1/2 bg-bone shadow-[0_0_14px_rgba(0,0,0,0.6)]">
+      <div aria-hidden className="ba-line pointer-events-none absolute inset-y-0 left-[var(--pos)] w-px -translate-x-1/2">
         <div className="ba-knob absolute left-1/2 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-bone/30 bg-ground/85 text-bone shadow-[0_8px_30px_-6px_rgba(0,0,0,0.8)] backdrop-blur-md group-has-[input:focus-visible]:outline-2 group-has-[input:focus-visible]:outline-offset-2 group-has-[input:focus-visible]:outline-ember">
           <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M7.5 6 3.5 10l4 4M12.5 6l4 4-4 4" />

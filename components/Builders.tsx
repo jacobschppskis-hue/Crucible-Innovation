@@ -4,10 +4,10 @@ import { ArrowRight } from './Icons';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
-/** A builder's ASCII portrait cast in on a bone card, or the Split Ring when there is none. Also used by the home page Story. */
+/** A builder's engraved portrait cast in on a bone card, or the Split Ring when there is none. Also used by the home page Story. */
 export function Portrait({ name, src, sizes = '(min-width: 768px) 24rem, 90vw' }: { name: string; src?: string; sizes?: string }) {
   if (src) {
-    // ASCII portraits are drawn as dark ink, so they sit on a bone card like the light cards in the brand sheet.
+    // Engraved portraits are dark ink, so they sit on a bone card (a cooled surface).
     // On first view the ink is cast in behind the Ember front, over a faint grid (the mold).
     return (
       <div data-cast="" className="portrait-mold relative aspect-[5/6] overflow-hidden rounded-2xl bg-bone">

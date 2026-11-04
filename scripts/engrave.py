@@ -25,10 +25,19 @@ as a set):
      a least-squares (Poisson, FFT) solve, which keeps the lines continuous and evenly spaced.
   3. Engrave. Line width follows darkness: the first family carries the light and mid tones; a
      cross-hatch family (rotated by `cross` degrees) comes in only in the darkest areas (hair,
-     pupils, deep shadows). Highlights get no lines at all. Strokes are rendered analytically at
-     `supersample`x with anti-aliased edges, then box-downsampled.
-  4. Output: dark ink (#16150f) on transparent, same aspect as the original, OUT_WIDTH px wide,
-     WebP with a lossless alpha channel.
+     pupils, deep shadows). Highlights get no lines at all, and lines taper to nothing as the
+     tone fades, so there is no hard border anywhere.
+  4. Contour strokes. Features thinner than the line pitch (eyelids, the line of the lips,
+     nostrils) would fall between engraved lines and the likeness with them, so dark ridges of
+     the source (Hessian) are drawn as swelling, tapered strokes, the way an engraver cuts an
+     eyelid. Only in feature areas, not in smooth skin or dark hair, and softer on the outline.
+  5. Everything is rendered analytically at `supersample`x with anti-aliased edges, then box-
+     downsampled. Output: dark ink (#16150f) on transparent, same aspect as the original,
+     OUT_WIDTH px wide, WebP (the alpha channel carries the drawing; RGB is flat ink).
+
+Tuning: run with --preview into a scratch folder and look at the bone-card PNGs at 100% and at
+card size (the -384 preview); keep spacing >= ~5.5 px or the lines moire when the browser shrinks
+the image to a 24rem card on a 1x screen.
 """
 from __future__ import annotations
 
@@ -50,9 +59,9 @@ OUT_WIDTH = 1000
 
 SETTINGS = dict(
     # tone
-    char_blur=2.5,      # px (source): blur that fuses the ASCII characters into tone
-    skin_blur=7.0,      # px: extra smoothing where the image has no structure
-    local_contrast=0.5, # unsharp amount (radius 12 px) to bring back features
+    char_blur=2.0,      # px (source): blur that fuses the ASCII characters into tone
+    skin_blur=10.0,     # px: extra smoothing where the image has no structure
+    local_contrast=0.8, # unsharp amount (radius 12 px) to bring back features
     gamma=1.0,          # <1 lifts light midtones (darker overall), >1 keeps it high-key
     threshold=0.04,     # tone below this is a highlight: no lines
     max_ink=0.94,       # coverage in the very darkest areas
@@ -63,8 +72,9 @@ SETTINGS = dict(
     follow_fine=1.0,    # pull towards fine-scale isophotes (hair, features)
     follow_form=1.0,    # pull towards large-scale isophotes (cheeks, forehead, jaw)
     max_bend=55.0,      # degrees: cap on how far lines may turn from the base direction
-    contour=0.5,        # 0 = off; higher draws more of the thin feature lines as strokes
+    contour=0.4,        # 0 = off; higher draws more of the thin feature lines as strokes
     contour_scale=2.5,  # px (source): width of the features the contour strokes pick up
+    outline_soften=0.5, # 0..1: how much weaker contour strokes are on the outer silhouette
     # engraving
     spacing=5.5,        # line pitch in output px
     cross=60.0,         # cross-hatch rotation, degrees
@@ -120,7 +130,8 @@ def structure(d: np.ndarray, pre: float, rho: float):
 
 # ---------------------------------------------------------------- pipeline
 
-def tone(alpha: np.ndarray, s: dict) -> np.ndarray:
+def tone(alpha: np.ndarray, s: dict) -> tuple:
+    """Darkness 0..1 (faded at the edges), the silhouette mask, and the contour-ridge field."""
     h, w = alpha.shape
     sharp = gblur(alpha, s["char_blur"])
     soft = gblur(alpha, s["skin_blur"])
@@ -130,8 +141,9 @@ def tone(alpha: np.ndarray, s: dict) -> np.ndarray:
     base = detail * sharp + (1 - detail) * soft
     d = base + s["local_contrast"] * (base - gblur(alpha, 12))
     d = np.clip(d / np.percentile(d, 99.6), 0, 1)
-    # silhouette: anywhere the ASCII art put ink nearby
-    sil = smoothstep(0.03, 0.15, gblur((alpha > 0.05).astype(float), 10))
+    # silhouette: anywhere the ASCII art put ink nearby (wide enough to close bare highlights)
+    sil = smoothstep(0.01, 0.05, gblur((alpha > 0.05).astype(float), 14))
+    inner = smoothstep(0.9, 1.0, gblur(sil, 10))
     yy, xx = np.mgrid[0:h, 0:w]
     frame = np.minimum.reduce([xx / w, (w - 1 - xx) / w, yy / h, (h - 1 - yy) / h])
     fade = sil * smoothstep(0, s["edge_fade"], frame)
@@ -143,6 +155,10 @@ def tone(alpha: np.ndarray, s: dict) -> np.ndarray:
     lam = (hxx + hyy) / 2 - np.sqrt(((hxx - hyy) / 2) ** 2 + hxy ** 2)
     ridge = np.maximum(0, -lam) * rs * rs
     ridge = ridge / np.percentile(ridge, 99.7) * fade
+    # only where they are needed: not in smooth skin (stray characters would speckle it) and
+    # not in areas already dark enough for the hatching to carry them (hair)
+    ridge *= detail * (1 - smoothstep(0.25, 0.55, gblur(d, 8)))
+    ridge *= 1 - s["outline_soften"] * (1 - inner)  # lighter on the outer silhouette
     return d * fade, sil, ridge
 
 
@@ -224,7 +240,9 @@ def save(cov: np.ndarray, path: str) -> Image.Image:
     rgba[..., :3] = INK
     rgba[..., 3] = np.round(np.clip(cov, 0, 1) * 255)
     im = Image.fromarray(rgba, "RGBA")
-    im.save(path, "WEBP", quality=90, alpha_quality=100, method=6)
+    # alpha carries the whole image; quality 70 halves the file with no visible change (max error
+    # 9/255). Lossy WebP stores colour as YUV, so the ink decodes one step off (#17150f): invisible.
+    im.save(path, "WEBP", quality=90, alpha_quality=70, method=6)
     return im
 
 
