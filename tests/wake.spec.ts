@@ -43,3 +43,11 @@ test('phones get a menu with every page', async ({ browser }) => {
   await expect(page.getByRole('dialog', { name: 'Menu' })).toBeHidden();
   await ctx.close();
 });
+
+test('desktop has no menu button (the links are in the bar)', async ({ browser }) => {
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  await page.goto('/');
+  await expect(page.getByRole('link', { name: 'Menu' })).toBeHidden();
+  await ctx.close();
+});

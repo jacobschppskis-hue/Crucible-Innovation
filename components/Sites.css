@@ -22,8 +22,13 @@
 }
 
 /* ---------- Phone menu (components/MobileMenu.tsx) ---------- */
+@media (max-width: 767px) {
+  .menu-btn.menu-btn {
+    display: inline-flex;
+  }
+}
 .menu-btn {
-  display: inline-flex;
+  display: none;
   align-items: center;
   height: 2.25rem;
   padding: 0 0.75rem;
