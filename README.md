@@ -27,8 +27,8 @@ Search the code for `TODO(jakob)`. The ones that matter:
 
 Copy lives in `data/*.ts`, so most changes are one edit:
 
-- **`ventures.ts`**: add a venture by adding one entry. `status: 'forging'` renders a dimmed card with no link. A `live` entry without `href` automatically gets a page at `/ventures/[slug]`.
-- **`work.ts`**: showcase cards (and the café screenshot in the home page's Crucible Sites card). Keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
+- **`ventures.ts`**: add a venture by adding one entry (name, blurb, tagline, description, mark). `status: 'forging'` shows it glowing in its mould with "Coming soon"; any entry without `href` gets a page at `/ventures/[slug]`.
+- **`work.ts`**: `clientSites` are the published client sites shown first on `/work` (name, description, live URL, embed or screenshot); add each one once it's live. `work` are the concept sites; keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
 - **`pricing.ts`**, **`faq.ts`**, **`site.ts`** (name, founders, email).
 
 The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />` (geometry is in `lib/splitRing.ts`).
@@ -44,6 +44,10 @@ node showcase-src/render.mjs
 It also writes 640px and 960px copies (`name-640.webp`, `name-960.webp`), which `lib/imageLoader.ts` serves to smaller screens because GitHub Pages can't resize images.
 
 The favicon (`public/favicon.svg`) and `public/apple-icon.png` are generated from the same Split Ring geometry (`lib/splitRing.ts`). The OpenGraph images are `app/opengraph-image.png` and `app/sites/opengraph-image.png`, rendered from `brand/og.html` with `node brand/render-og.mjs`.
+
+## Design rules
+
+`.claude/skills/unslop/SKILL.md` holds the design rules (what keeps the site from looking AI-made), and `npm run unslop` checks the ones a machine can. The direction board from the redesign is at `/lab` (not linked or indexed).
 
 ## Business card
 
@@ -80,26 +84,19 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
   - After load and idle, `richTier()` confirms rich with a real WebGL context (no software renderer), the measured download speed of the page's own files (this works in Safari, which has no Network Information API) and a frame-time probe.
   - WebGL code (`lib/gl/*`) is only downloaded once rich is confirmed. Each scene lowers its resolution, then hands back to the light version, if frames run long.
   - Add `?tier=rich` or `?tier=light` to any URL to force a tier.
-- **Home page:**
-  - `Ignition` is the opening and the first scroll, one pinned scene.
-    - On load the Ember core sparks, the Split Ring draws itself hot and cools, and the headline rises out of its masks.
-    - Scrolling parts the headline and tells "Not the person / Not the model / Neither, alone" on the same ring.
-    - Rich tier: the ring becomes WebGL particles (`lib/gl/ringParticles.ts`).
-  - `Story` is both co-founders in their own words, side by side (`data/story.ts`: Jacob's account and Charlie's). It warms from dim to bone as it's read (`HeatText` and `ReadingHeat`).
-  - `Ventures`: the live venture's card has a concept site cast into it on first view. Forging ventures show an unfinished ring.
-  - `Thesis` heats from 293 K to 1811 K as you scroll. A furnace glow rises in CSS, and the rich tier adds molten iron (`lib/gl/molten.ts`).
-  - A giant wordmark rises into the footer, and its Ember dot lights at the end.
+- **Home page:** one continuous casting, top to bottom.
+  - `Ignition` is the opening and the first scroll: the pour into a mould, then "Not the person / Not the model / Neither, alone" on the same ring. Rich tier: the ring becomes WebGL particles (`lib/gl/ringParticles.ts`).
+  - `Story`: one chapter per co-founder (Jacob first, `data/story.ts`), the engraved portrait pinned while the text warms as it's read. Two moments from Jacob's account are shown, not told: PayPal splitting into six companies, and iron plus a little carbon becoming steel.
+  - `Ventures` is the foundry floor: a pinned sideways track (vertical on phones). Each venture is a cast object: rendered ingots from `public/film/ingots/` when they exist, otherwise its mark in a mould, cool for a live venture and still glowing for the next ones.
+  - `Thesis` heats from 293 K to 1811 K as you scroll. Rich tier: the rendered film of iron melting (`public/film/iron/`, drawn by `lib/film.ts`), or the WebGL surface (`lib/gl/molten.ts`) until it exists. Light tier: its poster fades in.
+  - The footer is the cooled bone surface: a hot edge that cools as it comes in, and the wordmark set in ink.
 - **`/sites`:**
-  - `BuildStage` is the opening and the first scroll, built around live HTML versions of the concept sites (`LiveSite`).
-    - On load the café is cast: its blueprint pours in and the finished site follows behind an Ember heat front.
-    - Scrolling turns the frame into a phone (the site really reflows), then recasts it as the barbershop and the landscaper.
-    - Rich tier: sparks fly off the front (`lib/gl/sparks.ts`).
-  - The before/after slider tilts up as it scrolls in, and its handle follows the pointer on a spring.
-  - Heat runs along the process rail with a spark at its tip.
-  - Showcase images drift inside their frames, and cards lean toward the cursor.
-  - The builders' portraits are cast in on first view (`[data-cast]`).
+  - `BuildStage` is the opening and the first scroll, built around live HTML versions of the concept sites (`LiveSite`): the café is cast, turned into a phone and recast as the barbershop and the landscaper. Rich tier: sparks (`lib/gl/sparks.ts`).
+  - `TryIt`: the visitor types their business name and picks a trade; the live concept site is recast with it on a laptop and a phone. Nothing leaves the browser.
+  - The before/after is a renovation: scrolling it in sweeps the new site across the old one behind a hot divider; then the handle can be dragged.
+- **Film.** `film/*.py` are Blender scenes (rendered in the cloud with the `bpy` module); see `film/README.md`. Frame sequences in `public/film/<name>/<width>/NNN.webp` are scrubbed on a canvas by `lib/film.ts`, which loads them sparse-first and draws only on change. `lib/filmAssets.ts` checks at build time whether a sequence exists, so pages fall back until it's rendered.
 - **Everywhere:**
-  - Primary buttons lean slightly toward the cursor, and the nav has a reading-progress hairline.
+  - Primary buttons lean slightly toward the cursor, and the nav has a reading-progress hairline. On phones the nav has a menu (a native dialog).
   - Moving between pages pours the next page in (`RouteTransition`).
 - **Reduced motion and no JS.**
   - `prefers-reduced-motion` turns off loops, pinning, parallax, tilt, word reveals, page transitions, WebGL and smooth scrolling. Every scene shows its finished state and simple fades remain.
