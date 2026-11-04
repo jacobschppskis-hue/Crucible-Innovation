@@ -143,11 +143,23 @@ test('moving to /sites pours the next page in, then gets out of the way', async 
   await expect(page).toHaveURL(/\/sites$/);
   await expect(page.locator('h1')).toHaveText(/actually looks good/);
   await expect(page.locator('html')).not.toHaveAttribute('data-leaving', '');
-  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 3000 });
+  // The slide off the new page is a 760 ms CSS animation; the attribute goes when it ends. A busy CI runner can hold the
+  // main thread for a second or two while /sites mounts, so this allows for that rather than timing the runner.
+  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 8000 });
   await expect(page.locator('.route-sheet')).toBeHidden();
   // Back is ordinary navigation (no sheet).
   await page.goBack();
   await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
+  await expect(page.locator('.route-sheet')).toBeHidden();
+});
+
+test('going Back while the next page is still pouring in never leaves the sheet behind', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.getByRole('link', { name: /See Crucible Sites/ }).first().click();
+  await expect(page).toHaveURL(/\/sites$/);
+  await page.goBack();
+  await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
+  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 8000 });
   await expect(page.locator('.route-sheet')).toBeHidden();
 });
 

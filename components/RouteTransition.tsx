@@ -35,18 +35,29 @@ export function RouteTransition() {
     return () => document.removeEventListener('click', onClick, true);
   }, [router]);
 
+  // The sheet always gets out of the way: done when its slide off the new page ends, or after a fallback timer. Neither
+  // is cancelled if the path changes again straight away (e.g. Back during the slide), which used to leave the
+  // attribute set for good.
+  const sheet = useRef<HTMLDivElement>(null);
+  const fallback = useRef(0);
   useEffect(() => {
     if (!pending.current) return;
     pending.current = false;
     const html = document.documentElement;
     html.removeAttribute('data-leaving');
     html.setAttribute('data-arriving', '');
-    const id = window.setTimeout(() => html.removeAttribute('data-arriving'), 900);
-    return () => clearTimeout(id);
+    clearTimeout(fallback.current);
+    fallback.current = window.setTimeout(() => html.removeAttribute('data-arriving'), 900);
   }, [pathname]);
+  useEffect(() => {
+    const el = sheet.current!;
+    const done = (e: AnimationEvent) => e.target === el && e.animationName === 'route-uncover' && document.documentElement.removeAttribute('data-arriving');
+    el.addEventListener('animationend', done);
+    return () => el.removeEventListener('animationend', done);
+  }, []);
 
   return (
-    <div aria-hidden className="route-sheet">
+    <div ref={sheet} aria-hidden className="route-sheet">
       <div className="route-band" />
       <div className="cast-front route-front-leave" />
       <div className="cast-front route-front-arrive" />
