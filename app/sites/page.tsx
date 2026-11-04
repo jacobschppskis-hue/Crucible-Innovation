@@ -16,7 +16,7 @@ import { Reveal } from '@/components/Reveal';
 import { TryIt } from '@/components/TryIt';
 import { WordReveal, type Segment } from '@/components/WordReveal';
 import { packages, pricingNote } from '@/data/pricing';
-import { work } from '@/data/work';
+import { clientSites, work } from '@/data/work';
 import { conceptFonts } from '@/lib/conceptFonts';
 
 const title = 'Crucible Sites: websites for local businesses';
@@ -80,15 +80,43 @@ export default function SitesPage() {
           <Process />
         </section>
 
-        {/* 5. Work */}
+        {/* 5. Work: live client sites first (data/work.ts clientSites), then concepts to fill the row. */}
         <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1450px', '--h-lg': '710px' } as React.CSSProperties}>
           <SectionHead
             title={[{ t: 'Think in kelvin' }]}
-            sub="Measure from absolute zero, not from where everyone else starts. Every concept here began as a blank page. Real client work lands here as it ships."
+            sub={
+              clientSites.length
+                ? 'Measure from absolute zero, not from where everyone else starts. Every site here began as a blank page.'
+                : 'Measure from absolute zero, not from where everyone else starts. Every concept here began as a blank page. Real client work lands here as it ships.'
+            }
           />
           <ul className="mt-14 grid gap-x-6 gap-y-14 md:grid-cols-3">
-            {work.map((w, i) => (
-              <Reveal as="li" key={w.slug} delay={i * 0.08}>
+            {clientSites.map((c, i) => (
+              <Reveal as="li" key={c.slug} delay={i * 0.08}>
+                <article className="group">
+                  <a href={c.url} target="_blank" rel="noopener" tabIndex={-1} aria-hidden data-scroll="view" data-pull="10" className="parallax relative block aspect-[16/10] overflow-hidden bg-ground-2">
+                    {c.image ? (
+                      <span className="parallax-inner absolute inset-0">
+                        <Image src={c.image} alt="" fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top transition-transform duration-[1200ms] ease-[var(--ease-out)] group-hover:scale-[1.03]" />
+                      </span>
+                    ) : (
+                      <span className="wide absolute inset-0 grid place-items-center font-display text-xl font-semibold text-bone-dim">{new URL(c.url).hostname.replace(/^www\./, '')}</span>
+                    )}
+                  </a>
+                  <h3 className="wide mt-5 font-display text-xl font-semibold tracking-[-0.01em]">
+                    <a href={c.url} target="_blank" rel="noopener">
+                      {c.name}
+                      <span className="sr-only"> (opens in a new tab)</span>
+                    </a>
+                  </h3>
+                  <p className="mt-1 text-bone-dim">
+                    {c.type}. {c.description} <span className="text-bone">Live</span>
+                  </p>
+                </article>
+              </Reveal>
+            ))}
+            {work.slice(0, Math.max(0, 3 - clientSites.length)).map((w, i) => (
+              <Reveal as="li" key={w.slug} delay={(clientSites.length + i) * 0.08}>
                 <article className="group">
                   <div data-scroll="view" data-pull="10" className="parallax relative aspect-[16/10] overflow-hidden bg-ground-2">
                     <div className="parallax-inner absolute inset-0">
@@ -104,7 +132,7 @@ export default function SitesPage() {
             ))}
           </ul>
           <Link href="/work" className="vf-link mt-12">
-            Browse the concept sites <ArrowRight />
+            {clientSites.length ? 'See all the work' : 'Browse the concept sites'} <ArrowRight />
           </Link>
         </section>
 

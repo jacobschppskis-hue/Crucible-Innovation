@@ -21,15 +21,25 @@ Search the code for `TODO(jakob)`. The ones that matter:
 |---|---|
 | Contact email (currently `jacob@crucibleinnovation.com`) | `data/site.ts` |
 | FAQ answers | `data/faq.ts` |
-| Showcase: concept sites until real clients exist | `data/work.ts` |
+| Client sites: fill in and uncomment each of the three slots once that site is live (see "Adding a client site") | `data/work.ts` |
 
 ## Editing content
 
 Copy lives in `data/*.ts`, so most changes are one edit:
 
-- **`ventures.ts`**: add a venture by adding one entry (name, blurb, tagline, description, mark). `status: 'forging'` shows it glowing in its mould with "Coming soon"; any entry without `href` gets a page at `/ventures/[slug]`.
-- **`work.ts`**: `clientSites` are the published client sites shown first on `/work` (name, description, live URL, embed or screenshot); add each one once it's live. `work` are the concept sites; keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
+- **`ventures.ts`**: add a venture by adding one entry (name, blurb, tagline, description, mark). `status: 'forging'` shows it glowing in its mould with "Coming soon"; any entry without `href` gets a page at `/ventures/[slug]`. Its casting is `public/film/ingots/<slug>-*.webp` (rendered by `film/ingots.py`; without one, its mark glows in CSS), and `node scripts/venture-og.mjs` crops those into the pages' share images (`public/og/<slug>.jpg`).
+- **`work.ts`**: `clientSites` are the published client sites, shown first on `/work` and `/sites`; add each one once it's live (below). `work` are the concept sites; keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
 - **`pricing.ts`**, **`faq.ts`**, **`site.ts`** (name, founders, email).
+
+### Adding a client site
+
+Once a client's site is live and they're happy for it to be shown:
+
+1. Screenshot it: `node scripts/shoot-client.mjs <slug> <url>` writes `public/work/<slug>.webp` (desktop) and `-phone.webp`.
+2. In `data/work.ts`, fill in one of the slots in `clientSites` (name, type, one or two sentences, URL, `image: '/work/<slug>.webp'`) and uncomment it.
+3. Check the site can be framed (most can; if `/work` shows it blank, set `embed: false` and the screenshot is shown instead).
+
+It then appears first on `/work` (live, in a browser frame, with a link) and first in the `/sites` work grid, where it takes a concept's place. The copy about client work arriving "as it ships" switches over by itself.
 
 The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />` (geometry is in `lib/splitRing.ts`).
 
@@ -47,7 +57,7 @@ The favicon (`public/favicon.svg`) and `public/apple-icon.png` are generated fro
 
 ## Design rules
 
-`.claude/skills/unslop/SKILL.md` holds the design rules (what keeps the site from looking AI-made), and `npm run unslop` checks the ones a machine can. The direction board from the redesign is at `/lab` (not linked or indexed).
+`.claude/skills/unslop/SKILL.md` holds the design rules (what keeps the site from looking AI-made), and `npm run unslop` checks the ones a machine can.
 
 ## Business card
 

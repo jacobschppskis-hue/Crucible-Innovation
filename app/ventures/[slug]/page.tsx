@@ -1,9 +1,11 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { Footer } from '@/components/Footer';
 import { Nav } from '@/components/Nav';
-import { MarkCast } from '@/components/Ventures';
+import { VentureObject } from '@/components/Ventures';
 import { WordReveal } from '@/components/WordReveal';
 import { site } from '@/data/site';
 import { ventures, type Venture } from '@/data/ventures';
@@ -25,12 +27,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const title = `${v.name} · Crucible`;
   const description = v.tagline ? `${v.tagline}. ${v.blurb}` : v.blurb;
   const url = `/ventures/${v.slug}`;
-  return { title, description, alternates: { canonical: url }, openGraph: { title, description, url }, twitter: { title, description } };
+  // Its own share image when there is one: the rendered casting, cropped to 1200 × 630 (scripts/venture-og.mjs).
+  const og = `/og/${v.slug}.jpg`;
+  const images = fs.existsSync(path.join(process.cwd(), 'public', og))
+    ? [{ url: og, width: 1200, height: 630, alt: `${v.name}, cast in metal${v.status === 'live' ? '' : ' and still molten in its mould'}` }]
+    : undefined;
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: { title, description, url, ...(images && { images }) },
+    twitter: { title, description, ...(images && { images }) },
+  };
 }
 
 /**
- * A venture's own page. While it is still forging this is a teaser: the name, its line, its mark glowing in the mould,
- * Jacob's description (never edited) and a way to hear when it ships. No dates, users or numbers until they are real.
+ * A venture's own page. While it is still forging this is a teaser: the name, its line, its casting still molten in the
+ * mould (the rendered ingot, or its mark glowing in CSS without one), Jacob's description (never edited) and a way to
+ * hear when it ships. No dates, users or numbers until they are real.
  */
 export default async function VenturePage({ params }: Props) {
   const { slug } = await params;
@@ -50,7 +64,7 @@ export default async function VenturePage({ params }: Props) {
 
         <div className="vx-split">
           <div className="vx-visual vx-mark-frame" data-hot={live ? undefined : ''}>
-            <MarkCast v={v} />
+            <VentureObject v={v} sizes="(min-width: 1024px) 46vw, 92vw" eager />
           </div>
           {/* The page's first screen: shown straight away rather than held for a reveal. */}
           <div className="vx-copy">

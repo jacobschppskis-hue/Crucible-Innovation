@@ -105,6 +105,16 @@ test('heat loops only run while on screen, and never with reduced motion', async
   await ctx.close();
 });
 
+test('venture pages: the casting fills the frame and the share image is the casting', async ({ page }) => {
+  for (const slug of ['verge', 'trellis']) {
+    await page.goto(`/ventures/${slug}`, { waitUntil: 'networkidle' });
+    const img = page.locator('.vx-visual .vf-img');
+    await expect(img).toHaveAttribute('src', `/film/ingots/${slug}-1200.webp`);
+    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', new RegExp(`/og/${slug}\\.jpg$`));
+  }
+});
+
 test('ventures: the live one has set and links to /sites; the next ones glow in their moulds and have their own pages', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
   const panels = page.locator('#ventures .vf-panel');

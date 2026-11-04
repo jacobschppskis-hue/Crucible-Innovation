@@ -41,9 +41,9 @@ export const work: Work[] = [
 ];
 
 /**
- * Published client sites, shown first on /work with a short description, a live embed and a link.
- * Empty until the first ones launch: /work then shows the concepts and Crucible's own work instead.
- * Only add a site once it is live and the client is happy for it to be shown.
+ * Client sites, shown first on /work (a short description, the live site embedded, a link) and first in the /sites
+ * work grid. Empty until the first ones launch: both pages then show the concepts, and /work says client sites are on
+ * their way. Only add a site once it is live and the client is happy for it to be shown.
  */
 export type ClientSite = {
   slug: string;
@@ -55,14 +55,29 @@ export type ClientSite = {
   /** The live site. */
   url: string;
   /**
-   * Embed the live site in a frame. Some sites refuse to be framed (X-Frame-Options / CSP frame-ancestors);
-   * set false for those and add a screenshot as `image` instead.
+   * Embed the live site on /work. Some sites refuse to be framed (X-Frame-Options / CSP frame-ancestors); set false for
+   * those and the screenshot is shown instead.
    */
   embed: boolean;
-  /** Optional screenshot (public/work/<slug>.webp), used when the embed is off and as the poster before it loads. */
+  /**
+   * Screenshot, made with `node scripts/shoot-client.mjs <slug> <url>` → '/work/<slug>.webp'. Shown on /sites, on /work
+   * while the embed loads, and instead of it when `embed` is false.
+   */
   image?: string;
 };
 
-// TODO(jakob): add the three sites here as they go live, e.g.
-// { slug: 'example', name: 'Example Bakery', type: 'Bakery', description: '…', url: 'https://example.com', embed: true },
-export const clientSites: ClientSite[] = [];
+// TODO(jakob): the three client sites. Fill one in and uncomment it once that site is live (and its client says yes):
+// 1. Made, not up yet.
+// 2. Being made (waiting on photos).
+// 3. Not made yet.
+export const clientSites: ClientSite[] = [
+  // {
+  //   slug: 'example',
+  //   name: 'Example Bakery',
+  //   type: 'Bakery',
+  //   description: 'A neighbourhood bakery. The site puts the day’s bakes and the opening hours first.',
+  //   url: 'https://examplebakery.com',
+  //   embed: true,
+  //   image: '/work/example.webp',
+  // },
+];

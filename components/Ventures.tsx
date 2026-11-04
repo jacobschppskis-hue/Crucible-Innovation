@@ -74,14 +74,17 @@ function VentureCast({ v }: { v: Venture }) {
  * the temperature (`data-hot` on an ancestor while the venture is still forging) and the frame's size. Also used by
  * the /ventures pages.
  */
-export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw' }: { v: Venture; sizes?: string }) {
+export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager }: { v: Venture; sizes?: string; eager?: boolean }) {
   return hasIngot(v.ingot) ? (
     <img
       src={`/film/ingots/${v.ingot}-1200.webp`}
       srcSet={`/film/ingots/${v.ingot}-600.webp 600w, /film/ingots/${v.ingot}-1200.webp 1200w, /film/ingots/${v.ingot}-2400.webp 2400w`}
       sizes={sizes}
+      width={1200}
+      height={750}
       alt=""
-      loading="lazy"
+      loading={eager ? 'eager' : 'lazy'}
+      fetchPriority={eager ? 'high' : undefined}
       decoding="async"
       className="vf-img"
     />
