@@ -24,8 +24,14 @@ test('scrolling turns the frame into a phone, then recasts it as other businesse
 
   await to(0.3);
   await expect(device).toHaveAttribute('data-layout', 'phone');
-  const phone = (await device.boundingBox())!;
-  expect(phone.height, 'phone is taller than wide').toBeGreaterThan(phone.width * 1.5);
+  // The frame eases into the phone shape (scroll progress catches up at a capped speed, slower on slow runners),
+  // so wait for the shape rather than reading it the moment the layout flips.
+  await expect
+    .poll(async () => {
+      const b = (await device.boundingBox())!;
+      return b.height / b.width;
+    }, { message: 'phone is taller than wide' })
+    .toBeGreaterThan(1.5);
   await shown(page, 0);
   await expect(scene).toHaveAttribute('data-out', '');
 
