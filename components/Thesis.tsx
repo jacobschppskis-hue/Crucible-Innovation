@@ -101,7 +101,7 @@ export function Thesis({ film }: { film?: FilmInfo | null }) {
           </div>
           <div className="w-full shrink-0 sm:w-64 lg:mb-3">
             <p className="label">Temperature</p>
-            <p className="wide mt-2 font-display text-5xl font-semibold tabular-nums text-bone sm:text-6xl">
+            <p className="thesis-readout wide mt-2 font-display text-5xl font-semibold tabular-nums text-bone sm:text-6xl">
               <span className="sr-only">Heating from 293 kelvin, room temperature, to 1811 kelvin, the melting point of iron.</span>
               <span aria-hidden ref={num}>
                 {IRON}

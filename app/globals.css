@@ -1621,14 +1621,14 @@ html.lenis body {
   height: 100%;
   object-fit: cover;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 8%, #000 58%);
-  mask-image: linear-gradient(to right, transparent 8%, #000 58%);
+  -webkit-mask-image: linear-gradient(to right, transparent 28%, #000 72%);
+  mask-image: linear-gradient(to right, transparent 28%, #000 72%);
 }
 @media (max-width: 1023px) {
   .thesis-film,
   .thesis-poster {
-    -webkit-mask-image: linear-gradient(to bottom, #000 30%, transparent 75%);
-    mask-image: linear-gradient(to bottom, #000 30%, transparent 75%);
+    -webkit-mask-image: linear-gradient(to bottom, #000 18%, transparent 62%);
+    mask-image: linear-gradient(to bottom, #000 18%, transparent 62%);
   }
 }
 .thesis-poster {
@@ -1649,6 +1649,7 @@ html.lenis body {
   opacity: calc(var(--k) * 0.3);
 }
 /* small type keeps a dark halo when molten metal runs behind it */
+.thesis :is(.label, .thesis-readout),
 .thesis[data-gl] :is(.label, .font-mono) {
   text-shadow:
     0 0 14px rgba(13, 13, 11, 0.95),
