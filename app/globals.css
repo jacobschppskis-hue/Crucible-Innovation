@@ -15,7 +15,7 @@
   --cool: #e8e4d8;
   --ink: #16150f;
   --ink-dim: #5e5b52; /* 5.3:1 on bone */
-  --ember-deep: #b83f0f; /* Ember text on bone (the same heat, dark enough for AA) */
+  --ember-deep: #a8380c; /* Ember text on bone (the same heat, dark enough for AA: 5.1:1) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --nav-h: 4rem;

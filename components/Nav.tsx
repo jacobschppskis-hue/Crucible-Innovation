@@ -51,9 +51,10 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
       <nav aria-label="Main" className="container-x flex h-[var(--nav-h)] items-center justify-between gap-4">
         {/* The ring and "crucible" always go to the Crucible home page; "sites" goes to the Crucible Sites home. */}
         <div className="flex items-baseline gap-[0.4em] text-[1.375rem]">
-          <Link href="/" aria-label="Crucible home" className="flex items-baseline gap-2.5 rounded-md">
+          <Link href="/" className="flex items-baseline gap-2.5 rounded-md">
             <SplitRing size={26} title="" className="self-center" />
             <Wordmark />
+            <span className="sr-only">home</span>
           </Link>
           {variant === 'sites' && (
             <Link
