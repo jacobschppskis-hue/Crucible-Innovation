@@ -6,6 +6,7 @@ import { Nav } from '@/components/Nav';
 import { Story } from '@/components/Story';
 import { Thesis } from '@/components/Thesis';
 import { Ventures } from '@/components/Ventures';
+import { filmInfo } from '@/lib/filmAssets';
 
 export const metadata: Metadata = {
   title: 'Crucible: Intelligence, alloyed.',
@@ -28,7 +29,7 @@ export default function Home() {
         {/* Ventures: the live one casts a concept site as it scrolls in; the rest are still in the furnace */}
         <Ventures />
 
-        <Thesis />
+        <Thesis film={filmInfo('iron')} />
       </main>
       <Footer />
       <JsonLd page="home" />
