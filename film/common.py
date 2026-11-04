@@ -304,6 +304,15 @@ def aim(o, target, roll=0.0):
         o.rotation_euler.rotate_axis('Z', roll)
 
 
+def look_at(o, target, up=(0.0, 0.0, 1.0)):
+    """Point an object's -Z at target with its +Y toward `up` (stable even when looking straight along an axis)."""
+    from mathutils import Matrix, Vector
+    f = (Vector(target) - Vector(o.location)).normalized()
+    r = f.cross(Vector(up)).normalized()
+    u = r.cross(f)
+    o.rotation_euler = Matrix((r, u, -f)).transposed().to_euler()
+
+
 def camera(name='cam', lens=100.0, sensor=36.0, fstop=4.0, focus=1.0):
     d = bpy.data.cameras.new(name)
     d.lens = lens

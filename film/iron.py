@@ -51,7 +51,7 @@ def exposure_temp(f, Tc, gain=0.3):
     lnB = math.log(0.3) + (math.log(1.0) - math.log(0.3)) * smooth(0.5, 0.79, f) ** 1.5
     inv_solid = 1 / Tc + math.log(gain / math.exp(lnB)) / C2 * -1
     T = T0 + f * (T1 - T0)
-    inv_liq = 1 / (T - 20) + math.log(0.22 / gain) / C2
+    inv_liq = 1 / (T - 20) + math.log(0.16 / gain) / C2
     return 1 / (inv_solid + (inv_liq - inv_solid) * smooth(0.79, 0.95, f))
 
 

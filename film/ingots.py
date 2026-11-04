@@ -71,31 +71,63 @@ def frustum(name, w0, d0, w1, d1, z0, z1):
     return mesh_object(name, bm)
 
 
-def sand(name, cavity=None, size=900.0):
-    """Sand floor at z=0 (mm). With cavity=(w, d, depth, draft): an open mould cut into it."""
+def sand(name, cavity=None, plaque=None, half=240.0, step=2.0):
+    """Foundry sand (mm units, z=0 is the nominal surface): a lumpy displaced grid. cavity=(w, d, depth, draft) cuts
+    an open mould into it (with a crumbled rim); plaque=(w, d) pushes up a little berm where a plaque was set down."""
+    from mathutils import Vector, noise
+
+    def height(x, y):
+        p = Vector((x / 22.0, y / 22.0, 0.3))
+        h = 1.3 * noise.fractal(p, 0.55, 2.0, 4, noise_basis='PERLIN_ORIGINAL')
+        h += 0.35 * noise.fractal(Vector((x / 4.5, y / 4.5, 7.1)), 0.6, 2.0, 3, noise_basis='PERLIN_ORIGINAL')
+        c = noise.noise(Vector((x / 9.0, y / 9.0, 3.3)), noise_basis='PERLIN_ORIGINAL')
+        h += 0.9 * max(0.0, c - 0.35)  # clumps
+        rect = cavity or plaque
+        if rect:
+            dx, dy = abs(x) - rect[0] / 2, abs(y) - rect[1] / 2
+            dist = max(dx, dy, 0.0)
+            near = math.exp(-dist / 6.0)
+            h *= 1.0 - 0.85 * near  # packed flat at the edge
+            h += (0.9 if cavity else 1.4) * math.exp(-((dist - 3.0) / 4.0) ** 2)  # a lip / berm
+        return h
+
     bm = bmesh.new()
-    s = size / 2
-    outer = [bm.verts.new((x * MM, y * MM, 0)) for x, y in ((-s, -s), (s, -s), (s, s), (-s, s))]
-    if cavity is None:
-        bm.faces.new(outer)
-    else:
+    n = int(2 * half / step)
+    grid = [[bm.verts.new(((-half + i * step) * MM, (-half + j * step) * MM, 0.0)) for i in range(n + 1)] for j in range(n + 1)]
+    for j in range(n):
+        for i in range(n):
+            bm.faces.new((grid[j][i], grid[j][i + 1], grid[j + 1][i + 1], grid[j + 1][i]))
+    if cavity:
         cw, cd, depth, dr = cavity
-        inner = [bm.verts.new((x * cw / 2 * MM, y * cd / 2 * MM, 0)) for x, y in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
-        bot = [bm.verts.new((x * (cw / 2 - dr) * MM, y * (cd / 2 - dr) * MM, -depth * MM)) for x, y in ((-1, -1), (1, -1), (1, 1), (-1, 1))]
-        for k in range(4):
-            j = (k + 1) % 4
-            bm.faces.new((outer[k], outer[j], inner[j], inner[k]))
-            bm.faces.new((inner[k], inner[j], bot[j], bot[k]))
-        bm.faces.new(bot[::-1])
+        inside = [f for f in bm.faces if all(abs(v.co.x / MM) < cw / 2 + 0.5 and abs(v.co.y / MM) < cd / 2 + 0.5 for v in f.verts)]
+        bmesh.ops.delete(bm, geom=inside, context='FACES_ONLY')
+        bm.verts.ensure_lookup_table()
+        for v in [v for v in bm.verts if not v.link_faces]:
+            bm.verts.remove(v)
+        edge = [e for e in bm.edges if e.is_boundary and abs(e.verts[0].co.x / MM) < half - 1 and abs(e.verts[0].co.y / MM) < half - 1]
+        loop_verts = {v for e in edge for v in e.verts}
+        for v in loop_verts:  # snap the hole onto the cavity rectangle (nearest point on its outline)
+            x, y = v.co.x / MM, v.co.y / MM
+            cx, cy = max(-cw / 2, min(cw / 2, x)), max(-cd / 2, min(cd / 2, y))
+            cands = [(math.copysign(cw / 2, x), cy), (cx, math.copysign(cd / 2, y))]
+            x, y = min(cands, key=lambda q: (q[0] - x) ** 2 + (q[1] - y) ** 2)
+            v.co.x, v.co.y = x * MM, y * MM
+        bm.verts.ensure_lookup_table()
+    for v in bm.verts:
+        v.co.z = height(v.co.x / MM, v.co.y / MM) * MM
+    if cavity:
+        ret = bmesh.ops.extrude_edge_only(bm, edges=edge)
+        new = [g for g in ret['geom'] if isinstance(g, bmesh.types.BMVert)]
+        for v in new:  # the walls narrow toward the bottom (draft), corners onto corners
+            v.co.x *= (cw / 2 - dr) / (cw / 2)
+            v.co.y *= (cd / 2 - dr) / (cd / 2)
+            v.co.z = -depth * MM
+        bot_edges = [g for g in ret['geom'] if isinstance(g, bmesh.types.BMEdge) and all(v in new for v in g.verts)]
+        bmesh.ops.contextual_create(bm, geom=bot_edges)
     bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
     ob = mesh_object(name, bm)
-    if cavity is not None:
-        # subdivide so the rim can be rounded and crumbled
-        m = ob.modifiers.new('bevel', 'BEVEL')
-        m.width = 2.2 * MM
-        m.segments = 4
-        m.limit_method = 'ANGLE'
-        m.angle_limit = math.radians(30)
+    for p in ob.data.polygons:
+        p.use_smooth = True
     return ob
 
 
@@ -217,7 +249,7 @@ def content(v, hot):
     nl = len(v['lines'])
     lead = 1.38  # baseline-to-baseline, in cap heights
     block_h = 1 + lead * (nl - 1)  # cap heights
-    mark_h = max(1.3, block_h)  # the mark spans the name block
+    mark_h = max(1.6, block_h)  # the mark spans the name block
     gap = 0.5
     name_w = max(widths) / cap1
     avail_w, avail_h = W - 40, D - 36
@@ -264,8 +296,10 @@ def content(v, hot):
 # ---------------------------------------------------------------------------------------------------------------
 # materials
 # ---------------------------------------------------------------------------------------------------------------
-def mm_coords(g):
+def mm_coords(g, ob=None):
     tc = g.node('ShaderNodeTexCoord')
+    if ob is not None:
+        tc.object = ob  # everything in the plaque's own space, so raised parts and body share one texture space
     return g.v('SCALE', tc.outputs['Object'], scale=1000.0), tc
 
 
@@ -279,88 +313,87 @@ def cast_grain(g, P, amp=1.0):
     return g.add(g.add(grain, fine), pores), gv, pn
 
 
-def cool_metal(slug, raised):
-    """Cooled sand-cast steel in bone. Raised = the name/mark: tops ground flat and bright with sanding scratches."""
+def cool_metal(plaque, raised):
+    """Cooled sand-cast steel, bone-tinted. Raised = the name/mark: tops ground flat and bright, with sanding
+    scratches; the cast field around them stays matte. One end still holds a little heat: temper colours on the
+    way in, then dark oxide and a faint dull-red glow at the very edge."""
     m, g, out = material(f'cool-{"raised" if raised else "body"}')
-    P, tc = mm_coords(g)
+    P, tc = mm_coords(g, plaque)
     px, py, pz = g.sep(P)
-    h, gv, pn = cast_grain(g, P, 0.35 if raised else 1.0)
-    rn = g.noise(g.v('ADD', P, (40, 1, 0)), 0.08, detail=4, rough=0.6).outputs['Fac']
+    h, gv, pn = cast_grain(g, P, 0.3 if raised else 1.0)
     nz = g.sep(tc.outputs['Normal'])[2]
-    top = g.smooth(0.93, 0.99, nz) if raised else 0.0
-    # sanding scratches on the ground tops: noise stretched along x
-    scr = g.noise(g.comb(g.mul(px, 0.08), g.mul(py, 14.0), g.mul(pz, 1.0)), 1.0, detail=3, rough=0.6).outputs['Fac']
+    top = g.smooth(0.94, 0.99, nz) if raised else 0.0
+    scr = g.noise(g.comb(g.mul(px, 0.05), g.mul(py, 18.0), g.mul(pz, 2.0)), 1.0, detail=3, rough=0.6).outputs['Fac']
     if raised:
-        h = g.lerp(h, g.mul(g.sub(scr, 0.5), 0.004), top)
+        h = g.lerp(h, g.mul(g.sub(scr, 0.5), 0.003), top)
     disp = g.node('ShaderNodeDisplacement', {'Height': h, 'Midlevel': 0.0, 'Scale': 0.001}, space='OBJECT')
     g.nt.links.new(disp.outputs[0], out.inputs['Displacement'])
-    ao = g.node('ShaderNodeAmbientOcclusion', {'Distance': 0.004}, samples=8, inside=False).outputs['AO']
-    crev = g.smooth(0.85, 0.35, ao)
-    bone = (0.62, 0.595, 0.54)
-    cast = g.mix_rgb((0.20, 0.195, 0.185), (0.32, 0.31, 0.29), g.smooth(0.35, 0.7, rn))
-    base = g.mix_rgb(cast, bone, top) if raised else cast
-    base = g.mix_rgb(base, (0.12, 0.06, 0.035), g.mul(crev, 0.6))
-    # residual warmth at the right-hand end: temper colours, then a dark oxide and a faint dull glow at the edge
-    x = g.div(g.sub(px, W / 2 - 70), 70.0)  # 0 .. 1 toward the end
-    x = g.add(x, g.mul(g.sub(g.noise(P, 0.06, detail=2).outputs['Fac'], 0.5), 0.25))
-    temper = g.ramp(g.clamp01(x), [(0.0, (1, 1, 1)), (0.25, (1.0, 0.86, 0.55)), (0.42, (0.80, 0.48, 0.28)),
-                                   (0.56, (0.45, 0.25, 0.45)), (0.7, (0.25, 0.32, 0.6)), (0.85, (0.35, 0.36, 0.4)), (1.0, (0.18, 0.17, 0.17))])
-    base = g.mix_rgb(base, temper, 1.0, blend='MULTIPLY')
-    rough = g.add(g.remap(rn, 0.3, 0.7, 0.42, 0.62), g.mul(g.sub(gv, 0.5), 0.15))
+    ao = g.node('ShaderNodeAmbientOcclusion', {'Distance': 0.003}, samples=8, inside=False).outputs['AO']
+    crev = g.smooth(0.8, 0.3, ao)
+    v1 = g.noise(g.v('ADD', P, (40, 1, 0)), 0.22, detail=4, rough=0.55).outputs['Fac']
+    v2 = g.noise(g.v('ADD', P, (3, 9, 0)), 0.03, detail=2).outputs['Fac']
+    cast = g.mix_rgb((0.33, 0.32, 0.30), (0.42, 0.405, 0.375), g.add(g.mul(g.smooth(0.3, 0.7, v1), 0.6), g.mul(v2, 0.4)))
+    cast = g.mix_rgb(cast, (0.24, 0.235, 0.225), g.mul(g.smooth(0.55, 0.3, gv), 0.5))  # sand-grain pockets
+    base = g.mix_rgb(cast, (0.74, 0.71, 0.645), top) if raised else cast
+    base = g.mix_rgb(base, (0.16, 0.09, 0.05), g.mul(crev, 0.55))  # a little oxide where it can't be reached
+    x = g.div(g.sub(px, W / 2 - 60), 60.0)  # 0 -> 1 toward the warm end
+    x = g.add(x, g.mul(g.sub(g.noise(P, 0.08, detail=2).outputs['Fac'], 0.5), 0.18))
+    temper = g.ramp(g.clamp01(x), [(0.0, (1, 1, 1)), (0.3, (1.0, 0.9, 0.66)), (0.48, (0.88, 0.62, 0.4)),
+                                   (0.62, (0.62, 0.4, 0.55)), (0.75, (0.42, 0.5, 0.75)), (0.88, (0.5, 0.5, 0.55)), (1.0, (0.3, 0.29, 0.29))])
+    base = g.mix_rgb(base, temper, 0.85, blend='MULTIPLY')
+    rough = g.add(g.remap(v1, 0.3, 0.7, 0.5, 0.7), g.mul(g.sub(gv, 0.5), 0.15))
     if raised:
-        rough = g.lerp(rough, g.add(0.2, g.mul(scr, 0.14)), top)
+        rough = g.lerp(rough, g.add(0.17, g.mul(scr, 0.12)), top)
     rough = g.lerp(rough, 0.85, g.mul(crev, 0.5))
-    T = g.add(300.0, g.mul(g.pw(g.clamp01(g.div(g.sub(px, W / 2 - 22), 22.0)), 2.0), 660.0))
+    T = g.add(300.0, g.mul(g.pw(g.clamp01(g.div(g.sub(px, W / 2 - 18), 18.0)), 2.0), 720.0))
     col, strength = heat_emission(g, T, C2 / 1150.0, 0.3)
-    bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': base, 'Metallic': g.lerp(0.9, 0.2, crev), 'Roughness': rough,
+    bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': base, 'Metallic': g.lerp(0.92, 0.3, crev), 'Roughness': rough,
                                                'Emission Color': col, 'Emission Strength': strength})
     g.nt.links.new(bsdf.outputs[0], out.inputs['Surface'])
     m.displacement_method = 'BUMP'
     return m
 
 
-HOT_TE, HOT_GAIN = 1430.0, 0.15  # the body of the melt (1430 K, Ember) renders at 0.15
+HOT_TE, HOT_GAIN = 1440.0, 0.18  # the body of the melt (1440 K, Ember) renders at 0.18
 
 
-def hot_metal(raised, seed=0):
-    """Freshly poured metal in the mould: Ember body, raised name/mark hottest, a dark crust creeping in from the
-    sand walls with glowing seams, and a wrinkled oxide skin starting on the surface."""
+def hot_metal(plaque, raised, seed=0):
+    """Freshly poured metal in the mould: Ember body, the raised name/mark hottest, a dark crust creeping in from the
+    sand walls (plates with glowing seams), a wrinkled oxide skin starting to form, and a sheen on the liquid."""
     m, g, out = material(f'hot-{"raised" if raised else "body"}')
     m.cycles.emission_sampling = 'FRONT'  # it lights the mould around it
-    P, tc = mm_coords(g)
-    P = g.v('ADD', P, (seed * 17.0, seed * 5.0, 0.0))
-    px, py, pz = g.sep(g.v('SUBTRACT', P, (seed * 17.0, seed * 5.0, 0.0)))
-    # distance to the mould wall (mm), wobbled
+    P0, tc = mm_coords(g, plaque)
+    px, py, pz = g.sep(P0)
+    P = g.v('ADD', P0, (seed * 17.0, seed * 5.0, 0.0))
     dwall = g.mn(g.sub(W / 2, g.m('ABSOLUTE', px)), g.sub(D / 2, g.m('ABSOLUTE', py)))
-    wob = g.noise(P, 0.09, detail=3, rough=0.6).outputs['Fac']
-    dw = g.add(dwall, g.mul(g.sub(wob, 0.5), 9.0))
-    crust = 0.0 if raised else g.smooth(7.0, 2.5, dw)
-    # crust plates with glowing seams
-    warp = g.v('SUBTRACT', g.noise(P, 0.3, detail=2).outputs['Color'], (0.5, 0.5, 0.5))
-    Pw = g.v('ADD', P, g.v('SCALE', warp, scale=1.6))
-    ce = g.div(g.voronoi(Pw, 0.55, 'DISTANCE_TO_EDGE', rand=1.0, dims='2D').outputs['Distance'], 0.55)
-    seam = g.sub(1.0, g.smooth(0.03, 0.12, ce))
-    # skin wrinkles on the cooling surface, stronger toward the crust
-    wr = g.noise(g.comb(g.mul(px, 0.9), g.mul(py, 0.35), 0.0), 1.0, detail=4, rough=0.55, distortion=0.6).outputs['Fac']
-    ripple = g.noise(P, 0.05, detail=2).outputs['Fac']
-    skin = g.add(0.15, g.mul(g.smooth(16.0, 4.0, dw), 0.85)) if not raised else 0.1
-    h = g.add(g.mul(g.sub(ripple, 0.5), 0.25), g.mul(g.mul(g.sub(wr, 0.5), 0.07), skin))
-    h = g.add(h, g.mul(crust, g.add(0.06, g.mul(g.smooth(0.0, 0.5, ce), 0.08))))
+    wob = g.noise(P, 0.07, detail=3, rough=0.6).outputs['Fac']
+    dw = g.add(dwall, g.mul(g.sub(wob, 0.5), 14.0))
+    crust = 0.0 if raised else g.smooth(9.0, 3.0, dw)
+    warp = g.v('SUBTRACT', g.noise(P, 0.25, detail=2).outputs['Color'], (0.5, 0.5, 0.5))
+    Pw = g.v('ADD', P, g.v('SCALE', warp, scale=2.0))
+    ce = g.div(g.voronoi(Pw, 0.42, 'DISTANCE_TO_EDGE', rand=1.0, dims='2D').outputs['Distance'], 0.42)
+    seam = g.sub(1.0, g.smooth(0.03, 0.16, ce))
+    wr = g.noise(g.comb(g.mul(px, 0.7), g.mul(py, 0.28), 0.0), 1.0, detail=4, rough=0.55, distortion=0.8).outputs['Fac']
+    ripple = g.noise(P, 0.045, detail=2).outputs['Fac']
+    skin = 0.1 if raised else g.add(0.1, g.mul(g.smooth(22.0, 5.0, dw), 0.9))
+    h = g.add(g.mul(g.sub(ripple, 0.5), 0.35), g.mul(g.mul(g.sub(wr, 0.5), 0.09), skin))
+    if not raised:
+        h = g.add(h, g.mul(crust, g.add(0.05, g.mul(g.smooth(0.0, 0.6, ce), 0.12))))
     disp = g.node('ShaderNodeDisplacement', {'Height': h, 'Midlevel': 0.0, 'Scale': 0.001}, space='OBJECT')
     g.nt.links.new(disp.outputs[0], out.inputs['Displacement'])
-    # temperature
-    tn = g.noise(g.v('ADD', P, (5, 5, 0)), 0.04, detail=3).outputs['Fac']
+    tn = g.noise(g.v('ADD', P, (5, 5, 0)), 0.035, detail=3).outputs['Fac']
     if raised:
         nz = g.sep(tc.outputs['Normal'])[2]
-        T = g.add(1585.0, g.add(g.mul(g.sub(tn, 0.5), 50.0), g.mul(nz, 25.0)))  # hottest: tops a touch hotter
+        T = g.add(1590.0, g.add(g.mul(g.sub(tn, 0.5), 50.0), g.mul(nz, 25.0)))  # hottest; the tops a touch hotter
     else:
-        T = g.add(1430.0, g.mul(g.sub(tn, 0.5), 70.0))
-        T = g.sub(T, g.mul(g.mul(g.sub(wr, 0.5), 60.0), skin))  # wrinkle crests cool first
-        T_crust = g.add(g.add(980.0, g.mul(seam, 300.0)), g.mul(g.smooth(2.5, 7.0, dw), 120.0))
+        centre = g.smooth(5.0, 45.0, dwall)  # it cools from the walls in
+        T = g.add(g.add(1370.0, g.mul(centre, 100.0)), g.mul(g.sub(tn, 0.5), 80.0))
+        T = g.sub(T, g.mul(g.mul(g.smooth(0.45, 0.8, wr), 90.0), skin))  # wrinkle crests cool first
+        T_crust = g.add(g.add(930.0, g.mul(seam, 330.0)), g.mul(g.smooth(3.0, 9.0, dw), 150.0))
         T = g.lerp(T, T_crust, crust)
     col, strength = heat_emission(g, T, C2 / HOT_TE, HOT_GAIN)
-    base = g.mix_rgb((0.55, 0.53, 0.5), (0.06, 0.055, 0.05), crust)
-    rough = g.lerp(g.add(0.08, g.mul(skin, 0.18)), 0.55, crust)
+    base = g.mix_rgb((0.36, 0.35, 0.33), (0.06, 0.055, 0.05), crust)
+    rough = g.lerp(g.add(0.1, g.mul(skin, 0.2)), 0.55, crust) if not raised else 0.14
     bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': base, 'Metallic': g.lerp(1.0, 0.3, crust), 'Roughness': rough,
                                                'Emission Color': col, 'Emission Strength': strength})
     g.nt.links.new(bsdf.outputs[0], out.inputs['Surface'])
@@ -369,42 +402,42 @@ def hot_metal(raised, seed=0):
 
 
 def sand_material(hot, cavity=None):
-    """Dark foundry sand. In a mould, the sand at the metal is scorched and glows dull red where it touches."""
+    """Dark foundry sand: individual grains (some catch the light), clumps. In a mould, the sand where the metal
+    touches it is scorched black and glows dull red right at the contact."""
     m, g, out = material('sand')
     P, tc = mm_coords(g)
     px, py, pz = g.sep(P)
-    g1 = g.voronoi(P, 3.2, 'F1', rand=1.0).outputs['Distance']
-    g2 = g.voronoi(g.v('ADD', P, (3, 7, 1)), 1.4, 'SMOOTH_F1', rand=1.0, smooth=0.4).outputs['Distance']
-    clump = g.noise(P, 0.25, detail=4, rough=0.6).outputs['Fac']
-    und = g.noise(P, 0.02, detail=3).outputs['Fac']
-    h = g.add(g.add(g.mul(g.sub(0.5, g1), 0.05), g.mul(g.sub(0.5, g2), 0.08)),
-              g.add(g.mul(g.smooth(0.5, 0.75, clump), 0.25), g.mul(und, 1.6)))
+    vg = g.voronoi(P, 2.8, 'F1', rand=1.0)
+    g1, gc = vg.outputs['Distance'], vg.outputs['Color']
+    g2 = g.voronoi(g.v('ADD', P, (3, 7, 1)), 1.2, 'SMOOTH_F1', rand=1.0, smooth=0.4).outputs['Distance']
+    lump = g.noise(g.v('ADD', P, (2, 2, 2)), 0.28, detail=3, rough=0.6).outputs['Fac']
+    h = g.add(g.add(g.mul(g.sub(0.5, g1), 0.06), g.mul(g.sub(0.5, g2), 0.08)), g.mul(lump, 0.3))
     disp = g.node('ShaderNodeDisplacement', {'Height': h, 'Midlevel': 0.0, 'Scale': 0.001}, space='OBJECT')
     g.nt.links.new(disp.outputs[0], out.inputs['Displacement'])
-    cn = g.noise(g.v('ADD', P, (9, 2, 0)), 0.08, detail=3).outputs['Fac']
-    base = g.mix_rgb((0.030, 0.028, 0.025), (0.075, 0.068, 0.058), g.smooth(0.3, 0.75, cn))
-    base = g.mix_rgb(base, (0.11, 0.10, 0.09), g.mul(g.smooth(0.42, 0.25, g1), 0.5))  # grain highlights
-    em = 0.0
-    col = (0, 0, 0)
+    gr, gg, gb = g.node('ShaderNodeSeparateColor', {'Color': gc}).outputs
+    cn = g.noise(g.v('ADD', P, (9, 2, 0)), 0.05, detail=3).outputs['Fac']
+    base = g.mix_rgb((0.04, 0.038, 0.034), (0.085, 0.078, 0.068), g.smooth(0.3, 0.75, cn))
+    base = g.mix_rgb(base, (0.15, 0.14, 0.125), g.mul(g.smooth(0.75, 0.95, gr), 0.7))  # light grains
+    base = g.mix_rgb(base, (0.025, 0.023, 0.02), g.mul(g.smooth(0.3, 0.05, gg), 0.8))  # coal-dark grains
+    rough = g.lerp(0.92, 0.38, g.smooth(0.9, 0.97, gb))  # a few glassy grains glint
+    em, col = 0.0, (0, 0, 0)
     if hot and cavity is not None:
         cw, cd = cavity
         dx = g.sub(g.m('ABSOLUTE', px), cw / 2)
         dy = g.sub(g.m('ABSOLUTE', py), cd / 2)
         # distance (mm) from the line where metal meets sand: up the wall, then out across the top
         dist = g.add(g.mx(g.mx(dx, dy), 0.0), g.mx(g.add(pz, SAND_RIM), 0.0))
-        near = g.exp(g.mul(dist, -0.6))
-        base = g.mix_rgb(base, (0.02, 0.018, 0.016), g.smooth(10.0, 0.0, dist))  # scorched
-        T = g.add(320.0, g.mul(near, 830.0))
+        near = g.exp(g.mul(dist, -0.55))
+        base = g.mix_rgb(base, (0.018, 0.016, 0.014), g.smooth(14.0, 0.0, dist))
+        T = g.add(320.0, g.mul(near, 870.0))
         col, em = heat_emission(g, T, C2 / HOT_TE, HOT_GAIN * 0.8)
-    bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': base, 'Metallic': 0.0,
-                                               'Roughness': g.add(0.82, g.mul(cn, 0.15)),
+    bsdf = g.node('ShaderNodeBsdfPrincipled', {'Base Color': base, 'Metallic': 0.0, 'Roughness': rough,
                                                'Emission Color': col, 'Emission Strength': em})
     g.nt.links.new(bsdf.outputs[0], out.inputs['Surface'])
     m.displacement_method = 'BUMP'
     return m
 
 
-# ---------------------------------------------------------------------------------------------------------------
 def build(slug, a):
     v = VENTURES[slug]
     hot = v['hot']
@@ -412,22 +445,23 @@ def build(slug, a):
     sc.cycles.adaptive_threshold = 0.015
     if hot:
         top = 0.0  # the metal surface; the sand rim stands SAND_RIM above it
-        sand_ob = sand('sand', cavity=(W + 1.0, D + 1.0, H + SAND_RIM, DRAFT))
+        cav = (W + 1.0, D + 1.0)
+        sand_ob = sand('sand', cavity=(*cav, H + SAND_RIM, DRAFT))
         sand_ob.location.z = (top + SAND_RIM) * MM
         body = frustum('plaque', W - 2 * DRAFT, D - 2 * DRAFT, W, D, top - H, top)
         bevel(body, 2.0 * MM, 5, angle=40)
-        sand_ob.data.materials.append(sand_material(True, (W + 1.0, D + 1.0)))
-        body.data.materials.append(hot_metal(False, v.get('seed', 0)))
-        raised_mat = hot_metal(True, v.get('seed', 0))
+        sand_ob.data.materials.append(sand_material(True, cav))
+        body.data.materials.append(hot_metal(body, False, v.get('seed', 0)))
+        raised_mat = hot_metal(body, True, v.get('seed', 0))
     else:
-        sink = 1.2
+        sink = 1.0
         top = H - sink
-        sand_ob = sand('sand')
+        sand_ob = sand('sand', plaque=(W, D))
         body = frustum('plaque', W, D, W - 2 * DRAFT, D - 2 * DRAFT, -sink, top)
         bevel(body, 2.6 * MM, 5, angle=40)
         sand_ob.data.materials.append(sand_material(False))
-        body.data.materials.append(cool_metal(slug, False))
-        raised_mat = cool_metal(slug, True)
+        body.data.materials.append(cool_metal(body, False))
+        raised_mat = cool_metal(body, True)
     for p in body.data.polygons:
         p.use_smooth = True
     obs = content(v, hot)
@@ -437,22 +471,23 @@ def build(slug, a):
         ob.data.materials.append(raised_mat)
         for p in ob.data.polygons:
             p.use_smooth = True
-    for ob in (sand_ob,):
-        for p in ob.data.polygons:
-            p.use_smooth = False
 
-    # one camera for the set: 3/4 from the front-left, slightly above, long lens
-    target = (0.0, 0.004, top * MM)
-    cam = camera(lens=150, fstop=8.0)
-    el, az, dist = math.radians(31), math.radians(-24), 1.38
-    cam.location = (target[0] + dist * math.cos(el) * math.sin(az), target[1] - dist * math.cos(el) * math.cos(az),
-                    target[2] + dist * math.sin(el))
+    # one camera for the set: 3/4 from the front-left, slightly above, long lens, focus on the name
+    target = (0.0, 0.0, top * MM)
+    cam = camera(lens=150, fstop=5.6)
+    el, az, dist = math.radians(30), math.radians(-18), 1.22
+    cdir = (math.cos(el) * math.sin(az), -math.cos(el) * math.cos(az), math.sin(el))
+    cam.location = tuple(target[k] + dist * cdir[k] for k in range(3))
     aim(cam, target)
-    cam.data.dof.focus_distance = dist - 0.012
-    # warm low key from the front (furnace glow), cool faint fill from above, a rim from behind for the bevels
-    area_light('key', (0.35, -0.95, 0.10), (0, 0, 0.01), 9.0, 0.35, kelvin=2000)
-    area_light('fill', (-0.2, 0.3, 1.6), (0, 0, 0), 14.0, 1.6, kelvin=9000)
-    area_light('rim', (-0.45, 0.95, 0.16), (0, 0, 0.01), 10.0, 0.25, kelvin=2700)
+    cam.data.dof.focus_distance = dist
+    # warm low key from the front (furnace glow), cool faint fill from above, a rim from behind-left for the bevels,
+    # and a soft overhead panel placed where the camera sees it mirrored: ground metal and liquid metal catch it
+    area_light('key', (0.30, -0.85, 0.07), (0, 0, 0.01), 1.8, 0.3, kelvin=2300)
+    area_light('fill', (-0.2, -0.1, 1.5), (0, 0, 0), 12.0, 1.4, kelvin=9000)
+    area_light('rim', (-0.5, 0.85, 0.12), (0, 0, 0.01), 7.0, 0.25, kelvin=3200)
+    mir = (-cdir[0], -cdir[1], cdir[2])
+    area_light('panel', tuple(target[k] + 0.9 * mir[k] for k in range(3)), target, 0.3 if hot else 2.5, 0.7, kelvin=5200, shape='RECTANGLE',
+               size_y=0.28)
     return sc
 
 
