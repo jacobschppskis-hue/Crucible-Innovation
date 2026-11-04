@@ -59,7 +59,7 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
             <Link
               href="/sites"
               aria-label="Crucible Sites home"
-              className="rounded-md font-mono text-[0.62em] uppercase leading-none tracking-[0.14em] text-bone-dim transition-colors duration-200 hover:text-bone"
+              className="rounded-md font-display font-medium leading-none tracking-[-0.01em] text-bone-dim transition-colors duration-200 hover:text-bone"
             >
               sites
             </Link>

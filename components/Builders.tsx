@@ -15,7 +15,7 @@ export function Portrait({ name, src, sizes = '(min-width: 768px) 24rem, 90vw' }
           <div className="cast-in">
             <Image
               src={src}
-              alt={`ASCII portrait of ${name}`}
+              alt={src.includes('engraved') ? `Engraved portrait of ${name}` : `ASCII portrait of ${name}`}
               width={800}
               height={956}
               sizes={sizes}
@@ -49,7 +49,7 @@ function Bio({ b }: { b: Builder }) {
           <p key={p}>{p}</p>
         ))}
       </div>
-      {b.signoff && <p className="mt-6 font-serif text-2xl italic text-bone">{b.signoff}</p>}
+      {b.signoff && <p className="wide mt-6 font-display text-xl font-semibold text-bone">{b.signoff}</p>}
     </>
   );
 }
@@ -67,9 +67,8 @@ export function Builders() {
             <Portrait name={b.name} src={b.portrait} />
           </Reveal>
           <div>
-            <p className="label">Who you&rsquo;ll work with</p>
-            <h2 id="who" className="h-section mt-4">
-              Hi, I&rsquo;m {b.name}.
+            <h2 id="who" className="h-section">
+              Hi, I&rsquo;m {b.name}
             </h2>
             <Reveal>
               <Bio b={b} />
@@ -85,20 +84,20 @@ export function Builders() {
 
   return (
     <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2100px', '--h-lg': '1200px' } as React.CSSProperties}>
-      <p className="label">Who you&rsquo;ll work with</p>
-      <h2 id="who" className="h-section mt-4">
-        Meet the <span className="accent">builders.</span>
+      <h2 id="who" className="h-section">
+        Meet the builders
       </h2>
+      <p className="mt-6 max-w-md text-lg leading-relaxed text-bone-dim">You talk to the people building your site, from the first call to launch day.</p>
       <ul className="mt-12 grid gap-12 md:grid-cols-2 md:gap-10">
         {builders.map((b, i) => (
           <Reveal as="li" key={b.name} delay={i * 0.1}>
             <div className="max-w-sm">
               <Portrait name={b.name} src={b.portrait} />
             </div>
-            <h3 className="mt-8 font-display text-2xl font-semibold tracking-[-0.02em]">{b.name}</h3>
-            <p className="label mt-2">{b.role}</p>
+            <h3 className="wide mt-8 font-display text-2xl font-semibold tracking-[-0.015em]">{b.name}</h3>
+            <p className="mt-2 text-bone-dim">{b.role}</p>
             {b.email && (
-              <a href={`mailto:${b.email}`} className="mt-2 inline-block font-mono text-xs text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+              <a href={`mailto:${b.email}`} className="mt-1 inline-block text-sm text-bone-dim underline-offset-4 hover:text-ember hover:underline">
                 {b.email}
               </a>
             )}

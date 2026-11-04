@@ -1,0 +1,214 @@
+/* "Try it with your business" (components/TryIt.tsx) */
+.try {
+  display: grid;
+  gap: 3.5rem;
+  padding-block: 7rem;
+}
+@media (min-width: 1024px) {
+  .try {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.5fr);
+    align-items: center;
+    gap: 5rem;
+    padding-block: 10rem;
+  }
+}
+
+.try-input {
+  display: block;
+  width: 100%;
+  max-width: 24rem;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0 0.6rem;
+  border: 0;
+  border-bottom: 2px solid var(--line-strong);
+  background: transparent;
+  color: var(--bone);
+  font-size: clamp(1.5rem, 3vw, 2.25rem);
+  font-weight: 600;
+  font-variation-settings: 'wdth' 125;
+  transition: border-color 200ms ease;
+}
+.try-input::placeholder {
+  color: var(--line-strong);
+}
+.try-input:hover {
+  border-color: var(--bone-dim);
+}
+.try-input:focus {
+  outline: none;
+  border-color: var(--ember);
+}
+
+/* Trade choices are real controls, so they're allowed to be pills. Selected = hot. */
+.try-chip span {
+  display: inline-flex;
+  height: 2.5rem;
+  align-items: center;
+  padding: 0 1rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--bone-dim);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    color 200ms ease,
+    border-color 200ms ease,
+    background-color 200ms ease;
+}
+.try-chip:hover span {
+  color: var(--bone);
+  border-color: var(--bone-dim);
+}
+.try-chip input:checked + span {
+  border-color: var(--ember);
+  background: var(--ember);
+  color: var(--ground);
+  font-weight: 600;
+}
+.try-chip input:focus-visible + span {
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
+}
+
+/* The devices */
+.try-stage {
+  position: relative;
+  padding-bottom: 2.5rem;
+}
+.try-desk {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem;
+  background: var(--ground-2);
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 40px 80px -30px #000;
+}
+.try-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  background: var(--ground-2);
+}
+.try-dots {
+  display: flex;
+  gap: 0.375rem;
+}
+.try-dots i {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.try-url {
+  flex: 1;
+  max-width: 22rem;
+  margin-inline: auto;
+  padding: 0.2rem 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--ground);
+  color: var(--bone-dim);
+  font: 0.75rem/1.4 var(--font-mono);
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.try-screen {
+  position: relative;
+  overflow: hidden;
+}
+.try-desk .try-screen {
+  aspect-ratio: 1280 / 760;
+}
+.try-phone {
+  position: absolute;
+  right: -0.5rem;
+  bottom: 0;
+  width: min(30%, 13rem);
+  padding: 0.4rem;
+  border-radius: 1.75rem;
+  background: #1a1915;
+  box-shadow:
+    0 0 0 1px var(--line-strong),
+    0 30px 60px -20px #000;
+}
+.try-phone .try-screen {
+  aspect-ratio: 390 / 780;
+  border-radius: 1.4rem;
+}
+.try-cap {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  max-width: 60%;
+}
+@media (max-width: 639px) {
+  .try-desk {
+    display: none;
+  }
+  .try-phone {
+    position: relative;
+    right: auto;
+    width: min(78%, 18rem);
+    margin-inline: auto;
+  }
+  .try-cap {
+    position: static;
+    max-width: none;
+    margin-top: 1.25rem;
+    text-align: center;
+  }
+  .try-stage {
+    padding-bottom: 0;
+  }
+}
+
+/* Recast on a trade change: the new site is poured in behind a hot front. */
+@media (prefers-reduced-motion: no-preference) {
+  .try-cast > .ls {
+    animation: try-pour 900ms var(--ease-out) both;
+  }
+  .try-cast > .try-front {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    z-index: 3;
+    background: var(--ember-hot);
+    box-shadow:
+      0 0 12px 2px var(--ember),
+      0 0 40px 6px var(--ember);
+    animation: try-front 900ms var(--ease-out) both;
+    pointer-events: none;
+  }
+}
+@keyframes try-pour {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes try-front {
+  from {
+    top: 0;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  to {
+    top: 100%;
+    opacity: 0;
+  }
+}
+@media (min-width: 1024px) {
+  .try-h {
+    font-size: clamp(2.75rem, 4.4vw, 4.5rem);
+  }
+}
