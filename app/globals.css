@@ -1312,8 +1312,9 @@ html.lenis body {
     --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
     transform-box: fill-box;
     transform-origin: center;
-    transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px)) rotate(calc(var(--dr) * var(--q) * 1deg))
-      scale(calc(1 - var(--q) * 0.2));
+    /* --kx/--ky/--kr: knocked by the cursor (lib/knock.ts) */
+    transform: translate(calc((var(--dx) * var(--q) + var(--kx, 0)) * 1px), calc((var(--dy) * var(--q) + var(--ky, 0)) * 1px))
+      rotate(calc((var(--dr) * var(--q) + var(--kr, 0)) * 1deg)) scale(calc(1 - var(--q) * 0.2));
     opacity: calc(1 - var(--q) * 0.9);
   }
   .js .ig-core-g {

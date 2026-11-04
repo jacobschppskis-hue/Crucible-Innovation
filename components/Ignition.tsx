@@ -147,6 +147,25 @@ export function Ignition() {
   }, []);
 
   const { c, px, stroke, rings } = RING;
+  // The machine half is physical: once the pour has set, the cursor can knock its pixels loose (lib/knock.ts).
+  useEffect(() => {
+    if (!matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches) return;
+    let stop: (() => void) | undefined;
+    let dead = false;
+    const begin = async () => {
+      removeEventListener('pointermove', begin);
+      const { startKnock } = await import('@/lib/knock');
+      if (!dead && ringRef.current) stop = startKnock(ringRef.current);
+    };
+    const t = setTimeout(() => addEventListener('pointermove', begin, { passive: true, once: true }), 3000);
+    return () => {
+      dead = true;
+      clearTimeout(t);
+      removeEventListener('pointermove', begin);
+      stop?.();
+    };
+  }, []);
+
   let k = 0;
   const total = rings.reduce((n, r) => n + r.n, 0);
 
