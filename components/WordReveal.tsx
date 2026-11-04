@@ -3,17 +3,19 @@ export type Segment = { t: string; className?: string } | { br: true; className?
 type Props = {
   segments: Segment[];
   as?: 'h1' | 'h2' | 'p';
+  id?: string;
   className?: string;
   /** Play on first paint (hero) instead of on first view. Pure CSS, so it doesn't wait for hydration. */
   immediate?: boolean;
   delayMs?: number;
 };
 
-/** Word-by-word blur-in (blur 8px→0, y 12px→0, 40ms stagger), once per load. <InView /> triggers it on first view. */
-export function WordReveal({ segments, as: Tag = 'h2', className = '', immediate = false, delayMs = 0 }: Props) {
+/** Word-by-word rise (y 0.45em→0, 45ms stagger), once per load. <InView /> triggers it on first view. */
+export function WordReveal({ segments, as: Tag = 'h2', id, className = '', immediate = false, delayMs = 0 }: Props) {
   let i = 0;
   return (
     <Tag
+      id={id}
       className={`words ${className}`}
       data-words=""
       data-in={immediate ? '' : undefined}

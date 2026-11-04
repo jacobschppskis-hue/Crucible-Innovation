@@ -15,18 +15,18 @@ const casts: { theme: Theme; type: string }[] = [
 
 const captions = [
   {
-    label: '01 · Every screen',
-    title: 'Built for the phone in their pocket.',
+    label: 'Every screen',
+    title: 'Built for the phone in their pocket',
     body: 'Mobile-first. Every layout is drawn for the phone first, then opened up for the big screen.',
   },
   {
-    label: '02 · Every business',
-    title: 'Not a template.',
+    label: 'Every business',
+    title: 'Not a template',
     body: 'Same week, different business. Every concept here began as a blank page, not a template.',
   },
   {
-    label: '03 · Live in about a week',
-    title: 'Then it’s yours.',
+    label: 'Live in about a week',
+    title: 'Then it’s yours',
     body: 'Your domain, your content, live in about a week. No payment until you’ve approved the design.',
   },
 ];
@@ -210,12 +210,11 @@ export function BuildStage() {
         <div className="container-x relative grid items-center gap-12 pt-[calc(var(--nav-h)+2.5rem)] pb-16 lg:min-h-[100svh] lg:grid-cols-[1fr_1.08fr] lg:gap-16 lg:pt-[var(--nav-h)] lg:pb-0">
           <div className="bs-copywrap grid">
             <div className="bs-hero">
-              <p className="label">Crucible Sites · Websites for local businesses</p>
               <WordReveal
                 as="h1"
                 immediate
-                className="h-display mt-6 text-[2.625rem] sm:text-6xl xl:text-[4.5rem]"
-                segments={[{ t: 'Your business deserves a website that' }, { t: 'actually looks good.', className: 'accent molten text-[1.08em]' }]}
+                className="h-display text-[2.375rem] sm:text-[3.25rem] xl:text-[3.75rem]"
+                segments={[{ t: 'Your business deserves a website that actually looks good' }]}
               />
               <p className="mt-6 max-w-lg text-lg leading-relaxed text-bone-dim sm:text-xl">
                 We design and build fast, beautiful websites for local businesses. Live in about a week.
@@ -232,8 +231,7 @@ export function BuildStage() {
             <ol className="bs-caps">
               {captions.map((c, i) => (
                 <li key={c.label} className={`bs-cap bs-cap-${i + 1}`}>
-                  <p className="label">{c.label}</p>
-                  <h2 className="h-section mt-4">{c.title}</h2>
+                  <h2 className="h-section">{c.title}</h2>
                   <p className="mt-5 max-w-md text-lg leading-relaxed text-bone-dim">{c.body}</p>
                 </li>
               ))}

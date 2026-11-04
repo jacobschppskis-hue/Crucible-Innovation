@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "playwright test"
+    "test": "playwright test",
+    "unslop": "playwright test tests/unslop.spec.ts"
   },
   "dependencies": {
     "lenis": "^1.3.26",

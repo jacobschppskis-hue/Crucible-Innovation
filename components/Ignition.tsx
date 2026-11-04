@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { RING, arcPath, dotsSvg, pixels } from '@/lib/splitRing';
 import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
 import { richTier } from '@/lib/tier';
+import type { FilmInfo } from '@/lib/filmAssets';
 import { HeatField } from './HeatField';
 import { ArrowRight } from './Icons';
 
@@ -74,14 +75,19 @@ export type IgnitionState = { sm: number; sh: number; core: number; flare: numbe
  *     from white-hot through orange to bone and sets solid, while the headline rises and "alloyed." cools with it.
  *  2. First scroll: the headline parts, the ring takes the stage and comes apart. "Not the person." (the machine
  *     half scatters), "Not the model." (the human half leaves), "Neither, alone." (they fuse and the core re-ignites).
- * Rich tier: once the page is idle and the device proves capable, the story is told in WebGL: the ring melts into
- * molten dots as it starts, comes apart and fuses as dots, and sets solid again at the end.
+ * Rich tier: once the page is idle and the device proves capable, the story is told with the rendered ring
+ * (film/ring.py, scrubbed frame by frame): the flat mark hands over to the cast object as the story starts, which
+ * comes apart and fuses in depth, and hands back at the end. Its first and last frames overlay the SVG exactly.
+ * Without the film, WebGL tells it instead: the ring melts into molten dots and sets solid again.
  * Reduced motion and no JS: no pinning, every part shows its finished state.
  */
-export function Ignition() {
+export function Ignition({ film }: { film?: FilmInfo | null }) {
   const ref = useRef<HTMLElement>(null);
   const ringRef = useRef<SVGSVGElement>(null);
   const glRef = useRef<HTMLCanvasElement>(null);
+  const filmRef = useRef<HTMLCanvasElement>(null);
+  const progress = useRef(0);
+  const filmUpdate = useRef<() => void>(() => {});
   const state = useRef<IgnitionState>({ sm: 0, sh: 0, core: 1, flare: 0, out: 0, melt: 0 });
 
   useEffect(() => {
@@ -97,6 +103,10 @@ export function Ignition() {
     const set = (k: string, v: number) => el.style.setProperty(k, v.toFixed(4));
     const s = state.current;
     const off = trackScroll(el, 'pin', (p) => {
+      progress.current = p;
+      // The rendered ring takes over while the camera is front-on, so the hand-over (both ways) is invisible.
+      set('--fv', seg(p, 0.02, 0.07) * (1 - seg(p, 0.93, 0.98)));
+      filmUpdate.current();
       s.out = ease.inOut(seg(p, 0, 0.14));
       // Machine half scatters ("Not the person."), comes back while the human half leaves ("Not the model."), then both fuse.
       s.sm = ease.inOut(seg(p, 0.17, 0.3)) * (1 - ease.inOut(seg(p, 0.42, 0.54)));
@@ -118,16 +128,24 @@ export function Ignition() {
       el.toggleAttribute('data-out', s.out > 0.5);
     });
 
-    // Rich tier: once the page is idle and the device has proved itself, the scroll story melts the ring into dots.
+    // Rich tier: once the page is idle and the device has proved itself, the rendered ring (or, without it, the WebGL
+    // dots) tells the scroll story. Never started while the metal is still being poured.
     let stop: (() => void) | undefined;
     let dead = false;
     richTier().then(async (ok) => {
       if (!ok || dead) return;
-      const { startRing } = await import('@/lib/gl/ringParticles');
-      // Never start while the metal is still being poured.
       const fcp = performance.getEntriesByName('first-contentful-paint')[0]?.startTime ?? 0;
       const introEnd = fcp + (document.documentElement.dataset.intro === 'quick' ? 0.45 : 1) * 4600;
-      await new Promise((r) => setTimeout(r, Math.max(0, introEnd - performance.now())));
+      const wait = new Promise((r) => setTimeout(r, Math.max(0, introEnd - performance.now())));
+      if (film && filmRef.current) {
+        const [{ startFilm }] = await Promise.all([import('@/lib/film'), wait]);
+        if (dead) return;
+        const f = startFilm({ canvas: filmRef.current, ...film, progress: () => progress.current, onReady: () => el.setAttribute('data-film', '') });
+        filmUpdate.current = f.update;
+        stop = f;
+        return;
+      }
+      const [{ startRing }] = await Promise.all([import('@/lib/gl/ringParticles'), wait]);
       if (dead) return;
       stop = startRing({
         canvas: glRef.current!,
@@ -144,9 +162,28 @@ export function Ignition() {
       pour?.removeEventListener('animationend', onPoured);
       clearTimeout(pourTimer);
     };
-  }, []);
+  }, [film]);
 
   const { c, px, stroke, rings } = RING;
+  // The machine half is physical: once the pour has set, the cursor can knock its pixels loose (lib/knock.ts).
+  useEffect(() => {
+    if (!matchMedia('(hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)').matches) return;
+    let stop: (() => void) | undefined;
+    let dead = false;
+    const begin = async () => {
+      removeEventListener('pointermove', begin);
+      const { startKnock } = await import('@/lib/knock');
+      if (!dead && ringRef.current) stop = startKnock(ringRef.current);
+    };
+    const t = setTimeout(() => addEventListener('pointermove', begin, { passive: true, once: true }), 3000);
+    return () => {
+      dead = true;
+      clearTimeout(t);
+      removeEventListener('pointermove', begin);
+      stop?.();
+    };
+  }, []);
+
   let k = 0;
   const total = rings.reduce((n, r) => n + r.n, 0);
 
@@ -158,7 +195,8 @@ export function Ignition() {
         </div>
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ground" />
 
-        {/* The ring: SVG for everyone; the rich tier draws particles over it on the canvas below. */}
+        {/* The ring: SVG for everyone; for the scroll story the rich tier hands it over to the rendered ring (the canvas
+            inside it) or, without the film, to particles on the canvas below. */}
         <div className="ig-ring-area relative flex flex-1 items-center justify-center py-6">
           <div className="ig-ring">
             <div aria-hidden className="ig-glow">
@@ -186,6 +224,7 @@ export function Ignition() {
                 <circle cx={c} cy={c} r={RING.core} fill="var(--ember)" />
               </g>
             </svg>
+            {film && <canvas ref={filmRef} aria-hidden className="ig-film" />}
           </div>
         </div>
         <canvas ref={glRef} aria-hidden className="ig-gl pointer-events-none absolute inset-0 h-full w-full" />
@@ -198,13 +237,13 @@ export function Ignition() {
             </span>{' '}
             <span className="ig-line ig-l2">
               <span className="ig-in">
-                <span className="accent ig-cool" data-text="alloyed.">
-                  alloyed.
+                <span className="ig-cool" data-text="alloyed">
+                  alloyed
                 </span>
               </span>
             </span>
           </h1>
-          <div className="ig-meta mt-6 flex flex-col gap-6 lg:absolute lg:bottom-14 lg:right-8 lg:mt-0 lg:max-w-[23rem]">
+          <div className="ig-meta mt-6 flex flex-col gap-6 lg:absolute lg:bottom-6 lg:right-8 lg:mt-0 lg:max-w-[22rem]">
             <p className="text-base leading-relaxed text-bone-dim sm:text-lg">
               Human judgment and machine range, fused into one material. Crucible is a studio that builds and ships ventures.
             </p>
@@ -222,24 +261,16 @@ export function Ignition() {
         {/* Fusion lines: the scroll story told under the ring. */}
         <div className="ig-fuse px-4 text-center">
           <p className="ig-fl ig-t1 h-display text-4xl sm:text-6xl">
-            Not the <span className="accent">person.</span>
+            Not the person
           </p>
           <p className="ig-fl ig-t2 h-display text-4xl sm:text-6xl">
-            Not the <span className="accent">model.</span>
+            Not the model
           </p>
           <div className="ig-fl ig-t3">
-            <h2 className="h-display text-5xl sm:text-7xl">
-              Neither, <span className="accent">alone.</span>
-            </h2>
-            <p className="label mt-5">Not the person · Not the model · The mix</p>
+            <h2 className="h-display text-5xl sm:text-7xl">Neither, alone</h2>
           </div>
         </div>
 
-        <ol aria-hidden className="ig-steps label">
-          <li className="ig-s1">01 Person</li>
-          <li className="ig-s2">02 Model</li>
-          <li className="ig-s3">03 Mix</li>
-        </ol>
         <div aria-hidden className="ig-cue">
           <span />
         </div>

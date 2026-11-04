@@ -1,0 +1,449 @@
+/* The quote form on /sites (components/QuoteForm.tsx). With JS one question shows at a time (everything below that
+   is scoped to html.js); without JS it is a plain form with every field visible. */
+
+/* The section heading shares its row with the form, so it runs a size below the other section heads. */
+.qf-head {
+  font-size: clamp(2.5rem, 5vw, 4.75rem);
+}
+
+/* JS-only parts (progress, Next, the review) and the parts that wait for their step. */
+html:not(.js) .qf-js {
+  display: none !important;
+}
+.js .qf-off {
+  display: none;
+}
+
+/* ---------- Progress: how far the metal has run (settled bone behind a hot front) ---------- */
+.qf-bar {
+  position: relative;
+  height: 2px;
+  background: var(--line);
+}
+.qf-bar i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc(var(--qf-p, 0) * 100%);
+  background: var(--bone-dim);
+  transition: width 700ms var(--ease-out);
+}
+.qf-bar i::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 1.25rem;
+  background: var(--ember);
+}
+.qf-meta {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+  margin-top: 0.375rem;
+}
+.qf-count {
+  margin-left: auto;
+  font-size: 0.875rem;
+  color: var(--bone-dim);
+  font-variant-numeric: tabular-nums;
+}
+.qf-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: -0.25rem;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--bone-dim);
+  transition: color 200ms ease;
+}
+.qf-back:hover {
+  color: var(--ember);
+}
+
+/* ---------- Questions ---------- */
+.qf-steps {
+  position: relative;
+  margin-top: 2.25rem;
+}
+.qf-step {
+  min-width: 0;
+}
+html:not(.js) .qf-step + .qf-step {
+  margin-top: 2.75rem;
+}
+.js .qf-step:not([data-active]):not([data-leaving]) {
+  display: none;
+}
+/* The outgoing question leaves on top of the incoming one, out of the flow so the form doesn't change height twice. */
+.js .qf-step[data-leaving] {
+  position: absolute;
+  inset: 0 0 auto;
+  pointer-events: none;
+}
+.qf-step fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.qf-q {
+  display: block;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  font-weight: 600;
+  font-size: clamp(1.875rem, 3.4vw, 3.25rem);
+  line-height: 1.04;
+  font-variation-settings: 'wdth' 125;
+  text-wrap: balance;
+  color: var(--bone);
+}
+.qf-q:focus {
+  outline: none;
+}
+html:not(.js) .qf-q {
+  margin-bottom: 1rem;
+  font-size: clamp(1.25rem, 2vw, 1.5rem);
+}
+
+/* Inputs: large type on an underline that runs hot while you type. */
+.qf-input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  padding: 0.2em 0 0.35em;
+  border: 0;
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0;
+  background: transparent;
+  color: var(--bone);
+  font: inherit;
+  font-size: clamp(1.375rem, 2.3vw, 2rem);
+  font-weight: 500;
+  line-height: 1.25;
+  caret-color: var(--ember);
+  transition: border-color 200ms ease;
+}
+html:not(.js) .qf-input {
+  font-size: 1.25rem;
+}
+.qf-input::placeholder {
+  color: var(--bone-dim);
+  opacity: 1;
+}
+.qf-input:hover,
+.qf-area:hover {
+  border-bottom-color: var(--bone-dim);
+}
+.qf-input:focus,
+.qf-area:focus,
+.qf-input[aria-invalid='true'],
+.qf-area[aria-invalid='true'] {
+  outline: none;
+  border-bottom-color: var(--ember);
+}
+.qf-input:-webkit-autofill,
+.qf-input:-webkit-autofill:hover,
+.qf-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--bone);
+  -webkit-box-shadow: 0 0 0 100px var(--ground) inset;
+  transition: background-color 9999s;
+}
+.qf-field {
+  display: block;
+}
+.qf-field + .qf-field {
+  margin-top: 1.75rem;
+}
+.qf-sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.9375rem;
+  color: var(--bone-dim);
+}
+
+/* The longer answer: a quiet field rather than a box. */
+.qf-area {
+  display: block;
+  width: 100%;
+  min-height: 9.5rem;
+  padding: 0.875rem 1rem;
+  border: 0;
+  border-bottom: 2px solid var(--line-strong);
+  border-radius: 0.375rem 0.375rem 0 0;
+  background: var(--ground-2);
+  color: var(--bone);
+  font: inherit;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  caret-color: var(--ember);
+  resize: vertical;
+  transition: border-color 200ms ease;
+}
+
+.qf-hint {
+  margin-top: 0.875rem;
+  max-width: 34rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--bone-dim);
+}
+.qf-hint-lead {
+  margin: -0.5rem 0 1.25rem;
+}
+.qf-msg {
+  margin-top: 0.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--bone);
+}
+.qf-msg:empty {
+  display: none;
+}
+
+/* Choices: real controls, so pills. A selected one runs hot. */
+.qf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+}
+.qf-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  height: 3.25rem;
+  padding: 0 1.375rem 0 1.125rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  color: var(--bone);
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.qf-chip::before {
+  content: '';
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--bone-dim);
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+.qf-chip:hover {
+  border-color: var(--bone-dim);
+}
+input:checked + .qf-chip {
+  border-color: var(--ember);
+  box-shadow: inset 0 0 0 1px var(--ember);
+}
+input:checked + .qf-chip::before {
+  background: var(--ember);
+  box-shadow: none;
+}
+input:focus-visible + .qf-chip {
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
+}
+
+/* ---------- Review ---------- */
+.qf-review {
+  margin-top: -0.25rem;
+}
+.qf-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.125rem 1.25rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+}
+.qf-row dt {
+  grid-column: 1 / -1;
+  font-size: 0.875rem;
+  color: var(--bone-dim);
+}
+@media (min-width: 640px) {
+  .qf-row {
+    grid-template-columns: 7.5rem minmax(0, 1fr) auto;
+  }
+  .qf-row dt {
+    grid-column: auto;
+  }
+}
+.qf-answer {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: 1.0625rem;
+  color: var(--bone);
+}
+.qf-change,
+.qf-aside a,
+.qf-aside button {
+  color: var(--bone);
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 0.3em;
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
+}
+.qf-change {
+  font-size: 0.875rem;
+  color: var(--bone-dim);
+}
+.qf-change:hover,
+.qf-aside a:hover,
+.qf-aside button:hover {
+  color: var(--ember);
+  text-decoration-color: var(--ember);
+}
+.qf-note {
+  font-size: 0.9375rem;
+  color: var(--bone-dim);
+}
+.js .qf-note {
+  margin-top: 1.5rem;
+}
+
+/* ---------- Next / send ---------- */
+.qf-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem 1.25rem;
+  margin-top: 2rem;
+}
+html:not(.js) .qf-foot {
+  margin-top: 1.25rem;
+}
+.qf-foot .btn {
+  height: 3.25rem;
+  padding: 0 1.75rem;
+  font-size: 1rem;
+}
+.qf-send:disabled {
+  opacity: 0.7;
+  cursor: progress;
+}
+.qf-enter {
+  font-size: 0.8125rem;
+  color: var(--bone-dim);
+}
+@media (hover: none), (pointer: coarse) {
+  .qf-enter {
+    display: none;
+  }
+}
+@media (max-width: 639px) {
+  .qf-foot .btn {
+    flex: 1;
+  }
+}
+
+/* ---------- Ready to send (no Formspree) and sent ---------- */
+.qf-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9375rem;
+  color: var(--bone-dim);
+}
+.qf-panel .qf-q,
+.qf-done .qf-q {
+  margin: 0;
+}
+.qf-lede {
+  margin-top: 1rem;
+  max-width: 30rem;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  text-wrap: pretty;
+  color: var(--bone-dim);
+}
+.qf-routes {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 32rem;
+  margin-top: 2.25rem;
+}
+@media (min-width: 640px) {
+  .qf-routes {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.qf-routes .btn {
+  width: 100%;
+  height: 3.25rem;
+  font-size: 1rem;
+}
+.qf-aside {
+  margin-top: 1.75rem;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+}
+.qf-done {
+  padding-top: 3.25rem;
+}
+
+/* ---------- Motion: the current question leaves upward, the next rises in (mirrored going back) ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .js .qf-step[data-dir][data-active] {
+    animation: qf-in 620ms var(--ease-out) 80ms both;
+  }
+  .js .qf-step[data-dir='back'][data-active] {
+    animation-name: qf-in-back;
+  }
+  .js .qf-step[data-leaving] {
+    animation: qf-out 260ms cubic-bezier(0.5, 0, 0.75, 0) both;
+  }
+  .js .qf-step[data-dir='back'][data-leaving] {
+    animation-name: qf-out-back;
+  }
+  .qf-panel,
+  .qf-done {
+    animation: qf-in 700ms var(--ease-out) both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .qf-step[data-leaving] {
+    display: none;
+  }
+  .qf-bar i {
+    transition: none;
+  }
+}
+@keyframes qf-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.75rem);
+  }
+}
+@keyframes qf-in-back {
+  from {
+    opacity: 0;
+    transform: translateY(-1.75rem);
+  }
+}
+@keyframes qf-out {
+  to {
+    opacity: 0;
+    transform: translateY(-1.25rem);
+  }
+}
+@keyframes qf-out-back {
+  to {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+}

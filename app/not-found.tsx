@@ -43,10 +43,8 @@ export default function NotFound() {
       <Nav />
       <main id="main" className="container-x flex min-h-[85svh] flex-col items-center justify-center pt-[var(--nav-h)] text-center">
         <ColdRing />
-        <p className="label mt-10">Error 404 · Cooled to 0 K</p>
-        <h1 className="h-display mt-5 max-w-2xl text-4xl sm:text-6xl">
-          This page didn&rsquo;t survive <span className="accent">the furnace.</span>
-        </h1>
+        <h1 className="h-display mt-10 max-w-3xl text-4xl sm:text-6xl">This page didn&rsquo;t survive the furnace</h1>
+        <p className="mt-5 text-bone-dim">Nothing here but a ring cooled to 0 K. The page you wanted doesn&rsquo;t exist, or moved.</p>
         <div className="mt-10 flex flex-wrap justify-center gap-3">
           <Link href="/" className="btn btn-ghost">
             Back to Crucible

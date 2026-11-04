@@ -16,7 +16,7 @@ export const builders: Builder[] = [
     name: 'Jacob Schopp',
     role: 'Co-founder, Crucible and Crucible Sites',
     email: 'jacob@crucibleinnovation.com',
-    portrait: '/team/jacob.webp',
+    portrait: '/team/jacob-engraved.webp',
     bio: [
       'I am still in high school, and Crucible is the name Charlie and I build our ventures under. Crucible Sites is the first of them, and the two of us build the sites together. Our first ones are already lined up.',
       'When you work with us, you talk directly to the people building your site, from the first call until the day it goes live. Tell me about your business and I will get back to you within 24 hours.',
@@ -27,7 +27,7 @@ export const builders: Builder[] = [
     name: 'Charlie Rochford',
     role: 'Co-founder, Crucible and Crucible Sites',
     email: 'charles@crucibleinnovation.com',
-    portrait: '/team/charlie.webp',
+    portrait: '/team/charlie-engraved.webp',
     // From Charlie's own answers.
     bio: [
       'I do the same work Jacob does, from designing and building the sites to talking with the businesses we build them for.',

@@ -10,3 +10,5 @@ playwright-report
 test-results
 .lighthouseci
 overnight/capture/
+__pycache__/
+.claude/worktrees/

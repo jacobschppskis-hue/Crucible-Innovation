@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
+import type { FilmInfo } from '@/lib/filmAssets';
 import { richTier } from '@/lib/tier';
 
 const ROOM = 293;
@@ -10,11 +11,13 @@ const IRON = 1811; // iron melts at 1811 K
  * Scroll heats the section from room temperature (293 K) to iron's melting point (1811 K): a furnace glow rises from
  * the floor (CSS), and on the rich tier a WebGL surface of iron goes from glowing cracks to flowing molten metal.
  */
-export function Thesis() {
+export function Thesis({ film }: { film?: FilmInfo | null }) {
   const ref = useRef<HTMLElement>(null);
   const num = useRef<HTMLSpanElement>(null);
   const cap = useRef<HTMLSpanElement>(null);
   const gl = useRef<HTMLCanvasElement>(null);
+  const filmCanvas = useRef<HTMLCanvasElement>(null);
+  const filmUpdate = useRef<() => void>(() => {});
   const heat = useRef(1);
 
   useEffect(() => {
@@ -25,13 +28,14 @@ export function Thesis() {
       const k = ease.inOut(seg(p, 0.08, 0.78));
       heat.current = k;
       el.style.setProperty('--k', k.toFixed(4));
+      filmUpdate.current();
       // One line fully leaves before the next arrives.
       el.style.setProperty('--xa', ease.inOut(seg(p, 0.34, 0.46)).toFixed(4));
       el.style.setProperty('--xb', ease.out(seg(p, 0.5, 0.64)).toFixed(4));
       const t = Math.round(ROOM + k * (IRON - ROOM));
       if (t !== shown) {
         shown = t;
-        num.current!.textContent = String(t).padStart(4, '0');
+        num.current!.textContent = String(t);
         cap.current!.textContent = t >= IRON ? 'Iron melts' : t <= ROOM ? 'Room temperature' : 'Heating';
       }
     });
@@ -40,6 +44,15 @@ export function Thesis() {
     let dead = false;
     richTier().then(async (ok) => {
       if (!ok || dead) return;
+      // Rendered film (film/iron.py) when it exists: real footage of iron melting, scrubbed by the same heat.
+      if (film && filmCanvas.current) {
+        const { startFilm } = await import('@/lib/film');
+        if (dead) return;
+        const f = startFilm({ canvas: filmCanvas.current, ...film, progress: () => heat.current, onReady: () => el.setAttribute('data-film', '') });
+        filmUpdate.current = f.update;
+        stop = f;
+        return;
+      }
       const { startMolten } = await import('@/lib/gl/molten');
       if (dead) return;
       stop = startMolten({
@@ -57,29 +70,38 @@ export function Thesis() {
   }, []);
 
   return (
-    <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative border-y border-line">
+    <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative">
       <div className="pin-sticky relative flex items-center overflow-hidden">
         <canvas ref={gl} aria-hidden className="thesis-gl" />
+        {film?.poster && (
+          <img
+            aria-hidden
+            alt=""
+            src={film.posterSmall ?? film.poster}
+            srcSet={film.posterSmall ? `${film.posterSmall} 800w, ${film.poster} 1600w` : undefined}
+            sizes="100vw"
+            loading="lazy"
+            decoding="async"
+            className="thesis-poster"
+          />
+        )}
+        {film && <canvas ref={filmCanvas} aria-hidden className="thesis-film" />}
         <div aria-hidden className="thesis-furnace" />
         <div aria-hidden className="thesis-glow" />
         <div className="container-x relative flex w-full flex-col gap-12 py-24 lg:flex-row lg:items-end lg:justify-between">
           <div className="thesis-lines relative grid max-w-4xl">
             <div className="thesis-a [grid-area:1/1]">
-              <p className="font-serif-upright text-[2.75rem] leading-[1.02] tracking-[-0.015em] text-balance sm:text-7xl lg:text-[5.75rem]">
-                Nothing new happens at <span className="accent">293 K.</span>
-              </p>
-              <p className="mt-6 font-mono text-xs text-bone-dim">293 K is room temperature.</p>
+              <p className="h-display text-[2.75rem] sm:text-7xl lg:text-[5.5rem]">Nothing new happens at 293 K</p>
+              <p className="mt-6 text-bone-dim">293 K is room temperature.</p>
             </div>
             <div className="thesis-b [grid-area:1/1]">
-              <p className="font-serif-upright text-[2.75rem] leading-[1.02] tracking-[-0.015em] text-balance sm:text-7xl lg:text-[5.75rem]">
-                An alloy is stronger than its <span className="accent">metals.</span>
-              </p>
-              <p className="mt-6 font-mono text-xs text-bone-dim">Steel is harder than iron. Bronze is harder than copper.</p>
+              <p className="h-display text-[2.75rem] sm:text-7xl lg:text-[5.5rem]">An alloy is stronger than its metals</p>
+              <p className="mt-6 text-bone-dim">Steel is harder than iron. Bronze is harder than copper.</p>
             </div>
           </div>
-          <div className="w-full shrink-0 border-l border-line pl-5 sm:w-64 lg:mb-3">
-            <p className="label">Fe · Temperature</p>
-            <p className="mt-2 font-mono text-4xl tabular-nums text-bone sm:text-5xl">
+          <div className="w-full shrink-0 sm:w-64 lg:mb-3">
+            <p className="label">Temperature</p>
+            <p className="thesis-readout wide mt-2 font-display text-5xl font-semibold tabular-nums text-bone sm:text-6xl">
               <span className="sr-only">Heating from 293 kelvin, room temperature, to 1811 kelvin, the melting point of iron.</span>
               <span aria-hidden ref={num}>
                 {IRON}

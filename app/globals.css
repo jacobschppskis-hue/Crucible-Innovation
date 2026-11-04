@@ -3,12 +3,19 @@
 :root {
   --ground: #0d0d0b;
   --ground-2: #16150f;
-  --line: rgba(232, 228, 216, 0.08);
-  --line-strong: rgba(232, 228, 216, 0.16);
+  /* Colour means temperature: Ember is hot (active, interactive, live), bone is cooled (settled). Every colour on the
+     site is one of these tokens; no ad-hoc rgba() or opacity utilities (see .claude/skills/unslop). */
+  --line: #23221d;
+  --line-strong: #3a3832;
   --bone: #e8e4d8;
-  --bone-dim: rgba(232, 228, 216, 0.56);
+  --bone-dim: #9a978e; /* solid, 6.6:1 on ground */
   --ember: #ff5b1f;
-  --ember-hot: #ffb347; /* only inside gradients, for the molten core */
+  --ember-hot: #ffb347; /* only inside hot metal, for the molten core */
+  /* The cooled surface: where the metal has set, the page flips to bone. */
+  --cool: #e8e4d8;
+  --ink: #16150f;
+  --ink-dim: #5e5b52; /* 5.3:1 on bone */
+  --ember-deep: #a8380c; /* Ember text on bone (the same heat, dark enough for AA: 5.1:1) */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --nav-h: 4rem;
@@ -27,9 +34,12 @@
   --color-ember-hot: var(--ember-hot);
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-instrument), ui-serif, Georgia, serif; /* italic face only */
-  --font-serif-upright: var(--font-instrument-upright), ui-serif, Georgia, serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, SFMono-Regular, monospace;
+  --color-cool: var(--cool);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ember-deep: var(--ember-deep);
+  /* Mono only for real data (a URL bar, a readout); system mono, nothing downloaded. */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --ease-out: var(--ease-out);
 }
 
@@ -87,27 +97,26 @@ html.lenis body {
       contain-intrinsic-size: auto var(--h-lg, 1000px);
     }
   }
+  /* Small text that carries information (a status, a caption). Sentence case, no tracking. */
   .label {
-    @apply font-mono text-[0.75rem] uppercase tracking-[0.14em] text-bone-dim;
+    @apply text-[0.8125rem] font-medium leading-snug text-bone-dim;
   }
+  /* Display type: Archivo at its widest. Poster scale: very big display, small labels, little in between. */
   .h-display {
-    @apply font-display font-semibold tracking-[-0.035em] leading-[1.02] text-balance;
+    @apply font-display font-semibold leading-[0.92] tracking-[-0.02em] text-balance;
+    font-variation-settings: 'wdth' 125;
   }
   .h-section {
-    @apply font-display text-[2rem] font-semibold leading-[1.05] tracking-[-0.03em] text-balance sm:text-[2.75rem] lg:text-[3.25rem];
+    @apply font-display font-semibold leading-[0.95] tracking-[-0.02em] text-balance;
+    font-size: clamp(2.5rem, 6.4vw, 6rem);
+    font-variation-settings: 'wdth' 125;
   }
+  .wide {
+    font-variation-settings: 'wdth' 125;
+  }
+  /* Kept for old markup; no longer a second face. */
   .accent {
-    @apply font-serif font-normal italic tracking-[-0.01em];
-  }
-  .molten {
-    background: linear-gradient(100deg, var(--ember) 10%, var(--ember-hot) 90%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
-    /* background-clip: text only paints inside the box, so pad it out to cover the italic overhang and
-       the deep g/y descenders on every side, then cancel the padding with negative margins so layout doesn't shift. */
-    padding: 0 0.1em 0.3em 0.2em; /* left too: the italic g's lower loop swings left of its box */
-    margin: 0 -0.1em -0.3em -0.2em;
+    font: inherit;
   }
 }
 
@@ -207,16 +216,6 @@ html.lenis body {
   }
 }
 
-/* ---------- Grain ---------- */
-.grain {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.035;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
 /* ---------- Nav ---------- */
 .nav {
   border-bottom: 1px solid transparent;
@@ -226,9 +225,9 @@ html.lenis body {
     backdrop-filter 300ms ease;
 }
 .nav[data-scrolled] {
-  background: color-mix(in srgb, var(--ground) 70%, transparent);
-  -webkit-backdrop-filter: blur(14px) saturate(1.3);
-  backdrop-filter: blur(14px) saturate(1.3);
+  background: color-mix(in srgb, var(--ground) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
   border-color: var(--line);
 }
 
@@ -300,97 +299,20 @@ html.lenis body {
 }
 
 /* ---------- Spotlight cards (Linear style) ---------- */
-.spot {
-  position: relative;
-  isolation: isolate;
-  border-radius: 1.25rem;
-  background: var(--ground-2);
-  border: 1px solid var(--line);
-}
-.spot::before,
-.spot::after {
-  content: '';
-  position: absolute;
-  pointer-events: none;
-  border-radius: inherit;
-  opacity: 0;
-  transition: opacity 300ms ease;
-}
 /* surface glow */
-.spot::before {
-  inset: 0;
-  z-index: -1;
-  background: radial-gradient(520px circle at var(--mx, 50%) var(--my, 50%), rgba(232, 228, 216, 0.06), transparent 45%);
-}
 /* border glow, masked to the 1px edge */
-.spot::after {
-  inset: -1px;
-  z-index: 2;
-  padding: 1px;
-  background: radial-gradient(260px circle at var(--mx, 50%) var(--my, 50%), rgba(232, 228, 216, 0.45), transparent 70%);
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
-}
-@media (hover: hover) {
-  .spot:hover::before,
-  .spot:hover::after {
-    opacity: 1;
-  }
-}
 
 /* ---------- Border beam (featured pricing card) ---------- */
-@property --beam-angle {
-  syntax: '<angle>';
-  inherits: false;
-  initial-value: 0deg;
-}
-.beam {
-  position: absolute;
-  inset: -1px;
-  z-index: 3;
-  padding: 1px;
-  border-radius: inherit;
-  pointer-events: none;
-  background: conic-gradient(
-    from var(--beam-angle),
-    transparent 0%,
-    transparent 62%,
-    rgba(255, 91, 31, 0.9) 80%,
-    var(--ember-hot) 86%,
-    rgba(255, 91, 31, 0.6) 90%,
-    transparent 96%
-  );
-  -webkit-mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  -webkit-mask-composite: xor;
-  mask:
-    linear-gradient(#000 0 0) content-box exclude,
-    linear-gradient(#000 0 0);
-  animation: beam 6s linear infinite;
-}
-@keyframes beam {
-  to {
-    --beam-angle: 360deg;
-  }
-}
 
 /* ---------- Section reveals: fade + 16px rise (only hidden when JS runs) ---------- */
 [data-reveal] {
   transition:
-    opacity 1000ms var(--ease-spring) var(--delay, 0s),
-    transform 1100ms var(--ease-spring) var(--delay, 0s),
-    filter 1000ms var(--ease-spring) var(--delay, 0s);
+    opacity 900ms var(--ease-out) var(--delay, 0s),
+    transform 1100ms var(--ease-out) var(--delay, 0s);
 }
 .js [data-reveal]:not([data-in]) {
   opacity: 0;
-  transform: translateY(28px) scale(0.985);
-  filter: blur(6px);
+  transform: translateY(24px);
 }
 
 /* ---------- Word-by-word blur-in ---------- */
@@ -407,12 +329,10 @@ html.lenis body {
 @keyframes word-in {
   from {
     opacity: 0;
-    filter: blur(8px);
-    transform: translateY(0.32em);
+    transform: translateY(0.45em);
   }
   to {
     opacity: 1;
-    filter: blur(0);
     transform: none;
   }
 }
@@ -443,25 +363,6 @@ html.lenis body {
 }
 
 /* ---------- Form chips ---------- */
-.chip {
-  @apply inline-flex h-10 cursor-pointer select-none items-center rounded-full border border-line-strong px-4 text-sm text-bone-dim transition-colors duration-200;
-}
-.chip:hover {
-  @apply border-bone/30 text-bone;
-}
-input:checked + .chip {
-  @apply border-ember/70 bg-ember/10 text-bone;
-}
-input:focus-visible + .chip {
-  outline: 2px solid var(--ember);
-  outline-offset: 3px;
-}
-.field {
-  @apply h-12 w-full rounded-xl border border-line-strong bg-ground px-4 text-[1rem] text-bone transition-colors duration-200 placeholder:text-bone/40 hover:border-bone/25 focus:border-ember/70 focus:outline-none;
-}
-textarea.field {
-  @apply h-auto min-h-36 py-3 leading-relaxed;
-}
 
 /* ---------- Success pulse ---------- */
 .pulse-dot {
@@ -498,12 +399,8 @@ textarea.field {
   .ring-glow {
     animation: ring-glow-in 600ms ease-out forwards;
   }
-  .beam,
   .pulse-dot::after {
     animation: none;
-  }
-  .beam {
-    --beam-angle: 200deg;
   }
   .words .w,
   .js .words:not([data-in]) .w {
@@ -530,9 +427,6 @@ textarea.field {
 
 :where(.ring-svg) {
   color: var(--bone);
-}
-.ring-dark {
-  color: var(--ground);
 }
 
 /* ---------- Nav: thin reading-progress hairline ---------- */
@@ -582,6 +476,7 @@ textarea.field {
    (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --f, --t1..--t3 from lib/scroll.ts. */
 .ig {
   --o: 0;
+  --fv: 0;
   --melt: 0;
   --sm: 0;
   --sh: 0;
@@ -645,6 +540,27 @@ textarea.field {
   opacity: calc(1 - var(--melt));
   -webkit-mask: radial-gradient(circle at var(--hx, 50%) var(--hy, 50%), transparent calc(var(--hr, 0px) * 0.55), #000 var(--hr, 0px));
   mask: radial-gradient(circle at var(--hx, 50%) var(--hy, 50%), transparent calc(var(--hr, 0px) * 0.55), #000 var(--hr, 0px));
+}
+
+/* Rich tier with the rendered ring (film/ring.py → public/film/ring): for the scroll story the flat SVG hands over to
+   the cast object (--fv, 0 → 1), frame for frame with the story's beats. A frame spans the viewBox -16 -16 96 96, so
+   the canvas is the ring's box plus a quarter on each side and frame 0 lies exactly on the SVG. The frames' edges are
+   the ground colour; lighten lets the glow and isotherms behind show through their dark. */
+.ig-film {
+  position: absolute;
+  left: -25%;
+  top: -25%;
+  width: 150%;
+  height: 150%;
+  opacity: 0;
+  pointer-events: none;
+  mix-blend-mode: lighten;
+}
+.ig[data-film] .ig-film {
+  opacity: var(--fv);
+}
+.ig[data-film] .ig-svg {
+  opacity: calc(1 - var(--fv));
 }
 
 /* ---------- The pour (components/Ignition.tsx Pour): everything is in ring units, as % of the ring's box ----------
@@ -881,18 +797,18 @@ textarea.field {
 
 /* Sized so "Intelligence," spans ~90% of the container (Archivo sets it at ~5.05em wide), capped by height. */
 .ig-title {
-  font-size: min((100vw - 2rem) / 5.4, 15svh);
+  font-size: min((100vw - 2rem) / 6.6, 15svh);
   line-height: 0.9;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.025em;
 }
 @media (min-width: 640px) {
   .ig-title {
-    font-size: min((100vw - 3rem) / 5.6, 19svh);
+    font-size: min((100vw - 3rem) / 6.8, 19svh);
   }
 }
 @media (min-width: 1024px) {
   .ig-title {
-    font-size: min((min(100vw, 76rem) - 4rem) / 5.6, 21svh);
+    font-size: min((min(100vw, 76rem) - 4rem) / 7.1, 20svh);
   }
 }
 /* Each line is its own mask; padding (cancelled by margins) keeps italic overhangs and descenders inside it. */
@@ -904,10 +820,6 @@ textarea.field {
 }
 .ig-in {
   display: inline-block;
-}
-.ig-l2 .accent {
-  font-size: 1.14em;
-  letter-spacing: -0.02em;
 }
 /* "alloyed." cools from white-hot to bone as it arrives: a hot copy sits on the bone word and fades off it, so the
    whole effect is one composited opacity animation (finished state: bone). The copy is hidden from screen readers. */
@@ -931,8 +843,7 @@ textarea.field {
   pointer-events: none;
 }
 
-.ig-fuse,
-.ig-steps {
+.ig-fuse {
   pointer-events: none;
 }
 .ig-fuse {
@@ -947,9 +858,6 @@ textarea.field {
 .ig-t1,
 .ig-t2 {
   color: var(--bone-dim);
-}
-.ig-steps {
-  display: none;
 }
 .ig-cue {
   display: none;
@@ -1426,8 +1334,9 @@ textarea.field {
     --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
     transform-box: fill-box;
     transform-origin: center;
-    transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px)) rotate(calc(var(--dr) * var(--q) * 1deg))
-      scale(calc(1 - var(--q) * 0.2));
+    /* --kx/--ky/--kr: knocked by the cursor (lib/knock.ts) */
+    transform: translate(calc((var(--dx) * var(--q) + var(--kx, 0)) * 1px), calc((var(--dy) * var(--q) + var(--ky, 0)) * 1px))
+      rotate(calc((var(--dr) * var(--q) + var(--kr, 0)) * 1deg)) scale(calc(1 - var(--q) * 0.2));
     opacity: calc(1 - var(--q) * 0.9);
   }
   .js .ig-core-g {
@@ -1458,36 +1367,14 @@ textarea.field {
   .js .ig-t1 {
     opacity: var(--t1);
     transform: translateY(calc((1 - var(--t1)) * 22px));
-    filter: blur(calc((1 - var(--t1)) * 6px));
   }
   .js .ig-t2 {
     opacity: var(--t2);
     transform: translateY(calc((1 - var(--t2)) * 22px));
-    filter: blur(calc((1 - var(--t2)) * 6px));
   }
   .js .ig-t3 {
     opacity: var(--t3);
     transform: translateY(calc((1 - var(--t3)) * 30px)) scale(calc(0.97 + var(--t3) * 0.03));
-    filter: blur(calc((1 - var(--t3)) * 8px));
-  }
-  .js .ig-steps {
-    position: absolute;
-    bottom: 1.75rem;
-    left: 50%;
-    translate: -50% 0;
-    display: flex;
-    gap: 1.5rem;
-    white-space: nowrap;
-    opacity: var(--f);
-  }
-  .js .ig-s1 {
-    opacity: calc(0.45 + 0.55 * var(--sm));
-  }
-  .js .ig-s2 {
-    opacity: calc(0.45 + 0.55 * var(--sh));
-  }
-  .js .ig-s3 {
-    opacity: calc(0.45 + 0.55 * var(--t3));
   }
   .js .ig-cue {
     position: absolute;
@@ -1613,79 +1500,8 @@ textarea.field {
 }
 
 /* ---------- Ventures (components/Ventures.tsx) ---------- */
-.venture-concept {
-  position: absolute;
-  right: 0.5rem;
-  top: 0.5rem;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  background: rgba(13, 13, 11, 0.8);
-  font: 0.5625rem/1.4 var(--font-mono);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--bone);
-}
 /* the live card's mold: a blueprint of a page (grid, a headline bar, a picture box), cast over by the screenshot */
-.venture-mold {
-  background-color: #12110e;
-  background-image:
-    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
-    linear-gradient(rgba(232, 228, 216, 0.13), rgba(232, 228, 216, 0.13)),
-    linear-gradient(rgba(232, 228, 216, 0.09), rgba(232, 228, 216, 0.09)),
-    linear-gradient(rgba(232, 228, 216, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(232, 228, 216, 0.05) 1px, transparent 1px);
-  background-size:
-    38% 9%,
-    30% 9%,
-    26% 4%,
-    16px 16px,
-    16px 16px;
-  background-position:
-    6% 30%,
-    6% 43%,
-    6% 58%,
-    0 0,
-    0 0;
-  background-repeat: no-repeat, no-repeat, no-repeat, repeat, repeat;
-}
-.venture-mold::after {
-  content: '';
-  position: absolute;
-  inset: 16% 6% 22% 54%;
-  border: 1px dashed rgba(232, 228, 216, 0.3);
-  border-radius: 8%;
-}
-.forging-mark {
-  width: min(9rem, 60%);
-  color: rgba(232, 228, 216, 0.22);
-  overflow: visible;
-}
 /* still in the furnace: the core isn't lit yet (only a live venture gets its Ember core); it just warms and cools */
-.forging-core {
-  fill: rgba(232, 228, 216, 0.16);
-}
-.forging::after {
-  content: '';
-  position: absolute;
-  inset: auto 10% -40% 10%;
-  height: 70%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 91, 31, 0.1), rgba(255, 91, 31, 0));
-  pointer-events: none;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .forging-core {
-    animation: smoulder 3.2s ease-in-out infinite;
-  }
-  li:nth-child(3) .forging-core {
-    animation-delay: -1.4s;
-  }
-}
-@keyframes smoulder {
-  50% {
-    fill: rgba(255, 179, 71, 0.22);
-  }
-}
 
 /* ---------- Builders: the portrait's mold is a faint grid on the bone card ---------- */
 .portrait-mold {
@@ -1767,8 +1583,8 @@ textarea.field {
 }
 /* body copy settles at 82% bone; its dim state is the same 56% as everything else */
 .heat-text.heat-body {
-  --lo: 0.68;
-  color: rgba(232, 228, 216, 0.82);
+  --lo: 0.6;
+  --hi: 0.86;
 }
 .heat-text span {
   opacity: calc(var(--lo) + (var(--hi) - var(--lo)) * clamp(0, (var(--p, 1) * (var(--n) + 10) - var(--i)) / 8, 1));
@@ -1788,12 +1604,10 @@ textarea.field {
 .thesis-a {
   opacity: calc(1 - var(--xa));
   transform: translateY(calc(var(--xa) * -36px));
-  filter: blur(calc(var(--xa) * 8px));
 }
 .thesis-b {
   opacity: var(--xb);
   transform: translateY(calc((1 - var(--xb)) * 36px));
-  filter: blur(calc((1 - var(--xb)) * 8px));
 }
 /* the furnace: heat rises from the floor as the temperature climbs */
 .thesis-furnace {
@@ -1819,10 +1633,45 @@ textarea.field {
 .thesis[data-gl] .thesis-gl {
   opacity: 1;
 }
+/* Rendered film of iron melting (rich tier), and its poster (light tier), which fades in with the heat. Both are
+   masked off the left, where the type sits, so it stays on dark ground. */
+.thesis-film,
+.thesis-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to right, transparent 28%, #000 72%);
+  mask-image: linear-gradient(to right, transparent 28%, #000 72%);
+}
+@media (max-width: 1023px) {
+  .thesis-film,
+  .thesis-poster {
+    -webkit-mask-image: linear-gradient(to bottom, #000 18%, transparent 62%);
+    mask-image: linear-gradient(to bottom, #000 18%, transparent 62%);
+  }
+}
+.thesis-poster {
+  opacity: calc(var(--k) * var(--k));
+}
+.thesis-film {
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+.thesis[data-film] .thesis-film {
+  opacity: 1;
+}
+.thesis[data-film] .thesis-poster,
+.thesis[data-film] .thesis-furnace {
+  opacity: 0;
+}
 .thesis[data-gl] .thesis-furnace {
   opacity: calc(var(--k) * 0.3);
 }
 /* small type keeps a dark halo when molten metal runs behind it */
+.thesis :is(.label, .thesis-readout),
 .thesis[data-gl] :is(.label, .font-mono) {
   text-shadow:
     0 0 14px rgba(13, 13, 11, 0.95),
@@ -1849,207 +1698,16 @@ textarea.field {
 /* ---------- Furnace (components/Furnace.tsx): the Thesis's heat in small doses ----------
    A low glow off the floor and heat rising from it in soft waves (a tile of blurred sine lines drifting up and
    sideways, faded out with height). Everything moves by transform or opacity, and only while on screen. */
-.furnace {
-  --heat: 1;
-  --reach: 80%; /* how high the waves rise before they fade out */
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
-}
-.furnace::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(75% 85% at 50% 120%, rgba(255, 150, 70, 0.3), rgba(255, 91, 31, 0.12) 40%, rgba(130, 22, 0, 0.05) 66%, rgba(130, 22, 0, 0) 86%);
-  opacity: var(--heat);
-}
-.furnace-waves {
-  position: absolute;
-  inset: 0;
-  opacity: calc(var(--heat) * 0.8);
-  -webkit-mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
-  mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
-}
-.furnace-waves i {
-  position: absolute;
-  inset: 0 0 -160px -400px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cfilter id='b' x='-10%25' y='-60%25' width='120%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cg fill='none' filter='url(%23b)'%3E%3Cpath stroke='%23ff9a4a' stroke-opacity='.3' stroke-width='16' d='M0 50Q50 32 100 50T200 50T300 50T400 50'/%3E%3Cpath stroke='%23ff6a2a' stroke-opacity='.22' stroke-width='12' d='M0 122Q66.7 140 133.3 122T266.7 122T400 122'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 400px 160px repeat;
-}
-.furnace-waves i + i {
-  inset: 0 -560px -220px 0;
-  background-size: 560px 220px;
-  opacity: 0.6;
-}
-.furnace-gl {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  transition: opacity 900ms ease;
-}
-.furnace[data-gl] .furnace-gl {
-  opacity: 0.6;
-}
-.furnace[data-gl] .furnace-waves {
-  opacity: calc(var(--heat) * 0.4);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .furnace::before {
-    animation: furnace-breathe 5.5s ease-in-out infinite paused;
-  }
-  .furnace-waves i {
-    animation: heat-rise 5s linear infinite paused;
-  }
-  .furnace-waves i + i {
-    animation-name: heat-rise-wide;
-    animation-duration: 8s;
-  }
-  .furnace[data-live]::before,
-  .furnace[data-live] .furnace-waves i {
-    animation-play-state: running;
-  }
-}
-@keyframes furnace-breathe {
-  50% {
-    opacity: calc(var(--heat) * 0.72);
-  }
-}
 /* one tile up and one tile across per loop, so it never jumps */
-@keyframes heat-rise {
-  to {
-    translate: 400px -160px;
-  }
-}
-@keyframes heat-rise-wide {
-  to {
-    translate: -560px -220px;
-  }
-}
 /* "molten." in the Ventures heading: the word is the metal, with brighter heat flowing through it. */
-.molten-flow {
-  background: linear-gradient(100deg, var(--ember) 0%, var(--ember-hot) 18%, #fff0d4 26%, var(--ember-hot) 34%, var(--ember) 52%, #ff7a2e 74%, var(--ember) 100%) 0 0 / 250% 100% repeat-x;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  padding: 0 0.1em 0.3em 0.2em; /* as .molten: cover the italic overhang and descenders */
-  margin: 0 -0.1em -0.3em -0.2em;
-}
 @media (prefers-reduced-motion: no-preference) {
   /* runs alongside the word's own reveal (same list), only while the heading is on screen */
-  .words[data-in] .w.molten-flow {
-    animation:
-      word-in 1000ms var(--ease-spring) both,
-      molten-flow 7s linear infinite;
-    animation-delay: calc(var(--d, 0ms) + var(--i) * 45ms), 0s;
-    animation-play-state: running, paused;
-  }
-  [data-live] .words[data-in] .w.molten-flow {
-    animation-play-state: running, running;
-  }
 }
 /* one whole gradient width per loop: 250% wide, so -166.67% moves it by exactly its own width */
-@keyframes molten-flow {
-  to {
-    background-position: -166.667% 0;
-  }
-}
 
 /* ---------- Process: heat runs down the rail with a spark at its leading edge ---------- */
-.process {
-  --heat: 1;
-}
-.process-fill {
-  background: linear-gradient(to bottom, rgba(232, 228, 216, 0.7), var(--ember));
-  transform-origin: top;
-  transform: scaleY(var(--heat));
-}
-.process-spark {
-  position: absolute;
-  left: 5.5px;
-  top: calc(0.5rem + var(--heat) * (100% - 1rem));
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  translate: -50% -50%;
-  background: radial-gradient(circle, #fff6e6 0%, var(--ember-hot) 35%, var(--ember) 75%);
-  box-shadow:
-    0 0 12px 2px rgba(255, 91, 31, 0.7),
-    0 0 30px 6px rgba(255, 91, 31, 0.25);
-  opacity: calc(min(1, var(--heat) * 40) * (1 - max(0, (var(--heat) - 0.98) * 50)));
-  pointer-events: none;
-}
-@media (min-width: 768px) {
-  .process-fill {
-    background: linear-gradient(to right, rgba(232, 228, 216, 0.7), var(--ember));
-    transform-origin: left;
-    transform: scaleX(var(--heat));
-  }
-  .process-spark {
-    top: 5.5px;
-    left: calc(var(--heat) * 100%);
-  }
-}
-.process-step {
-  --on: clamp(0, (var(--heat) - var(--t)) * 14, 1);
-}
-.process-step h3 {
-  color: color-mix(in srgb, var(--bone) calc(62% + var(--on) * 38%), var(--ground));
-  translate: 0 calc((1 - var(--on)) * 6px);
-}
-.process-node {
-  border: 1px solid rgba(232, 228, 216, 0.3);
-  background: var(--ground);
-  transition:
-    background-color 500ms var(--ease-spring),
-    border-color 500ms var(--ease-spring),
-    box-shadow 700ms var(--ease-spring);
-}
-.process-step[data-on] .process-node {
-  background: var(--bone);
-  border-color: var(--bone);
-}
-.process-step[data-current] .process-node {
-  background: var(--ember);
-  border-color: var(--ember);
-  box-shadow:
-    0 0 0 4px rgba(255, 91, 31, 0.14),
-    0 0 18px rgba(255, 91, 31, 0.55);
-}
-.process-step[data-current] .process-node::after {
-  content: '';
-  position: absolute;
-  inset: -1px;
-  border-radius: 50%;
-  border: 1px solid var(--ember);
-  animation: ripple 1300ms var(--ease-spring) forwards;
-}
-@keyframes ripple {
-  from {
-    transform: scale(1);
-    opacity: 0.9;
-  }
-  to {
-    transform: scale(3.6);
-    opacity: 0;
-  }
-}
 
 /* ---------- Cards: lean toward the cursor and lift ---------- */
-.spot-tilt {
-  transform: perspective(900px) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) translateY(var(--lift, 0px));
-  transition:
-    transform 700ms var(--ease-spring),
-    box-shadow 700ms var(--ease-spring);
-}
-@media (hover: hover) {
-  .spot-tilt:hover {
-    --lift: -4px;
-    box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.85);
-  }
-}
 
 /* Showcase screenshots drift inside their frames as you scroll, and zoom a touch on hover. */
 .parallax-inner {
@@ -2085,14 +1743,11 @@ textarea.field {
 }
 
 /* Quote: the send panel arrives with the same rise as everything else. */
-.send-panel {
-  animation: rise 900ms var(--ease-spring) both;
-}
+
 @keyframes rise {
   from {
     opacity: 0;
     transform: translateY(20px);
-    filter: blur(6px);
   }
 }
 
@@ -2106,26 +1761,60 @@ textarea.field {
   }
 }
 
-/* ---------- Footer: the wordmark rises out of the bottom edge ---------- */
-.footer-giant {
+/* ---------- Footer: the cooled surface ---------- */
+.foot {
+  background: var(--cool);
+  color: var(--ink);
+  /* The hot front: an Ember edge that cools to bone as the footer comes into view (--p from data-scroll="enter"). */
+  box-shadow:
+    0 -2px 0 color-mix(in oklab, var(--ember) calc((1 - var(--p, 1)) * 100%), var(--cool)),
+    0 -18px 48px -12px color-mix(in oklab, var(--ember) calc((1 - var(--p, 1)) * 90%), transparent);
+}
+.foot ::selection {
+  background: var(--ink);
+  color: var(--cool);
+}
+.foot :focus-visible {
+  outline-color: var(--ember-deep);
+}
+.foot-mail {
+  font-size: clamp(1.25rem, 5.3vw, 3.5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  text-decoration: underline;
+  text-decoration-thickness: 0.06em;
+  text-underline-offset: 0.14em;
+  text-decoration-color: color-mix(in oklab, var(--ink) 25%, transparent);
+  transition:
+    color 200ms ease,
+    text-decoration-color 200ms ease;
+}
+@media (max-width: 639px) {
+  .foot-mail {
+    font-variation-settings: 'wdth' 100;
+  }
+}
+.foot-mail:hover {
+  color: var(--ember-deep);
+  text-decoration-color: var(--ember-deep);
+}
+.foot-link {
+  transition: color 200ms ease;
+}
+.foot-link:hover {
+  color: var(--ember-deep);
+}
+.foot-giant {
   height: 19.5vw;
-  margin-top: 1rem;
 }
-.footer-giant-inner {
+.foot-giant-inner {
+  color: var(--ink);
   transform: translateY(calc((1 - var(--p, 1)) * 55%));
-  opacity: calc(0.15 + var(--p, 1) * 0.85);
 }
-.footer-giant-inner [aria-hidden],
-.footer-giant-inner .spark-i {
-  background: linear-gradient(180deg, rgba(232, 228, 216, 0.16), rgba(232, 228, 216, 0) 88%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-/* the Ember dot only lights once the wordmark has fully risen */
-.footer-giant-inner .spark-i::after {
+/* the Ember dot only lights once the wordmark has fully set */
+.foot-giant-inner .spark-i::after {
   opacity: clamp(0, var(--p, 1) * 3 - 2, 1);
-  box-shadow: 0 0 calc(var(--p, 1) * 2.5vw) rgba(255, 91, 31, 0.45);
 }
 /* 404: a ring that went cold. Its pixels have drifted loose and the core is out. */
 .cold-ring {
@@ -2148,24 +1837,18 @@ textarea.field {
     height: auto;
   }
   .tilt-in > .ba,
-  .footer-giant-inner {
+  .foot-giant-inner {
     transform: none;
-    opacity: 1;
   }
   .frame-in,
-  .live-dot,
-  .send-panel {
+  .live-dot {
     animation: none;
   }
-  .parallax-inner,
-  .spot-tilt {
+  .parallax-inner {
     transform: none;
   }
   .btn {
     translate: none;
-  }
-  .process-step[data-current] .process-node::after {
-    display: none;
   }
   .js [data-reveal]:not([data-in]) {
     transform: none;

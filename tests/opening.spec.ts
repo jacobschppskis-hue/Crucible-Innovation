@@ -45,7 +45,7 @@ test('the scroll story ends fused: core lit, last line showing, headline out of 
   expect(await scene.evaluate(readVar, '--core')).toBeGreaterThan(0.99);
   expect(await scene.evaluate(readVar, '--sm')).toBeLessThan(0.01);
   expect(await scene.evaluate(readVar, '--sh')).toBeLessThan(0.01);
-  await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
 });
 
 test('reduced motion: no pinning, every part finished and visible', async ({ browser }) => {
@@ -56,8 +56,8 @@ test('reduced motion: no pinning, every part finished and visible', async ({ bro
   const h = (await page.locator('section.ig').boundingBox())!.height;
   expect(h).toBeLessThan(800 * 2);
   await expect(page.locator('h1')).toBeVisible();
-  for (const name of ['Not the person.', 'Not the model.']) await expect(page.getByText(name)).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  for (const name of ['Not the person', 'Not the model']) await expect(page.getByText(name)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
   // "alloyed." has finished cooling: the hot copy over it is gone. No pour: the ring is simply there.
   expect(await page.locator('.ig-cool').evaluate((el) => getComputedStyle(el, '::after').opacity)).toBe('0');
   await expect(page.locator('.ig-pour')).toBeHidden();
@@ -70,45 +70,63 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   const page = await ctx.newPage();
   await page.goto('/');
   await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
-  await expect(page.getByRole('link', { name: /See Crucible Sites/ })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Neither, alone.' })).toBeVisible();
+  await expect(page.getByRole('link', { name: /See Crucible Sites/ }).first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
   await expect(page.locator('.ig-pour')).toBeHidden();
   await expect(page.locator('.ig-svg')).toBeVisible();
   expect((await page.locator('section.ig').boundingBox())!.height).toBeLessThan(page.viewportSize()!.height * 2.5);
   await ctx.close();
 });
 
-test('furnace floors: heat only moves while it is on screen, and never with reduced motion', async ({ page, browser }) => {
+test('heat loops only run while on screen, and never with reduced motion', async ({ page, browser }) => {
+  // The next ventures are still hot: a rendered ingot's molten face swells (its frame's ::after), or the mark breathes.
+  const playState = (el: Element) => {
+    const glow = getComputedStyle(el.querySelector('.vf-visual')!, '::after');
+    if (glow.animationName !== 'none') return glow.animationPlayState;
+    const mark = el.querySelector('.vf-mark');
+    return mark ? getComputedStyle(mark).animationPlayState : 'none';
+  };
   await page.goto('/?tier=light', { waitUntil: 'networkidle' });
-  const floor = page.locator('.footer-giant .furnace');
-  const waves = page.locator('.footer-giant .furnace-waves i').first();
+  const floor = page.locator('#ventures');
+  const hot = page.locator('#ventures [data-hot]').first();
   await expect(floor).not.toHaveAttribute('data-live', '');
-  expect(await waves.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('paused');
-  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight));
+  expect(await hot.evaluate(playState)).toBe('paused');
+  await hot.scrollIntoViewIfNeeded();
   await expect(floor).toHaveAttribute('data-live', '');
-  expect(await waves.evaluate((el) => getComputedStyle(el).animationPlayState)).toBe('running');
+  expect(await hot.evaluate(playState)).toBe('running');
 
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const calm = await ctx.newPage();
   await calm.goto('/', { waitUntil: 'networkidle' });
-  for (const sel of ['.footer-giant .furnace-waves i', '#ventures .molten-flow']) {
-    expect(await calm.locator(sel).first().evaluate((el) => getComputedStyle(el).animationName), sel).toBe('none');
-  }
+  const still = await calm.locator('#ventures [data-hot]').first().evaluate((el) =>
+    [getComputedStyle(el.querySelector('.vf-visual')!, '::after').animationName, el.querySelector('.vf-mark') ? getComputedStyle(el.querySelector('.vf-mark')!).animationName : 'none'],
+  );
+  expect(still).toEqual(['none', 'none']);
   await ctx.close();
 });
 
-test('ventures: the live one pours in a labelled concept site; the rest are still forging', async ({ page }) => {
+test('venture pages: the casting fills the frame and the share image is the casting', async ({ page }) => {
+  for (const slug of ['verge', 'trellis']) {
+    await page.goto(`/ventures/${slug}`, { waitUntil: 'networkidle' });
+    const img = page.locator('.vx-visual .vf-img');
+    await expect(img).toHaveAttribute('src', `/film/ingots/${slug}-1200.webp`);
+    expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+    await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', new RegExp(`/og/${slug}\\.jpg$`));
+  }
+});
+
+test('ventures: the live one has set and links to /sites; the next ones glow in their moulds and have their own pages', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
-  const cast = page.locator('#ventures [data-cast]');
-  await cast.scrollIntoViewIfNeeded();
-  await expect(cast).toHaveAttribute('data-in', '');
-  await expect(cast.getByText('Concept')).toBeVisible();
-  await expect(page.locator('#ventures .forging-mark')).toHaveCount(2);
+  const panels = page.locator('#ventures .vf-panel');
+  await expect(panels).toHaveCount(3);
+  await expect(page.locator('#ventures [data-hot]')).toHaveCount(2);
+  await expect(page.locator('#ventures').getByRole('link', { name: 'See Crucible Sites' })).toHaveAttribute('href', '/sites');
+  for (const v of ['verge', 'trellis']) await expect(page.locator(`#ventures a.vf-link[href="/ventures/${v}"]`)).toHaveCount(1);
 });
 
 test('moving to /sites pours the next page in, then gets out of the way', async ({ page }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
-  await page.getByRole('link', { name: /See Crucible Sites/ }).click();
+  await page.getByRole('link', { name: /See Crucible Sites/ }).first().click();
   await expect(page).toHaveURL(/\/sites$/);
   await expect(page.locator('h1')).toHaveText(/actually looks good/);
   await expect(page.locator('html')).not.toHaveAttribute('data-leaving', '');
@@ -136,18 +154,30 @@ test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ bro
 
 test.describe('rich tier', () => {
   // Headless Chromium's WebGL is SwiftShader, which the tier check rightly rejects, so these force the tier.
-  test('forced rich: solid at rest, melts into dots for the story, sets solid at the end', async ({ page }) => {
+  test('forced rich: solid at rest, hands over to the rendered ring for the story, solid again at the end', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
     const scene = page.locator('section.ig');
-    await expect(scene).toHaveAttribute('data-gl', '', { timeout: 15000 });
+    // public/film/ring exists, so the rendered ring (not the WebGL dots) tells the story.
+    await expect(scene).toHaveAttribute('data-film', '', { timeout: 15000 });
+    await expect(scene).not.toHaveAttribute('data-gl', '');
     const opacity = (sel: string) => page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
     expect(await opacity('.ig-svg')).toBe(1);
+    expect(await opacity('.ig-film')).toBe(0);
     const box = (await scene.boundingBox())!;
     const vh = page.viewportSize()!.height;
     await page.evaluate((y) => scrollTo(0, y), (box.height - vh) * 0.3);
     await expect.poll(() => opacity('.ig-svg')).toBeLessThan(0.01);
+    await expect.poll(() => opacity('.ig-film')).toBeGreaterThan(0.99);
+    // The frame on the canvas follows the scroll: something was drawn.
+    const lit = await page.locator('.ig-film').evaluate((c: HTMLCanvasElement) => {
+      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
+      let max = 0;
+      for (let i = 0; i < d.length; i += 4 * 97) max = Math.max(max, d[i]);
+      return max;
+    });
+    expect(lit, 'the film canvas shows the ring').toBeGreaterThan(120);
     await page.evaluate((y) => scrollTo(0, y), box.height - vh);
     await expect.poll(() => opacity('.ig-svg')).toBeGreaterThan(0.99);
     expect(errors).toEqual([]);
@@ -167,11 +197,24 @@ test.describe('rich tier', () => {
     }
   });
 
-  test('forced rich: the Thesis runs molten iron once it is on screen', async ({ page }) => {
+  test('forced rich: the Thesis scrubs the rendered film of iron melting once it is on screen', async ({ page }) => {
     await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
     await page.locator('section.thesis').scrollIntoViewIfNeeded();
     await page.evaluate(() => scrollBy(0, 200));
-    await expect(page.locator('section.thesis')).toHaveAttribute('data-gl', '', { timeout: 15000 });
+    // public/film/iron exists, so the film (not the WebGL fallback) takes over.
+    await expect(page.locator('section.thesis')).toHaveAttribute('data-film', '', { timeout: 15000 });
+    await expect(page.locator('section.thesis')).not.toHaveAttribute('data-gl', '');
+  });
+
+  test('light tier: the Thesis fades in the film poster and no film frames are downloaded', async ({ page }) => {
+    const frames: string[] = [];
+    page.on('request', (r) => /\/film\/(iron|ring)\/\d+\//.test(r.url()) && frames.push(r.url()));
+    await page.goto('/?tier=light', { waitUntil: 'networkidle' });
+    await page.locator('section.thesis').scrollIntoViewIfNeeded();
+    await page.evaluate(() => scrollBy(0, 400));
+    await expect(page.locator('.thesis-poster')).toBeAttached();
+    await page.waitForTimeout(1000);
+    expect(frames).toEqual([]);
   });
 
   test('no WebGL: the SVG ring stays and nothing breaks', async ({ page }) => {

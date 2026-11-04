@@ -4,9 +4,10 @@ export type Theme = 'cafe' | 'barber' | 'landscaper';
  * The three concept sites (fictional businesses, see data/work.ts) as real, responsive HTML instead of screenshots.
  * Each lays out at a "virtual" viewport width (container queries reflow it for phones) and is scaled into its frame.
  * `blueprint` renders the same markup as a wireframe: outlines, labels and greeked text, for the casting effect.
+ * `brand` swaps the business name in the logo (the "Try it with your business" toy on /sites).
  * Decorative: the caller labels the frame for screen readers and hides this from them.
  */
-export function LiveSite({ theme, blueprint = false }: { theme: Theme; blueprint?: boolean }) {
+export function LiveSite({ theme, blueprint = false, brand }: { theme: Theme; blueprint?: boolean; brand?: string }) {
   const cls = `ls ls-${theme} ${blueprint ? 'ls-bp' : ''}`;
   if (theme === 'cafe')
     return (
@@ -14,7 +15,11 @@ export function LiveSite({ theme, blueprint = false }: { theme: Theme; blueprint
         <nav className="ls-nav" data-bp="Nav">
           <span className="ls-logo">
             <span className="tx">
-              Halcyon <i>coffee</i>
+              {brand || (
+                <>
+                  Halcyon <i>coffee</i>
+                </>
+              )}
             </span>
           </span>
           <span className="ls-links">
@@ -82,7 +87,11 @@ export function LiveSite({ theme, blueprint = false }: { theme: Theme; blueprint
         <nav className="ls-nav" data-bp="Nav">
           <span className="ls-logo">
             <span className="tx">
-              Sharp <i>&amp;</i> Co.
+              {brand || (
+                <>
+                  Sharp <i>&amp;</i> Co.
+                </>
+              )}
             </span>
           </span>
           <span className="ls-links">
@@ -152,7 +161,7 @@ export function LiveSite({ theme, blueprint = false }: { theme: Theme; blueprint
         <nav className="ls-nav" data-bp="Nav">
           <span className="ls-logo">
             <i className="land-mark" />
-            <span className="tx">Fieldstone</span>
+            <span className="tx">{brand || 'Fieldstone'}</span>
           </span>
           <span className="ls-links">
             <span>Services</span>

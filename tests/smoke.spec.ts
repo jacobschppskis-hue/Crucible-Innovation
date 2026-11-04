@@ -41,22 +41,6 @@ test('no "LLC" anywhere and no payment details', async ({ page }) => {
   }
 });
 
-test('the gradient accent paints every glyph (nothing clipped)', async ({ page }) => {
-  await page.goto('/sites', { waitUntil: 'networkidle' });
-  // Each molten word's padded box must reach past its glyphs: compare the box to the word's ink via a Range.
-  const clipped = await page.locator('h1 .molten').evaluateAll((els) =>
-    els.filter((el) => {
-      const box = el.getBoundingClientRect();
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      const ink = range.getBoundingClientRect();
-      const em = parseFloat(getComputedStyle(el).fontSize);
-      return box.bottom < ink.bottom + 0.15 * em || box.left > ink.left - 0.1 * em;
-    }).length,
-  );
-  expect(clipped).toBe(0);
-});
-
 test('quote form: package card preselects the package, and the request is written for the visitor', async ({ page }) => {
   let body = '';
   await page.route('https://formspree.io/**', async (route) => {
@@ -70,19 +54,33 @@ test('quote form: package card preselects the package, and the request is writte
   await expect(form.locator('input[name=package][value^="Alloy"]')).toBeChecked();
   await expect(form.locator('input[name=_gotcha]')).toHaveCount(1);
   const configured = (await form.getAttribute('action'))?.includes('formspree.io');
+  // One question at a time: Enter or Next moves on once the answer is there.
+  const next = form.getByRole('button', { name: /^(Next|Skip|Review)/ });
+  await next.click();
+  await expect(form.locator('.qf-msg', { hasText: 'We need a name to reply to' })).toBeVisible();
+  await expect(form.locator('input[name=name]')).toHaveAttribute('aria-invalid', 'true');
   await form.locator('input[name=name]').fill('Test Person');
+  await form.locator('input[name=name]').press('Enter');
   await form.locator('input[name=business]').fill('Test Co');
+  await form.locator('input[name=business]').press('Enter');
   await form.locator('input[name=email]').fill('test@example.com');
+  await next.click();
+  await next.click(); // no website yet: Skip
   await form.getByText('Redesign').click();
+  await next.click();
+  await expect(form.locator('input[name=package][value^="Alloy"]')).toBeChecked();
+  await next.click();
   await form.locator('textarea[name=message]').fill('Hello');
+  await next.click();
+  await expect(form.getByText('Does this look right?')).toBeVisible();
   await form.locator('button[type=submit]').click();
   if (configured) {
-    await expect(page.getByText('Got it.')).toBeVisible();
+    await expect(page.getByText('Got it', { exact: true })).toBeVisible();
     expect(body).toContain('card');
     return;
   }
   // No Formspree: the email is composed and offered via mail app, Gmail, Outlook or copy.
-  await expect(page.getByText('Send it your way.')).toBeVisible();
+  await expect(page.getByText('Send it your way', { exact: true })).toBeVisible();
   const mailto = await page.getByRole('link', { name: 'Mail app' }).getAttribute('href');
   expect(mailto).toMatch(/^mailto:jacob@crucibleinnovation\.com\?subject=/);
   const decoded = decodeURIComponent(mailto!);
@@ -91,6 +89,21 @@ test('quote form: package card preselects the package, and the request is writte
   expect(decoded).toContain('ref: card');
   expect(await page.getByRole('link', { name: 'Gmail' }).getAttribute('href')).toContain('mail.google.com');
   expect(await page.getByRole('link', { name: 'Outlook' }).getAttribute('href')).toContain('outlook.live.com');
+});
+
+test('quote form without JavaScript: every question shows and the form opens a mail app', async ({ browser }) => {
+  const ctx = await browser.newContext({ javaScriptEnabled: false });
+  const page = await ctx.newPage();
+  await page.goto('/sites');
+  const form = page.locator('#start form');
+  await form.scrollIntoViewIfNeeded();
+  for (const name of ['name', 'business', 'email', 'phone', 'website', 'message']) await expect(form.locator(`[name=${name}]`)).toBeVisible();
+  await expect(form.getByText('Redesign')).toBeVisible();
+  await expect(form.getByText('Alloy')).toBeVisible();
+  await expect(form.locator('button[type=submit]')).toBeVisible();
+  await expect(form.getByRole('button', { name: 'Next' })).toBeHidden();
+  expect(await form.getAttribute('action')).toMatch(/^mailto:|formspree\.io/);
+  await ctx.close();
 });
 
 test('scroll scenes reach their finished state', async ({ page }) => {

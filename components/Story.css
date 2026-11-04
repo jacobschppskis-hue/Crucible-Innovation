@@ -1,0 +1,164 @@
+/* "Why Crucible": chapters, the pinned portrait, and Jacob's two beats. */
+@media (min-width: 1024px) {
+  .story-side {
+    position: sticky;
+    top: calc(var(--nav-h) + 2.5rem);
+    align-self: start;
+  }
+}
+
+.story-quote {
+  margin: 4.5rem 0 4rem;
+}
+.story-quote p {
+  font-size: clamp(1.5rem, 3vw, 2.5rem);
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+/* ---------- Beats: shared ---------- */
+.beat {
+  margin: 4.5rem 0;
+}
+
+/* ---------- One company splits into six ----------
+   --p comes from data-scroll="view". Each piece has its own eased progress --s, staggered by --i; the cut is hot
+   (Ember) while the pieces separate and cools to bone once they settle. Pieces move by left/width/top on six elements,
+   which is cheap. Final layout: two rows of three on phones, one row of six from 640px. */
+.split {
+  --g: 0.625rem;
+  --cols: 3;
+  --h: 2.75rem;
+  --row: 5.25rem;
+  position: relative;
+  height: calc(var(--row) * 2);
+}
+@media (min-width: 640px) {
+  .split {
+    --cols: 6;
+    height: var(--row);
+  }
+  .split-piece {
+    --c: var(--i) !important;
+    --r: 0 !important;
+  }
+}
+.split-piece {
+  --s0: clamp(0, (var(--p, 1) - 0.3 - var(--i) * 0.025) * 4, 1);
+  --s: calc(var(--s0) * var(--s0) * (3 - 2 * var(--s0)));
+  --heat: calc(var(--s) * (1 - var(--s)) * 4);
+  --w0: calc(100% / 6);
+  --w1: calc((100% - (var(--cols) - 1) * var(--g)) / var(--cols));
+  position: absolute;
+  top: calc(var(--r) * var(--row) * var(--s));
+  left: calc(var(--i) * var(--w0) * (1 - var(--s)) + var(--c) * (var(--w1) + var(--g)) * var(--s));
+  width: calc(var(--w0) * (1 - var(--s)) + var(--w1) * var(--s));
+  height: var(--h);
+  background: color-mix(in oklab, var(--ember) calc(var(--heat) * 100%), var(--bone));
+  /* a cast bar: lit from above, a little shadow along its foot; glowing while the cut is hot */
+  box-shadow:
+    inset 0 1px 0 #fffaf0,
+    inset 0 -3px 0 color-mix(in oklab, var(--ink) 18%, transparent),
+    0 0 calc(var(--heat) * 28px) calc(var(--heat) * 1px) var(--ember);
+}
+.split-name {
+  position: absolute;
+  z-index: 1;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--h);
+  display: grid;
+  place-items: center;
+  font-variation-settings: 'wdth' 125;
+  font-weight: 600;
+  font-size: 1.125rem;
+  color: var(--ink);
+  opacity: clamp(0, 1 - (var(--p, 1) - 0.3) * 6, 1);
+  pointer-events: none;
+}
+.split-label {
+  position: absolute;
+  left: 0;
+  top: calc(var(--h) + 0.55rem);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--bone);
+  opacity: clamp(0, var(--s) * 2 - 1, 1);
+}
+
+/* ---------- Iron and a little carbon become steel ---------- */
+.beat-alloy {
+  --s: clamp(0, (var(--p, 1) - 0.28) * 3.2, 1);
+  --t: clamp(0, var(--s) * 2, 1); /* the carbon travelling in */
+  --m: clamp(0, var(--s) * 2 - 1, 1); /* the melt: hot, then cooling to steel */
+  --heat: calc(var(--m) * (1 - var(--m)) * 4);
+}
+.alloy {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 9rem;
+}
+.alloy-block {
+  position: relative;
+  display: grid;
+  width: 9rem;
+  height: 9rem;
+  place-items: center;
+  background: color-mix(in oklab, var(--ember) calc(var(--heat) * 100%), color-mix(in oklab, var(--bone-dim) calc((1 - var(--m)) * 100%), var(--bone)));
+  box-shadow: 0 0 calc(var(--heat) * 40px) calc(var(--heat) * 2px) var(--ember);
+}
+.alloy-sym {
+  grid-area: 1 / 1;
+  font-variation-settings: 'wdth' 125;
+  font-weight: 600;
+  color: var(--ink);
+}
+.alloy-fe {
+  font-size: 2.75rem;
+  opacity: calc(1 - var(--m));
+}
+.alloy-steel {
+  font-size: 1.5rem;
+  opacity: var(--m);
+}
+.alloy-c {
+  position: absolute;
+  left: calc(9rem + 2rem + (1 - var(--t)) * min(12rem, 40vw) - var(--t) * 6.5rem);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  color: var(--bone);
+  opacity: clamp(0, (1 - var(--t)) * 3.5, 1);
+}
+.alloy-c i {
+  width: 0.875rem;
+  height: 0.875rem;
+  border-radius: 50%;
+  background: var(--ember);
+}
+.alloy-cap {
+  position: relative;
+  margin-top: 1rem;
+  height: 1.5rem;
+  color: var(--bone-dim);
+}
+.alloy-cap > span {
+  position: absolute;
+  left: 0;
+}
+.alloy-cap-a {
+  opacity: calc(1 - var(--m, 1));
+}
+.alloy-cap-b {
+  opacity: var(--m, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .beat {
+    --p: 1 !important;
+  }
+}

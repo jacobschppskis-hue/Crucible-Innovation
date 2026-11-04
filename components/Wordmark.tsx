@@ -9,7 +9,7 @@ export function Wordmark({ sites = false, className = '' }: Props) {
         cruc<span className="spark-i">ı</span>ble
       </span>
       {sites && (
-        <span aria-hidden className="font-mono text-[0.62em] uppercase tracking-[0.14em] text-bone-dim leading-none">
+        <span aria-hidden className="font-display font-medium tracking-[-0.01em] text-bone-dim leading-none">
           sites
         </span>
       )}

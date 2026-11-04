@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo, Instrument_Serif, JetBrains_Mono } from 'next/font/google';
-import { Grain } from '@/components/Grain';
+import { Archivo } from 'next/font/google';
 import { InView } from '@/components/InView';
 import { Magnetic } from '@/components/Magnetic';
+import { Wake } from '@/components/Wake';
 import { ScrollDriver } from '@/components/ScrollDriver';
 import { ReadingHeat } from '@/components/ReadingHeat';
 import { RefTracker } from '@/components/RefTracker';
@@ -14,12 +14,18 @@ import './globals.css';
 // Bundled with the global CSS (one stylesheet request per page; these are only ~4 KB gzipped).
 import '@/components/LiveSite.css';
 import '@/components/BuildStage.css';
+import '@/components/Process.css';
+import '@/components/Story.css';
+import '@/components/Ventures.css';
+import '@/components/TryIt.css';
+import '@/components/Sites.css';
+import '@/components/QuoteForm.css';
+import '@/components/VenturePages.css';
+import '@/components/Work.css';
 
-const archivo = Archivo({ subsets: ['latin'], variable: '--font-archivo', display: 'swap' });
-// Italic is above the fold (hero accents); upright only appears further down, so it isn't preloaded.
-const instrument = Instrument_Serif({ subsets: ['latin'], weight: '400', style: 'italic', variable: '--font-instrument', display: 'swap' });
-const instrumentUpright = Instrument_Serif({ subsets: ['latin'], weight: '400', style: 'normal', variable: '--font-instrument-upright', display: 'swap', preload: false });
-const mono = JetBrains_Mono({ subsets: ['latin'], weight: '400', variable: '--font-jetbrains', display: 'swap' });
+// One family for the whole site. The width axis does the display work: Expanded (wdth 125) for display type, normal
+// width for text. The concept sites on /sites bring their own faces (lib/conceptFonts.ts).
+const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo', display: 'swap' });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),
@@ -39,7 +45,7 @@ const noJs = `.nav{background:rgba(13,13,11,.85)}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${archivo.variable} ${instrument.variable} ${instrumentUpright.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={archivo.variable}>
       <head>
         {/* Sets html.js, the visual tier and the intro tempo before first paint (see lib/tier.ts). */}
         <script dangerouslySetInnerHTML={{ __html: TIER_SCRIPT }} />
@@ -55,8 +61,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-bone focus:px-4 focus:py-2 focus:text-ground">
           Skip to content
         </a>
-        <Grain />
         {children}
+        <Wake />
         <InView />
         <ReadingHeat />
         <ScrollDriver />

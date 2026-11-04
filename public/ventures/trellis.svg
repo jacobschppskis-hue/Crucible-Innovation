@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- The Trellis mark. Same numbers as scripts/icons.swift: a 640 square centred on 512, 64-unit strokes. -->
+  <style>
+    .bg { fill: #f4f2ed } .lattice { fill: #17181a } .accent { fill: #3f6b4f }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0e0f10 } .lattice { fill: #eceae4 } .accent { fill: #8fb497 }
+    }
+  </style>
+  <rect class="bg" width="1024" height="1024" rx="224"/>
+  <rect class="accent" x="192" y="480" width="640" height="64"/>
+  <rect class="lattice" x="192" y="296" width="640" height="64"/>
+  <rect class="lattice" x="192" y="664" width="640" height="64"/>
+  <rect class="lattice" x="336" y="192" width="64" height="640"/>
+  <rect class="lattice" x="624" y="192" width="64" height="640"/>
+</svg>
