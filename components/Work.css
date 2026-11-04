@@ -1,0 +1,373 @@
+/* /work (app/work/page.tsx, components/Work.tsx). Defaults are the phone layout: a plain list, frames full width.
+   From 1024px each plate's media is sized from the screen's height, and where there's room and motion is allowed the
+   plates stack (sticky, each sliding over the last). */
+
+/* ---------- Header and group headings ---------- */
+.wk-head {
+  padding-top: calc(var(--nav-h) + 4rem);
+  padding-bottom: 2rem;
+}
+.wk-title {
+  font-size: min(30vw, 18rem);
+  line-height: 0.8;
+}
+.wk-lede {
+  margin-top: 2rem;
+  max-width: 22rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+}
+.wk-group {
+  padding-top: 7rem;
+  padding-bottom: 1rem;
+}
+.wk-h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'wdth' 125;
+  text-wrap: balance;
+}
+.wk-group-note {
+  margin-top: 1rem;
+  max-width: 26rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+}
+.wk-section-last {
+  padding-bottom: 6rem;
+}
+
+/* ---------- Plates ---------- */
+.wk-plate {
+  position: relative;
+  padding: 3rem 0 2rem;
+  background: var(--ground);
+}
+.wk-cap {
+  display: grid;
+  gap: 1rem;
+}
+.wk-name {
+  margin-top: 0.6rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.5rem, 5.2vw, 4.75rem);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-variation-settings: 'wdth' 125;
+}
+.wk-note {
+  max-width: 26rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+}
+.wk-media {
+  margin-top: 2rem;
+}
+
+/* ---------- Frames ---------- */
+.wk-devices {
+  display: grid;
+  gap: 2rem;
+}
+.wk-browser {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.875rem;
+  background: var(--ground-2);
+}
+.wk-chrome {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.75rem;
+  height: 2.25rem;
+  padding: 0 0.875rem;
+  border-bottom: 1px solid var(--line);
+}
+.wk-dots {
+  display: flex;
+  gap: 0.375rem;
+}
+.wk-dots i {
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  background: var(--line-strong);
+}
+.wk-url {
+  flex: 1;
+  max-width: 20rem;
+  margin-inline: auto;
+  overflow: hidden;
+  padding: 0.2rem 0.75rem;
+  border-radius: 0.375rem;
+  background: var(--ground);
+  font: 0.75rem/1.4 var(--font-mono);
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--bone-dim);
+}
+.wk-screen {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  background: var(--ground);
+}
+/* A live client site on a phone gets a phone-shaped viewport, so it shows its own mobile layout at a usable size. */
+.wk-screen-live {
+  aspect-ratio: 4 / 5;
+}
+.wk-shot,
+.wk-embed {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.wk-shot {
+  object-fit: cover;
+  object-position: top;
+}
+.wk-embed {
+  border: 0;
+  background: transparent;
+}
+.wk-host {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.25rem, 3vw, 2.5rem);
+  font-weight: 600;
+}
+
+/* A concept site's casting: the blueprint is the mould and only shows while the site pours in over it; finished (and
+   without JS, and with reduced motion) it's out of the page. Phones get the desktop layout as a still (.wk-still). */
+.wk-cast {
+  position: absolute;
+  inset: 0;
+  display: none;
+}
+.wk-bp {
+  visibility: hidden;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js [data-cast][data-in] .wk-bp {
+    animation: wk-bp calc(var(--cast-ms) + var(--cast-delay, 150ms)) step-end both;
+  }
+}
+@keyframes wk-bp {
+  from {
+    visibility: visible;
+  }
+  to {
+    visibility: hidden;
+  }
+}
+
+/* A phone: the site scrolls inside it (wheel too: data-lenis-prevent hands the wheel back to the browser). */
+.wk-phone {
+  position: relative;
+  justify-self: center;
+  width: min(72vw, 18rem);
+  aspect-ratio: 9 / 19;
+  border: 1px solid var(--line-strong);
+  border-radius: 2.5rem;
+  background: var(--ground-2);
+}
+.wk-phone-screen {
+  position: absolute;
+  inset: 0.5rem;
+  overflow: hidden;
+  border-radius: 2rem;
+  background: var(--ground);
+}
+.wk-island {
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  left: 50%;
+  width: 26%;
+  height: 1.1rem;
+  translate: -50% 0;
+  border-radius: 999px;
+  background: var(--ground);
+}
+.wk-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.wk-scroll::-webkit-scrollbar {
+  display: none;
+}
+.wk-scroll:focus-visible {
+  outline-offset: -2px;
+  border-radius: 2rem;
+}
+/* The live site at its natural height, so there is something to scroll. */
+.wk-flow {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+.wk-flow > .ls {
+  position: relative;
+  inset: auto;
+  flex: 1 0 auto;
+}
+
+/* ---------- The business card ---------- */
+.wk-cards {
+  display: grid;
+  gap: 1rem;
+}
+.wk-card {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.375rem;
+}
+
+/* ---------- The mark ---------- */
+.wk-mould {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+}
+.wk-sizes {
+  display: flex;
+  align-items: flex-end;
+  gap: 2rem;
+  margin-top: 2rem;
+}
+.wk-sizes li {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+}
+
+/* ---------- Wide screens: media sized from the screen ---------- */
+@media (min-width: 1024px) {
+  /* The word as a poster across the page, the caption tucked under its right end. */
+  .wk-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    padding-top: calc(var(--nav-h) + 5rem);
+  }
+  .wk-title {
+    grid-column: 1 / -1;
+  }
+  .wk-lede {
+    grid-column: 2;
+    margin-top: 2.5rem;
+  }
+  .wk-group {
+    padding-top: 10rem;
+    padding-bottom: 2rem;
+  }
+  .wk-plate {
+    padding: 2.5rem 0 3rem;
+  }
+  .wk-cap {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+    align-items: end;
+    gap: 3rem;
+  }
+  .wk-note {
+    padding-bottom: 0.25rem;
+  }
+  /* --mh: the media row's height. Tall enough to read the sites, short enough that the plate fits under the nav,
+     and narrow enough that browser + gap + phone fit the container (--cw):
+     (mh − chrome) × 1.6 + 2.5rem + mh × 9/19 ≤ cw. */
+  .wk-media {
+    --cw: min(100vw - 5rem, 72rem);
+    --mh: clamp(18rem, min(100svh - var(--nav-h) - 15rem, (var(--cw) + 1.15rem) / 2.074), 40rem);
+    height: var(--mh);
+  }
+  .wk-devices {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 2.5rem;
+    height: 100%;
+  }
+  .wk-browser {
+    flex: none;
+    width: calc((var(--mh) - 2.25rem - 2px) * 1.6);
+    height: 100%;
+  }
+  /* A client site alone: the full width of the plate, a real desktop viewport for the live site. */
+  .wk-browser-solo {
+    width: 100%;
+  }
+  .wk-screen {
+    flex: 1;
+    aspect-ratio: auto;
+  }
+  .wk-cast {
+    display: block;
+  }
+  .wk-still {
+    display: none;
+  }
+  .wk-phone {
+    flex: none;
+    width: auto;
+    height: 100%;
+  }
+  /* The front large and high, the back lower and over the front's empty corner. */
+  .wk-cards {
+    position: relative;
+    display: block;
+    height: 100%;
+  }
+  .wk-card {
+    position: absolute;
+    width: auto;
+  }
+  .wk-card-front {
+    left: 0;
+    top: 0;
+    height: 70%;
+  }
+  .wk-card-back {
+    right: 0;
+    bottom: 0;
+    height: 52%;
+  }
+  .wk-mould {
+    aspect-ratio: auto;
+    height: 100%;
+  }
+}
+
+/* ---------- The stack: where the plate fits the screen and motion is welcome ---------- */
+@media (min-width: 1024px) and (min-height: 680px) and (prefers-reduced-motion: no-preference) {
+  .wk-plate {
+    position: sticky;
+    top: var(--nav-h);
+    z-index: var(--i, 1);
+    min-height: calc(100svh - var(--nav-h));
+  }
+  /* Each plate holds still, whole, for a moment before the next one arrives. */
+  .wk-plate:not(:last-child) {
+    margin-bottom: 28svh;
+  }
+  /* The next plate's leading edge is hot while it slides over, and cools to a hairline once it has settled. */
+  .wk-plate + .wk-plate {
+    border-top: 1px solid color-mix(in oklab, var(--ember) calc((1 - var(--p, 1)) * 100%), var(--line));
+    box-shadow: 0 -1.5rem 3rem -1.5rem var(--ground);
+  }
+}
