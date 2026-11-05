@@ -4,6 +4,19 @@ import { expect, test } from '@playwright/test';
 
 const readVar = (el: Element, name: string) => Number(getComputedStyle(el).getPropertyValue(name).trim() || 'NaN');
 
+test('every visit gets the full version; only reduced motion gets the light one', async ({ page, browser }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await expect(page.locator('html')).toHaveAttribute('data-tier', 'rich');
+  // No probing for a fast device or connection: the rendered ring takes over as soon as the pour is done.
+  await expect(page.locator('section.ig')).toHaveAttribute('data-film', '', { timeout: 15000 });
+
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const calm = await ctx.newPage();
+  await calm.goto('/', { waitUntil: 'networkidle' });
+  await expect(calm.locator('html')).toHaveAttribute('data-tier', 'light');
+  await ctx.close();
+});
+
 test('the tier can be forced from the URL', async ({ page }) => {
   await page.goto('/?tier=light');
   await expect(page.locator('html')).toHaveAttribute('data-tier', 'light');
@@ -130,11 +143,23 @@ test('moving to /sites pours the next page in, then gets out of the way', async 
   await expect(page).toHaveURL(/\/sites$/);
   await expect(page.locator('h1')).toHaveText(/actually looks good/);
   await expect(page.locator('html')).not.toHaveAttribute('data-leaving', '');
-  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 3000 });
+  // The slide off the new page is a 760 ms CSS animation; the attribute goes when it ends. A busy CI runner can hold the
+  // main thread for a second or two while /sites mounts, so this allows for that rather than timing the runner.
+  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 8000 });
   await expect(page.locator('.route-sheet')).toBeHidden();
   // Back is ordinary navigation (no sheet).
   await page.goBack();
   await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
+  await expect(page.locator('.route-sheet')).toBeHidden();
+});
+
+test('going Back while the next page is still pouring in never leaves the sheet behind', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.getByRole('link', { name: /See Crucible Sites/ }).first().click();
+  await expect(page).toHaveURL(/\/sites$/);
+  await page.goBack();
+  await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
+  await expect(page.locator('html')).not.toHaveAttribute('data-arriving', '', { timeout: 8000 });
   await expect(page.locator('.route-sheet')).toBeHidden();
 });
 
@@ -153,7 +178,7 @@ test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ bro
 });
 
 test.describe('rich tier', () => {
-  // Headless Chromium's WebGL is SwiftShader, which the tier check rightly rejects, so these force the tier.
+  // Every visit is rich anyway; these force it so they read plainly.
   test('forced rich: solid at rest, hands over to the rendered ring for the story, solid again at the end', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));

@@ -3,7 +3,7 @@
 // A few hundred CPU-simulated particles drawn by WebGL as short streaks with a hot head: born on the front line,
 // thrown up and out, pulled down by gravity, cooling from white-hot to ember to nothing. The emission rate follows
 // how fast the front is moving, so a quick scroll throws a shower and a still front just smoulders.
-import { dropToLight, richForced } from '@/lib/tier';
+import { dropToLight } from '@/lib/tier';
 
 type Options = { canvas: HTMLCanvasElement; fronts: () => HTMLElement[]; onFail?: () => void };
 
@@ -120,7 +120,8 @@ export function startSparks({ canvas, fronts, onFail }: Options): () => void {
     const dt = Math.min(0.05, last ? (now - last) / 1000 : 0.016);
     last = now;
     slow = dt > 0.024 ? slow + dt : Math.max(0, slow - dt);
-    if (slow > 2 && !richForced()) return fail();
+    // Slow (long frames for ~2 s): fewer sparks, rather than none.
+    const thin = slow > 2 ? 0.35 : 1;
 
     // Emit from every visible front, more when it is moving.
     const cr = canvas.getBoundingClientRect();
@@ -137,7 +138,7 @@ export function startSparks({ canvas, fronts, onFail }: Options): () => void {
       const fy = r.top - cr.top;
       const speed = Math.abs(fy - (lastY.get(f) ?? fy)) / Math.max(dt, 0.001); // px/s
       lastY.set(f, fy);
-      const rate = (6 + Math.min(speed, 1500) * 0.12) * op; // sparks per second
+      const rate = (6 + Math.min(speed, 1500) * 0.12) * op * thin; // sparks per second
       let n = rate * dt;
       while (n > 0) {
         if (Math.random() < n) {

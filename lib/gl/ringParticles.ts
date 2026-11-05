@@ -7,7 +7,7 @@
 // fusion it sets solid again. Everything is computed in the vertex shader from per-dot constants plus a handful of
 // uniforms, so there's no per-frame CPU work beyond one rect read, and nothing is drawn while the ring is solid.
 import { RING, dotRows, pixels } from '@/lib/splitRing';
-import { dropToLight, richForced } from '@/lib/tier';
+import { dropToLight } from '@/lib/tier';
 
 type State = { sm: number; sh: number; core: number; flare: number; out: number; melt: number };
 type Options = { canvas: HTMLCanvasElement; ring: SVGSVGElement; state: State; onReady?: () => void; onFail?: () => void };
@@ -244,7 +244,7 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
   gl.clearColor(0, 0, 0, 0);
   gl.uniform1f(u.uMaxPoint, (gl.getParameter(gl.ALIASED_POINT_SIZE_RANGE) as Float32Array)[1] || 64);
 
-  // Quality steps down if frames run long: full DPR → 1 → 0.75, then give up and go back to the SVG.
+  // Quality steps down if frames run long: full DPR → 1 → 0.75, where it stays.
   const maxDpr = Math.min(devicePixelRatio || 1, touch ? 1.75 : 2);
   const steps = [maxDpr, Math.min(maxDpr, 1), 0.75];
   let quality = 0;
@@ -354,9 +354,7 @@ export function startRing({ canvas, ring, state, onReady, onFail }: Options): ()
     slow = dt > 24 ? slow + dt : Math.max(0, slow - dt * 0.5);
     if (slow > 1500 && melting > 1200) {
       slow = 0;
-      if (quality + 1 >= steps.length) {
-        if (!richForced()) return fail();
-      } else quality++;
+      if (quality + 1 < steps.length) quality++;
       dpr = steps[quality];
       resize();
     }

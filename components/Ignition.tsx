@@ -75,7 +75,7 @@ export type IgnitionState = { sm: number; sh: number; core: number; flare: numbe
  *     from white-hot through orange to bone and sets solid, while the headline rises and "alloyed." cools with it.
  *  2. First scroll: the headline parts, the ring takes the stage and comes apart. "Not the person." (the machine
  *     half scatters), "Not the model." (the human half leaves), "Neither, alone." (they fuse and the core re-ignites).
- * Rich tier: once the page is idle and the device proves capable, the story is told with the rendered ring
+ * Rich tier (every visit but reduced motion): once the page is idle, the story is told with the rendered ring
  * (film/ring.py, scrubbed frame by frame): the flat mark hands over to the cast object as the story starts, which
  * comes apart and fuses in depth, and hands back at the end. Its first and last frames overlay the SVG exactly.
  * Without the film, WebGL tells it instead: the ring melts into molten dots and sets solid again.
@@ -128,7 +128,7 @@ export function Ignition({ film }: { film?: FilmInfo | null }) {
       el.toggleAttribute('data-out', s.out > 0.5);
     });
 
-    // Rich tier: once the page is idle and the device has proved itself, the rendered ring (or, without it, the WebGL
+    // Rich tier (every visit but reduced motion): once the page is idle, the rendered ring (or, without it, the WebGL
     // dots) tells the scroll story. Never started while the metal is still being poured.
     let stop: (() => void) | undefined;
     let dead = false;
