@@ -14,15 +14,21 @@ export function Liquid() {
   useEffect(() => {
     if (reducedMotion()) return;
     let stop: (() => void) | null = null;
+    let stopFloat: (() => void) | null = null;
     let dead = false;
     richTier().then(async (ok) => {
       if (!ok || dead) return;
       const { startLiquid } = await import('@/lib/liquid/render');
       if (dead) return;
       stop = startLiquid(ref.current!);
+      if (stop && !dead) {
+        const { startFloat } = await import('@/lib/liquid/float');
+        if (!dead) stopFloat = startFloat();
+      }
     });
     return () => {
       dead = true;
+      stopFloat?.();
       stop?.();
     };
   }, []);

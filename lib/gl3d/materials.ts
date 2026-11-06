@@ -11,7 +11,7 @@ export const FS = `#version 300 es
 precision highp float;
 in vec3 vP;in vec3 vW;in vec3 vO;out vec4 o;
 uniform int uMat;uniform float uTone,uTemp,uGlow,uSeed,uGrain,uExp,uRel;uniform vec2 uTemper;
-uniform vec3 uEye;uniform vec4 uCav,uRelP;uniform mat3 uNM;uniform sampler2D uRelT;
+uniform vec3 uEye;uniform vec4 uCav,uRelP,uClip;uniform float uTy;uniform mat3 uNM;uniform sampler2D uRelT;
 float h3(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float vn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
 return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
@@ -31,6 +31,7 @@ vec3 ramp(float t){
 vec3 a=vec3(.04,0.,0.),b=vec3(.4,.035,0.),c=vec3(1.05,.15,.015),d=vec3(1.7,.55,.07),e=vec3(4.,3.,1.8);
 return t<.25?mix(a,b,t*4.):t<.5?mix(b,c,(t-.25)*4.):t<.75?mix(c,d,(t-.5)*4.):mix(d,e,(t-.75)*4.);}
 void main(){
+if(dot(vW,uClip.xyz)>uClip.w)discard;
 vec3 p=vP,nO=normalize(vO),v=normalize(uEye-vW);
 float h0=ht(p),e=.05/uGrain;
 vec3 g=vec3(ht(p+vec3(e,0,0))-h0,ht(p+vec3(0,e,0))-h0,ht(p+vec3(0,0,e))-h0)/e;
@@ -60,15 +61,16 @@ col=min(col,vec3(1.,.4,.12));
 col+=vec3(1.,.8,.55)*(pow(max(dot(n,normalize(normalize(vec3(-.55,.65,.72))+v)),0.),70.)*.85+pow(max(dot(n,normalize(normalize(vec3(.1,-.9,.4))+v)),0.),30.)*.25)*(1.-.5*bl);
 }else if(uMat==2){
 vec3 q=p*uGrain*1.6+uSeed*3.;q+=vec3(vn(q*1.7),vn(q*1.7+4.),vn(q*1.7+9.))*1.1;float cn=.6*vn(q)+.4*vn(q*2.1);
-float T=clamp(uTemp+(h0-.5)*.1+rl*.1,0.,1.);
+float Tl=clamp(uTemp+uTy*vW.y,0.,1.);float T=clamp(Tl+(h0-.5)*.1+rl*.1,0.,1.);
 vec3 em=ramp(T);
 float cv=smoothstep(.42,.6,(1.-T)*1.6-.5+(cn-.5)*1.25);
-vec3 al=bone*mix(.05,1.,pow(1.-uTemp,6.))*(.74+.5*h0)*(1.+.07*rl);
-vec3 crust=lit(al,n,v,ao,.62,.3)+ramp(uTemp*.9)*.35*smoothstep(.0,.6,uTemp);
-vec3 liq=em*(1.-.35*smoothstep(.1,.4,uTemp)*.0)+lit(vec3(.05,.02,.01)+em*.04,n,v,1.,.12,1.1)*.8;
-col=mix(liq,crust,cv)+ramp(T)*smoothstep(.0,.5,cv)*(1.-smoothstep(.5,1.,cv))*.5*uTemp;
+vec3 al=bone*mix(.05,1.,pow(1.-Tl,6.))*(.74+.5*h0)*(1.+.07*rl);
+vec3 crust=lit(al,n,v,ao,.62,.3)+ramp(Tl*.9)*.35*smoothstep(.0,.6,Tl);
+vec3 liq=em*(1.-.35*smoothstep(.1,.4,Tl)*.0)+lit(vec3(.05,.02,.01)+em*.04,n,v,1.,.12,1.1)*.8;
+col=mix(liq,crust,cv)+ramp(T)*smoothstep(.0,.5,cv)*(1.-smoothstep(.5,1.,cv))*.5*Tl;
 }else{
 float gr=vn(p*uGrain*38.);vec3 al=vec3(.016,.013,.011)*(.25+1.5*h0)*(.55+.9*gr)+vec3(.05,.04,.03)*step(.86,gr)*.6;
+al*=1.+uTone*14.;
 float ins=step(abs(p.x),uCav.x+.5)*step(abs(p.y),uCav.y+.5);
 float dz=clamp((uCav.w-p.z)/9.,0.,1.);
 ao=(.5+.7*h0)*(1.-.62*dz*ins);

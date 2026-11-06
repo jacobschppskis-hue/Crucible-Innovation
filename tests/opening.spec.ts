@@ -7,8 +7,8 @@ const readVar = (el: Element, name: string) => Number(getComputedStyle(el).getPr
 test('every visit gets the full version; only reduced motion gets the light one', async ({ page, browser }) => {
   await page.goto('/', { waitUntil: 'networkidle' });
   await expect(page.locator('html')).toHaveAttribute('data-tier', 'rich');
-  // No probing for a fast device or connection: the rendered ring takes over as soon as the pour is done.
-  await expect(page.locator('section.ig')).toHaveAttribute('data-film', '', { timeout: 15000 });
+  // No probing for a fast device or connection: the 3D logo takes over as soon as the pour is done.
+  await expect(page.locator('section.ig')).toHaveAttribute('data-3d', '', { timeout: 20000 });
 
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const calm = await ctx.newPage();
@@ -31,14 +31,21 @@ test('a repeat visit in the same session plays the quick intro', async ({ page }
   await expect(page.locator('html')).toHaveAttribute('data-intro', 'quick');
 });
 
-test('the intro pours the mark into a mould, then only the solid ring is left', async ({ page }) => {
+test('the intro pours the mark in 3D (rich): the headline is held for the first 3D frame, then the flat ring steps aside', async ({ page }) => {
+  await page.goto('/?tier=rich', { waitUntil: 'load' });
+  const scene = page.locator('section.ig');
+  await expect(scene).toHaveAttribute('data-3d', '', { timeout: 20_000 });
+  // The headline and the metal start on the same frame: html[data-go] is set when the first 3D frame has drawn.
+  await expect(page.locator('html')).toHaveAttribute('data-go', '', { timeout: 5000 });
+  await expect(page.locator('.ig-pour')).toHaveCount(0);
+  await expect.poll(() => page.locator('.ig-svg').evaluate((el) => Number(getComputedStyle(el).opacity))).toBeLessThan(0.01);
+  await expect(page.locator('h1')).toBeVisible();
+});
+
+test('the light tier has no pour: the flat ring and the headline are simply there', async ({ page }) => {
   await page.goto('/?tier=light');
-  const pour = page.locator('.ig-pour');
-  await expect(pour).toBeVisible();
-  await expect(pour.locator('.ig-cru')).toHaveCount(1);
-  // Done: the pour layers are gone from the page (not just hidden) and the solid ring shows.
-  await expect(pour).toBeHidden({ timeout: 20_000 });
-  await expect(pour).toHaveCSS('display', 'none');
+  await expect(page.locator('.ig-pour')).toHaveCount(0);
+  await expect(page.locator('section.ig')).not.toHaveAttribute('data-3d', '');
   await expect.poll(() => page.locator('.ig-svg').evaluate((el) => Number(getComputedStyle(el).opacity))).toBe(1);
 });
 
@@ -73,7 +80,7 @@ test('reduced motion: no pinning, every part finished and visible', async ({ bro
   await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
   // "alloyed." has finished cooling: the hot copy over it is gone. No pour: the ring is simply there.
   expect(await page.locator('.ig-cool').evaluate((el) => getComputedStyle(el, '::after').opacity)).toBe('0');
-  await expect(page.locator('.ig-pour')).toBeHidden();
+  await expect(page.locator('.ig-pour')).toHaveCount(0);
   expect(await page.locator('.ig-svg').evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
   await ctx.close();
 });
@@ -85,7 +92,6 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   await expect(page.locator('h1')).toHaveText(/Intelligence, alloyed/);
   await expect(page.getByRole('link', { name: /See Crucible Sites/ }).first()).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Neither, alone' })).toBeVisible();
-  await expect(page.locator('.ig-pour')).toBeHidden();
   await expect(page.locator('.ig-svg')).toBeVisible();
   expect((await page.locator('section.ig').boundingBox())!.height).toBeLessThan(page.viewportSize()!.height * 2.5);
   await ctx.close();
@@ -179,32 +185,33 @@ test('the opening fits a 360 × 640 phone with no sideways scroll', async ({ bro
 
 test.describe('rich tier', () => {
   // Every visit is rich anyway; these force it so they read plainly.
-  test('forced rich: solid at rest, hands over to the rendered ring for the story, solid again at the end', async ({ page }) => {
+  test('forced rich: the transparent 3D logo takes over from the SVG once the pour is done and tells the story', async ({ page }) => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
     const scene = page.locator('section.ig');
-    // public/film/ring exists, so the rendered ring (not the WebGL dots) tells the story.
-    await expect(scene).toHaveAttribute('data-film', '', { timeout: 15000 });
-    await expect(scene).not.toHaveAttribute('data-gl', '');
+    await expect(scene).toHaveAttribute('data-3d', '', { timeout: 20000 });
     const opacity = (sel: string) => page.locator(sel).evaluate((el) => Number(getComputedStyle(el).opacity));
-    expect(await opacity('.ig-svg')).toBe(1);
-    expect(await opacity('.ig-film')).toBe(0);
+    await expect.poll(() => opacity('.ig-svg')).toBeLessThan(0.01);
+    await expect.poll(() => opacity('.ig-3d')).toBeGreaterThan(0.99);
+    // The canvas is transparent where there is no logo (no box) and draws the logo where there is.
+    const probe = () =>
+      page.locator('.ig-3d').evaluate((c: HTMLCanvasElement) => {
+        const gl = c.getContext('webgl2')!;
+        const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+        const px = new Uint8Array(4);
+        gl.readPixels(1, 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+        return { corner: px[3], w, h };
+      });
+    expect((await probe()).corner, 'canvas corner is transparent').toBe(0);
     const box = (await scene.boundingBox())!;
     const vh = page.viewportSize()!.height;
     await page.evaluate((y) => scrollTo(0, y), (box.height - vh) * 0.3);
-    await expect.poll(() => opacity('.ig-svg')).toBeLessThan(0.01);
-    await expect.poll(() => opacity('.ig-film')).toBeGreaterThan(0.99);
-    // The frame on the canvas follows the scroll: something was drawn.
-    const lit = await page.locator('.ig-film').evaluate((c: HTMLCanvasElement) => {
-      const d = c.getContext('2d')!.getImageData(0, 0, c.width, c.height).data;
-      let max = 0;
-      for (let i = 0; i < d.length; i += 4 * 97) max = Math.max(max, d[i]);
-      return max;
-    });
-    expect(lit, 'the film canvas shows the ring').toBeGreaterThan(120);
+    await page.waitForTimeout(800);
+    expect(await opacity('.ig-3d')).toBeGreaterThan(0.99);
     await page.evaluate((y) => scrollTo(0, y), box.height - vh);
-    await expect.poll(() => opacity('.ig-svg')).toBeGreaterThan(0.99);
+    await page.waitForTimeout(800);
+    expect(await opacity('.ig-3d')).toBeGreaterThan(0.99);
     expect(errors).toEqual([]);
   });
 

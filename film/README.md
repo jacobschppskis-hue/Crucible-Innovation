@@ -83,21 +83,14 @@ in-between zoom and cross-blending them. Nothing moves in that phase except a sm
 Outputs: `public/film/iron/1600/000–095.webp`, `public/film/iron/800/…` (budgets 3.5 MB and 1.2 MB),
 `poster-1600.webp` and `poster-800.webp` (frame 70).
 
-## ingots (foundry floor)
+## ingots (foundry floor): real-time 3D now
 
-One camera and one light rig for all three: 3/4 from the front-left (30° up, 18° round), 150 mm at f/5.6,
-focused on the name, with the depth of field falling off front to back. Plaques are 200 × 112 × 22 mm with draft and
-bevels. The mark and the name are raised 2.6 mm, set in Archivo ExtraBold.
-
-- `sites`: cast and cooled, sitting in dark foundry sand with a small berm. The mark is the Split Ring
-  (`lib/splitRing.ts`). Raised faces are ground bright with sanding scratches, and the cast field stays matte. The
-  right-hand end still holds heat: temper colours, then dark oxide and a faint dull-red glow at the very edge.
-- `verge` (bold serif V) and `trellis` (the lattice from `public/ventures/trellis.svg`, cast as a raised grid): just
-  poured into an open sand mould. The body is ~1440 K (Ember) and the raised mark and name are hottest (~1590 K).
-  A dark crust creeps in from the sand walls, with glowing seams and a wrinkled skin starting. The sand is scorched
-  and glows dull red where the metal touches it.
-
-Outputs: `public/film/ingots/<slug>-2400.webp`, `-1200.webp` and `-600.webp`.
+The ingots are no longer rendered in Cycles. They are real-time 3D objects (`lib/gl3d/ingots.ts`, shown by
+`components/IngotScene.tsx` and `lib/gl3d/ingotScene.ts`), freestanding on the page's liquid. `ingots.py` is kept only
+as the old reference. `public/film/ingots/<slug>-{600,1200,2400}.webp` are now the **fallback stills** (reduced motion,
+no JS, no WebGL): transparent WebP captures of the same 3D ingots, square-on with the slight constant tilt
+(`lib/gl3d/ingotPose.ts`), made by `node scripts/ingot-stills.mjs` (Playwright + swiftshader if there is no GPU).
+Then `node scripts/venture-og.mjs` rebuilds the share images `public/og/<slug>.jpg` from them.
 
 ## ring (home page scroll story)
 

@@ -27,7 +27,7 @@ Search the code for `TODO(jakob)`. The ones that matter:
 
 Copy lives in `data/*.ts`, so most changes are one edit:
 
-- **`ventures.ts`**: add a venture by adding one entry (name, blurb, tagline, description, mark). `status: 'forging'` shows it glowing in its mould with "Coming soon"; any entry without `href` gets a page at `/ventures/[slug]`. Its casting is `public/film/ingots/<slug>-*.webp` (rendered by `film/ingots.py`; without one, its mark glows in CSS), and `node scripts/venture-og.mjs` crops those into the pages' share images (`public/og/<slug>.jpg`).
+- **`ventures.ts`**: add a venture by adding one entry (name, blurb, tagline, description, mark). `status: 'forging'` shows it glowing in its mould with "Coming soon"; any entry without `href` gets a page at `/ventures/[slug]`. Its ingot is a real-time 3D object (`lib/gl3d/ingots.ts`); `public/film/ingots/<slug>-*.webp` are its transparent fallback stills (`node scripts/ingot-stills.mjs`; without them its mark glows in CSS), and `node scripts/venture-og.mjs` builds the pages' share images (`public/og/<slug>.jpg`) from them.
 - **`work.ts`**: `clientSites` are the published client sites, shown first on `/work` and `/sites`; add each one once it's live (below). `work` are the concept sites; keep `label: 'Concept'` on anything that isn't a paying client. The `/sites` hero shows live HTML versions of the same three concepts, in `components/LiveSite.tsx`.
 - **`pricing.ts`**, **`faq.ts`**, **`site.ts`** (name, founders, email).
 
@@ -96,7 +96,7 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
 - **Home page:** one continuous casting, top to bottom.
   - `Ignition` is the opening and the first scroll: the pour into a mould, then "Not the person / Not the model / Neither, alone" on the same ring. Rich tier: for the story the flat ring hands over to the rendered cast ring (`public/film/ring/`, frame = scroll progress × 95, first and last frames lying exactly on the SVG), or to WebGL particles (`lib/gl/ringParticles.ts`) without it. The cursor can knock the ring's pixels loose at rest (`lib/knock.ts`) on both tiers.
   - `Story`: one chapter per co-founder (Jacob first, `data/story.ts`), the ASCII portrait pinned while the text warms as it's read. One moment from Jacob's account is shown, not told: PayPal splitting into six companies.
-  - `Ventures` is the foundry floor: a pinned sideways track (vertical on phones). Each venture is a cast object: rendered ingots from `public/film/ingots/` when they exist, otherwise its mark in a mould, cool for a live venture and still glowing for the next ones.
+  - `Ventures` is the foundry floor: a pinned sideways track (vertical on phones). Each venture is a cast object: freestanding real-time 3D ingots (stills from `public/film/ingots/` as the fallback) when they exist, otherwise its mark in a mould, cool for a live venture and still glowing for the next ones.
   - `Thesis` heats from 293 K to 1811 K as you scroll. Rich tier: the rendered film of iron melting (`public/film/iron/`, drawn by `lib/film.ts`), or the WebGL surface (`lib/gl/molten.ts`) until it exists. Light tier: its poster fades in.
   - The footer is the cooled bone surface: a hot edge that cools as it comes in, and the wordmark set in ink.
 - **`/sites`:**
