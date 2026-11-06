@@ -88,7 +88,7 @@ export function Thesis() {
               <span aria-hidden ref={num}>
                 {IRON}
               </span>{' '}
-              <span aria-hidden className="text-bone-dim">
+              <span aria-hidden className="text-bone">
                 K
               </span>
             </p>

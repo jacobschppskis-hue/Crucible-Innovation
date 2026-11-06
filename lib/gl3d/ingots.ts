@@ -32,11 +32,11 @@ export function ingot(kind: IngotKind): IngotSpec {
   if (kind === 'sites') {
     const cw = 2048, ch = Math.round((cw * h) / w); // the map has the plate's own aspect, or the letters come out squeezed
     const cv = reliefCanvas(cw, ch, (c) => { text(c, 'Crucible', cw * 0.43, ch * 0.47, ch * 0.19); text(c, 'Sites', cw * 0.43, ch * 0.73, ch * 0.19); });
-    parts.push({ mesh: slab(w / 2, h / 2, d, 1.4), material: 'cast', grain: 0.5, relief: { canvas: cv, x: 0, y: 0, w, h, strength: 4 }, tone: 1, temper: [30, 0.55] });
+    parts.push({ mesh: slab(w / 2, h / 2, d, 1.4), material: 'cast', grain: 0.5, relief: { canvas: cv, x: 0, y: 0, w, h, strength: 2 }, tone: 1, temper: [30, 0.55] });
     const s = 0.5, front = d / 2;
     for (const p of logoPieces()) {
       const core = p.kind === 'core';
-      parts.push({ mesh: p.mesh, material: 'cast', tone: 0.45, grain: 1.1, seed: core ? 4 : 1, scale: core ? [s, s, s * 0.5] : [s, s, s * 3.2], position: [-24 + p.center[0] * s, p.center[1] * s, front + (core ? 0 : 1.2 * s * 3.2 - 0.25)] });
+      parts.push({ mesh: p.mesh, material: 'cast', tone: 0.9, grain: 1.1, seed: core ? 4 : 1, scale: core ? [s, s, s * 0.5] : [s, s, s * 3.2], position: [-24 + p.center[0] * s, p.center[1] * s, front + (core ? 0 : 1.2 * s * 3.2 - 0.25)] });
     }
   } else {
     const hw = w / 2, hh = h / 2, cw = 42, chh = 22, depth = 10, front = brickD / 2;
@@ -47,9 +47,9 @@ export function ingot(kind: IngotKind): IngotSpec {
       const u = mh * 0.42, x0 = mw * 0.055, y0 = (mh - u) / 2, k = u / 512, r = u * 0.19;
       c.beginPath(); c.roundRect(x0, y0, u, u, r); c.fill();
       c.fillStyle = '#000';
-      if (kind === 'verge') { // the serif V (Georgia 600) as a polygon: thick left stroke, hairline right, slab serifs
-        const P = (px: number, py: number) => c.lineTo(x0 + px * k, y0 + py * k);
-        c.beginPath(); c.moveTo(x0 + 96 * k, y0 + 118 * k); P(222, 118); P(222, 140); P(196, 148); P(262, 330); P(326, 148); P(300, 140); P(300, 118); P(416, 118); P(416, 140); P(386, 148); P(282, 400); P(240, 400); P(130, 148); P(96, 140); c.closePath(); c.fill();
+      if (kind === 'verge') { // TODO(jakob): Verge's real mark. Placeholder: an Archivo V (the display face, 800) cut into the tile, not the serif of public/ventures/verge.svg.
+        c.font = FONT().replace('{s}', String(Math.round(u * 0.72))); c.textAlign = 'center'; c.textBaseline = 'alphabetic';
+        c.fillText('V', x0 + u / 2, y0 + u * 0.5 + u * 0.72 * 0.36); c.textAlign = 'left';
       } else {
         // lattice from the SVG (1024 box, 640 square, 64 strokes), scaled to 80% of the tile
         const sq = u * 0.62, o = (u - sq) / 2, t = sq * 0.1, g = (v: number) => o + (v - 192) / 640 * sq;

@@ -53,6 +53,9 @@ function startWorker(canvas: HTMLCanvasElement, onFail: () => void): (() => void
     return null;
   }
   const post = (m: unknown, tr?: Transferable[]) => worker.postMessage(m, tr ?? []);
+  // Screenshot checks only (?liquid=full): `__liquidFreeze(t)` draws the field at one fixed time (null releases it), so a shot
+  // shows the moment it is named for however late a software-GL frame is composited.
+  if (full()) (window as unknown as { __liquidFreeze: (t: number | null) => void }).__liquidFreeze = (t) => { (window as unknown as { __liquidT: number | null }).__liquidT = t; post({ type: 'freeze', t }); };
   const view = () => post({ type: 'view', w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1 });
   post(
     { type: 'init', canvas: off, origin: performance.timeOrigin, full: full(), w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, scroll: scrollY },
@@ -65,7 +68,8 @@ function startWorker(canvas: HTMLCanvasElement, onFail: () => void): (() => void
       failed = true;
       stop();
       onFail();
-    } else if (m.type === 'ready') canvas.dataset.on = '';
+    } else if (m.type === 'frame') canvas.dataset.t = m.t.toFixed(3);
+    else if (m.type === 'ready') canvas.dataset.on = '';
     else if (m.type === 'stats') {
       canvas.dataset.frames = String(m.frames);
       canvas.dataset.live = String(m.live);
@@ -80,7 +84,7 @@ function startWorker(canvas: HTMLCanvasElement, onFail: () => void): (() => void
       onFail();
     }
   };
-  hooks.onAdd = (s, kind) => post({ type: 'src', x: s.x, y: s.y, t0: s.t0, amp: s.amp, size: s.size, kind, mv: !!s.m });
+  hooks.onAdd = (s, kind) => post({ type: 'src', x: s.x, y: s.y, t0: s.t0, amp: s.amp, size: s.size, kind });
   const unbind = bindInput();
   const unCalm = watchCalm((rects) => post({ type: 'calm', rects }));
   const onScroll = () => post({ type: 'scroll', y: scrollY });
@@ -137,12 +141,18 @@ function startMain(canvas: HTMLCanvasElement): (() => void) | null {
   const unCalm = watchCalm(setCalm);
   canvas.dataset.on = '';
   let frames = 0;
-  const off = onFrame((t) => {
+  if (full()) (window as unknown as { __liquidFreeze: (t: number | null) => void }).__liquidFreeze = (t) => { (window as unknown as { __liquidT: number | null }).__liquidT = t; frozen = t; };
+  let frozen: number | null = null;
+  const off = onFrame((t0) => {
     if (document.hidden) return;
-    if (engine.draw(t, scrollY) && ++frames % 3 === 0) {
-      canvas.dataset.frames = String(frames);
-      canvas.dataset.live = String(engine.stats.live);
-      canvas.dataset.q = String(engine.stats.q);
+    const t = frozen ?? t0;
+    if (engine.draw(t, scrollY)) {
+      canvas.dataset.t = t.toFixed(3);
+      if (++frames % 3 === 0) {
+        canvas.dataset.frames = String(frames);
+        canvas.dataset.live = String(engine.stats.live);
+        canvas.dataset.q = String(engine.stats.q);
+      }
     }
   });
   const lost = (e: Event) => {

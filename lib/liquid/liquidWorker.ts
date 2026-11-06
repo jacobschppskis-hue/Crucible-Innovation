@@ -9,11 +9,12 @@ import { clock } from './loop';
 
 type Msg =
   | { type: 'init'; canvas: OffscreenCanvas; origin: number; full: boolean; w: number; h: number; dpr: number; scroll: number }
-  | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float'; mv?: boolean }
+  | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float' }
   | { type: 'calm'; rects: number[] }
   | { type: 'view'; w: number; h: number; dpr: number }
   | { type: 'scroll'; y: number }
   | { type: 'vis'; hidden: boolean }
+  | { type: 'freeze'; t: number | null }
   | { type: 'down' };
 
 const ctx = self as unknown as {
@@ -30,6 +31,7 @@ let running = false;
 let frames = 0;
 let lastPost = 0;
 let ready = false;
+let frozen: number | null = null; // screenshot checks (?liquid=full): draw this field time instead of the clock
 
 const now = () => (performance.timeOrigin + performance.now() - origin) / 1000;
 
@@ -38,10 +40,11 @@ function loop() {
     running = false;
     return;
   }
-  const t = now();
+  const t = frozen ?? now();
   clock.t = t;
   if (engine.draw(t, scroll)) {
     frames++;
+    ctx.postMessage({ type: 'frame', t }); // the field time of the frame just drawn (data-t on the canvas)
     if (!ready) {
       ready = true;
       ctx.postMessage({ type: 'ready' });
@@ -78,11 +81,12 @@ ctx.onmessage = (e) => {
     engine.setView(m.w, m.h, m.dpr);
     kick();
   } else if (m.type === 'calm') setCalm(m.rects);
-  else if (m.type === 'src') addSource(m.x, m.y, m.amp, m.size, { kind: m.kind, t: m.t0, move: m.mv });
+  else if (m.type === 'src') addSource(m.x, m.y, m.amp, m.size, { kind: m.kind, t: m.t0 });
   else if (m.type === 'view') engine?.setView(m.w, m.h, m.dpr);
   else if (m.type === 'scroll') scroll = m.y;
   else if (m.type === 'vis') {
     hidden = m.hidden;
     if (!hidden) kick();
-  } else if (m.type === 'down') engine?.stepDown(now());
+  } else if (m.type === 'freeze') frozen = m.t;
+  else if (m.type === 'down') engine?.stepDown(now());
 };

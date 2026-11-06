@@ -175,6 +175,7 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
       C.set(calm);
       gl.uniform4fv(uCalm, C);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
+      if (o.full) gl.finish(); // screenshot mode: the frame is really done before it is acknowledged
       stats.q = q;
       // Reported as the peak of the last 2.5 s: on a slow phone (a few frames a second, input handled late) a bare
       // instantaneous count flickers to 0 between a burst of waves and the next look at it.

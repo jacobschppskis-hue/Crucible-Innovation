@@ -52,9 +52,9 @@ vec3 n=normalize(uNM*nn);
 vec3 bone=vec3(.7,.67,.6);
 vec3 col;
 if(uMat==0){
-vec3 al=mix(bone,vec3(.2,.185,.18),uTone)*(.74+.5*h0)*(1.+.16*rl);
+vec3 al=mix(bone,vec3(.2,.185,.18),uTone)*(.74+.5*mix(h0,.5,.8*rl))*(1.-.68*rl);
 float tx=smoothstep(uTemper.x,uTemper.x+22.,p.x),tt=tx*uTemper.y;vec3 tc=mix(vec3(.2,.17,.3),vec3(.42,.2,.06),smoothstep(.2,.8,tx));al=mix(al,tc*(.7+.6*h0),tt*smoothstep(.0,.3,tx));
-col=lit(al,n,v,ao,.62,.38);
+col=lit(al,n,v,mix(ao,.85,.7*rl),.62,.38*(1.-.85*rl));
 }else if(uMat==1){
 float bl=smoothstep(.5,.68,.7*vn(p*uGrain*1.7+5.)+.3*h0);
 vec3 al=vec3(1.,.19,.03)*(1.-.78*bl)*(.7+.6*h0);

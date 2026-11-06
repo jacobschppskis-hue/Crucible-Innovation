@@ -4,77 +4,27 @@
 // transparent wherever there is no flame so the page liquid shows through. At 293 K only a low bed of dull embers;
 // the reach grows with heat until the fire fills most of the viewport. Reduced resolution, only while on screen,
 // and it steps its resolution down on slow frames.
-import { DECAY, DISP, packSources, SPEED, SPREAD, SWELL } from '@/lib/liquid/field';
+import { packSources } from '@/lib/liquid/field';
 import { clock } from '@/lib/liquid/loop';
+import { swellGLSL, wavesGLSL } from '@/lib/liquid/shader';
 
 type Options = { canvas: HTMLCanvasElement; crest?: HTMLCanvasElement | null; heat: () => number; onReady?: () => void; onFail?: () => void };
 
 const VERT = `attribute vec2 aPos; void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
-const CAP = 48; // wave sources the flame/crest shaders read (the liquid's newest ones)
-const fl = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
-// The liquid's wave formula (lib/liquid/shader.ts, field.ts) in GLSL: same packets, same idle swell, same page coords.
+const CAP = 48; // wave entries the flame/crest shaders read (the liquid's newest ones)
+// The liquid's wave formula (lib/liquid/shader.ts, field.ts): the same entries, taps, wake fronts and idle swell, page coords.
 const WAVES = `
 uniform vec2 uOrg; // canvas top-left in page CSS px
 uniform vec2 uCss; // canvas size in CSS px
 uniform float uClock;
-uniform int uN;
-uniform vec4 uA[${CAP}];
-uniform vec4 uB[${CAP}];
-void waves(vec2 p, out float dA, out float dB, out vec2 gp, out vec2 gf, out float hs, out vec2 gs) {
-  vec2 g = vec2(0.0);
-  gf = vec2(0.0); // floating things' tiny ripples: refraction only
-  float hm = 0.0; // pointer / scroll strides: the tallest wave there (their union is one clean V wake)
-  vec2 gm = vec2(0.0);
-  dA = 1e3; // px to the nearest crest line, weak and strong level
-  dB = 1e3;
-  for (int i = 0; i < ${CAP}; i++) {
-    if (i >= uN) break;
-    vec4 a = uA[i];
-    vec4 sb = uB[i];
-    float size = sb.x;
-    float age = a.z;
-    vec2 dv = p - a.xy;
-    float r = length(dv);
-    float sig = size * (1.0 + ${fl(DISP)} * age);
-    float R = ${fl(SPEED)} * age;
-    float d = r - R;
-    if (abs(d) > 3.0 * sig) continue;
-    float A = a.w * exp(-${fl(DECAY)} * age) / sqrt((1.0 + R / ${fl(SPREAD)}) * (1.0 + ${fl(DISP)} * age));
-    float e = exp(-0.5 * d * d / (sig * sig));
-    vec2 gi = dv / max(r, 0.001) * (A * e * (-d / (sig * sig)));
-    if (sb.y > 0.5) { gf += gi; continue; }
-    g += gi;
-    if (sb.z > 0.5) {
-      if (A * e > hm) { hm = A * e; gm = gi; }
-    } else {
-      float Ac = min(A, 0.6); // rings keep their shape once strong
-      float la = Ac > 0.105 ? abs(abs(d) - sig * sqrt(2.0 * log(Ac / 0.1))) : 1e3;
-      float lb = Ac > 0.315 ? abs(abs(d) - sig * sqrt(2.0 * log(Ac / 0.3))) : 1e3;
-      dA = min(dA, la);
-      dB = min(dB, lb);
-    }
-  }
-  float gml = max(length(gm), 0.0004);
-  dA = min(dA, abs(hm - 0.1) / gml);
-  dB = min(dB, abs(hm - 0.3) / gml);
-  gp = g;
-  float h = 0.0;
-  g = vec2(0.0);
-  ${SWELL.map(([ang, len, spd, a, ph]) => {
-    const kx = (Math.cos(ang) * 2 * Math.PI) / len;
-    const ky = (Math.sin(ang) * 2 * Math.PI) / len;
-    const w = ((2 * Math.PI) / len) * spd;
-    return `{ float ar = ${kx}*p.x + ${ky}*p.y - ${w}*uClock + ${ph}; h += ${a}*sin(ar); g += ${a}*cos(ar)*vec2(${kx}, ${ky}); }`;
-  }).join('\n  ')}
-  hs = h;
-  gs = g;
-}
+${wavesGLSL(CAP)}
+${swellGLSL()}
 vec2 pagePos(vec2 uv) { return uOrg + vec2(uv.x, 1.0 - uv.y) * uCss; }
 `;
 
-// Crest lines: the liquid's own Ember iso-lines (same look, same field) drawn at full resolution over the flames,
-// with a dark edge so they read on hot metal. Where there is no flame they land exactly on the liquid's own lines.
+// Crest lines: the liquid's own thin Ember lines (same formula, same look) at full resolution over the flames. Nothing
+// else: no dark edge, no emboss. Where there is no flame they land exactly on the liquid's own lines.
 const CREST = `
 precision highp float;
 uniform float uScale;
@@ -82,20 +32,13 @@ ${WAVES}
 void main() {
   vec2 uv = gl_FragCoord.xy / (uCss * uScale);
   vec2 p = pagePos(uv);
-  float dA, dB, hs; vec2 gp, gf, gs;
-  waves(p, dA, dB, gp, gf, hs, gs);
   float px = 1.0 / uScale;
-  float hw = 0.6;
-  float line = 0.5 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, dA)) + 1.0 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, dB));
-  float gsl = max(length(gs), 0.00002);
-  float ds = abs(hs) / gsl;
-  float sw = 0.16 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, ds));
-  float l = min(min(line, 1.0) * 0.95 + sw, 1.0);
-  // dark edge hugging the line (stronger for the strong crests)
-  float halo = 0.85 * (1.0 - smoothstep(hw, hw + 3.4 * px, dB)) + 0.5 * (1.0 - smoothstep(hw, hw + 2.8 * px, dA));
-  halo = min(halo, 0.85) * (1.0 - l);
-  vec3 ember = vec3(1.0, 0.46, 0.2); // Ember, a touch lifted so the core still reads on hot metal
-  gl_FragColor = vec4(ember * l, min(1.0, l + halo));
+  float line, sl;
+  vec2 gp, gf, gs;
+  waves(p, px, line, gp, gf);
+  swell(p, uClock, px, gs, sl);
+  float l = max(line * 0.95, sl);
+  gl_FragColor = vec4(vec3(1.0, 0.357, 0.122) * l, l);
 }`;
 
 const FRAG = `
@@ -128,9 +71,10 @@ void main() {
   float asp = uRes.x / uRes.y;
   float k = uK;
   // refraction: the flames are seen through the liquid surface, so they bend along its slope
-  float dA, dB, hs; vec2 gp, gf, gs;
-  waves(pagePos(uv0), dA, dB, gp, gf, hs, gs);
-  vec2 bend = (gp + gf + gs) * 90.0 / uCss * vec2(1.0, -1.0);
+  float line, sl; vec2 gp, gf, gs;
+  waves(pagePos(uv0), 1.0, line, gp, gf);
+  swell(pagePos(uv0), uClock, 1.0, gs, sl);
+  vec2 bend = (gp + gf + gs) * 45.0 / uCss * vec2(1.0, -1.0); // only a slight shift of the flames under a crest
   vec2 uv = uv0 + bend;
   float x = uv.x * asp, y = uv.y;
   float t = uTime * (0.4 + k * 0.8);
@@ -279,11 +223,12 @@ export function startMolten({ canvas, crest, heat, onReady, onFail }: Options): 
     }
     mouse.s += ((now - mouse.moved < 900 ? 1 : 0) - mouse.s) * Math.min(1, dt / 300);
     const r = canvas.getBoundingClientRect();
-    const n = packSources(clock.t, sources[q], A, B);
+    const T = (window as unknown as { __liquidT?: number | null }).__liquidT ?? clock.t; // frozen only by our screenshot checks
+    const n = packSources(T, sources[q], A, B);
     for (const { p, org, css, clk, n: un, a, b, scale } of passes) {
       p.gl.uniform2f(org, r.left + scrollX, r.top + scrollY);
       p.gl.uniform2f(css, r.width, r.height);
-      p.gl.uniform1f(clk, clock.t);
+      p.gl.uniform1f(clk, T);
       p.gl.uniform1i(un, n);
       p.gl.uniform4fv(a, A);
       p.gl.uniform4fv(b, B);
@@ -295,6 +240,7 @@ export function startMolten({ canvas, crest, heat, onReady, onFail }: Options): 
     gl.uniform3f(uMouse, mouse.x, mouse.y, mouse.s);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
     line?.gl.drawArrays(line.gl.TRIANGLES, 0, 3);
+    canvas.dataset.t = T.toFixed(3); // field time of the last frame drawn here (screenshot checks wait on it)
     if (!ready) {
       ready = true;
       onReady?.();
