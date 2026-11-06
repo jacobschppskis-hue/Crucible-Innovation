@@ -69,6 +69,8 @@ export function createLogoRunner(
     pour?: { tempo: number };
     emit: (x: number, docY: number, amp: number, size: number, t: number) => void;
     onFirst?: () => void;
+    /** The logo is finished and floating (pour over, skipped or cut short by scrolling); called once. */
+    onSettled?: () => void;
   },
 ): LogoRunner {
   const stage: Stage = createStage(canvas, { fov: 28, frame: MARK * LOGO_SPAN, quality: 1, dpr: Math.min(opts.dpr || 1, 1.5), exposure: 1, css: env.css, fidelity: opts.full });
@@ -114,9 +116,16 @@ export function createLogoRunner(
   };
   let pour: Pour | undefined = opts.pour ? createPour(stage, bodies, headroom()) : undefined;
   let fl = pour ? 0 : 1; // how much of the floating shows (0 while the logo is still in the mould)
-  // The pour clock advances by capped frame steps, so a stall (shader compile, a slow software GL) never skips beats.
-  let pourClock = 0;
-  const pourTau = () => (env.pourT !== undefined ? env.pourT : pourClock);
+  // The pour runs on the wall clock from its first drawn frame (a slow software-GL frame rate drops frames, it never
+  // stretches the pour). The first frame's own cost (shader compile) is not counted.
+  let pourStart = -1;
+  const pourTau = (t: number) => (env.pourT !== undefined ? env.pourT : (t - pourStart) / opts.pour!.tempo);
+  let settled = false;
+  const settle = () => {
+    if (settled) return;
+    settled = true;
+    opts.onSettled?.();
+  };
   pour?.update(0);
 
   const ptr = env.ptr;
@@ -145,14 +154,16 @@ export function createLogoRunner(
         pour.dispose();
         pour = undefined;
         fl = 1;
+        settle();
       } else {
-        pourClock += Math.min(dt, 0.1) / opts.pour!.tempo;
-        tick = pour.update(pourTau());
+        if (pourStart < 0) pourStart = t;
+        tick = pour.update(pourTau(t));
         fl = tick.float;
         if (tick.done) {
           pour.dispose();
           pour = undefined;
           fl = 1;
+          settle();
         }
       }
     }
@@ -179,7 +190,7 @@ export function createLogoRunner(
         ry = (piece.ring === 0 ? 1 : -1) * 0.9 * h;
         sc = 1 - h * 0.78;
       } else {
-        sc = 0.8 + 0.2 * Math.min(1, story.core) + story.flare * 0.3;
+        sc = 1 + story.flare * 0.3; // same size in every beat, so the same halo
       }
 
       // Where the piece is on the page now, then the liquid under it.
@@ -239,6 +250,7 @@ export function createLogoRunner(
     if (!shown) {
       shown = true;
       opts.onFirst?.();
+      if (!pour) settle();
     }
   };
 

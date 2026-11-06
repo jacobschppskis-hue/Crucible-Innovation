@@ -11,7 +11,7 @@ type Options = { canvas: HTMLCanvasElement; crest?: HTMLCanvasElement | null; he
 
 const VERT = `attribute vec2 aPos; void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
-const CAP = 24; // wave sources the flame/crest shaders read (the liquid's newest ones)
+const CAP = 48; // wave sources the flame/crest shaders read (the liquid's newest ones)
 const fl = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 // The liquid's wave formula (lib/liquid/shader.ts, field.ts) in GLSL: same packets, same idle swell, same page coords.
 const WAVES = `
@@ -21,13 +21,18 @@ uniform float uClock;
 uniform int uN;
 uniform vec4 uA[${CAP}];
 uniform vec4 uB[${CAP}];
-void waves(vec2 p, out float hp, out vec2 gp, out float hs, out vec2 gs) {
-  float h = 0.0;
+void waves(vec2 p, out float dA, out float dB, out vec2 gp, out vec2 gf, out float hs, out vec2 gs) {
   vec2 g = vec2(0.0);
+  gf = vec2(0.0); // floating things' tiny ripples: refraction only
+  float hm = 0.0; // pointer / scroll strides: the tallest wave there (their union is one clean V wake)
+  vec2 gm = vec2(0.0);
+  dA = 1e3; // px to the nearest crest line, weak and strong level
+  dB = 1e3;
   for (int i = 0; i < ${CAP}; i++) {
     if (i >= uN) break;
     vec4 a = uA[i];
-    float size = uB[i].x;
+    vec4 sb = uB[i];
+    float size = sb.x;
     float age = a.z;
     vec2 dv = p - a.xy;
     float r = length(dv);
@@ -37,12 +42,24 @@ void waves(vec2 p, out float hp, out vec2 gp, out float hs, out vec2 gs) {
     if (abs(d) > 3.0 * sig) continue;
     float A = a.w * exp(-${fl(DECAY)} * age) / sqrt((1.0 + R / ${fl(SPREAD)}) * (1.0 + ${fl(DISP)} * age));
     float e = exp(-0.5 * d * d / (sig * sig));
-    h += A * e;
-    g += dv / max(r, 0.001) * (A * e * (-d / (sig * sig)));
+    vec2 gi = dv / max(r, 0.001) * (A * e * (-d / (sig * sig)));
+    if (sb.y > 0.5) { gf += gi; continue; }
+    g += gi;
+    if (sb.z > 0.5) {
+      if (A * e > hm) { hm = A * e; gm = gi; }
+    } else {
+      float Ac = min(A, 0.6); // rings keep their shape once strong
+      float la = Ac > 0.105 ? abs(abs(d) - sig * sqrt(2.0 * log(Ac / 0.1))) : 1e3;
+      float lb = Ac > 0.315 ? abs(abs(d) - sig * sqrt(2.0 * log(Ac / 0.3))) : 1e3;
+      dA = min(dA, la);
+      dB = min(dB, lb);
+    }
   }
+  float gml = max(length(gm), 0.0004);
+  dA = min(dA, abs(hm - 0.1) / gml);
+  dB = min(dB, abs(hm - 0.3) / gml);
   gp = g;
-  hp = h;
-  h = 0.0;
+  float h = 0.0;
   g = vec2(0.0);
   ${SWELL.map(([ang, len, spd, a, ph]) => {
     const kx = (Math.cos(ang) * 2 * Math.PI) / len;
@@ -65,12 +82,10 @@ ${WAVES}
 void main() {
   vec2 uv = gl_FragCoord.xy / (uCss * uScale);
   vec2 p = pagePos(uv);
-  float hp, hs; vec2 gp, gs;
-  waves(p, hp, gp, hs, gs);
+  float dA, dB, hs; vec2 gp, gf, gs;
+  waves(p, dA, dB, gp, gf, hs, gs);
   float px = 1.0 / uScale;
   float hw = 0.6;
-  float gl = max(length(gp), 0.0004);
-  float dA = abs(hp - 0.1) / gl, dB = abs(hp - 0.3) / gl;
   float line = 0.5 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, dA)) + 1.0 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, dB));
   float gsl = max(length(gs), 0.00002);
   float ds = abs(hs) / gsl;
@@ -113,9 +128,9 @@ void main() {
   float asp = uRes.x / uRes.y;
   float k = uK;
   // refraction: the flames are seen through the liquid surface, so they bend along its slope
-  float hp, hs; vec2 gp, gs;
-  waves(pagePos(uv0), hp, gp, hs, gs);
-  vec2 bend = (gp + gs) * 90.0 / uCss * vec2(1.0, -1.0);
+  float dA, dB, hs; vec2 gp, gf, gs;
+  waves(pagePos(uv0), dA, dB, gp, gf, hs, gs);
+  vec2 bend = (gp + gf + gs) * 90.0 / uCss * vec2(1.0, -1.0);
   vec2 uv = uv0 + bend;
   float x = uv.x * asp, y = uv.y;
   float t = uTime * (0.4 + k * 0.8);
@@ -211,7 +226,7 @@ export function startMolten({ canvas, crest, heat, onReady, onFail }: Options): 
   // one pixel wide, so they render at (nearly) full resolution and only step down when frames run slow.
   const scales = [0.5, 0.35, 0.25];
   const lineScales = [1, 0.75, 0.5];
-  const sources = [CAP, 14, 8];
+  const sources = [CAP, 24, 12];
   let q = 0;
   const resize = () => {
     const d = Math.min(devicePixelRatio || 1, 2);

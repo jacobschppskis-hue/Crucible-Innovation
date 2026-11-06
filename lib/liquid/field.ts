@@ -8,7 +8,7 @@ import { clock } from './loop';
 export const LIFE = 4.5; // seconds a packet lives
 export const SPEED = 320; // px/s the ring spreads at
 export const DISP = 0.8; // how fast the packet widens (dispersion)
-export const DECAY = 0.9; // amplitude decay per second
+export const DECAY = 0.45; // amplitude decay per second
 export const SPREAD = 80; // px over which the ring's energy thins as 1/sqrt
 
 /** Idle swell: a few long directional waves [angle rad, wavelength px, speed px/s, amplitude, phase]. */
@@ -22,7 +22,7 @@ export const SLOTS = 40; // pointer / click / scroll packets
 export const FLOAT_SLOTS = 8; // reserved for floating things' own small ripples
 export const MAX_SOURCES = SLOTS + FLOAT_SLOTS;
 
-export type Source = { x: number; y: number; t0: number; amp: number; size: number };
+export type Source = { x: number; y: number; t0: number; amp: number; size: number; f?: boolean; m?: boolean };
 
 /** Set by the worker renderer's host: called with every new packet so it can be forwarded (a tiny message). */
 export const hooks: { onAdd: ((s: Source, kind: 'ring' | 'float') => void) | null; also: Set<(s: Source, kind: 'ring' | 'float') => void> } = { onAdd: null, also: new Set() };
@@ -37,8 +37,8 @@ let fi = 0;
 const now = () => (typeof performance === 'undefined' ? clock.t : Math.max(clock.t, performance.now() / 1000));
 
 /** Drop a packet at page position (x, docY). amp ~0.3 (a light touch) to ~1.6 (a click); size = packet width in px. */
-export function addSource(x: number, docY: number, amp = 0.6, size = 14, opts: { kind?: 'ring' | 'float'; t?: number } = {}) {
-  const s: Source = { x, y: docY, t0: opts.t ?? now(), amp, size };
+export function addSource(x: number, docY: number, amp = 0.6, size = 14, opts: { kind?: 'ring' | 'float'; t?: number; move?: boolean } = {}) {
+  const s: Source = { x, y: docY, t0: opts.t ?? now(), amp, size, f: opts.kind === 'float', m: !!opts.move };
   if (opts.kind === 'float') floats[fi++ % FLOAT_SLOTS] = s;
   else main[mi++ % SLOTS] = s;
   const kind = opts.kind === 'float' ? 'float' : 'ring';
@@ -46,20 +46,38 @@ export function addSource(x: number, docY: number, amp = 0.6, size = 14, opts: {
   for (const f of hooks.also) f(s, kind);
 }
 
-/** Live sources, newest first, at most `max` (a quality knob), written as two vec4 arrays for the shader:
- *  a = (x, y, age, amp), b = (size, 0, 0, 0). Returns how many. */
+/** Live sources for the shader, written as two vec4 arrays: a = (x, y, age, amp), b = (size, isFloat, isPath, 0). Wave sources
+ *  (pointer, taps, scroll) come first, newest first, so a drag keeps its whole head; a few of the floating things' tiny
+ *  ripples follow. Floats only bend the surface (refraction): they never draw crest lines (those were the stray ovals).
+ *  `max` is a quality knob. Returns how many. */
 export function packSources(t: number, max: number, a: Float32Array, b: Float32Array) {
-  const live: Source[] = [];
-  for (const s of main) if (s && t - s.t0 < LIFE) live.push(s);
-  for (const s of floats) if (s && t - s.t0 < LIFE) live.push(s);
-  live.sort((p, q) => q.t0 - p.t0);
-  const n = Math.min(live.length, max);
-  for (let i = 0; i < n; i++) {
-    const s = live[i];
-    a.set([s.x, s.y, t - s.t0, s.amp], i * 4);
-    b[i * 4] = s.size;
-  }
+  const rings: Source[] = [];
+  const fl: Source[] = [];
+  for (const s of main) if (s && t >= s.t0 && t - s.t0 < LIFE) rings.push(s);
+  for (const s of floats) if (s && t >= s.t0 && t - s.t0 < LIFE) fl.push(s);
+  rings.sort((p, q) => q.t0 - p.t0);
+  fl.sort((p, q) => q.t0 - p.t0);
+  const nf = Math.min(fl.length, max >= 16 ? 4 : 2);
+  const nr = Math.min(rings.length, max - nf);
+  let n = 0;
+  const put = (s: Source, isF: number) => {
+    a.set([s.x, s.y, t - s.t0, s.amp], n * 4);
+    b[n * 4] = s.size;
+    b[n * 4 + 1] = isF;
+    b[n * 4 + 2] = s.m ? 1 : 0;
+    n++;
+  };
+  for (let i = 0; i < nr; i++) put(rings[i], 0);
+  for (let i = 0; i < nf; i++) put(fl[i], 1);
   return n;
+}
+
+/** Calm zones (page px rects x, y, w, h, e.g. the ASCII portraits): crest lines fade out inside them. Max CALM_MAX. */
+export const CALM_MAX = 6;
+export const calm: number[] = [];
+export function setCalm(rects: number[]) {
+  calm.length = 0;
+  for (let i = 0; i < Math.min(rects.length, CALM_MAX * 4); i++) calm.push(rects[i]);
 }
 
 export type Sample = { h: number; gx: number; gy: number };
@@ -112,7 +130,8 @@ export function liveCount(t = clock.t) {
   return n;
 }
 
-const SPACING = 15; // px of travel between packets
+const SPACING = 22; // px of travel between packets
+const VCAP = 1100; // px/s: the wake is laid down at this speed at most, so a flick still leaves a V and not a flat pill
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 
 /**
@@ -125,6 +144,7 @@ export function bindInput() {
   let ay = 0;
   let has = false;
   let speed = 0; // px/ms, smoothed
+  let tv = 0; // birth time of the newest stride packet
   let at = 0;
   let mx = -1; // mouse, viewport px
   let my = -1;
@@ -138,26 +158,30 @@ export function bindInput() {
     has = true;
     speed = 0;
   };
-  const moveTo = (x: number, y: number, now: number, touch: boolean) => {
-    if (!has) return reset(x, y, now);
+  const moveTo = (x: number, y: number, ts: number, touch: boolean) => {
+    if (!has) return reset(x, y, ts);
     const dist = Math.hypot(x - ax, y - ay);
     if (dist < SPACING) return;
-    const inst = dist / Math.max(6, now - at);
+    const inst = dist / Math.max(6, ts - at);
     speed = speed ? speed * 0.5 + inst * 0.5 : inst;
-    const amp = clamp(0.22 + speed * 0.3, 0.22, 0.95) * (touch ? 1.15 : 1);
-    const steps = Math.min(8, Math.floor(dist / SPACING));
+    const amp = clamp(0.3 + speed * 0.3, 0.3, 1.0) * (touch ? 1.15 : 1);
+    const steps = Math.min(10, Math.floor(dist / SPACING));
     const ux = (x - ax) / dist;
     const uy = (y - ay) / dist;
+    // Laid down at VCAP at most: when the pointer is faster, the packets are born a little later each (the wake keeps
+    // chasing the pointer), so the rings line up into a V behind it instead of one flat wave (a pill).
+    const t1 = now();
     for (let i = 0; i < steps; i++) {
       ax += ux * SPACING;
       ay += uy * SPACING;
-      addSource(ax, ay, amp * 0.8, 15 + clamp(speed * 3, 0, 8));
+      tv = Math.max(t1, tv + SPACING / VCAP);
+      addSource(ax, ay, amp, 20 + clamp(speed * 3, 0, 8), { t: tv, move: true });
     }
-    if (steps === 8) {
+    if (steps === 10) {
       ax = x;
       ay = y;
     }
-    at = now;
+    at = ts;
   };
 
   const onMove = (e: PointerEvent) => {
@@ -171,7 +195,7 @@ export function bindInput() {
   };
   const onDown = (e: PointerEvent) => {
     reset(e.pageX, e.pageY, e.timeStamp);
-    addSource(e.pageX, e.pageY, e.pointerType === 'touch' ? 1.7 : 1.4, 24);
+    addSource(e.pageX, e.pageY, e.pointerType === 'touch' ? 2.1 : 1.9, 24);
   };
   const onUp = (e: PointerEvent) => {
     if (e.pointerType === 'touch') has = false;

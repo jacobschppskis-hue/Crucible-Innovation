@@ -5,7 +5,7 @@
 // capped fps, fewer packets) so the liquid still shows without starving the machine. `?liquid=full` (our own
 // screenshot checks) skips that and pins the top step: no software start, no adaptation.
 
-import { MAX_SOURCES, packSources } from './field';
+import { CALM_MAX, calm, MAX_SOURCES, packSources } from './field';
 import { fragment, VERT } from './shader';
 
 type Ctx = WebGLRenderingContext | WebGL2RenderingContext;
@@ -62,6 +62,8 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
   const uN = u('uN');
   const uA = u('uA');
   const uB = u('uB');
+  const uCalm = u('uCalm');
+  const C = new Float32Array(CALM_MAX * 4);
   const A = new Float32Array(cap * 4);
   const B = new Float32Array(cap * 4);
 
@@ -169,6 +171,9 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
       gl.uniform1i(uN, n);
       gl.uniform4fv(uA, A);
       gl.uniform4fv(uB, B);
+      C.fill(0);
+      C.set(calm);
+      gl.uniform4fv(uCalm, C);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       stats.q = q;
       // Reported as the peak of the last 2.5 s: on a slow phone (a few frames a second, input handled late) a bare

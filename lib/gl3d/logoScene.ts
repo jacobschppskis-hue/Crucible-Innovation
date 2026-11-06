@@ -23,6 +23,8 @@ export function mountLogo(opts: {
   story: () => LogoStory;
   onReady?: () => void;
   onFail?: () => void;
+  /** The logo is finished and floating (the pour is over or was skipped). */
+  onSettled?: () => void;
   /** First visit of the page: play the pour. `start()` is called once the first frame is up. */
   pour?: { tempo: number; start: () => void };
 }): () => void {
@@ -115,6 +117,7 @@ export function mountLogo(opts: {
     worker.onmessage = (e: MessageEvent) => {
       const m = e.data;
       if (m.type === 'ready') first();
+      else if (m.type === 'settled') opts.onSettled?.();
       else if (m.type === 'emit') addSource(m.x, m.y, m.amp, m.size, { kind: 'float', t: m.t });
       else if (m.type === 'fail' && !dead) {
         dead = true;
@@ -170,6 +173,7 @@ export function mountLogo(opts: {
           pour: opts.pour,
           emit: (x, y, amp, size, t) => addSource(x, y, amp, size, { kind: 'float', t }),
           onFirst: first,
+          onSettled: opts.onSettled,
         });
         const offLong = onLongTasks(() => runner.down());
         const offFrame = onFrame((t) => {

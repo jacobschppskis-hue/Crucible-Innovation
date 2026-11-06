@@ -10,8 +10,35 @@
 // if long tasks keep coming. `?liquid=full` skips that and pins full quality (for our own screenshot checks only).
 
 import { createEngine } from './engine';
-import { bindInput, hooks } from './field';
+import { bindInput, hooks, setCalm } from './field';
 import { onFrame } from './loop';
+
+// Crest lines fade out inside the ASCII portraits (transparent, so the lines would show through the faces). Page-px
+// rects of the portrait images, refreshed on resize and every second or so (layout and lazy images settle late).
+function watchCalm(apply: (rects: number[]) => void) {
+  let last = '';
+  const read = () => {
+    const r: number[] = [];
+    for (const el of document.querySelectorAll('img[alt^="ASCII portrait"]')) {
+      const b = el.getBoundingClientRect();
+      if (b.width > 0 && b.height > 0) r.push(Math.round(b.left + scrollX), Math.round(b.top + scrollY), Math.round(b.width), Math.round(b.height));
+    }
+    const k = r.join();
+    if (k !== last) {
+      last = k;
+      apply(r);
+    }
+  };
+  read();
+  const id = setInterval(read, 1000);
+  addEventListener('resize', read);
+  addEventListener('load', read);
+  return () => {
+    clearInterval(id);
+    removeEventListener('resize', read);
+    removeEventListener('load', read);
+  };
+}
 
 const full = () => /[?&]liquid=full\b/.test(location.search);
 
@@ -53,8 +80,9 @@ function startWorker(canvas: HTMLCanvasElement, onFail: () => void): (() => void
       onFail();
     }
   };
-  hooks.onAdd = (s, kind) => post({ type: 'src', x: s.x, y: s.y, t0: s.t0, amp: s.amp, size: s.size, kind });
+  hooks.onAdd = (s, kind) => post({ type: 'src', x: s.x, y: s.y, t0: s.t0, amp: s.amp, size: s.size, kind, mv: !!s.m });
   const unbind = bindInput();
+  const unCalm = watchCalm((rects) => post({ type: 'calm', rects }));
   const onScroll = () => post({ type: 'scroll', y: scrollY });
   const onVis = () => post({ type: 'vis', hidden: document.hidden });
   addEventListener('scroll', onScroll, { passive: true });
@@ -86,6 +114,7 @@ function startWorker(canvas: HTMLCanvasElement, onFail: () => void): (() => void
   function stop() {
     hooks.onAdd = null;
     unbind();
+    unCalm();
     po?.disconnect();
     removeEventListener('scroll', onScroll);
     removeEventListener('resize', view);
@@ -105,6 +134,7 @@ function startMain(canvas: HTMLCanvasElement): (() => void) | null {
   size();
   addEventListener('resize', size);
   const unbind = bindInput();
+  const unCalm = watchCalm(setCalm);
   canvas.dataset.on = '';
   let frames = 0;
   const off = onFrame((t) => {
@@ -124,6 +154,7 @@ function startMain(canvas: HTMLCanvasElement): (() => void) | null {
   return () => {
     off();
     unbind();
+    unCalm();
     removeEventListener('resize', size);
     canvas.removeEventListener('webglcontextlost', lost);
     delete canvas.dataset.on;

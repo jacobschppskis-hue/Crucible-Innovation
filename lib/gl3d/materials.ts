@@ -47,8 +47,7 @@ vec3 nn=normalize(nO-g*k/uGrain*.05);
 if(uRel>0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.55,vec2(.0004),vec2(.0011));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
 rl=texture(uRelT,uv,-1.5).r*w;
 vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0),-1.5).r-texture(uRelT,uv-vec2(d.x,0),-1.5).r,texture(uRelT,uv+vec2(0,d.y),-1.5).r-texture(uRelT,uv-vec2(0,d.y),-1.5).r)*w*(.0011/d);
-nn=normalize(mix(nn,nO,.6*rl)-vec3(gr,0.)*uRel);
-float sh=texture(uRelT,uv+vec2(-.004,.007),-1.5).r*w;ao*=1.-.45*clamp(sh-rl,0.,1.);}
+nn=normalize(mix(nn,nO,.6*rl)-vec3(gr,0.)*uRel);}
 vec3 n=normalize(uNM*nn);
 vec3 bone=vec3(.7,.67,.6);
 vec3 col;
@@ -74,11 +73,12 @@ vec3 liq=em*(1.-.35*smoothstep(.1,.4,Tl)*.0)+lit(vec3(.05,.02,.01)+em*.04,n,v,1.
 col=mix(liq,crust,cv)+ramp(T)*smoothstep(.0,.5,cv)*(1.-smoothstep(.5,1.,cv))*.5*Tl;
 }else if(uMat==4){
 vec3 q=p*uGrain*1.4+uSeed*3.;q+=vec3(vn(q*1.6),vn(q*1.6+4.),vn(q*1.6+9.))*.9;float cn=.6*vn(q)+.4*vn(q*2.2);
-float hot=clamp(uTemp+(cn-.5)*.55+(h0-.5)*.2+rl*.22,0.,1.);
+float hot=clamp(uTemp+(cn-.5)*.55+(h0-.5)*.2-rl*.55,0.,1.);
 vec3 deep=vec3(.95,.17,.01),mid=vec3(1.25,.45,.02),yel=vec3(1.55,.82,.07);
 vec3 em=hot<.5?mix(deep,mid,hot*2.):mix(mid,yel,(hot-.5)*2.);
 float skin=smoothstep(.55,.9,1.-hot+(vn(p*uGrain*3.+uSeed)-.5)*.5);
 em=mix(em,vec3(.95,.14,.015),skin*.5*(1.-rl));
+em*=1.-.5*rl;
 vec3 sp=lit(vec3(.12,.05,.02),n,v,1.,.3,1.)*.7;
 float sd=dot(n,normalize(vec3(-.55,.65,.72)));
 col=em*(.8+.3*uGlow)*(.62+.38*ao)*(.62+.6*clamp(sd,0.,1.))+sp*.6;

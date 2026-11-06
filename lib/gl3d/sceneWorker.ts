@@ -70,6 +70,7 @@ ctx.onmessage = (e) => {
         full: m.full,
         pour: m.pour,
         emit: (x, y, amp, size, t) => ctx.postMessage({ type: 'emit', x, y, amp, size, t }),
+        onSettled: () => ctx.postMessage({ type: 'settled' }),
         onFirst: () => {
           if (!ready) {
             ready = true;

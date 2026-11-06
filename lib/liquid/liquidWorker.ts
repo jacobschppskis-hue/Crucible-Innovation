@@ -4,12 +4,13 @@
 // birth times from the main thread mean the same here and `sample()` over there matches what is drawn.
 
 import { createEngine, type Engine } from './engine';
-import { addSource } from './field';
+import { addSource, setCalm } from './field';
 import { clock } from './loop';
 
 type Msg =
   | { type: 'init'; canvas: OffscreenCanvas; origin: number; full: boolean; w: number; h: number; dpr: number; scroll: number }
-  | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float' }
+  | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float'; mv?: boolean }
+  | { type: 'calm'; rects: number[] }
   | { type: 'view'; w: number; h: number; dpr: number }
   | { type: 'scroll'; y: number }
   | { type: 'vis'; hidden: boolean }
@@ -76,7 +77,8 @@ ctx.onmessage = (e) => {
     if (!engine) return ctx.postMessage({ type: 'fail' });
     engine.setView(m.w, m.h, m.dpr);
     kick();
-  } else if (m.type === 'src') addSource(m.x, m.y, m.amp, m.size, { kind: m.kind, t: m.t0 });
+  } else if (m.type === 'calm') setCalm(m.rects);
+  else if (m.type === 'src') addSource(m.x, m.y, m.amp, m.size, { kind: m.kind, t: m.t0, move: m.mv });
   else if (m.type === 'view') engine?.setView(m.w, m.h, m.dpr);
   else if (m.type === 'scroll') scroll = m.y;
   else if (m.type === 'vis') {

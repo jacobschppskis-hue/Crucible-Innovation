@@ -77,6 +77,7 @@ export function Ignition() {
       stopLogo?.();
       stopLogo = undefined;
       el.removeAttribute('data-3d');
+      el.removeAttribute('data-settled');
     };
     if (root.dataset.tier === 'rich') {
       import('@/lib/gl3d/logoScene').then(({ mountLogo }) => {
@@ -88,6 +89,7 @@ export function Ignition() {
             story: () => state.current,
             pour: wantPour ? { tempo, start: () => ((wantPour = false), clearTimeout(late), go()) } : undefined,
             onReady: () => el.setAttribute('data-3d', ''),
+            onSettled: () => el.setAttribute('data-settled', ''), // pour over, ring floating (screenshot tools wait on it)
             onFail: () => {
               failed = true;
               stopLogo = undefined;

@@ -217,18 +217,12 @@ html.lenis body {
 }
 
 /* ---------- Nav ---------- */
+/* Always solid (background + hairline) at every scroll position: it never waits on a scroll handler and never animates. */
 .nav {
-  border-bottom: 1px solid transparent;
-  transition:
-    background-color 300ms ease,
-    border-color 300ms ease,
-    backdrop-filter 300ms ease;
-}
-.nav[data-scrolled] {
   background: color-mix(in srgb, var(--ground) 92%, transparent);
   -webkit-backdrop-filter: blur(14px);
   backdrop-filter: blur(14px);
-  border-color: var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 /* ---------- Buttons ---------- */
@@ -772,6 +766,11 @@ html.lenis body {
   .js .ig-glow {
     opacity: calc(min(1, var(--core)) * 0.85 + var(--flare) * 0.9);
     transform: scale(calc(0.55 + min(1, var(--core)) * 0.45 + var(--flare) * 0.55));
+  }
+  /* The 3D core is the same size in every beat, so its halo is too. */
+  .js .ig[data-3d] .ig-glow {
+    opacity: 0.85;
+    transform: none;
   }
   .js .ig-fuse {
     position: absolute;

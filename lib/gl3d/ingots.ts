@@ -43,15 +43,21 @@ export function ingot(kind: IngotKind): IngotSpec {
     parts.push({ mesh: mouldBrick(hw, hh, brickD, cw, chh, depth), material: 'sand', grain: 0.6, cavity: [cw, chh, 0.55, front] });
     const mw = 2048, mh = Math.round((mw * (chh * 2 - 2)) / (cw * 2 - 2));
     const cv = reliefCanvas(mw, mh, (c) => {
-      if (kind === 'verge') {
-        const u = mh * 0.28, x0 = mw * 0.07, y0 = mh * 0.36, t = u * 0.17; // a plain chevron V, square-cut
-        c.beginPath(); c.moveTo(x0, y0); c.lineTo(x0 + t * 1.25, y0); c.lineTo(x0 + u / 2, y0 + u - t * 1.6); c.lineTo(x0 + u - t * 1.25, y0); c.lineTo(x0 + u, y0); c.lineTo(x0 + u / 2 + t * 0.7, y0 + u); c.lineTo(x0 + u / 2 - t * 0.7, y0 + u); c.closePath(); c.fill();
-        text(c, 'Verge', mw * 0.26, mh * 0.64, mh * 0.4);
+      // The ventures' drawn marks (public/ventures/*.svg): a raised rounded tile with the glyph cut into it, then the word, clear of it.
+      const u = mh * 0.42, x0 = mw * 0.055, y0 = (mh - u) / 2, k = u / 512, r = u * 0.19;
+      c.beginPath(); c.roundRect(x0, y0, u, u, r); c.fill();
+      c.fillStyle = '#000';
+      if (kind === 'verge') { // the serif V (Georgia 600) as a polygon: thick left stroke, hairline right, slab serifs
+        const P = (px: number, py: number) => c.lineTo(x0 + px * k, y0 + py * k);
+        c.beginPath(); c.moveTo(x0 + 96 * k, y0 + 118 * k); P(222, 118); P(222, 140); P(196, 148); P(262, 330); P(326, 148); P(300, 140); P(300, 118); P(416, 118); P(416, 140); P(386, 148); P(282, 400); P(240, 400); P(130, 148); P(96, 140); c.closePath(); c.fill();
       } else {
-        const u = mh * 0.28, x0 = mw * 0.07, y0 = mh * 0.36, t = u / 8;
-        c.fillRect(x0, y0 + u * 0.28, u, t); c.fillRect(x0, y0 + u * 0.62, u, t); c.fillRect(x0 + u * 0.3, y0, t, u); c.fillRect(x0 + u * 0.64, y0, t, u);
-        text(c, 'Trellis', mw * 0.26, mh * 0.64, mh * 0.4);
+        // lattice from the SVG (1024 box, 640 square, 64 strokes), scaled to 80% of the tile
+        const sq = u * 0.62, o = (u - sq) / 2, t = sq * 0.1, g = (v: number) => o + (v - 192) / 640 * sq;
+        c.fillRect(x0 + o, y0 + g(296), sq, t); c.fillRect(x0 + o, y0 + g(480), sq, t); c.fillRect(x0 + o, y0 + g(664), sq, t);
+        c.fillRect(x0 + g(336), y0 + o, t, sq); c.fillRect(x0 + g(624), y0 + o, t, sq);
       }
+      c.fillStyle = '#fff';
+      text(c, kind === 'verge' ? 'Verge' : 'Trellis', mw * 0.32, mh * 0.5 + mh * 0.4 * 0.36, mh * 0.4);
     });
     parts.push({ mesh: slab(cw - 1, chh - 1, 7, 1.6), material: 'ingot', temp: 0.3, grain: 0.5, seed: kind === 'verge' ? 3 : 9, position: [0, 0, front - depth + 4], relief: { canvas: cv, x: 0, y: 0, w: (cw - 1) * 2, h: (chh - 1) * 2, strength: 5 } });
   }
