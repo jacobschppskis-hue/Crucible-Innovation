@@ -9,7 +9,7 @@ The site's 3D is now real-time (`lib/gl3d/`, procedural materials; see `CLAUDE.m
 | `iron.py`, `ring.py` | older scenes (heated iron, the Split Ring as a cast object); no longer used by the site |
 | `grade.py` | the house grade: warm highlights, blacks lifted to `#0d0d0b`, vignette |
 | `encode.py` | raw PNGs to graded WebP |
-| `fonts/` | Archivo ExtraBold (names) and Gelasio SemiBold (Verge's serif V), static instances (OFL, licences alongside) |
+| `fonts/` | Archivo ExtraBold (names) and Gelasio SemiBold (the Blender reference's serif V; the live Verge mark is an Archivo V), static instances (OFL, licences alongside) |
 
 ## The house look
 

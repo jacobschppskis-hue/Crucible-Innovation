@@ -21,23 +21,31 @@ const GAIN_Y = 3; // x level.y per unit of h
 const GAIN_X = 90; // per unit of slope (px/px)
 const GAIN_R = 90; // ditto, degrees
 const sat = (v: number) => Math.tanh(v);
+// Dead band: the idle swell alone (h <= ~0.1, slope <= ~0.0008/px) stays under it, so DOM things rest exactly still until a
+// real wave (tap, drag, scroll wake, floater ripple) passes. 3D buoys keep the swell (dead = 0).
+const DEAD_Y = 0.32;
+const DEAD_X = 0.1;
+const dz = (v: number, d: number) => (v > d ? v - d : v < -d ? v + d : 0);
 
 const OMEGA = 9; // spring rad/s
 const ZETA = 0.62; // damping ratio: a little overshoot, buoy-like
 
 /** Reusable buoy physics for the 3D scenes: `step(x, docY, dt) -> {dx, dy, tilt}` (px, px, degrees). */
-export function buoy(opts: { strength?: number | FloatLevel } = {}) {
+export function buoy(opts: { strength?: number | FloatLevel; still?: boolean } = {}) {
   const lv = typeof opts.strength === 'string' ? LEVELS[opts.strength] : null;
   const k = typeof opts.strength === 'number' ? opts.strength : 1;
   const L = lv ?? { y: LEVELS.strong.y * k, x: LEVELS.strong.x * k, r: LEVELS.strong.r * k };
+  const still = !!opts.still;
   let x = 0, y = 0, r = 0, vx = 0, vy = 0, vr = 0;
   const out = { dx: 0, dy: 0, tilt: 0, vy: 0 };
   return {
     step(px: number, docY: number, dt: number, calm = 1) {
       const s = sample(px, docY);
-      const ty = -sat(s.h * GAIN_Y) * L.y * calm;
-      const tx = sat(s.gx * GAIN_X) * L.x * calm;
-      const tr = -sat(s.gx * GAIN_R) * L.r * calm;
+      const dy = still ? DEAD_Y : 0;
+      const dx = still ? DEAD_X : 0;
+      const ty = -sat(dz(s.h * GAIN_Y, dy)) * L.y * calm;
+      const tx = sat(dz(s.gx * GAIN_X, dx)) * L.x * calm;
+      const tr = -sat(dz(s.gx * GAIN_R, dx)) * L.r * calm;
       // sub-step so a long frame cannot blow the integrator up
       const n = Math.ceil(dt / 0.012);
       const h = dt / n;
@@ -126,7 +134,7 @@ export function startFloat(): () => void {
     for (const [el, lv] of ok) {
       if (el.parentElement?.closest('[data-fl]')) continue; // an ancestor already floats
       el.setAttribute('data-fl', '');
-      all.set(el, { el, lv: LEVELS[lv], b: buoy({ strength: 1 }), cx: 0, cy: 0, ox: 0, oy: 0, or: 0, on: false, ripple: -9 });
+      all.set(el, { el, lv: LEVELS[lv], b: buoy({ strength: 1, still: true }), cx: 0, cy: 0, ox: 0, oy: 0, or: 0, on: false, ripple: -9 });
       io.observe(el);
     }
   }
