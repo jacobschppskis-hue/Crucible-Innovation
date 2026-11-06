@@ -2,6 +2,7 @@ import { stories, type FounderStory } from '@/data/story';
 import { Portrait } from './Builders';
 import { HeatText } from './HeatText';
 import { WordReveal } from './WordReveal';
+import './Story.css';
 
 /**
  * "Why Crucible": the co-founders in their own words, one chapter each (Jacob first). On wide screens the portrait

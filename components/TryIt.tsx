@@ -2,6 +2,7 @@
 import { useId, useState } from 'react';
 import { ArrowRight } from './Icons';
 import { LiveSite, type Theme } from './LiveSite';
+import './TryIt.css';
 
 const trades: { theme: Theme; label: string }[] = [
   { theme: 'cafe', label: 'Café' },

@@ -9,6 +9,7 @@ import { VentureObject } from '@/components/Ventures';
 import { WordReveal } from '@/components/WordReveal';
 import { site } from '@/data/site';
 import { ventures, type Venture } from '@/data/ventures';
+import '@/components/VenturePages.css';
 
 // One page per venture that doesn't have its own route (no `href` in data/ventures.ts): live ones, and teasers for the
 // ones still in the mould.

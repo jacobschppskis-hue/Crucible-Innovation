@@ -1,6 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import { useEffect } from 'react';
+import { releaseConceptFonts } from '@/lib/tier';
 
 /**
  * One shared IntersectionObserver for every [data-reveal] / [data-words] / [data-cast] element: sets data-in at 15%
@@ -9,6 +10,7 @@ import { useEffect } from 'react';
 export function InView() {
   const pathname = usePathname();
   useEffect(() => {
+    releaseConceptFonts();
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {

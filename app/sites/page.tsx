@@ -18,6 +18,7 @@ import { WordReveal, type Segment } from '@/components/WordReveal';
 import { packages, pricingNote } from '@/data/pricing';
 import { clientSites, work } from '@/data/work';
 import { conceptFonts } from '@/lib/conceptFonts';
+import '@/components/Ventures.css'; // .vf-link (the "See our work" link)
 
 const title = 'Crucible Sites: websites for local businesses';
 const description = 'We design and build fast, beautiful websites for local businesses. Live in about a week. No payment until you’ve approved the design.';

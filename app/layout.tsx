@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Archivo } from 'next/font/google';
+import localFont from 'next/font/local';
 import { InView } from '@/components/InView';
 import { Magnetic } from '@/components/Magnetic';
 import { Liquid } from '@/components/Liquid';
@@ -11,21 +11,24 @@ import { SmoothScroll } from '@/components/SmoothScroll';
 import { site } from '@/data/site';
 import { TIER_SCRIPT } from '@/lib/tier';
 import './globals.css';
-// Bundled with the global CSS (one stylesheet request per page; these are only ~4 KB gzipped).
-import '@/components/LiveSite.css';
-import '@/components/BuildStage.css';
-import '@/components/Process.css';
-import '@/components/Story.css';
-import '@/components/Ventures.css';
-import '@/components/TryIt.css';
+// Shared by every page (menu, packages, before/after). Each other component's stylesheet is imported by the component
+// (or the page) that uses it, so a route only ships the CSS it renders.
 import '@/components/Sites.css';
-import '@/components/QuoteForm.css';
-import '@/components/VenturePages.css';
-import '@/components/Work.css';
 
 // One family for the whole site. The width axis does the display work: Expanded (wdth 125) for display type, normal
 // width for text. The concept sites on /sites bring their own faces (lib/conceptFonts.ts).
-const archivo = Archivo({ subsets: ['latin'], axes: ['wdth'], variable: '--font-archivo', display: 'swap' });
+// Self-hosted: Archivo's variable font (OFL) cut to the Latin glyphs and punctuation we set, wght 400-800 and wdth
+// 100-125, the only ranges used (44 KB instead of the 90 KB Google file, which sits on the critical path before first
+// paint). Regenerate: fontTools.varLib.instancer wght=400:800 wdth=100:125, then pyftsubset (see .board/status/T36.md).
+const archivo = localFont({
+  src: './fonts/Archivo-latin-wght400-800-wdth100-125.woff2',
+  weight: '400 800',
+  style: 'normal',
+  variable: '--font-archivo',
+  display: 'swap',
+  adjustFontFallback: 'Arial',
+  declarations: [{ prop: 'font-stretch', value: '100% 125%' }],
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.url),

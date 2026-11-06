@@ -4,6 +4,7 @@ import { packages } from '@/data/pricing';
 import { site } from '@/data/site';
 import { getRef } from './RefTracker';
 import { ArrowRight, Check } from './Icons';
+import './QuoteForm.css';
 
 const needs = ['New site', 'Redesign', 'Not sure'];
 const packageOptions = [...packages.map((p) => p.name), 'Not sure yet'];

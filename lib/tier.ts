@@ -41,6 +41,15 @@ export function dropToLight() {
   document.documentElement.dataset.tier = 'light';
 }
 
+/** Sets html[data-fonts] once the page is loaded and idle. The concept sites' faces (lib/conceptFonts.ts) are held back
+ * until then (LiveSite.css), so their ~31 KB don't compete with the scripts that start the page. Runs for every tier. */
+let fontsQueued = false;
+export function releaseConceptFonts() {
+  if (fontsQueued) return;
+  fontsQueued = true;
+  afterIdle(() => document.documentElement.setAttribute('data-fonts', ''));
+}
+
 function afterIdle(fn: () => void) {
   const idle = () => (window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 300)))(fn, { timeout: 2500 });
   if (document.readyState === 'complete') idle();

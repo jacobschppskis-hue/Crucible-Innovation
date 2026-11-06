@@ -6,6 +6,7 @@ import { ArrowRight } from './Icons';
 import { IngotScene } from './IngotScene';
 import { SplitRing } from './SplitRing';
 import { WordReveal } from './WordReveal';
+import './Ventures.css';
 
 // Ingot stills (scripts/ingot-stills.mjs → public/film/ingots/<slug>-<w>.webp, transparent). Checked at build time, so a venture without a
 // render falls back to its mark drawn in CSS: cool for a live venture, still glowing for one in the mould.

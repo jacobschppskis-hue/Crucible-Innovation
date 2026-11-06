@@ -2,6 +2,14 @@
    design is 1280 units wide and scales fluidly with its frame (no JS needed). With data-layout="phone" on an
    ancestor the same markup reflows into the phone layout, 390 units wide. Only the site's own fonts are used. */
 
+/* The concept faces (lib/conceptFonts.ts) are held back until the page is loaded and idle (releaseConceptFonts in
+   lib/tier.ts sets html[data-fonts]): until then the metric-matched fallback stands in, so their ~31 KB don't compete
+   with the scripts that start the page (scoped to the concept sites so the swap restyles only them). Without JS html.js is never set, so the real faces load as usual. */
+html.js:not([data-fonts]) :is(.ls, .fs) {
+  --font-instrument: 'Instrument Serif Fallback';
+  --font-instrument-upright: 'Instrument Serif Fallback';
+}
+
 .ls-vp {
   container-type: inline-size;
 }
