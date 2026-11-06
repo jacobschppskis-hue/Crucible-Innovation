@@ -46,3 +46,20 @@ function afterIdle(fn: () => void) {
   if (document.readyState === 'complete') idle();
   else addEventListener('load', idle, { once: true });
 }
+
+/** Runs `fn` once, when `el` is within `margin` (CSS rootMargin) of the viewport; returns the cancel. A far-off scene
+ * (Thesis flames, footer furnace) then creates its GL context when you near it, not during the page's first seconds. */
+export function whenNear(el: Element, fn: () => void, margin = '150% 0px 150% 0px'): () => void {
+  if (typeof IntersectionObserver === 'undefined') {
+    fn();
+    return () => {};
+  }
+  const io = new IntersectionObserver((es) => {
+    if (es.some((e) => e.isIntersecting)) {
+      io.disconnect();
+      fn();
+    }
+  }, { rootMargin: margin });
+  io.observe(el);
+  return () => io.disconnect();
+}

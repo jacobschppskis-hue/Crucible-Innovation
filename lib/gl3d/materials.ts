@@ -34,7 +34,11 @@ void main(){
 if(dot(vW,uClip.xyz)>uClip.w)discard;
 vec3 p=vP,nO=normalize(vO),v=normalize(uEye-vW);
 float h0=ht(p),e=.05/uGrain;
+#ifdef SOFT
+vec3 g=vec3(0.);
+#else
 vec3 g=vec3(ht(p+vec3(e,0,0))-h0,ht(p+vec3(0,e,0))-h0,ht(p+vec3(0,0,e))-h0)/e;
+#endif
 float k=uMat==2?.5:uMat==3?1.3:uMat==1?.9:.55;
 g-=dot(g,nO)*nO;
 float rl=0.,ao=.6+.8*h0;

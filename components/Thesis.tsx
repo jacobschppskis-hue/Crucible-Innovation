@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
-import { richTier } from '@/lib/tier';
+import { richTier, whenNear } from '@/lib/tier';
 
 const ROOM = 293;
 const IRON = 1811; // iron melts at 1811 K
@@ -39,20 +39,25 @@ export function Thesis() {
 
     let stop: (() => void) | undefined;
     let dead = false;
-    richTier().then(async (ok) => {
+    let unNear: (() => void) | undefined;
+    richTier().then((ok) => {
       if (!ok || dead) return;
-      const { startMolten } = await import('@/lib/gl/molten');
-      if (dead) return;
-      stop = startMolten({
-        canvas: gl.current!,
-        crest: crest.current,
-        heat: () => heat.current,
-        onReady: () => el.setAttribute('data-gl', ''),
-        onFail: () => el.removeAttribute('data-gl'),
+      // Only once the scene is within a screen or two: its GL contexts are not made during the page's first seconds.
+      unNear = whenNear(el, async () => {
+        const { startMolten } = await import('@/lib/gl/molten');
+        if (dead) return;
+        stop = startMolten({
+          canvas: gl.current!,
+          crest: crest.current,
+          heat: () => heat.current,
+          onReady: () => el.setAttribute('data-gl', ''),
+          onFail: () => el.removeAttribute('data-gl'),
+        });
       });
     });
     return () => {
       dead = true;
+      unNear?.();
       off();
       stop?.();
     };

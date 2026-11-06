@@ -51,19 +51,40 @@ export function mountLogo(opts: {
     return canvas;
   };
   const dbgPour = location.search.includes('pourdebug');
+  // Layout reads (boxes, nav bottom) are cached: re-read only after a scroll/resize, or every 0.7 s as a safety net.
+  // Reading them every frame forced a style + layout pass after the floaters' writes (costly on phones).
+  let lay: { css: { w: number; h: number }; rect: { left: number; top: number; width: number; height: number }; top: number } | null = null;
+  let layDirty = true;
+  let layAt = 0;
+  const dirty = () => (layDirty = true);
+  addEventListener('scroll', dirty, { passive: true });
+  addEventListener('resize', dirty);
+  const layout = (cv: HTMLCanvasElement) => {
+    const now = performance.now();
+    if (!lay || layDirty || now - layAt > 700) {
+      const r = cv.getBoundingClientRect();
+      lay = {
+        css: { w: cv.clientWidth, h: cv.clientHeight },
+        rect: { left: r.left, top: r.top, width: r.width, height: r.height },
+        top: document.querySelector('header, nav')?.getBoundingClientRect().bottom ?? 64,
+      };
+      layDirty = false;
+      layAt = now;
+    }
+    return lay;
+  };
   const envNow = (cv: HTMLCanvasElement, ptr: { x: number; y: number }) => {
-    const r = cv.getBoundingClientRect();
+    const l = layout(cv);
     return {
-      css: { w: cv.clientWidth, h: cv.clientHeight },
-      rect: { left: r.left, top: r.top, width: r.width, height: r.height },
+      css: l.css,
+      rect: l.rect,
       scrollY,
-      top: navBottom(),
+      top: l.top,
       ptr: { x: ptr.x, y: ptr.y },
       story: { ...opts.story() },
       pourT: dbgPour ? (window as unknown as { __pourT?: number }).__pourT : undefined,
     };
   };
-  const navBottom = () => document.querySelector('header, nav')?.getBoundingClientRect().bottom ?? 64;
   const ptr = { x: -9999, y: -9999 };
   const onMove = (e: PointerEvent) => {
     ptr.x = e.clientX;
@@ -122,7 +143,7 @@ export function mountLogo(opts: {
       if (key === lastKey) return;
       lastKey = key;
       post({ type: 'state', env });
-    });
+    }, { early: true });
     const onVis = () => post({ type: 'vis', hidden: document.hidden });
     document.addEventListener('visibilitychange', onVis);
     const offLong = onLongTasks(() => post({ type: 'down' }));
@@ -186,6 +207,8 @@ export function mountLogo(opts: {
     stopped = true;
     stopCur?.();
     removeEventListener('pointermove', onMove);
+    removeEventListener('scroll', dirty);
+    removeEventListener('resize', dirty);
     document.removeEventListener('pointerleave', onLeave);
     canvas?.remove();
   };

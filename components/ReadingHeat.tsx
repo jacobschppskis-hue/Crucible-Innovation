@@ -14,18 +14,47 @@ export function ReadingHeat() {
   return null;
 }
 
+function wrapOne(el: HTMLElement) {
+  const words = (el.textContent ?? '').split(' ');
+  el.style.setProperty('--n', String(words.length));
+  el.replaceChildren(
+    ...words.flatMap((w, i) => {
+      const s = document.createElement('span');
+      s.textContent = w;
+      s.style.setProperty('--i', String(i));
+      return i < words.length - 1 ? [s, ' '] : [s];
+    }),
+  );
+  el.dataset.heat = '';
+}
+
+// Blocks are wrapped as they come within a screen or two of the viewport (all ~850 spans at once was a long task on
+// phones, and most of this text is far below the fold), a few per animation frame.
 function wrap() {
-  document.querySelectorAll<HTMLElement>('.heat-text:not([data-heat])').forEach((el) => {
-    const words = (el.textContent ?? '').split(' ');
-    el.style.setProperty('--n', String(words.length));
-    el.replaceChildren(
-      ...words.flatMap((w, i) => {
-        const s = document.createElement('span');
-        s.textContent = w;
-        s.style.setProperty('--i', String(i));
-        return i < words.length - 1 ? [s, ' '] : [s];
-      }),
-    );
-    el.dataset.heat = '';
-  });
+  const queue: HTMLElement[] = [];
+  let busy = false;
+  const drain = () => {
+    const t0 = performance.now();
+    while (queue.length && performance.now() - t0 < 4) {
+      const el = queue.shift()!;
+      if (el.isConnected && !el.dataset.heat) wrapOne(el);
+    }
+    busy = queue.length > 0;
+    if (busy) requestAnimationFrame(drain);
+  };
+  const io = new IntersectionObserver(
+    (es) => {
+      for (const e of es) {
+        if (!e.isIntersecting) continue;
+        io.unobserve(e.target);
+        queue.push(e.target as HTMLElement);
+      }
+      if (queue.length && !busy) {
+        busy = true;
+        requestAnimationFrame(drain);
+      }
+    },
+    { rootMargin: '150% 0px 150% 0px' },
+  );
+  document.querySelectorAll<HTMLElement>('.heat-text:not([data-heat])').forEach((el) => io.observe(el));
 }

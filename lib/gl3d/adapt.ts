@@ -6,7 +6,7 @@ import type { Stage } from './core';
 
 // [render scale, fps cap (0 = every frame)]
 const STEPS: [number, number][] = [[1, 0], [0.8, 0], [0.6, 0], [0.5, 0], [0.4, 24], [0.3, 15], [0.25, 10]];
-const SOFT_START = 4;
+const SOFT_START = 5;
 
 export type Adapt = {
   /** Call once per rAF with the frame time (s): returns false when this frame is skipped (fps cap). Adapts on the way. */

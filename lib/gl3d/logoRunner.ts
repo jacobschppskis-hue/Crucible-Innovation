@@ -71,7 +71,7 @@ export function createLogoRunner(
     onFirst?: () => void;
   },
 ): LogoRunner {
-  const stage: Stage = createStage(canvas, { fov: 28, frame: MARK * LOGO_SPAN, quality: 1, dpr: Math.min(opts.dpr || 1, 1.5), exposure: 1, css: env.css });
+  const stage: Stage = createStage(canvas, { fov: 28, frame: MARK * LOGO_SPAN, quality: 1, dpr: Math.min(opts.dpr || 1, 1.5), exposure: 1, css: env.css, fidelity: opts.full });
   const adapt = createAdapt(stage, opts.full);
   const bodies: Body[] = [];
   let sq = 0;

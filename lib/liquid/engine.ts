@@ -81,7 +81,7 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
     ];
     const prev = steps[q];
     steps = all.filter(([s], i) => i === 0 || s < all[i - 1][0]);
-    qMin = soft ? steps.findIndex((s) => s[2] > 0) : 0;
+    qMin = soft ? steps.length - 1 : 0;
     q = prev ? Math.min(steps.length - 1, Math.max(qMin, q)) : qMin;
   };
 

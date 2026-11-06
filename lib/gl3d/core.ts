@@ -35,7 +35,9 @@ export type Obj = Required<Pick<ObjectInit, 'position' | 'rotation' | 'temp' | '
   Omit<ObjectInit, 'position' | 'rotation' | 'temp' | 'glow' | 'seed' | 'grain' | 'visible'> & { material: MaterialName; scale: Vec3 | number };
 
 /** `css`: the canvas' CSS size when it has no layout of its own (an OffscreenCanvas in a worker); the owner updates it. */
-export type StageOptions = { fov?: number; frame?: number; target?: Vec3; quality?: number; dpr?: number; exposure?: number; css?: { w: number; h: number } };
+export type StageOptions = { fov?: number; frame?: number; target?: Vec3; quality?: number; dpr?: number; exposure?: number; css?: { w: number; h: number };
+  /** Full fidelity even on software GL (MSAA, bump normals): screenshots and stills. Off, software GL gets the cheap path. */
+  fidelity?: boolean };
 type Cv = HTMLCanvasElement | OffscreenCanvas;
 export type Stage = {
   canvas: Cv;
@@ -73,8 +75,27 @@ function local(o: Obj): M4 {
 }
 const world = (o: Obj): M4 => (o.parent ? mul(world(o.parent), local(o)) : local(o));
 
+// Software GL (SwiftShader / llvmpipe: no GPU) is told from a throwaway context before the real one is made, so the
+// real one can skip MSAA and the shader its bump-normal taps (the dominant cost there); cached per realm.
+let softGL: boolean | undefined;
+function detectSoft(): boolean {
+  if (softGL !== undefined) return softGL;
+  softGL = false;
+  try {
+    const c = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(1, 1) : document.createElement('canvas');
+    const g = c.getContext('webgl2') as WebGL2RenderingContext | null;
+    if (g) {
+      const ext = g.getExtension('WEBGL_debug_renderer_info');
+      softGL = /swiftshader|llvmpipe|software|basic render/i.test(String(g.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : g.RENDERER)));
+      g.getExtension('WEBGL_lose_context')?.loseContext();
+    }
+  } catch { /* unknown: assume a GPU */ }
+  return softGL;
+}
+
 export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
-  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true, depth: true, stencil: false, powerPreference: 'high-performance' });
+  const preSoft = !opts.fidelity && detectSoft();
+  const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: !preSoft, depth: true, stencil: false, powerPreference: 'high-performance' });
   if (!gl) throw new Error('webgl2 unavailable');
   const sh = (t: number, src: string) => {
     const s = gl.createShader(t)!;
@@ -83,7 +104,7 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
     return s;
   };
   const prog = gl.createProgram()!;
-  const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, FS);
+  const vs = sh(gl.VERTEX_SHADER, VS), fs = sh(gl.FRAGMENT_SHADER, preSoft ? FS.replace('precision highp float;', '#define SOFT\nprecision highp float;') : FS);
   gl.attachShader(prog, vs); gl.attachShader(prog, fs);
   gl.bindAttribLocation(prog, 0, 'aP'); gl.bindAttribLocation(prog, 1, 'aN');
   gl.linkProgram(prog);

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { reducedMotion } from '@/lib/scroll';
-import { richTier } from '@/lib/tier';
+import { richTier, whenNear } from '@/lib/tier';
 
 /** Rich tier: the Thesis's molten iron (lib/gl/furnaceGL.ts) at a fixed temperature, under a Furnace's waves. */
 export function FurnaceGL({ heat }: { heat: number }) {
@@ -12,19 +12,24 @@ export function FurnaceGL({ heat }: { heat: number }) {
     const box = canvas.parentElement!;
     let stop: (() => void) | undefined;
     let dead = false;
-    richTier().then(async (ok) => {
+    let unNear: (() => void) | undefined;
+    richTier().then((ok) => {
       if (!ok || dead) return;
-      const { startFurnaceGL } = await import('@/lib/gl/furnaceGL');
-      if (dead) return;
-      stop = startFurnaceGL({
-        canvas,
-        heat: () => heat,
-        onReady: () => box.setAttribute('data-gl', ''),
-        onFail: () => box.removeAttribute('data-gl'),
+      // The footer is the last thing on the page: its context is made when you near it.
+      unNear = whenNear(box, async () => {
+        const { startFurnaceGL } = await import('@/lib/gl/furnaceGL');
+        if (dead) return;
+        stop = startFurnaceGL({
+          canvas,
+          heat: () => heat,
+          onReady: () => box.setAttribute('data-gl', ''),
+          onFail: () => box.removeAttribute('data-gl'),
+        });
       });
     });
     return () => {
       dead = true;
+      unNear?.();
       stop?.();
     };
   }, [heat]);

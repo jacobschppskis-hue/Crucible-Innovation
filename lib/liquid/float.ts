@@ -110,14 +110,21 @@ export function startFloat(): () => void {
         all.delete(f.el);
       }
     }
+    // Reads (computed styles) first, then writes (data-fl, observe): no style recalc per element.
+    const found: [HTMLElement, FloatLevel][] = [];
     for (const el of document.querySelectorAll<HTMLElement>(AUTO)) {
       if (all.has(el)) continue;
       const lv = levelOf(el);
       if (!lv || el.closest(SKIP) || el.querySelector('form')) continue;
-      if (el.parentElement?.closest('[data-fl]')) continue; // an ancestor already floats
       if (!el.closest('main') && !el.dataset.float) continue; // auto levels live in main
+      found.push([el, lv]);
+    }
+    const ok = found.filter(([el]) => {
       const cs = getComputedStyle(el);
-      if (cs.display === 'inline' || cs.position === 'fixed') continue; // translate does not apply to inline boxes
+      return cs.display !== 'inline' && cs.position !== 'fixed'; // translate does not apply to inline boxes
+    });
+    for (const [el, lv] of ok) {
+      if (el.parentElement?.closest('[data-fl]')) continue; // an ancestor already floats
       el.setAttribute('data-fl', '');
       all.set(el, { el, lv: LEVELS[lv], b: buoy({ strength: 1 }), cx: 0, cy: 0, ox: 0, oy: 0, or: 0, on: false, ripple: -9 });
       io.observe(el);

@@ -42,7 +42,7 @@ for (const slug of ['sites', 'verge', 'trellis']) {
     const old = document.getElementById('c');
     const cv = old.cloneNode();
     old.replaceWith(cv);
-    const { stage } = buildIngot(cv, slug, { dpr: 1, quality: 1 });
+    const { stage } = buildIngot(cv, slug, { dpr: 1, quality: 1, fidelity: true });
     stage.render();
     const url = cv.toDataURL('image/png');
     stage.dispose();

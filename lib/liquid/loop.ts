@@ -7,6 +7,8 @@ export type FrameCb = (t: number, dt: number) => void;
 export const clock = { t: typeof performance === 'undefined' ? 0 : performance.now() / 1000 };
 
 const cbs = new Set<FrameCb>();
+// `early` callbacks (layout readers) run before the others, so their reads see clean layout, not the frame's style writes.
+const earlyCbs = new Set<FrameCb>();
 let raf = 0;
 let last = 0;
 let bound = false;
@@ -17,11 +19,12 @@ function tick(now: number) {
   const dt = last ? Math.min(0.1, t - last) : 1 / 60;
   last = t;
   clock.t = t;
+  if (earlyCbs.size) for (const cb of [...earlyCbs]) cb(t, dt);
   for (const cb of [...cbs]) cb(t, dt);
 }
 
 function run() {
-  if (!raf && cbs.size && !document.hidden) raf = requestAnimationFrame(tick);
+  if (!raf && (cbs.size || earlyCbs.size) && !document.hidden) raf = requestAnimationFrame(tick);
 }
 
 function onVisibility() {
@@ -33,16 +36,17 @@ function onVisibility() {
 }
 
 /** Call `cb(t, dt)` every frame (t and dt in seconds). Returns the function that stops it. */
-export function onFrame(cb: FrameCb) {
+export function onFrame(cb: FrameCb, opts?: { early?: boolean }) {
   if (!bound) {
     bound = true;
     document.addEventListener('visibilitychange', onVisibility);
   }
-  cbs.add(cb);
+  const set = opts?.early ? earlyCbs : cbs;
+  set.add(cb);
   run();
   return () => {
-    cbs.delete(cb);
-    if (!cbs.size) {
+    set.delete(cb);
+    if (!cbs.size && !earlyCbs.size) {
       cancelAnimationFrame(raf);
       raf = 0;
       last = 0;

@@ -20,7 +20,7 @@ const BOB = 26; // wave height → world units
  * Returns the function that releases everything (loseContext). `onLost` is called if the GPU context is lost.
  */
 export function startIngot(canvas: HTMLCanvasElement, host: HTMLElement, kind: IngotKind, across: () => boolean, onLost: () => void, onDrawn: () => void = () => {}) {
-  const { stage, root, hot } = buildIngot(canvas, kind, { quality: 1 });
+  const { stage, root, hot } = buildIngot(canvas, kind, { quality: 1, fidelity: /[?&]liquid=full\b/.test(location.search) });
   // Software GL starts at a low step; long tasks on the main thread step it down further (never gives up).
   const adapt = createAdapt(stage, /[?&]liquid=full\b/.test(location.search));
   const offLong = onLongTasks(() => adapt.down());
