@@ -667,9 +667,10 @@ html.lenis body {
   html[data-tier='rich'][data-pour]:not([data-go]) .ig-cool::after {
     animation-play-state: paused;
   }
-  /* Until the 3D logo has drawn there is no flat ring either (the metal is about to be poured). */
+  /* Until the 3D logo has drawn, the ring stands there as a faint cold mould (no dead first second); the 3D mould
+     takes over from it. */
   html[data-tier='rich'][data-pour]:not([data-go]) .ig-svg {
-    opacity: 0;
+    opacity: 0.16;
   }
 }
 @keyframes ig-glow {
@@ -1263,6 +1264,27 @@ html.lenis body {
 }
 .foot-giant {
   height: 19.5vw;
+}
+.foot-giant-clip {
+  height: 100%;
+}
+/* the molten band rises from the base and glows up behind the letters; it reaches above the wordmark box (not clipped) */
+.foot-furnace {
+  inset: auto 0 0 0;
+  height: max(150%, 15rem);
+}
+.foot-furnace::before {
+  background: radial-gradient(80% 70% at 50% 100%, rgba(255, 130, 50, 0.55), rgba(255, 91, 31, 0.22) 45%, rgba(130, 22, 0, 0) 80%);
+}
+.foot-furnace .furnace-gl,
+.foot-furnace[data-gl] .furnace-gl {
+  opacity: 1;
+}
+.foot-furnace[data-gl]::before {
+  opacity: 0;
+}
+.foot-furnace[data-gl] .furnace-waves {
+  opacity: 0.25;
 }
 .foot-giant-inner {
   position: relative;

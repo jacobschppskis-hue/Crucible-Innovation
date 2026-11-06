@@ -1,6 +1,6 @@
 // Procedural materials as one uber shader: sand-cast bone metal, the glowing core, hot metal (temperature uniform) and
 // packed sand. Warm key light upper-left, dim cool fill, an Ember rim from below (as if lit by the liquid), filmic tone map.
-export const MATERIALS = { cast: 0, core: 1, hot: 2, sand: 3 } as const;
+export const MATERIALS = { cast: 0, core: 1, hot: 2, sand: 3, ingot: 4 } as const;
 export type MaterialName = keyof typeof MATERIALS;
 
 export const VS = `#version 300 es
@@ -40,11 +40,11 @@ g-=dot(g,nO)*nO;
 float rl=0.,ao=.6+.8*h0;
 vec3 n0=nO;
 vec3 nn=normalize(nO-g*k/uGrain*.05);
-if(uRel>0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=vec2(.0016);float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
+if(uRel>0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.8,vec2(.0005),vec2(.0016));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
 rl=texture(uRelT,uv).r*w;
-vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0)).r-texture(uRelT,uv-vec2(d.x,0)).r,texture(uRelT,uv+vec2(0,d.y)).r-texture(uRelT,uv-vec2(0,d.y)).r)*w;
+vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0)).r-texture(uRelT,uv-vec2(d.x,0)).r,texture(uRelT,uv+vec2(0,d.y)).r-texture(uRelT,uv-vec2(0,d.y)).r)*w*(.0016/d);
 nn=normalize(nn-vec3(gr,0.)*uRel);
-float sh=texture(uRelT,uv+vec2(-.007,.011)).r*w;ao*=1.-.6*clamp(sh-rl,0.,1.);}
+float sh=texture(uRelT,uv+vec2(-.004,.007)).r*w;ao*=1.-.45*clamp(sh-rl,0.,1.);}
 vec3 n=normalize(uNM*nn);
 vec3 bone=vec3(.7,.67,.6);
 vec3 col;
@@ -68,9 +68,19 @@ vec3 al=bone*mix(.05,1.,pow(1.-Tl,6.))*(.74+.5*h0)*(1.+.07*rl);
 vec3 crust=lit(al,n,v,ao,.62,.3)+ramp(Tl*.9)*.35*smoothstep(.0,.6,Tl);
 vec3 liq=em*(1.-.35*smoothstep(.1,.4,Tl)*.0)+lit(vec3(.05,.02,.01)+em*.04,n,v,1.,.12,1.1)*.8;
 col=mix(liq,crust,cv)+ramp(T)*smoothstep(.0,.5,cv)*(1.-smoothstep(.5,1.,cv))*.5*Tl;
+}else if(uMat==4){
+vec3 q=p*uGrain*1.4+uSeed*3.;q+=vec3(vn(q*1.6),vn(q*1.6+4.),vn(q*1.6+9.))*.9;float cn=.6*vn(q)+.4*vn(q*2.2);
+float hot=clamp(uTemp+(cn-.5)*.55+(h0-.5)*.2+rl*.22,0.,1.);
+vec3 deep=vec3(.95,.17,.01),mid=vec3(1.25,.45,.02),yel=vec3(1.55,.82,.07);
+vec3 em=hot<.5?mix(deep,mid,hot*2.):mix(mid,yel,(hot-.5)*2.);
+float skin=smoothstep(.55,.9,1.-hot+(vn(p*uGrain*3.+uSeed)-.5)*.5);
+em=mix(em,vec3(.95,.14,.015),skin*.5*(1.-rl));
+vec3 sp=lit(vec3(.12,.05,.02),n,v,1.,.3,1.)*.7;
+float sd=dot(n,normalize(vec3(-.55,.65,.72)));
+col=em*(.8+.3*uGlow)*(.62+.38*ao)*(.62+.6*clamp(sd,0.,1.))+sp*.6;
 }else{
 float gr=vn(p*uGrain*38.);vec3 al=vec3(.016,.013,.011)*(.25+1.5*h0)*(.55+.9*gr)+vec3(.05,.04,.03)*step(.86,gr)*.6;
-al*=1.+uTone*14.;
+al*=.32*(1.+uTone*14.);
 float ins=step(abs(p.x),uCav.x+.5)*step(abs(p.y),uCav.y+.5);
 float dz=clamp((uCav.w-p.z)/9.,0.,1.);
 ao=(.5+.7*h0)*(1.-.62*dz*ins);
@@ -90,7 +100,7 @@ export function reliefCanvas(w: number, h: number, draw: (c: CanvasRenderingCont
   cv.width = w; cv.height = h;
   const c = cv.getContext('2d')!;
   c.fillStyle = '#000'; c.fillRect(0, 0, w, h);
-  c.fillStyle = '#fff'; c.strokeStyle = '#fff'; c.shadowColor = '#fff'; c.shadowBlur = w / 260;
+  c.fillStyle = '#fff'; c.strokeStyle = '#fff'; c.shadowBlur = 0;
   draw(c, w, h);
   return cv;
 }

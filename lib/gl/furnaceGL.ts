@@ -33,22 +33,35 @@ vec3 blackbody(float t) {
 }
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
-  vec2 p = vec2(uv.x * uRes.x / uRes.y, uv.y) * 2.6;
-  float t = uTime * (0.015 + uK * 0.07);
+  float asp = uRes.x / uRes.y;
+  vec2 p = vec2(uv.x * asp, uv.y) * 2.4;
+  float t = uTime * (0.03 + uK * 0.08);
+  // the molten surface: a rolling line near the base, lifted by slow waves and a little noise
+  float top = 0.30 + 0.035 * sin(uv.x * asp * 5.0 + uTime * 0.7) + 0.025 * sin(uv.x * asp * 11.0 - uTime * 1.1);
   vec2 q = vec2(fbm(p + vec2(0.0, t)), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + 3.2 * q + vec2(1.7, 9.2) + t * 1.4), fbm(p + 3.2 * q + vec2(8.3, 2.8)));
-  float n = fbm(p + 2.8 * r);
-  float cracks = pow(1.0 - abs(n * 2.0 - 1.0), 7.0);           // thin bright seams in cold metal
-  float field = mix(cracks * 0.85, n * 1.15, smoothstep(0.35, 1.0, uK)); // melting: the whole surface takes over
-  float floorHeat = smoothstep(1.0, 0.0, uv.y);
-  float temp = field * (0.05 + uK * 0.95) * (0.3 + floorHeat * 0.85);
+  float n = fbm(p + 2.6 * q + vec2(t * 1.3, 0.0));
+  top += (n - 0.5) * 0.09;
   vec2 d = gl_FragCoord.xy - uMouse.xy;
-  temp += uMouse.z * 0.35 * exp(-dot(d, d) / (0.02 * uRes.y * uRes.y)) * (0.4 + uK);
-  temp = clamp(temp, 0.0, 0.9); // never white-hot across the board: the type sits on top of this
-  vec3 col = blackbody(temp);
-  float fade = smoothstep(0.6, 0.0, uv.y);                      // metal pools in the lower part; the type stays clear
-  float a = fade * (0.45 + 0.55 * smoothstep(0.0, 0.25, temp));
-  gl_FragColor = vec4(col * a, a);
+  top += uMouse.z * 0.05 * exp(-dot(d, d) / (0.03 * uRes.y * uRes.y));
+  float below = smoothstep(top, top - 0.02, uv.y);             // 1 inside the metal
+  float depth = clamp((top - uv.y) / top, 0.0, 1.0);
+  // inside: bright crust of orange-yellow veined with darker red, hotter toward the surface
+  float veins = pow(1.0 - abs(n * 2.0 - 1.0), 3.0);
+  float tm = clamp(0.5 + 0.35 * veins + 0.25 * (1.0 - depth) - 0.18 * depth * (1.0 - n), 0.0, 0.96) * (0.7 + 0.3 * uK + 0.2 * uK);
+  vec3 metal = blackbody(tm);
+  // the lip of the surface burns brightest
+  float lip = exp(-pow((uv.y - top) / 0.03, 2.0));
+  metal = mix(metal, vec3(1.0, 0.82, 0.5), lip * 0.8);
+  // above: heat glowing up behind the letters, flickering slowly, fading out well before the top
+  float rise = uv.y - top;
+  float halo = exp(-max(rise, 0.0) * 3.4) * smoothstep(0.95, 0.35, uv.y);
+  halo *= 0.8 + 0.4 * fbm(vec2(uv.x * asp * 3.0, uv.y * 2.0 - t * 3.0));
+  vec3 glow = blackbody(0.5 + 0.2 * halo);
+  float aGlow = (1.0 - below) * halo * (0.42 + 0.3 * uK);
+  float aMetal = below * (0.92 + 0.08 * veins);
+  float a = clamp(aMetal + aGlow + lip * 0.5 * (1.0 - below), 0.0, 1.0);
+  vec3 col = (metal * aMetal + glow * aGlow + vec3(1.0, 0.8, 0.45) * lip * 0.5 * (1.0 - below));
+  gl_FragColor = vec4(min(col, vec3(a)), a);
 }`;
 
 export function startFurnaceGL({ canvas, heat, onReady, onFail }: Options): () => void {

@@ -1,5 +1,5 @@
 // The wave field. The page is a dark liquid; this is its surface height, computed analytically (no simulation, no
-// readback): a sum of wave packets, each a ring that spreads from where something touched, plus an idle swell that is
+// readback): a sum of wave humps, each a ring that spreads from where something touched, plus an idle swell that is
 // always there. Sources live in PAGE CSS px (x, docY), so scrolling drags the liquid past the viewport.
 // `sample()` here and the fragment shader in render.ts evaluate exactly the same formula (constants below are shared).
 
@@ -8,16 +8,14 @@ import { clock } from './loop';
 export const LIFE = 4.5; // seconds a packet lives
 export const SPEED = 320; // px/s the ring spreads at
 export const DISP = 0.8; // how fast the packet widens (dispersion)
-export const KDROP = 0.5; // how fast its wavelength lengthens
 export const DECAY = 0.9; // amplitude decay per second
 export const SPREAD = 80; // px over which the ring's energy thins as 1/sqrt
-export const K0 = (2 * Math.PI) / 3.2; // carrier wavenumber × packet size
 
 /** Idle swell: a few long directional waves [angle rad, wavelength px, speed px/s, amplitude, phase]. */
 export const SWELL: number[][] = [
-  [0.5, 700, 22, 0.05, 0.3],
-  [2.3, 520, 18, 0.045, 1.9],
-  [-0.9, 900, 26, 0.045, 4.1],
+  [0.5, 760, 22, 0.07, 0.3],
+  [2.3, 540, 18, 0.012, 1.9],
+  [-0.9, 900, 26, 0.012, 4.1],
 ];
 
 export const SLOTS = 40; // pointer / click / scroll packets
@@ -80,13 +78,10 @@ export function sample(x: number, docY: number, t = clock.t): Sample {
       const R = SPEED * age;
       const d = r - R;
       if (Math.abs(d) > 3 * sig) continue;
-      const k = K0 / s.size / (1 + KDROP * age);
       const A = (s.amp * Math.exp(-DECAY * age)) / Math.sqrt((1 + R / SPREAD) * (1 + DISP * age));
       const e = Math.exp(-0.5 * (d / sig) * (d / sig));
-      const c = Math.cos(k * d);
-      const sn = Math.sin(k * d);
-      h += A * e * c;
-      const dh = (A * e * (-(d / (sig * sig)) * c - k * sn)) / Math.max(r, 0.001);
+      h += A * e;
+      const dh = (A * e * -(d / (sig * sig))) / Math.max(r, 0.001);
       gx += dh * dx;
       gy += dh * dy;
     }
@@ -113,7 +108,7 @@ export function liveCount(t = clock.t) {
   return n;
 }
 
-const SPACING = 24; // px of travel between packets
+const SPACING = 15; // px of travel between packets
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 
 /**
@@ -146,15 +141,15 @@ export function bindInput() {
     const inst = dist / Math.max(6, now - at);
     speed = speed ? speed * 0.5 + inst * 0.5 : inst;
     const amp = clamp(0.22 + speed * 0.3, 0.22, 0.95) * (touch ? 1.15 : 1);
-    const steps = Math.min(6, Math.floor(dist / SPACING));
+    const steps = Math.min(8, Math.floor(dist / SPACING));
     const ux = (x - ax) / dist;
     const uy = (y - ay) / dist;
     for (let i = 0; i < steps; i++) {
       ax += ux * SPACING;
       ay += uy * SPACING;
-      addSource(ax, ay, amp, 13 + clamp(speed * 3, 0, 7));
+      addSource(ax, ay, amp * 0.8, 15 + clamp(speed * 3, 0, 8));
     }
-    if (steps === 6) {
+    if (steps === 8) {
       ax = x;
       ay = y;
     }

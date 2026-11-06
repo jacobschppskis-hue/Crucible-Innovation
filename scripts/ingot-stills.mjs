@@ -6,7 +6,7 @@ import { chromium } from 'playwright';
 import sharp from 'sharp';
 import { execFileSync } from 'node:child_process';
 import { createServer } from 'node:http';
-import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,11 +17,12 @@ const tsc = join(root, 'node_modules/.bin/tsc');
 execFileSync(tsc, ['--outDir', tmp, '--module', 'esnext', '--target', 'es2020', '--moduleResolution', 'bundler', '--lib', 'es2020,dom', '--skipLibCheck', '--noCheck', join(root, 'lib/gl3d/ingotPose.ts')], { stdio: 'inherit' });
 writeFileSync(join(tmp, 'index.html'), '<!doctype html><body style="margin:0"><canvas id="c" style="width:2400px;height:1500px;display:block"></canvas>');
 // Extensionless relative imports → .js
+copyFileSync(join(root, 'film/fonts/Archivo-ExtraBold.ttf'), join(tmp, 'Archivo.ttf'));
 const srv = createServer((q, r) => {
   let f = join(tmp, decodeURIComponent(q.url.split('?')[0]));
   if (!existsSync(f) && existsSync(f + '.js')) f += '.js';
   if (!existsSync(f)) { r.statusCode = 404; return r.end(); }
-  r.setHeader('content-type', f.endsWith('.js') ? 'text/javascript' : 'text/html');
+  r.setHeader('content-type', f.endsWith('.js') ? 'text/javascript' : f.endsWith('.ttf') ? 'font/ttf' : 'text/html');
   r.end(readFileSync(f));
 });
 await new Promise((res) => srv.listen(0, '127.0.0.1', res));
@@ -35,6 +36,9 @@ const out = join(root, 'public/film/ingots');
 for (const slug of ['sites', 'verge', 'trellis']) {
   const png = await page.evaluate(async (slug) => {
     const { buildIngot } = await import('/gl3d/ingotPose.js');
+    const { loadIngotFont } = await import('/gl3d/ingots.js');
+    document.fonts.add(await new FontFace('Archivo', 'url(/Archivo.ttf)', { weight: '800' }).load());
+    await loadIngotFont();
     const old = document.getElementById('c');
     const cv = old.cloneNode();
     old.replaceWith(cv);

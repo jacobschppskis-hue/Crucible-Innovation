@@ -17,7 +17,6 @@ export type Pour = { update(tau: number): PourTick; finish(): void; dispose(): v
 export const POUR_END = 4.25;
 
 const LIPX = 0.55;
-const LIPY = 36.5;
 const K = 0.92; // crucible scale
 const CRU_Z = 5.5; // the crucible stands in front of the mould, so they never intersect // the crucible's pouring lip
 const STREAM_Z = 4.2;
@@ -25,6 +24,7 @@ const D = 130; // heat falls from white at the metal's surface to bone this many
 const CORE_R = RING.core;
 const HI = 1e4;
 
+const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x);
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
 const sm = (a: number, b: number, x: number) => clamp01((x - a) / (b - a));
 const io = (x: number) => x * x * (3 - 2 * x);
@@ -54,7 +54,10 @@ type Tray = {
   hot: (tau: number, L: number, c: number) => number; // glow 0..1
 };
 
-export function createPour(stage: Stage, pieces: PourPiece[]): Pour {
+export function createPour(stage: Stage, pieces: PourPiece[], headroom = 40): Pour {
+  // The crucible stands fully below the nav: its lip is at most `headroom` mark units above the ring's centre.
+  const LIPY = clamp(headroom - 1.5, 21, 36.5);
+  const DROP = 4; // it settles in from just above
   const owned: Obj[] = [];
   const add = (init: Parameters<Stage['add']>[0]) => {
     const o = stage.add(init);
@@ -156,8 +159,8 @@ export function createPour(stage: Stage, pieces: PourPiece[]): Pour {
     // Crucible: drops in with a little weight, tips about its lip, is righted and lifted away.
     const k = sm(0.15, 0.72, tau) - 1;
     const back = 1 + 2.2 * k * k * k + 1.2 * k * k; // ease out with a small overshoot
-    const dy = 30 * (1 - back);
-    const lift = 36 * ei(sm(3.3, 3.95, tau));
+    const dy = DROP * (1 - back);
+    const lift = 30 * ei(sm(3.3, 3.95, tau));
     const theta = path(TILT, tau);
     pivot.position = [LIPX, LIPY + dy + lift, CRU_Z];
     pivot.rotation = [0, 0, (-theta * Math.PI) / 180];
@@ -176,7 +179,7 @@ export function createPour(stage: Stage, pieces: PourPiece[]): Pour {
       o.visible = tau >= t0 && slump < 1;
       const fall = ei(sm(t0, t0 + 0.4, tau));
       const rest = LIPY + dy + (-11.15 + 1.5 + p[1]) * K;
-      o.position = [LIPX + (p[0] - LIPX) * K, rest + 36 * (1 - fall) + 0.7 * Math.sin(Math.PI * sm(t0 + 0.4, t0 + 0.62, tau)), CRU_Z];
+      o.position = [LIPX + (p[0] - LIPX) * K, rest + DROP * 1.2 * (1 - fall) + 0.7 * Math.sin(Math.PI * sm(t0 + 0.4, t0 + 0.62, tau)), CRU_Z];
       o.scale = [K * (1 + 0.4 * slump), K * (1 - 0.85 * slump), K];
       o.temp = io(sm(0.62, 1.18, tau)) * 0.95;
     });

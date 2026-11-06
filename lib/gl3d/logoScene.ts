@@ -57,11 +57,13 @@ export function mountLogo(opts: {
       css: { w: cv.clientWidth, h: cv.clientHeight },
       rect: { left: r.left, top: r.top, width: r.width, height: r.height },
       scrollY,
+      top: navBottom(),
       ptr: { x: ptr.x, y: ptr.y },
       story: { ...opts.story() },
       pourT: dbgPour ? (window as unknown as { __pourT?: number }).__pourT : undefined,
     };
   };
+  const navBottom = () => document.querySelector('header, nav')?.getBoundingClientRect().bottom ?? 64;
   const ptr = { x: -9999, y: -9999 };
   const onMove = (e: PointerEvent) => {
     ptr.x = e.clientX;
@@ -155,6 +157,7 @@ export function mountLogo(opts: {
           env.css.h = n.css.h;
           env.rect = n.rect;
           env.scrollY = n.scrollY;
+        env.top = n.top;
           env.story = n.story;
           env.pourT = n.pourT;
           runner.frame(t);

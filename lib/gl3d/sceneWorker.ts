@@ -12,7 +12,7 @@ type Msg =
   | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float' }
   | { type: 'vis'; hidden: boolean }
   | { type: 'down' };
-type EnvMsg = { css: { w: number; h: number }; rect: LogoEnv['rect']; scrollY: number; ptr: { x: number; y: number }; story: LogoStory; pourT?: number };
+type EnvMsg = { css: { w: number; h: number }; rect: LogoEnv['rect']; scrollY: number; top?: number; ptr: { x: number; y: number }; story: LogoStory; pourT?: number };
 
 const ctx = self as unknown as {
   postMessage(m: unknown): void;
@@ -26,6 +26,7 @@ const setEnv = (m: EnvMsg) => {
   env.css.h = m.css.h;
   env.rect = m.rect;
   env.scrollY = m.scrollY;
+  env.top = m.top;
   env.ptr.x = m.ptr.x;
   env.ptr.y = m.ptr.y;
   env.story = m.story;

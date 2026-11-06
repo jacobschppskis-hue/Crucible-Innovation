@@ -38,30 +38,34 @@ void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
   float asp = uRes.x / uRes.y;
   float k = uK;
-  // How far the fire climbs: a low bed of embers at 293 K, most of the screen by 1811 K.
-  float reach = 0.16 + 0.9 * k * (0.6 + 0.4 * k);
-  float t = uTime * (0.35 + k * 0.9);
-  vec2 p = vec2(uv.x * asp * 2.2, uv.y * 1.6 * (0.8 + reach));
-  // Fluid motion: the field is carried upward and folded over itself (domain warp), tongues lean with the warp.
-  vec2 w = vec2(fbm(p + vec2(0.0, -t * 0.8)), fbm(p * 1.3 + vec2(4.1, -t * 1.1)));
-  vec2 q = p + (w - 0.5) * vec2(1.7, 0.9);
-  float n = fbm(q * vec2(1.0, 0.75) + vec2(0.0, -t * 1.5));
-  float n2 = fbm(q * 2.1 + vec2(3.3, -t * 2.4));
-  float body = mix(n, n2, 0.35);
-  // Vertical profile: full at the floor, thinning to nothing at the reach; noise breaks the front into tongues.
-  float y = uv.y / reach;
-  float f = (1.0 - y) * 1.35 + (body - 0.5) * (0.9 + 0.5 * y) - 0.12;
-  float a = smoothstep(0.0, 0.22, f);
-  float temp = clamp(f * (0.55 + 0.5 * k) + (body - 0.5) * 0.25 + k * 0.12, 0.0, 1.0);
-  // Cold: only dull red embers; hot: orange to yellow cores, white only deep in the base at the very end.
-  temp = min(temp * (0.55 + 0.45 * k), 0.66); // orange and amber, never white: the type sits on top
+  float x = uv.x * asp, y = uv.y;
+  float t = uTime * (0.4 + k * 0.8);
+  // Tongue height: a low bed of embers at 293 K, most of the screen at 1811 K; it varies slowly across the width.
+  float reach = 0.14 + 1.25 * k * (0.55 + 0.45 * k);
+  // Sway grows with height; the flow is carried upward (sample coordinates move down).
+  float sway = fbm(vec2(x * 1.4, y * 1.1 - t * 0.9)) - 0.5;
+  float xs = x + sway * (0.15 + 0.9 * y);
+  float lick = noise(vec2(xs * 2.3 + 3.0, t * 0.55)) * 0.6 + noise(vec2(xs * 5.0, t * 1.1 + 9.0)) * 0.4;
+  float H = reach * (0.35 + 0.85 * lick);
+  float yn = y / max(H, 0.02);
+  // Vertical streaks (x stretched vs y) give tongues; finer scales break them up as they climb.
+  float tg = fbm(vec2(xs * 3.2, y * 1.5 - t * 1.5));
+  float fine = fbm(vec2(xs * 7.0 + 5.0, y * 4.0 - t * 2.8));
+  float d = (1.0 - yn) * 1.0 + (tg - 0.5) * 1.3 - (fine - 0.5) * 0.8 * (0.3 + yn) - 0.1;
+  float a = smoothstep(0.0, 0.2, d);
+  // Internal structure: hot veins inside each tongue, cooler edges and tips, dim pockets in the base.
+  float vein = fbm(vec2(xs * 4.5 + 2.0, y * 2.2 - t * 2.0));
+  float temp = d * 0.55 + (vein - 0.5) * 1.3 + (tg - 0.5) * 0.4 + 0.12 + k * 0.08;
+  temp = clamp(temp, 0.0, 1.0) * (0.6 + 0.4 * k);
+  temp = min(temp, 0.72);
+  a *= 0.4 + 0.6 * smoothstep(0.05, 0.4, temp + (fine - 0.5) * 0.5);
   vec3 col = blackbody(temp);
-  vec2 d = gl_FragCoord.xy - uMouse.xy;
-  float m = uMouse.z * 0.3 * exp(-dot(d, d) / (0.02 * uRes.y * uRes.y));
+  vec2 dm = gl_FragCoord.xy - uMouse.xy;
+  float m = uMouse.z * 0.3 * exp(-dot(dm, dm) / (0.02 * uRes.y * uRes.y));
   col += vec3(1.0, 0.45, 0.1) * m * a;
   // The type band is cooler and thinner so the copy stays legible over the fire.
   float band = smoothstep(0.18, 0.4, uv.y) * smoothstep(0.78, 0.55, uv.y);
-  a = clamp(a * (0.5 + 0.5 * smoothstep(0.0, 0.35, temp)) * (0.55 + 0.4 * k), 0.0, 1.0) * (1.0 - 0.55 * band);
+  a = clamp(a * (0.5 + 0.5 * k), 0.0, 1.0) * (1.0 - 0.55 * band);
   col *= 1.0 - 0.3 * band;
   gl_FragColor = vec4(col * a, a);
 }`;

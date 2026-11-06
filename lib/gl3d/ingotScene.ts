@@ -6,6 +6,7 @@ import { buildIngot, PITCH, ROLL } from './ingotPose';
 import type { IngotKind } from './index';
 import { createAdapt } from './adapt';
 import { onLongTasks } from './watchdog';
+export { loadIngotFont } from './ingots';
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const YAW = 1.3; // radians of turn from one edge of the viewport to the other (about 75°)
@@ -53,7 +54,7 @@ export function startIngot(canvas: HTMLCanvasElement, host: HTMLElement, kind: I
     dx = tx; dy = ty;
     root.position = [dx, bob + dy, 0];
     root.rotation = [PITCH + rx, yaw, ROLL + rz];
-    if (hot) hot.temp = 0.5 + 0.05 * Math.sin(t * 1.3 + (kind === 'verge' ? 0 : 2));
+    if (hot) hot.temp = 0.3 + 0.05 * Math.sin(t * 1.3 + (kind === 'verge' ? 0 : 2));
     // Its own small ripples, a few seconds apart.
     if (t > nextRipple) {
       nextRipple = t + 2.2 + Math.random() * 1.8;

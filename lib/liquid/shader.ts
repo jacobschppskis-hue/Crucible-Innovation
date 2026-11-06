@@ -1,7 +1,7 @@
 // The liquid's fragment shader (GLSL ES 1.0, valid in WebGL1 and WebGL2) and its wave formula, shared by the worker
 // renderer and the main-thread fallback. The formula is the one in field.ts (`sample`), written out in GLSL.
 
-import { DECAY, DISP, K0, KDROP, SPEED, SPREAD, SWELL } from './field';
+import { DECAY, DISP, SPEED, SPREAD, SWELL } from './field';
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
 
@@ -45,31 +45,37 @@ void main() {
     float R = ${f(SPEED)} * age;
     float d = r - R;
     if (abs(d) > 3.0 * sig) continue;
-    float k = ${K0} / size / (1.0 + ${f(KDROP)} * age);
     float A = a.w * exp(-${f(DECAY)} * age) / sqrt((1.0 + R / ${f(SPREAD)}) * (1.0 + ${f(DISP)} * age));
     float e = exp(-0.5 * d * d / (sig * sig));
-    float c = cos(k * d);
-    float s = sin(k * d);
-    h += A * e * c;
-    g += dv / max(r, 0.001) * (A * e * (-d / (sig * sig) * c - k * s));
+    h += A * e;
+    g += dv / max(r, 0.001) * (A * e * (-d / (sig * sig)));
   }
+  vec2 gp = g; // packets only
+  float hp = h;
+  h = 0.0;
+  g = vec2(0.0);
   ${swell}
+  float hs = h;
+  vec2 gs = g;
 
-  // Body: near-black with a faint texture, seen through the surface (the slope bends where we look).
-  vec2 q = (p + g * 320.0) / 90.0;
-  float tx = vnoise(q) * 0.6 + vnoise(q * 2.3 + 7.0) * 0.4;
-  vec3 col = vec3(0.051, 0.051, 0.043) + vec3(0.9, 0.78, 0.62) * 0.034 * smoothstep(0.3, 0.9, tx);
+  // Body: even near-black. A very faint, fine, regular dot lattice seen through the surface (the slope bends where we
+  // look), so refraction is visible without any blotchy texture.
+  vec2 q = (p + (gp + gs) * 70.0) / 16.0;
+  vec2 f = fract(q) - 0.5;
+  float dotv = 1.0 - smoothstep(0.07, 0.07 + 1.1 / (16.0 * uScale), length(f));
+  vec3 col = vec3(0.047, 0.047, 0.043) + vec3(0.9, 0.78, 0.62) * 0.03 * dotv;
 
-  // Crests and troughs: thin Ember iso-lines of h. Brighter for stronger waves (higher levels only exist there).
-  float gl = max(length(g), 0.00005);
+  // Crests: thin Ember iso-lines of the packet height (real wave fronts: rings, wakes), one pixel wide and crisp;
+  // the idle swell is a fainter line along its own crests.
   float px = 1.0 / uScale;
-  float hw = 0.55;
+  float hw = 0.6;
+  float gl = max(length(gp), 0.0004);
   float line = 0.0;
-  line += 0.1 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(h - 0.07) / gl));
-  line += 0.45 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(h - 0.24) / gl));
-  line += 1.0 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(h - 0.5) / gl));
-  line += 0.3 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(h + 0.3) / gl));
-  col += vec3(1.0, 0.357, 0.122) * min(line, 1.0) * 0.9;
+  line += 0.5 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(hp - 0.1) / gl));
+  line += 1.0 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(hp - 0.3) / gl));
+  float gsl = max(length(gs), 0.00002);
+  float sw = 0.16 * (1.0 - smoothstep(hw - 0.5 * px, hw + 0.5 * px, abs(hs - 0.0) / gsl));
+  col += vec3(1.0, 0.357, 0.122) * (min(line, 1.0) * 0.95 + sw);
 
   col += (hash(gl_FragCoord.xy + uTime) - 0.5) / 255.0; // dither: no banding in the dark
   gl_FragColor = vec4(col, 1.0);

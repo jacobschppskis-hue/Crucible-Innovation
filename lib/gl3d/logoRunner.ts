@@ -22,6 +22,8 @@ const scatter = (i: number) => {
   const r = (n: number) => ((Math.sin(i * 127.1 + n * 311.7) * 43758.5453) % 1 + 1) % 1;
   return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 220 };
 };
+/** Most a piece drifts from its place, in mark units (about 1.5% of the logo, a few px at any width). */
+const DRIFT = 1.4;
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const hash = (i: number) => ((Math.sin(i * 91.7 + 3.1) * 43758.5453) % 1 + 1) % 1;
 
@@ -43,6 +45,8 @@ export type LogoEnv = {
   /** Its on-screen box now (includes the ring's CSS transform). */
   rect: { left: number; top: number; width: number; height: number };
   scrollY: number;
+  /** Client y below which the page is free of the nav (the crucible stays under it). */
+  top?: number;
   ptr: { x: number; y: number };
   story: LogoStory;
   /** Contact sheets (?pourdebug): the pour clock, in place of the real one. */
@@ -93,13 +97,26 @@ export function createLogoRunner(
     });
   });
 
+  // End squares of each ring sit on the arc's tips: they take their arc's drift instead of drifting alone.
+  const tipArc = new Map<Body, Body>();
+  for (const b of bodies) {
+    if (b.piece.kind !== 'square') continue;
+    const [, ri, k] = /^sq(\d)-(\d+)$/.exec(b.piece.id) || [];
+    const arc = bodies.find((a) => a.piece.id === `arc${ri}`);
+    const last = ri === '0' ? 10 : 6;
+    if (arc && (+k === 0 || +k === last)) tipArc.set(b, arc);
+  }
+
   // The pour (opening): the pieces are cast in a sand mould, then released onto the liquid.
-  let pour: Pour | undefined = opts.pour ? createPour(stage, bodies) : undefined;
-  let pourStart = -1;
-  let fl = pour ? 0 : 1; // how much of the floating shows (0 while the logo is still in the mould)
-  const pourTau = (t: number) => {
-    return env.pourT !== undefined ? env.pourT : (t - pourStart) / opts.pour!.tempo;
+  const headroom = () => {
+    const px = env.rect.height / (MARK * LOGO_SPAN);
+    return px > 0 ? (env.rect.top + env.rect.height / 2 - (env.top ?? 64) - 12) / px : 40;
   };
+  let pour: Pour | undefined = opts.pour ? createPour(stage, bodies, headroom()) : undefined;
+  let fl = pour ? 0 : 1; // how much of the floating shows (0 while the logo is still in the mould)
+  // The pour clock advances by capped frame steps, so a stall (shader compile, a slow software GL) never skips beats.
+  let pourClock = 0;
+  const pourTau = () => (env.pourT !== undefined ? env.pourT : pourClock);
   pour?.update(0);
 
   const ptr = env.ptr;
@@ -123,14 +140,14 @@ export function createLogoRunner(
     const sx0 = cx, sy0 = cy;
     let tick: ReturnType<Pour['update']> | undefined;
     if (pour && shown) {
-      if (pourStart < 0) pourStart = t;
       if (story.out > 0.02 || story.sm > 0.01) {
         pour.finish();
         pour.dispose();
         pour = undefined;
         fl = 1;
       } else {
-        tick = pour.update(pourTau(t));
+        pourClock += Math.min(dt, 0.1) / opts.pour!.tempo;
+        tick = pour.update(pourTau());
         fl = tick.float;
         if (tick.done) {
           pour.dispose();
@@ -150,9 +167,10 @@ export function createLogoRunner(
         ox = b.sc.dx * q;
         oy = -b.sc.dy * q;
         oz = -22 * q;
-        rz = (-b.sc.dr * q * Math.PI) / 180;
-        rx = (b.sc.dr / 220) * q * 1.4;
-        ry = (b.sc.dy / 64) * q * 1.2;
+        // Scattered squares only tilt a little (never a 45-degree diamond).
+        rz = (-b.sc.dr / 110) * q * 0.2;
+        rx = (b.sc.dr / 110) * q * 0.35;
+        ry = (b.sc.dy / 32) * q * 0.3;
         sc = 1 - q * 0.45;
       } else if (piece.kind === 'arc') {
         const h = story.sh;
@@ -181,11 +199,18 @@ export function createLogoRunner(
       }
       const idle = t * 1.1 + b.phase;
       const tz = w.h * 7 + Math.sin(idle) * 0.7;
-      const trx = clamp(-w.gy * 4, -0.5, 0.5) + Math.sin(idle * 0.8 + 1) * 0.04;
-      const try_ = clamp(w.gx * 4, -0.5, 0.5) + Math.cos(idle * 0.9) * 0.04;
+      const trx = clamp(-w.gy * 4, -0.2, 0.2) + Math.sin(idle * 0.8 + 1) * 0.04;
+      const try_ = clamp(w.gx * 4, -0.2, 0.2) + Math.cos(idle * 0.9) * 0.04;
       // Springs (units, 1/s²): x,y return to rest and drift gently downhill; z, rx, ry follow the surface.
-      const targets = [-w.gx * 30, w.gy * 30, tz, trx, try_];
-      for (let j = 0; j < 5; j++) {
+      const targets = [clamp(-w.gx * 30, -DRIFT, DRIFT), clamp(w.gy * 30, -DRIFT, DRIFT), tz, trx, try_];
+      const tipOf = tipArc.get(b);
+      if (tipOf) {
+        // Arc-tip squares ride with their arc, so arc ends stay clean.
+        for (let j = 0; j < 5; j++) {
+          s[j] = tipOf.s[j];
+          v[j] = tipOf.v[j];
+        }
+      } else for (let j = 0; j < 5; j++) {
         const kk = j < 2 ? 22 : 55;
         const cc = j < 2 ? 5 : 6.5;
         let acc = kk * (targets[j] - s[j]) - cc * v[j];
@@ -194,8 +219,8 @@ export function createLogoRunner(
         v[j] += acc * step;
         s[j] += v[j] * step;
       }
-      s[0] = clamp(s[0], -22, 22);
-      s[1] = clamp(s[1], -22, 22);
+      s[0] = clamp(s[0], -DRIFT, DRIFT);
+      s[1] = clamp(s[1], -DRIFT, DRIFT);
       // A hard shove sheds a tiny ripple (rate-limited).
       if (pushed > 1800 && t - lastRipple > 0.28) {
         lastRipple = t;

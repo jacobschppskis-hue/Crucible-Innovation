@@ -38,7 +38,8 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
           if (stop || starting || broken) return;
           starting = true;
           import('@/lib/gl3d/ingotScene')
-            .then(({ startIngot }) => {
+            .then(async ({ startIngot, loadIngotFont }) => {
+              await loadIngotFont(); // the lettering is drawn once, so the site's Archivo has to be in first
               if (dead || !starting) return;
               const canvas = canvasRef.current;
               if (!canvas) return;

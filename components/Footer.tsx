@@ -58,10 +58,12 @@ export function Footer() {
         <p className="mt-16 text-sm text-bone-dim">© {new Date().getFullYear()} Crucible</p>
       </div>
 
-      <div aria-hidden data-scroll="reveal" className="foot-giant relative isolate overflow-hidden">
-        <Furnace heat={0.75} reach="95%" molten={0.38} />
-        <div className="foot-giant-inner flex justify-center text-[24vw] leading-[0.8]">
-          <Wordmark />
+      <div aria-hidden data-scroll="reveal" className="foot-giant relative isolate">
+        <Furnace heat={1} reach="100%" molten={0.8} className="foot-furnace" />
+        <div className="foot-giant-clip overflow-hidden">
+          <div className="foot-giant-inner flex justify-center text-[24vw] leading-[0.8]">
+            <Wordmark />
+          </div>
         </div>
       </div>
     </footer>
