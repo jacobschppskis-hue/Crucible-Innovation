@@ -12,6 +12,10 @@ export const DECAY = 0.45; // amplitude decay per second
 export const SPREAD = 80; // px over which the ring's energy thins as 1/sqrt
 export const SEGSIG = 20; // px: width of a wake's hump (refraction), before it widens with age
 export const TAPGAP = 40; // px between a tap's two rings
+export const APPROACH_WINDOW = 1.0; // s before a tap in which the pointer's approach wake is weakened near the tap
+export const APPROACH_AHEAD = 0.12; // s after: a flick is laid down with births staggered into the future
+export const APPROACH_NEAR = 140; // px: no approach wake at all within this of the tap ...
+export const APPROACH_FAR = 380; // ... full strength beyond this
 export const TRAIL = 28; // px a wake's fainter trailing line sits inside its front
 
 /** Idle swell: a few long directional waves [angle rad, wavelength px, speed px/s, amplitude, phase]. The first one also
@@ -31,7 +35,7 @@ export const MAX_SOURCES = 48; // entries the shader reads (taps, wake segments,
 // VERT_CONT continues the previous vertex. A stroke is a polyline whose every vertex is a disk growing at SPEED.
 export const VERT_START = 21;
 export const VERT_CONT = 20;
-export type Source = { x: number; y: number; t0: number; amp: number; size: number; f?: boolean; sid?: number; px?: number; py?: number; pt?: number };
+export type Source = { x: number; y: number; t0: number; amp: number; size: number; f?: boolean; fade?: number; sid?: number; px?: number; py?: number; pt?: number };
 
 /** Set by the worker renderer's host: called with every new packet so it can be forwarded (a tiny message). */
 export const hooks: { onAdd: ((s: Source, kind: 'ring' | 'float') => void) | null; also: Set<(s: Source, kind: 'ring' | 'float') => void> } = { onAdd: null, also: new Set() };
@@ -92,14 +96,30 @@ function collect(t: number): Frame {
   }
   for (const s of floats) if (s && t >= s.t0 && t - s.t0 < LIFE) fl.push(s);
   taps.sort((p, q) => q.t0 - p.t0);
+  // The pointer's approach to a click is part of the click: wake vertices born just before a tap and near it are weakened
+  // (the closer, the more), so the tap reads as one set of centred rings instead of rings plus an offset wake front.
+  for (const l of byId.values()) {
+    for (const v of l) {
+      let w = 1;
+      if (taps.length) {
+        for (const tp of taps) {
+          const dt = tp.t0 - v.t0;
+          if (dt < -APPROACH_AHEAD || dt > APPROACH_WINDOW) continue;
+          const u = Math.min(1, Math.max(0, (Math.hypot(v.x - tp.x, v.y - tp.y) - APPROACH_NEAR) / (APPROACH_FAR - APPROACH_NEAR)));
+          w = Math.min(w, u * u * (3 - 2 * u));
+        }
+      }
+      v.fade = w;
+    }
+  }
   fl.sort((p, q) => q.t0 - p.t0);
   const strokes: Pt[][] = [];
   for (const l of byId.values()) {
     l.sort((p, q) => p.t0 - q.t0);
     const pts: Pt[] = [];
     const f0 = l[0];
-    if (f0.px !== undefined && t - f0.pt! < LIFE) pts.push({ x: f0.px, y: f0.py!, t: f0.pt!, amp: f0.amp });
-    for (const s of l) pts.push({ x: s.x, y: s.y, t: s.t0, amp: s.amp });
+    if (f0.px !== undefined && t - f0.pt! < LIFE) pts.push({ x: f0.px, y: f0.py!, t: f0.pt!, amp: f0.amp * (f0.fade ?? 1) });
+    for (const s of l) pts.push({ x: s.x, y: s.y, t: s.t0, amp: s.amp * (s.fade ?? 1) });
     // cut at "now": the head of a wake born in the future (a flick is laid down at VCAP) is where it has got to
     const live: Pt[] = [];
     for (let i = 0; i < pts.length; i++) {
@@ -344,6 +364,10 @@ const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi 
 export function bindInput() {
   let ax = 0; // last vertex, page px
   let ay = 0;
+  let ex = 0; // last event, page px
+  let ey = 0;
+  let cx = 0; // start of the next smoothed curve piece (midpoint of the last two events)
+  let cy = 0;
   let has = false;
   let fresh = true; // the next vertex starts a new stroke
   let speed = 0; // px/ms, smoothed
@@ -360,18 +384,19 @@ export function bindInput() {
   const reset = (x: number, y: number, ts: number) => {
     ax = x;
     ay = y;
+    ex = x;
+    ey = y;
+    cx = x;
+    cy = y;
     at = ts;
     has = true;
     fresh = true;
     speed = 0;
   };
-  const moveTo = (x: number, y: number, ts: number, touch: boolean) => {
-    if (!has) reset(x, y, ts);
+  // Lay vertices every SPACING px along the straight way from the last vertex to (x, y).
+  const lay = (x: number, y: number, amp: number) => {
     const dist = Math.hypot(x - ax, y - ay);
     if (dist < SPACING) return;
-    const inst = dist / Math.max(6, ts - at);
-    speed = speed ? speed * 0.5 + inst * 0.5 : inst;
-    const amp = clamp(0.5 + speed * 0.3, 0.5, 1.0) * (touch ? 1.15 : 1);
     const steps = Math.min(MAXSTEPS, Math.floor(dist / SPACING));
     const ux = (x - ax) / dist;
     const uy = (y - ay) / dist;
@@ -391,7 +416,43 @@ export function bindInput() {
       ax = x;
       ay = y;
     }
+  };
+  // The path is smoothed: events are corners, the wake follows the quadratic curve through the midpoints between them (so
+  // sparse or uneven touch/mouse events cannot make a kink), laid at even arc length. It trails the pointer by half an event;
+  // `flush` lays the rest once the pointer has paused or lifted.
+  let flushT = 0;
+  let amp0 = 0.5;
+  const flush = () => {
+    clearTimeout(flushT);
+    if (!has) return;
+    lay(ex, ey, amp0);
+    cx = ex;
+    cy = ey;
+  };
+  const moveTo = (x: number, y: number, ts: number, touch: boolean) => {
+    if (!has) reset(x, y, ts);
+    const dist = Math.hypot(x - ex, y - ey);
+    if (dist < 4) return;
+    const inst = dist / Math.max(6, ts - at);
+    speed = speed ? speed * 0.5 + inst * 0.5 : inst;
+    const amp = (amp0 = clamp(0.5 + speed * 0.3, 0.5, 1.0) * (touch ? 1.15 : 1));
+    const mx1 = (ex + x) * 0.5;
+    const my1 = (ey + y) * 0.5;
+    const K = Math.min(24, Math.max(2, Math.ceil(dist / 10)));
+    for (let j = 1; j <= K; j++) {
+      const u = j / K;
+      const w0 = (1 - u) * (1 - u);
+      const w1 = 2 * u * (1 - u);
+      const w2 = u * u;
+      lay(w0 * cx + w1 * ex + w2 * mx1, w0 * cy + w1 * ey + w2 * my1, amp);
+    }
+    cx = mx1;
+    cy = my1;
+    ex = x;
+    ey = y;
     at = ts;
+    clearTimeout(flushT);
+    flushT = setTimeout(flush, 60) as unknown as number;
   };
 
   const onMove = (e: PointerEvent) => {
@@ -412,12 +473,14 @@ export function bindInput() {
   const onUp = (e: PointerEvent) => {
     const d = down;
     down = null;
+    flush();
     if (e.type === 'pointerup' && d && Math.hypot(e.pageX - d.x, e.pageY - d.y) <= TAP_PX && e.timeStamp - d.t < 800) {
       addSource(e.pageX, e.pageY, e.pointerType === 'touch' ? 2.1 : 1.9, 24);
     }
     if (e.pointerType === 'touch') has = false;
   };
   const onLeave = () => {
+    flush();
     mouseIn = false;
     has = false;
   };

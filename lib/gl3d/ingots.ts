@@ -36,7 +36,7 @@ export function ingot(kind: IngotKind): IngotSpec {
     const s = 0.5, front = d / 2;
     for (const p of logoPieces()) {
       const core = p.kind === 'core';
-      parts.push({ mesh: p.mesh, material: 'cast', tone: 0.9, grain: 1.1, seed: core ? 4 : 1, scale: core ? [s, s, s * 0.5] : [s, s, s * 3.2], position: [-24 + p.center[0] * s, p.center[1] * s, front + (core ? 0 : 1.2 * s * 3.2 - 0.25)] });
+      parts.push({ mesh: p.mesh, material: 'cast', tone: 0.88 /* 0.88 = ink in the cast shader: near-black albedo, little specular, so the mark reads at any angle */, grain: 1.1, seed: core ? 4 : 1, scale: core ? [s, s, s * 0.5] : [s, s, s * 3.2], position: [-24 + p.center[0] * s, p.center[1] * s, front + (core ? 0 : 1.2 * s * 3.2 - 0.25)] });
     }
   } else {
     const hw = w / 2, hh = h / 2, cw = 42, chh = 22, depth = 10, front = brickD / 2;
