@@ -17,7 +17,7 @@ export type ObjectInit = {
   /** Noise cycles per object unit (coarse grain; the fine grain is ~9x that). */
   grain?: number;
   /** Raised flat artwork (white on black canvas) mapped on the +z face: centre x, y and size w, h in object units. */
-  relief?: { canvas: HTMLCanvasElement; x: number; y: number; w: number; h: number; strength?: number };
+  relief?: { canvas: HTMLCanvasElement | OffscreenCanvas; x: number; y: number; w: number; h: number; strength?: number };
   /** Sand mould pocket: half width, half height, glow, z of the front face. */
   cavity?: [number, number, number, number];
   /** Cast metal: 0 bone (default) .. 1 dark cooled steel. */
@@ -34,9 +34,13 @@ export type ObjectInit = {
 export type Obj = Required<Pick<ObjectInit, 'position' | 'rotation' | 'temp' | 'glow' | 'seed' | 'grain' | 'visible'>> &
   Omit<ObjectInit, 'position' | 'rotation' | 'temp' | 'glow' | 'seed' | 'grain' | 'visible'> & { material: MaterialName; scale: Vec3 | number };
 
-export type StageOptions = { fov?: number; frame?: number; target?: Vec3; quality?: number; dpr?: number; exposure?: number };
+/** `css`: the canvas' CSS size when it has no layout of its own (an OffscreenCanvas in a worker); the owner updates it. */
+export type StageOptions = { fov?: number; frame?: number; target?: Vec3; quality?: number; dpr?: number; exposure?: number; css?: { w: number; h: number } };
+type Cv = HTMLCanvasElement | OffscreenCanvas;
 export type Stage = {
-  canvas: HTMLCanvasElement;
+  canvas: Cv;
+  /** Software GL (SwiftShader, llvmpipe: no GPU): callers start at a low quality step. */
+  soft: boolean;
   /** fov in degrees; `frame` = world units that fill the canvas height at the target depth; `target` = look-at point. */
   camera: { fov: number; frame: number; target: Vec3 };
   /** Render scale 0.3..1 (× devicePixelRatio): lower it on slow frames. */
@@ -69,7 +73,7 @@ function local(o: Obj): M4 {
 }
 const world = (o: Obj): M4 => (o.parent ? mul(world(o.parent), local(o)) : local(o));
 
-export function createStage(canvas: HTMLCanvasElement, opts: StageOptions = {}): Stage {
+export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
   const gl = canvas.getContext('webgl2', { alpha: true, premultipliedAlpha: true, antialias: true, depth: true, stencil: false, powerPreference: 'high-performance' });
   if (!gl) throw new Error('webgl2 unavailable');
   const sh = (t: number, src: string) => {
@@ -89,7 +93,7 @@ export function createStage(canvas: HTMLCanvasElement, opts: StageOptions = {}):
   for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uCav', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy']) U[n] = gl.getUniformLocation(prog, n);
 
   const meshes = new WeakMap<Mesh, { vao: WebGLVertexArrayObject; bufs: WebGLBuffer[]; n: number; type: number }>();
-  const texes = new WeakMap<HTMLCanvasElement, WebGLTexture>();
+  const texes = new WeakMap<object, WebGLTexture>();
   const owned: (WebGLBuffer | WebGLVertexArrayObject | WebGLTexture)[] = [];
   const upload = (m: Mesh) => {
     let g = meshes.get(m);
@@ -111,7 +115,7 @@ export function createStage(canvas: HTMLCanvasElement, opts: StageOptions = {}):
     meshes.set(m, g);
     return g;
   };
-  const tex = (c?: HTMLCanvasElement) => {
+  const tex = (c?: HTMLCanvasElement | OffscreenCanvas) => {
     let t = c && texes.get(c);
     if (t) return t;
     t = gl.createTexture()!;
@@ -127,9 +131,15 @@ export function createStage(canvas: HTMLCanvasElement, opts: StageOptions = {}):
   const blank = tex();
   let objs: Obj[] = [];
   let disposed = false;
-  const dprBase = () => opts.dpr ?? Math.min(window.devicePixelRatio || 1, 2);
+  const dprBase = () => opts.dpr ?? Math.min((typeof window === 'undefined' ? 1 : window.devicePixelRatio) || 1, 2);
+  let soft = false;
+  try {
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    soft = /swiftshader|llvmpipe|software|basic render/i.test(String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER)));
+  } catch { /* unknown: assume a GPU */ }
   const st: Stage = {
     canvas,
+    soft,
     camera: { fov: opts.fov ?? 28, frame: opts.frame ?? 72, target: opts.target ?? [0, 0, 0] },
     quality: opts.quality ?? 1,
     exposure: opts.exposure ?? 1,
@@ -141,7 +151,7 @@ export function createStage(canvas: HTMLCanvasElement, opts: StageOptions = {}):
     remove(o) { objs = objs.filter((x) => x !== o && x.parent !== o); },
     resize() {
       const s = dprBase() * Math.max(0.25, Math.min(1, st.quality));
-      const w = Math.max(1, Math.round(canvas.clientWidth * s)), h = Math.max(1, Math.round(canvas.clientHeight * s));
+      const w = Math.max(1, Math.round((opts.css ? opts.css.w : (canvas as HTMLCanvasElement).clientWidth) * s)), h = Math.max(1, Math.round((opts.css ? opts.css.h : (canvas as HTMLCanvasElement).clientHeight) * s));
       if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
     },
     render() {

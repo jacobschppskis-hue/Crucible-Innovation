@@ -4,6 +4,8 @@ import { clock, onFrame } from '../liquid/loop';
 import { addSource, sample } from '../liquid/field';
 import { buildIngot, PITCH, ROLL } from './ingotPose';
 import type { IngotKind } from './index';
+import { createAdapt } from './adapt';
+import { onLongTasks } from './watchdog';
 
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const YAW = 1.3; // radians of turn from one edge of the viewport to the other (about 75°)
@@ -18,16 +20,23 @@ const BOB = 26; // wave height → world units
  */
 export function startIngot(canvas: HTMLCanvasElement, host: HTMLElement, kind: IngotKind, across: () => boolean, onLost: () => void, onDrawn: () => void = () => {}) {
   const { stage, root, hot } = buildIngot(canvas, kind, { quality: 1 });
+  // Software GL starts at a low step; long tasks on the main thread step it down further (never gives up).
+  const adapt = createAdapt(stage, /[?&]liquid=full\b/.test(location.search));
+  const offLong = onLongTasks(() => adapt.down());
   const lost = (e: Event) => { e.preventDefault(); onLost(); };
   canvas.addEventListener('webglcontextlost', lost);
   let yaw = 0, bob = 0, tx = 0, ty = 0, rx = 0, rz = 0, dx = 0, dy = 0;
-  let slow = 0, fast = 0, nextRipple = clock.t + 1 + Math.random() * 2;
+  let nextRipple = clock.t + 1 + Math.random() * 2;
   let first = true;
   let drawn = false;
-  const off = onFrame((t, dt) => {
+  let lastDraw = 0;
+  const off = onFrame((t) => {
     const r = host.getBoundingClientRect();
     const vw = innerWidth, vh = innerHeight;
     if (r.bottom < -vh * 0.2 || r.top > vh * 1.2 || r.right < -vw * 0.2 || r.left > vw * 1.2) return;
+    if (!adapt.allow(t)) return;
+    const dt = lastDraw && t - lastDraw < 0.5 ? t - lastDraw : 1 / 60;
+    lastDraw = t;
     const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
     const u = across() ? (cx - vw / 2) / vw : (cy - vh / 2) / vh;
     const px = cx + scrollX, py = cy + scrollY;
@@ -52,14 +61,10 @@ export function startIngot(canvas: HTMLCanvasElement, host: HTMLElement, kind: I
     }
     stage.render();
     if (!drawn) { drawn = true; onDrawn(); }
-    // Adaptive quality: step the render scale down on slow frames and back up when there is headroom.
-    const cost = dt * 1000;
-    if (cost > 26) { slow++; fast = 0; } else if (cost < 18) { fast++; slow = 0; } else { slow = 0; fast = 0; }
-    if (slow > 20 && stage.quality > 0.4) { stage.quality = Math.max(0.4, stage.quality - 0.15); slow = 0; }
-    if (fast > 240 && stage.quality < 1) { stage.quality = Math.min(1, stage.quality + 0.1); fast = 0; }
   });
   return () => {
     off();
+    offLong();
     canvas.removeEventListener('webglcontextlost', lost);
     stage.dispose();
   };

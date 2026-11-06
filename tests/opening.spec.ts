@@ -97,41 +97,84 @@ test('without JavaScript the opening is static and complete', async ({ browser }
   await ctx.close();
 });
 
-test('heat loops only run while on screen, and never with reduced motion', async ({ page, browser }) => {
-  // The next ventures are still hot: a rendered ingot's molten face swells (its frame's ::after), or the mark breathes.
-  const playState = (el: Element) => {
-    const glow = getComputedStyle(el.querySelector('.vf-visual')!, '::after');
-    if (glow.animationName !== 'none') return glow.animationPlayState;
-    const mark = el.querySelector('.vf-mark');
-    return mark ? getComputedStyle(mark).animationPlayState : 'none';
-  };
-  await page.goto('/?tier=light', { waitUntil: 'networkidle' });
-  const floor = page.locator('#ventures');
-  const hot = page.locator('#ventures [data-hot]').first();
-  await expect(floor).not.toHaveAttribute('data-live', '');
-  expect(await hot.evaluate(playState)).toBe('paused');
-  await hot.scrollIntoViewIfNeeded();
-  await expect(floor).toHaveAttribute('data-live', '');
-  expect(await hot.evaluate(playState)).toBe('running');
+test('ingot canvases exist only near the viewport and are released when far, and never with reduced motion', async ({ page, browser }) => {
+  // The 3D ingots (components/IngotScene.tsx) replaced the CSS heat loops: the same intent, work only while on screen.
+  const live = () => page.locator('#ventures .ing[data-on]').count();
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await expect(page.locator('html')).toHaveAttribute('data-tier', 'rich');
+  expect(await live()).toBe(0); // the ventures are far below the opening
+  await page.locator('#ventures').scrollIntoViewIfNeeded();
+  await page.locator('#ventures').evaluate((el) => window.scrollTo(0, el.getBoundingClientRect().top + scrollY + 200));
+  await expect.poll(live, { timeout: 40000 }).toBeGreaterThan(0);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await expect.poll(live, { timeout: 20000 }).toBe(0);
 
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const calm = await ctx.newPage();
   await calm.goto('/', { waitUntil: 'networkidle' });
-  const still = await calm.locator('#ventures [data-hot]').first().evaluate((el) =>
-    [getComputedStyle(el.querySelector('.vf-visual')!, '::after').animationName, el.querySelector('.vf-mark') ? getComputedStyle(el.querySelector('.vf-mark')!).animationName : 'none'],
-  );
-  expect(still).toEqual(['none', 'none']);
+  await calm.locator('#ventures').scrollIntoViewIfNeeded();
+  await calm.waitForTimeout(1500);
+  expect(await calm.locator('.ing[data-on]').count()).toBe(0);
+  // The stills hold the layout instead.
+  const still = calm.locator('#ventures .ing-still').first();
+  await still.scrollIntoViewIfNeeded();
+  expect(await still.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
   await ctx.close();
 });
 
-test('venture pages: the casting fills the frame and the share image is the casting', async ({ page }) => {
+test('venture pages: a freestanding ingot with a still fallback, and the share image is the casting', async ({ page }) => {
   for (const slug of ['verge', 'trellis']) {
-    await page.goto(`/ventures/${slug}`, { waitUntil: 'networkidle' });
-    const img = page.locator('.vx-visual .vf-img');
+    await page.goto(`/ventures/${slug}?tier=light`, { waitUntil: 'networkidle' });
+    const img = page.locator('.vx-visual .ing-still');
     await expect(img).toHaveAttribute('src', `/film/ingots/${slug}-1200.webp`);
     expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+    await expect(page.locator('.vx-visual .ing-canvas')).toHaveCount(1);
+    await expect(page.locator('.vx-visual .ing[data-on]')).toHaveCount(0); // light tier: the still only
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', new RegExp(`/og/${slug}\\.jpg$`));
   }
+});
+
+test('every page ends on a dark footer, and no page has a bone one', async ({ page }) => {
+  for (const path of ['/', '/sites', '/ventures', '/ventures/verge', '/work']) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    const foot = page.locator('footer.foot');
+    await expect(foot).toHaveCount(1);
+    const { bg, fg } = await foot.evaluate((el) => ({ bg: getComputedStyle(el).backgroundColor, fg: getComputedStyle(el.querySelector('.foot-mail')!).color }));
+    const lum = (c: string) => {
+      const [r, g, b, a = 1] = (c.match(/[\d.]+/g) ?? []).map(Number);
+      return a === 0 ? 0 : (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
+    };
+    expect(lum(bg), `${path} footer background`).toBeLessThan(0.3);
+    expect(lum(fg), `${path} footer text`).toBeGreaterThan(0.5);
+  }
+});
+
+test('no alloy beat and bone portraits on / and /sites', async ({ page }) => {
+  for (const path of ['/', '/sites']) {
+    await page.goto(path, { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('.alloy, [class*="AlloyBeat"], [data-alloy]')).toHaveCount(0);
+    const portraits = page.locator('img[alt^="ASCII portrait"]');
+    const n = await portraits.count();
+    if (path === '/') expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) expect(await portraits.nth(i).getAttribute('src')).toMatch(/bone/);
+    // Straight on the page, not on a bone card.
+    await expect(page.locator('img[alt^="ASCII portrait"]').locator('xpath=ancestor::*[contains(@class,"bg-bone")]')).toHaveCount(0);
+  }
+});
+
+test('reduced motion shows the static SVG logo and the ingot stills, with no canvases drawing', async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1000);
+  await expect(page.locator('section.ig')).not.toHaveAttribute('data-3d', '');
+  await expect(page.locator('section.ig .ig-svg')).toBeVisible();
+  // The 18 squares of the ring stay upright in the rendered logo.
+  expect(await page.locator('.ig-svg rect[transform]').count()).toBe(0);
+  await expect(page.locator('.ig-3d')).toHaveCount(0);
+  expect(await page.locator('.ing[data-on]').count()).toBe(0);
+  expect(await page.locator('.ing-still').count()).toBeGreaterThan(0);
+  await ctx.close();
 });
 
 test('ventures: the live one has set and links to /sites; the next ones glow in their moulds and have their own pages', async ({ page }) => {
@@ -196,12 +239,14 @@ test.describe('rich tier', () => {
     await expect.poll(() => opacity('.ig-3d')).toBeGreaterThan(0.99);
     // The canvas is transparent where there is no logo (no box) and draws the logo where there is.
     const probe = () =>
+      // The canvas belongs to the scene worker (OffscreenCanvas), so read it back through a 2D canvas.
       page.locator('.ig-3d').evaluate((c: HTMLCanvasElement) => {
-        const gl = c.getContext('webgl2')!;
-        const w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
-        const px = new Uint8Array(4);
-        gl.readPixels(1, 1, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
-        return { corner: px[3], w, h };
+        const copy = document.createElement('canvas');
+        copy.width = c.width;
+        copy.height = c.height;
+        const g = copy.getContext('2d')!;
+        g.drawImage(c, 0, 0);
+        return { corner: g.getImageData(1, 1, 1, 1).data[3], w: c.width, h: c.height };
       });
     expect((await probe()).corner, 'canvas corner is transparent').toBe(0);
     const box = (await scene.boundingBox())!;
@@ -251,6 +296,9 @@ test.describe('rich tier', () => {
     const errors: string[] = [];
     page.on('pageerror', (e) => errors.push(String(e)));
     await page.addInitScript(() => {
+      // No OffscreenCanvas worker path either, so the main-thread fallback runs and finds no GL.
+      // @ts-expect-error not part of the point
+      HTMLCanvasElement.prototype.transferControlToOffscreen = undefined;
       const get = HTMLCanvasElement.prototype.getContext;
       // @ts-expect-error narrowing the overloads is not the point here
       HTMLCanvasElement.prototype.getContext = function (type: string, ...rest: unknown[]) {

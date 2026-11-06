@@ -86,7 +86,7 @@ o=vec4(col,1.);}`;
 
 /** Draw into a canvas (white = raised) for the relief shader: lettering, lattice, anything flat. Soft edges welcome. */
 export function reliefCanvas(w: number, h: number, draw: (c: CanvasRenderingContext2D, w: number, h: number) => void) {
-  const cv = document.createElement('canvas');
+  const cv = (typeof document === 'undefined' ? new OffscreenCanvas(w, h) : document.createElement('canvas')) as HTMLCanvasElement;
   cv.width = w; cv.height = h;
   const c = cv.getContext('2d')!;
   c.fillStyle = '#000'; c.fillRect(0, 0, w, h);

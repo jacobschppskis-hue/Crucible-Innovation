@@ -633,14 +633,16 @@ html.lenis body {
   .js .ig-heat {
     animation: ig-heat calc(2000ms * var(--T)) ease-out calc(2000ms * var(--T)) both;
   }
+  /* The headline is visible from the first paint; it lifts a little into place while the metal rises (about 2.0 s to
+     3.4 s of the pour). */
   .js .ig-in {
-    animation: ig-rise calc(1250ms * var(--T)) cubic-bezier(0.16, 1, 0.3, 1) calc(var(--ld, 0ms) * var(--T)) both;
+    animation: ig-rise calc(1700ms * var(--T)) cubic-bezier(0.45, 0, 0.2, 1) calc((1800ms + var(--ld, 0ms)) * var(--T)) both;
   }
   .js .ig-l1 .ig-in {
-    --ld: 300ms;
+    --ld: 0ms;
   }
   .js .ig-l2 .ig-in {
-    --ld: 430ms;
+    --ld: 130ms;
   }
   /* "alloyed." stays white-hot while the metal pours and cools with it. */
   .js .ig-cool::after {
@@ -648,15 +650,20 @@ html.lenis body {
     animation: ig-cool calc(3700ms * var(--T)) cubic-bezier(0.4, 0, 0.6, 1) calc(400ms * var(--T)) both;
   }
   .js .ig-meta > * {
-    animation: rise calc(1000ms * var(--T)) var(--ease-spring) calc((820ms + var(--mi, 0) * 110ms) * var(--T)) both;
+    animation: ig-lift calc(1000ms * var(--T)) var(--ease-spring) calc((2100ms + var(--mi, 0) * 110ms) * var(--T)) both;
   }
   .js .ig-meta > :nth-child(2) {
     --mi: 1;
   }
-  .js .nav-intro {
-    animation: ig-nav calc(1000ms * var(--T)) var(--ease-out) calc(900ms * var(--T)) both;
+  /* Nothing to pour (no GL, or the light tier): the headline and the rest simply sit in place. */
+  html:is([data-nopour], [data-tier='light']) :is(.ig-in, .ig-meta > *) {
+    animation: none;
   }
-  html[data-tier='rich'][data-pour]:not([data-go]) :is(.ig-in, .ig-meta > *, .nav-intro, .ig-glow span, .ig-heat),
+  html:is([data-nopour], [data-tier='light']) .ig-cool::after {
+    animation: none;
+    opacity: 0;
+  }
+  html[data-tier='rich'][data-pour]:not([data-go]) :is(.ig-in, .ig-meta > *, .ig-glow span, .ig-heat),
   html[data-tier='rich'][data-pour]:not([data-go]) .ig-cool::after {
     animation-play-state: paused;
   }
@@ -681,7 +688,7 @@ html.lenis body {
 }
 @keyframes ig-rise {
   from {
-    transform: translate3d(0, 140%, 0); /* clear of the mask's bottom padding too */
+    transform: translate3d(0, 0.2em, 0);
   }
   to {
     transform: none;
@@ -701,10 +708,9 @@ html.lenis body {
     opacity: 0;
   }
 }
-@keyframes ig-nav {
+@keyframes ig-lift {
   from {
-    opacity: 0;
-    transform: translateY(-10px);
+    transform: translate3d(0, 14px, 0);
   }
 }
 

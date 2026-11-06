@@ -19,12 +19,13 @@ export type IgnitionState = { sm: number; sh: number; core: number; flare: numbe
  * The home page's opening, one pinned scene:
  *  1. The pour (on load, rich tier): in the 3D logo's own transparent canvas (lib/gl3d/pour.ts) a crucible tips and
  *     pours white-hot metal into the core, the metal rises through a freestanding sand mould of the mark, cools to
- *     bone while the mould falls away, and the logo is released onto the liquid. The headline rises with it: its CSS
- *     animations are held until the first 3D frame is up (html[data-go]), so both start on the same frame.
+ *     bone while the mould falls away, and the logo is released onto the liquid. The headline is on screen from the
+ *     first paint (LCP) and lifts a little into place in step with the metal: its CSS lift is held until the first 3D
+ *     frame is up (html[data-go]), so both start together. The logo is drawn in a Web Worker (lib/gl3d/sceneWorker.ts).
  *  2. First scroll: the headline parts, the ring takes the stage and comes apart. "Not the person." (the machine
  *     half scatters), "Not the model." (the human half leaves), "Neither, alone." (they fuse and the core re-ignites).
  * The canvas exists only while the opening is near the viewport. Reduced motion, no JS and no WebGL show the flat SVG
- * ring from the start with the headline in place (a failsafe in lib/tier.ts releases the headline if the scene is slow).
+ * ring from the start with the headline in place (a failsafe in lib/tier.ts lets the lift play if the scene is slow).
  */
 export function Ignition() {
   const ref = useRef<HTMLElement>(null);
@@ -67,10 +68,11 @@ export function Ignition() {
     let stopLogo: (() => void) | undefined;
     let io: IntersectionObserver | undefined;
     let failed = false;
+    // Failsafe only: the headline is on screen from the first paint; this just lets it lift if the scene is very slow.
     const late = setTimeout(() => {
       wantPour = false;
       go();
-    }, 2400);
+    }, 3000);
     const unmount = () => {
       stopLogo?.();
       stopLogo = undefined;
@@ -84,12 +86,13 @@ export function Ignition() {
           stopLogo = mountLogo({
             host: hostRef.current,
             story: () => state.current,
-            pour: wantPour ? { tempo, skip: () => !wantPour, start: () => ((wantPour = false), clearTimeout(late), go()) } : undefined,
+            pour: wantPour ? { tempo, start: () => ((wantPour = false), clearTimeout(late), go()) } : undefined,
             onReady: () => el.setAttribute('data-3d', ''),
             onFail: () => {
               failed = true;
               stopLogo = undefined;
               clearTimeout(late);
+              root.setAttribute('data-nopour', ''); // no GL: the headline simply sits in place
               go();
             },
           });

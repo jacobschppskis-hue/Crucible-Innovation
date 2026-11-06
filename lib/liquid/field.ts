@@ -27,7 +27,7 @@ export const MAX_SOURCES = SLOTS + FLOAT_SLOTS;
 export type Source = { x: number; y: number; t0: number; amp: number; size: number };
 
 /** Set by the worker renderer's host: called with every new packet so it can be forwarded (a tiny message). */
-export const hooks: { onAdd: ((s: Source, kind: 'ring' | 'float') => void) | null } = { onAdd: null };
+export const hooks: { onAdd: ((s: Source, kind: 'ring' | 'float') => void) | null; also: Set<(s: Source, kind: 'ring' | 'float') => void> } = { onAdd: null, also: new Set() };
 
 const main: (Source | null)[] = new Array(SLOTS).fill(null);
 const floats: (Source | null)[] = new Array(FLOAT_SLOTS).fill(null);
@@ -39,7 +39,9 @@ export function addSource(x: number, docY: number, amp = 0.6, size = 14, opts: {
   const s: Source = { x, y: docY, t0: opts.t ?? clock.t, amp, size };
   if (opts.kind === 'float') floats[fi++ % FLOAT_SLOTS] = s;
   else main[mi++ % SLOTS] = s;
-  hooks.onAdd?.(s, opts.kind === 'float' ? 'float' : 'ring');
+  const kind = opts.kind === 'float' ? 'float' : 'ring';
+  hooks.onAdd?.(s, kind);
+  for (const f of hooks.also) f(s, kind);
 }
 
 /** Live sources, newest first, at most `max` (a quality knob), written as two vec4 arrays for the shader:

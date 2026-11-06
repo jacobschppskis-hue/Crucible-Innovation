@@ -88,30 +88,32 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
 ## Motion and performance notes
 
 - **Scroll engine.** `lib/scroll.ts` runs one listener for every scroll effect. Each tracked element gets a `--p` CSS variable (0 → 1), and all reads happen before all writes on each frame. Mark an element with `data-scroll="view|enter|pin|reveal|read"` and style it with `var(--p)`, or call `trackScroll()` for a callback.
+- **The liquid.** The site background is a dark liquid (`lib/liquid/`): an analytic wave field shared by the CPU (`sample()`, used for floating) and the shader. Pointer, taps, scroll, floaters and an idle swell make waves. It renders in a Web Worker on an OffscreenCanvas into one fixed `z-index:-1` canvas, so section backgrounds are transparent. It adapts its own quality, and software GL (no GPU: CI, PageSpeed) starts at the lowest step. `?liquid=full` pins full quality (screenshots). `lib/liquid/float.ts` makes headings, text and blocks bob on the waves via `data-float="strong|heading|block|text|none"` (nav, the /sites form and reduced motion are excluded).
+- **3D** (`lib/gl3d/`): a small WebGL2 renderer with procedural metal materials (no assets, no Blender). The home logo (`logoScene.ts`, `pour.ts`: the pour into a sand mould, then the ring floats) and the venture ingots (`IngotScene`, `ingotScene.ts`) are real-time objects in their own canvases, created near the viewport and released when far. The logo runs in a Web Worker and the headline shows from first paint. Static versions: SVG logo and the transparent ingot stills (`node scripts/ingot-stills.mjs`).
 - **Two tiers** (`lib/tier.ts`):
-  - **Rich** is what every visitor gets: the rendered films (`public/film`, scrubbed on a 2D canvas by `lib/film.ts`) and the WebGL scenes (`lib/gl/*`). There's deliberately no low-bandwidth version. Rich effects load after the page's load and idle, so they never hold back the first paint, and the film frames load only as each scene comes up.
-  - **Light** (CSS, SVG, the films' posters) is what's left with reduced motion, without JS, or when a scene can't start at all (no WebGL, a lost context).
-  - On slow frames a scene lowers its own quality (resolution, spark count) and keeps going.
+  - **Rich** is what every visitor gets: the liquid, the 3D scenes and the WebGL effects (`lib/gl/*`). There's deliberately no low-bandwidth version. Rich effects load after the page's load and idle, so they never hold back the first paint.
+  - **Light** (CSS, SVG, the stills) is what's left with reduced motion, without JS, or when a scene can't start at all (no WebGL, a lost context).
+  - On slow frames a scene lowers its own quality and keeps going.
   - Add `?tier=rich` or `?tier=light` to any URL to force a tier.
 - **Home page:** one continuous casting, top to bottom.
-  - `Ignition` is the opening and the first scroll: the pour into a mould, then "Not the person / Not the model / Neither, alone" on the same ring. Rich tier: for the story the flat ring hands over to the rendered cast ring (`public/film/ring/`, frame = scroll progress × 95, first and last frames lying exactly on the SVG), or to WebGL particles (`lib/gl/ringParticles.ts`) without it. The cursor can knock the ring's pixels loose at rest (`lib/knock.ts`) on both tiers.
-  - `Story`: one chapter per co-founder (Jacob first, `data/story.ts`), the ASCII portrait pinned while the text warms as it's read. One moment from Jacob's account is shown, not told: PayPal splitting into six companies.
-  - `Ventures` is the foundry floor: a pinned sideways track (vertical on phones). Each venture is a cast object: freestanding real-time 3D ingots (stills from `public/film/ingots/` as the fallback) when they exist, otherwise its mark in a mould, cool for a live venture and still glowing for the next ones.
-  - `Thesis` heats from 293 K to 1811 K as you scroll. Rich tier: the rendered film of iron melting (`public/film/iron/`, drawn by `lib/film.ts`), or the WebGL surface (`lib/gl/molten.ts`) until it exists. Light tier: its poster fades in.
-  - The footer is the cooled bone surface: a hot edge that cools as it comes in, and the wordmark set in ink.
+  - `Ignition` is the opening and the first scroll: the 3D logo is poured into a mould, then "Not the person / Not the model / Neither, alone" on the same ring.
+  - `Story`: one chapter per co-founder (Jacob first, `data/story.ts`), the bone ASCII portrait (`public/team/*-bone.webp`, from `node`-free `python3 scripts/bone-portraits.py`) pinned while the text warms as it's read. One moment from Jacob's account is shown, not told: PayPal splitting into six companies.
+  - `Ventures` is the foundry floor: a pinned sideways track (vertical on phones) of freestanding 3D ingots (stills from `public/film/ingots/` as the fallback).
+  - `Thesis` heats from 293 K to 1811 K as you scroll, with WebGL flames (`lib/gl/molten.ts`) over the liquid.
+  - The footer is dark, with a furnace glowing under the wordmark (`Furnace`, `FurnaceGL`, `lib/gl/furnaceGL.ts`).
 - **`/sites`:**
   - `BuildStage` is the opening and the first scroll, built around live HTML versions of the concept sites (`LiveSite`): the café is cast, turned into a phone and recast as the barbershop and the landscaper. Rich tier: sparks (`lib/gl/sparks.ts`), from the first scroll or touch.
   - `TryIt`: the visitor types their business name and picks a trade; the live concept site is recast with it on a laptop and a phone. Nothing leaves the browser.
   - The before/after is a renovation: scrolling it in sweeps the new site across the old one behind a hot divider; then the handle can be dragged.
-- **Film.** `film/*.py` are Blender scenes (rendered in the cloud with the `bpy` module); see `film/README.md`. Frame sequences in `public/film/<name>/<width>/NNN.webp` are scrubbed on a canvas by `lib/film.ts`, which loads them sparse-first and draws only on change. `lib/filmAssets.ts` checks at build time whether a sequence exists, so pages fall back until it's rendered.
+- **Stills.** `film/ingots.py` is the old Blender reference; the shipped ingot stills come from our own 3D renderer (`film/README.md`).
 - **Everywhere:**
   - Primary buttons lean slightly toward the cursor, and the nav has a reading-progress hairline. On phones the nav has a menu (a native dialog).
   - Moving between pages pours the next page in (`RouteTransition`).
 - **Reduced motion and no JS.**
-  - `prefers-reduced-motion` turns off loops, pinning, parallax, tilt, word reveals, page transitions, WebGL and smooth scrolling. Every scene shows its finished state and simple fades remain.
+  - `prefers-reduced-motion` turns off loops, pinning, parallax, tilt, word reveals, page transitions, the liquid, floating, WebGL and smooth scrolling. Every scene shows its finished state and simple fades remain.
   - Without JS every scene also renders finished, the FAQ still works (native `<details>`), and the form opens a mail app.
   - Pinned scenes are also unpinned on very short screens (landscape phones).
 - **Heat field.** The canvas draws one static frame immediately and only starts drifting once the page is idle. It pauses off-screen and in background tabs.
 - **Weight.**
-  - First-load JS is about 127 KB gzipped on `/sites` and 114 KB on `/`. The rich tier's WebGL modules (a few KB each) and film frames load after the page is up. There is no animation library.
+  - First-load JS is about 166 KB gzipped on `/sites` and 156 KB on `/` (budget: `/sites` ≤ 172 KB). The liquid, 3D and WebGL modules (a few KB each) load after the page is up. There is no animation library.
   - Below-the-fold sections on `/sites` use `content-visibility: auto`.
