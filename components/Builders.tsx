@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import { builders, type Builder } from '@/data/team';
 import { ArrowRight } from './Icons';
+import { PortraitImg } from './PortraitImg';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
@@ -9,7 +9,7 @@ export function Portrait({ name, src, sizes = '(min-width: 768px) 24rem, 90vw' }
   if (src) {
     return (
       <div data-float="block" className="relative aspect-[5/6]">
-        <Image src={src} alt={`ASCII portrait of ${name}`} width={800} height={956} sizes={sizes} loading="eager" fetchPriority="low" className="absolute inset-0 h-full w-full object-contain" />
+        <PortraitImg src={src} alt={`ASCII portrait of ${name}`} sizes={sizes} />
       </div>
     );
   }
