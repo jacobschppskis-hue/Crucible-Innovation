@@ -32,9 +32,13 @@ const floats: (Source | null)[] = new Array(FLOAT_SLOTS).fill(null);
 let mi = 0;
 let fi = 0;
 
+// Birth time on the rAF clock. clock.t only moves while a frame callback runs (not before the float loop starts, and
+// slowly on a starved phone), so a stale value would make a fresh packet look old and expire at once.
+const now = () => (typeof performance === 'undefined' ? clock.t : Math.max(clock.t, performance.now() / 1000));
+
 /** Drop a packet at page position (x, docY). amp ~0.3 (a light touch) to ~1.6 (a click); size = packet width in px. */
 export function addSource(x: number, docY: number, amp = 0.6, size = 14, opts: { kind?: 'ring' | 'float'; t?: number } = {}) {
-  const s: Source = { x, y: docY, t0: opts.t ?? clock.t, amp, size };
+  const s: Source = { x, y: docY, t0: opts.t ?? now(), amp, size };
   if (opts.kind === 'float') floats[fi++ % FLOAT_SLOTS] = s;
   else main[mi++ % SLOTS] = s;
   const kind = opts.kind === 'float' ? 'float' : 'ring';

@@ -1046,6 +1046,9 @@ html.lenis body {
 .thesis[data-gl] .thesis-gl {
   opacity: 1;
 }
+.thesis-crest {
+  transition-duration: 0ms;
+}
 .thesis[data-gl] .thesis-furnace {
   opacity: calc(var(--k) * 0.3);
 }

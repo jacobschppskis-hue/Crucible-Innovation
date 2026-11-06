@@ -32,7 +32,7 @@ export function ingot(kind: IngotKind): IngotSpec {
   if (kind === 'sites') {
     const cw = 2048, ch = Math.round((cw * h) / w); // the map has the plate's own aspect, or the letters come out squeezed
     const cv = reliefCanvas(cw, ch, (c) => { text(c, 'Crucible', cw * 0.43, ch * 0.47, ch * 0.19); text(c, 'Sites', cw * 0.43, ch * 0.73, ch * 0.19); });
-    parts.push({ mesh: slab(w / 2, h / 2, d, 1.4), material: 'cast', grain: 0.5, relief: { canvas: cv, x: 0, y: 0, w, h, strength: 1.6 }, tone: 1, temper: [30, 0.55] });
+    parts.push({ mesh: slab(w / 2, h / 2, d, 1.4), material: 'cast', grain: 0.5, relief: { canvas: cv, x: 0, y: 0, w, h, strength: 4 }, tone: 1, temper: [30, 0.55] });
     const s = 0.5, front = d / 2;
     for (const p of logoPieces()) {
       const core = p.kind === 'core';

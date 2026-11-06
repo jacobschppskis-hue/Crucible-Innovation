@@ -40,11 +40,11 @@ g-=dot(g,nO)*nO;
 float rl=0.,ao=.6+.8*h0;
 vec3 n0=nO;
 vec3 nn=normalize(nO-g*k/uGrain*.05);
-if(uRel>0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.8,vec2(.0005),vec2(.0016));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
-rl=texture(uRelT,uv).r*w;
-vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0)).r-texture(uRelT,uv-vec2(d.x,0)).r,texture(uRelT,uv+vec2(0,d.y)).r-texture(uRelT,uv-vec2(0,d.y)).r)*w*(.0016/d);
-nn=normalize(nn-vec3(gr,0.)*uRel);
-float sh=texture(uRelT,uv+vec2(-.004,.007)).r*w;ao*=1.-.45*clamp(sh-rl,0.,1.);}
+if(uRel>0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.55,vec2(.0004),vec2(.0011));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
+rl=texture(uRelT,uv,-1.5).r*w;
+vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0),-1.5).r-texture(uRelT,uv-vec2(d.x,0),-1.5).r,texture(uRelT,uv+vec2(0,d.y),-1.5).r-texture(uRelT,uv-vec2(0,d.y),-1.5).r)*w*(.0011/d);
+nn=normalize(mix(nn,nO,.6*rl)-vec3(gr,0.)*uRel);
+float sh=texture(uRelT,uv+vec2(-.004,.007),-1.5).r*w;ao*=1.-.45*clamp(sh-rl,0.,1.);}
 vec3 n=normalize(uNM*nn);
 vec3 bone=vec3(.7,.67,.6);
 vec3 col;

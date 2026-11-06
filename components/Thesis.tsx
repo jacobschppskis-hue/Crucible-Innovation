@@ -15,6 +15,7 @@ export function Thesis() {
   const num = useRef<HTMLSpanElement>(null);
   const cap = useRef<HTMLSpanElement>(null);
   const gl = useRef<HTMLCanvasElement>(null);
+  const crest = useRef<HTMLCanvasElement>(null);
   const heat = useRef(1);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export function Thesis() {
       if (dead) return;
       stop = startMolten({
         canvas: gl.current!,
+        crest: crest.current,
         heat: () => heat.current,
         onReady: () => el.setAttribute('data-gl', ''),
         onFail: () => el.removeAttribute('data-gl'),
@@ -60,6 +62,7 @@ export function Thesis() {
     <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative">
       <div className="pin-sticky relative flex items-center overflow-hidden">
         <canvas ref={gl} aria-hidden className="thesis-gl" />
+        <canvas ref={crest} aria-hidden className="thesis-gl thesis-crest" />
         <div aria-hidden className="thesis-furnace" />
         <div aria-hidden className="thesis-glow" />
         <div className="container-x relative flex w-full flex-col gap-12 py-24 lg:flex-row lg:items-end lg:justify-between">
