@@ -46,7 +46,6 @@
 .wk-plate {
   position: relative;
   padding: 3rem 0 2rem;
-  background: var(--ground);
 }
 .wk-cap {
   display: grid;

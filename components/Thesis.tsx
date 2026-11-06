@@ -1,7 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
 import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
-import type { FilmInfo } from '@/lib/filmAssets';
 import { richTier } from '@/lib/tier';
 
 const ROOM = 293;
@@ -9,15 +8,13 @@ const IRON = 1811; // iron melts at 1811 K
 
 /**
  * Scroll heats the section from room temperature (293 K) to iron's melting point (1811 K): a furnace glow rises from
- * the floor (CSS), and on the rich tier a WebGL surface of iron goes from glowing cracks to flowing molten metal.
+ * the floor (CSS), and on the rich tier WebGL flames rise and climb with the reading until they fill most of the screen.
  */
-export function Thesis({ film }: { film?: FilmInfo | null }) {
+export function Thesis() {
   const ref = useRef<HTMLElement>(null);
   const num = useRef<HTMLSpanElement>(null);
   const cap = useRef<HTMLSpanElement>(null);
   const gl = useRef<HTMLCanvasElement>(null);
-  const filmCanvas = useRef<HTMLCanvasElement>(null);
-  const filmUpdate = useRef<() => void>(() => {});
   const heat = useRef(1);
 
   useEffect(() => {
@@ -28,7 +25,6 @@ export function Thesis({ film }: { film?: FilmInfo | null }) {
       const k = ease.inOut(seg(p, 0.08, 0.78));
       heat.current = k;
       el.style.setProperty('--k', k.toFixed(4));
-      filmUpdate.current();
       // One line fully leaves before the next arrives.
       el.style.setProperty('--xa', ease.inOut(seg(p, 0.34, 0.46)).toFixed(4));
       el.style.setProperty('--xb', ease.out(seg(p, 0.5, 0.64)).toFixed(4));
@@ -44,15 +40,6 @@ export function Thesis({ film }: { film?: FilmInfo | null }) {
     let dead = false;
     richTier().then(async (ok) => {
       if (!ok || dead) return;
-      // Rendered film (film/iron.py) when it exists: real footage of iron melting, scrubbed by the same heat.
-      if (film && filmCanvas.current) {
-        const { startFilm } = await import('@/lib/film');
-        if (dead) return;
-        const f = startFilm({ canvas: filmCanvas.current, ...film, progress: () => heat.current, onReady: () => el.setAttribute('data-film', '') });
-        filmUpdate.current = f.update;
-        stop = f;
-        return;
-      }
       const { startMolten } = await import('@/lib/gl/molten');
       if (dead) return;
       stop = startMolten({
@@ -73,19 +60,6 @@ export function Thesis({ film }: { film?: FilmInfo | null }) {
     <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative">
       <div className="pin-sticky relative flex items-center overflow-hidden">
         <canvas ref={gl} aria-hidden className="thesis-gl" />
-        {film?.poster && (
-          <img
-            aria-hidden
-            alt=""
-            src={film.posterSmall ?? film.poster}
-            srcSet={film.posterSmall ? `${film.posterSmall} 800w, ${film.poster} 1600w` : undefined}
-            sizes="100vw"
-            loading="lazy"
-            decoding="async"
-            className="thesis-poster"
-          />
-        )}
-        {film && <canvas ref={filmCanvas} aria-hidden className="thesis-film" />}
         <div aria-hidden className="thesis-furnace" />
         <div aria-hidden className="thesis-glow" />
         <div className="container-x relative flex w-full flex-col gap-12 py-24 lg:flex-row lg:items-end lg:justify-between">

@@ -1,4 +1,4 @@
-/* "Why Crucible": chapters, the pinned portrait, and Jacob's two beats. */
+/* "Why Crucible": chapters, the pinned portrait, and Jacob's PayPal beat. */
 @media (min-width: 1024px) {
   .story-side {
     position: sticky;
@@ -89,74 +89,6 @@
   opacity: clamp(0, var(--s) * 2 - 1, 1);
 }
 
-/* ---------- Iron and a little carbon become steel ---------- */
-.beat-alloy {
-  --s: clamp(0, (var(--p, 1) - 0.28) * 3.2, 1);
-  --t: clamp(0, var(--s) * 2, 1); /* the carbon travelling in */
-  --m: clamp(0, var(--s) * 2 - 1, 1); /* the melt: hot, then cooling to steel */
-  --heat: calc(var(--m) * (1 - var(--m)) * 4);
-}
-.alloy {
-  position: relative;
-  display: flex;
-  align-items: center;
-  height: 9rem;
-}
-.alloy-block {
-  position: relative;
-  display: grid;
-  width: 9rem;
-  height: 9rem;
-  place-items: center;
-  background: color-mix(in oklab, var(--ember) calc(var(--heat) * 100%), color-mix(in oklab, var(--bone-dim) calc((1 - var(--m)) * 100%), var(--bone)));
-  box-shadow: 0 0 calc(var(--heat) * 40px) calc(var(--heat) * 2px) var(--ember);
-}
-.alloy-sym {
-  grid-area: 1 / 1;
-  font-variation-settings: 'wdth' 125;
-  font-weight: 600;
-  color: var(--ink);
-}
-.alloy-fe {
-  font-size: 2.75rem;
-  opacity: calc(1 - var(--m));
-}
-.alloy-steel {
-  font-size: 1.5rem;
-  opacity: var(--m);
-}
-.alloy-c {
-  position: absolute;
-  left: calc(9rem + 2rem + (1 - var(--t)) * min(12rem, 40vw) - var(--t) * 6.5rem);
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-weight: 600;
-  color: var(--bone);
-  opacity: clamp(0, (1 - var(--t)) * 3.5, 1);
-}
-.alloy-c i {
-  width: 0.875rem;
-  height: 0.875rem;
-  border-radius: 50%;
-  background: var(--ember);
-}
-.alloy-cap {
-  position: relative;
-  margin-top: 1rem;
-  height: 1.5rem;
-  color: var(--bone-dim);
-}
-.alloy-cap > span {
-  position: absolute;
-  left: 0;
-}
-.alloy-cap-a {
-  opacity: calc(1 - var(--m, 1));
-}
-.alloy-cap-b {
-  opacity: var(--m, 1);
-}
 @media (prefers-reduced-motion: reduce) {
   .beat {
     --p: 1 !important;

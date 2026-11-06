@@ -17,7 +17,8 @@ export const arcPath = (r: number, c: number = RING.c, under = true) => {
 };
 
 /**
- * Machine half: n pixels along the right arc, top → bottom. The end pixels start exactly where the arc's square
+ * Machine half: n pixels along the right arc, top → bottom. The squares sit upright like screen pixels: `deg` is
+ * only the pixel's angle around the ring, never a rotation to draw with. The end pixels start exactly where the arc's square
  * ends stop (inset by half a pixel), so line and pixels meet edge to edge with nothing sticking out.
  */
 export function pixels(r: number, n: number, c: number = RING.c): Pixel[] {
@@ -36,7 +37,7 @@ export function splitRingSvg({ fg = '#E8E4D8', core = '#FF5B1F', bg }: { fg?: st
     .map(({ r, n }) =>
       `<path d="${arcPath(r)}" fill="none" stroke="${fg}" stroke-width="${stroke}"/>` +
       pixels(r, n)
-        .map(({ x, y, deg }) => `<rect x="${f(x - px / 2)}" y="${f(y - px / 2)}" width="${px}" height="${px}" fill="${fg}" transform="rotate(${f(deg)} ${f(x)} ${f(y)})"/>`)
+        .map(({ x, y }) => `<rect x="${f(x - px / 2)}" y="${f(y - px / 2)}" width="${px}" height="${px}" fill="${fg}"/>`)
         .join(''),
     )
     .join('');
@@ -64,7 +65,7 @@ export function dotsSvg(d = 0.82) {
     )
     .join('');
   const grids = rings
-    .flatMap(({ r, n }) => pixels(r, n).map(({ x, y, deg }) => `<path transform="rotate(${f(deg)} ${f(x)} ${f(y)})" d="M${f(x - 1.5)} ${f(y - 1)}h3m-3 1h3m-3 1h3"/>`))
+    .flatMap(({ r, n }) => pixels(r, n).map(({ x, y }) => `<path d="M${f(x - 1.5)} ${f(y - 1)}h3m-3 1h3m-3 1h3"/>`))
     .join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-width="${d}">${arcs}<g stroke-dasharray="0 1" stroke-dashoffset="-0.5">${grids}</g></g></svg>`;
 }

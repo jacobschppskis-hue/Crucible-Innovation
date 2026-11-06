@@ -222,22 +222,20 @@ test.describe('rich tier', () => {
     }
   });
 
-  test('forced rich: the Thesis scrubs the rendered film of iron melting once it is on screen', async ({ page }) => {
+  test('forced rich: the Thesis lights its WebGL flames once it is on screen', async ({ page }) => {
     await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
     await page.locator('section.thesis').scrollIntoViewIfNeeded();
     await page.evaluate(() => scrollBy(0, 200));
-    // public/film/iron exists, so the film (not the WebGL fallback) takes over.
-    await expect(page.locator('section.thesis')).toHaveAttribute('data-film', '', { timeout: 15000 });
-    await expect(page.locator('section.thesis')).not.toHaveAttribute('data-gl', '');
+    await expect(page.locator('section.thesis')).toHaveAttribute('data-gl', '', { timeout: 15000 });
   });
 
-  test('light tier: the Thesis fades in the film poster and no film frames are downloaded', async ({ page }) => {
+  test('light tier: the Thesis shows the static version and no film frames are downloaded', async ({ page }) => {
     const frames: string[] = [];
     page.on('request', (r) => /\/film\/(iron|ring)\/\d+\//.test(r.url()) && frames.push(r.url()));
     await page.goto('/?tier=light', { waitUntil: 'networkidle' });
     await page.locator('section.thesis').scrollIntoViewIfNeeded();
     await page.evaluate(() => scrollBy(0, 400));
-    await expect(page.locator('.thesis-poster')).toBeAttached();
+    await expect(page.locator('section.thesis')).not.toHaveAttribute('data-gl', '');
     await page.waitForTimeout(1000);
     expect(frames).toEqual([]);
   });

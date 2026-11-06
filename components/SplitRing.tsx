@@ -24,15 +24,15 @@ export function SplitRing({ size = 64, animated = false, pixel = 'square', class
       {rings.map(({ r, n }) => (
         <g key={r}>
           <path className="ring-arc" d={arcPath(r)} pathLength={1} fill="none" stroke="currentColor" strokeWidth={stroke} strokeLinecap="butt" />
-          {pixels(r, n).map(({ x, y, deg }, i) => {
+          {pixels(r, n).map(({ x, y }, i) => {
             const style = { '--i': k++ } as React.CSSProperties;
-            // The CSS pop-in animates the <g>, so it never fights the rect's own SVG rotate().
+            // The CSS pop-in animates the <g>, so the pop-in never touches the (upright) rect.
             return (
               <g key={i} className="ring-px" style={style}>
                 {pixel === 'dot' ? (
                   <circle cx={x} cy={y} r={px / 2} fill="currentColor" />
                 ) : (
-                  <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" transform={`rotate(${deg} ${x} ${y})`} />
+                  <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" />
                 )}
               </g>
             );

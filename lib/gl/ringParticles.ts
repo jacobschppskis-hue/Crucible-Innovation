@@ -157,12 +157,12 @@ function build() {
       }
   });
 
-  // Machine pixels: a 3 × 3 grid in each, turned with it; each pixel flies off its own way, its dots spreading.
+  // Machine pixels: a 3 × 3 grid in each, upright; each pixel flies off its own way, its dots spreading.
   const total = RINGS.reduce((s, r) => s + r.n, 0);
   let k = 0;
   RINGS.forEach(({ r, n }) => {
-    pixels(r, n, 0).forEach(({ x, y, deg }) => {
-      const a = (deg * Math.PI) / 180;
+    pixels(r, n, 0).forEach(({ x, y }) => {
+      const a = 0; // upright, like screen pixels
       const h = mulberry(k * 31 + 5);
       const sx = 16 + h() * 44;
       const sy = (h() - 0.5) * 64;

@@ -1,8 +1,9 @@
-// Rich tier for the home Thesis: a surface of iron that heats with scroll (293 K → 1811 K).
+// Rich tier for the home Thesis: rising fluid flames that climb with the reading (293 K → 1811 K).
 //
-// One fullscreen fragment shader: domain-warped noise for the metal, coloured on a blackbody ramp. Cold, only the
-// cracks glow dull red; as it heats the whole surface brightens and starts to flow. It is hottest at the floor and
-// fades out toward the top so the type stays clean. Rendered at reduced resolution, only while on screen.
+// One fullscreen fragment shader: domain-warped noise carried upward, coloured on a blackbody ramp. The canvas is
+// transparent wherever there is no flame so the page liquid shows through. At 293 K only a low bed of dull embers;
+// the reach grows with heat until the fire fills most of the viewport. Reduced resolution, only while on screen,
+// and it steps its resolution down on slow frames.
 import { dropToLight } from '@/lib/tier';
 
 type Options = { canvas: HTMLCanvasElement; heat: () => number; onReady?: () => void; onFail?: () => void };
@@ -35,21 +36,33 @@ vec3 blackbody(float t) {
 }
 void main() {
   vec2 uv = gl_FragCoord.xy / uRes;
-  vec2 p = vec2(uv.x * uRes.x / uRes.y, uv.y) * 2.6;
-  float t = uTime * (0.015 + uK * 0.07);
-  vec2 q = vec2(fbm(p + vec2(0.0, t)), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + 3.2 * q + vec2(1.7, 9.2) + t * 1.4), fbm(p + 3.2 * q + vec2(8.3, 2.8)));
-  float n = fbm(p + 2.8 * r);
-  float cracks = pow(1.0 - abs(n * 2.0 - 1.0), 7.0);           // thin bright seams in cold metal
-  float field = mix(cracks * 0.85, n * 1.15, smoothstep(0.35, 1.0, uK)); // melting: the whole surface takes over
-  float floorHeat = smoothstep(1.0, 0.0, uv.y);
-  float temp = field * (0.05 + uK * 0.95) * (0.3 + floorHeat * 0.85);
-  vec2 d = gl_FragCoord.xy - uMouse.xy;
-  temp += uMouse.z * 0.35 * exp(-dot(d, d) / (0.02 * uRes.y * uRes.y)) * (0.4 + uK);
-  temp = clamp(temp, 0.0, 0.9); // never white-hot across the board: the type sits on top of this
+  float asp = uRes.x / uRes.y;
+  float k = uK;
+  // How far the fire climbs: a low bed of embers at 293 K, most of the screen by 1811 K.
+  float reach = 0.16 + 0.9 * k * (0.6 + 0.4 * k);
+  float t = uTime * (0.35 + k * 0.9);
+  vec2 p = vec2(uv.x * asp * 2.2, uv.y * 1.6 * (0.8 + reach));
+  // Fluid motion: the field is carried upward and folded over itself (domain warp), tongues lean with the warp.
+  vec2 w = vec2(fbm(p + vec2(0.0, -t * 0.8)), fbm(p * 1.3 + vec2(4.1, -t * 1.1)));
+  vec2 q = p + (w - 0.5) * vec2(1.7, 0.9);
+  float n = fbm(q * vec2(1.0, 0.75) + vec2(0.0, -t * 1.5));
+  float n2 = fbm(q * 2.1 + vec2(3.3, -t * 2.4));
+  float body = mix(n, n2, 0.35);
+  // Vertical profile: full at the floor, thinning to nothing at the reach; noise breaks the front into tongues.
+  float y = uv.y / reach;
+  float f = (1.0 - y) * 1.35 + (body - 0.5) * (0.9 + 0.5 * y) - 0.12;
+  float a = smoothstep(0.0, 0.22, f);
+  float temp = clamp(f * (0.55 + 0.5 * k) + (body - 0.5) * 0.25 + k * 0.12, 0.0, 1.0);
+  // Cold: only dull red embers; hot: orange to yellow cores, white only deep in the base at the very end.
+  temp = min(temp * (0.55 + 0.45 * k), 0.66); // orange and amber, never white: the type sits on top
   vec3 col = blackbody(temp);
-  float fade = smoothstep(0.6, 0.0, uv.y);                      // metal pools in the lower part; the type stays clear
-  float a = fade * (0.45 + 0.55 * smoothstep(0.0, 0.25, temp));
+  vec2 d = gl_FragCoord.xy - uMouse.xy;
+  float m = uMouse.z * 0.3 * exp(-dot(d, d) / (0.02 * uRes.y * uRes.y));
+  col += vec3(1.0, 0.45, 0.1) * m * a;
+  // The type band is cooler and thinner so the copy stays legible over the fire.
+  float band = smoothstep(0.18, 0.4, uv.y) * smoothstep(0.78, 0.55, uv.y);
+  a = clamp(a * (0.5 + 0.5 * smoothstep(0.0, 0.35, temp)) * (0.55 + 0.4 * k), 0.0, 1.0) * (1.0 - 0.55 * band);
+  col *= 1.0 - 0.3 * band;
   gl_FragColor = vec4(col * a, a);
 }`;
 

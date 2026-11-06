@@ -29,7 +29,7 @@ export default function Home() {
         {/* Ventures: the live one casts a concept site as it scrolls in; the rest are still in the furnace */}
         <Ventures />
 
-        <Thesis film={filmInfo('iron')} />
+        <Thesis />
       </main>
       <Footer />
       <JsonLd page="home" />

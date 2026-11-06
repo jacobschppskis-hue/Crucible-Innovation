@@ -1503,17 +1503,6 @@ html.lenis body {
 /* the live card's mold: a blueprint of a page (grid, a headline bar, a picture box), cast over by the screenshot */
 /* still in the furnace: the core isn't lit yet (only a live venture gets its Ember core); it just warms and cools */
 
-/* ---------- Builders: the portrait's mold is a faint grid on the bone card ---------- */
-.portrait-mold {
-  background-image:
-    linear-gradient(rgba(13, 13, 11, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(13, 13, 11, 0.06) 1px, transparent 1px);
-  background-size: 24px 24px;
-}
-.portrait-mold .cast-piece {
-  background: var(--bone);
-}
-
 /* ---------- Page transition (components/RouteTransition.tsx): the next page is poured in ----------
    A sheet of ground slides down over the page with the Ember front at its leading edge; the route changes under it;
    then it carries on down, the front now at its top edge, uncovering the new page. */
@@ -1633,45 +1622,11 @@ html.lenis body {
 .thesis[data-gl] .thesis-gl {
   opacity: 1;
 }
-/* Rendered film of iron melting (rich tier), and its poster (light tier), which fades in with the heat. Both are
-   masked off the left, where the type sits, so it stays on dark ground. */
-.thesis-film,
-.thesis-poster {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  pointer-events: none;
-  -webkit-mask-image: linear-gradient(to right, transparent 28%, #000 72%);
-  mask-image: linear-gradient(to right, transparent 28%, #000 72%);
-}
-@media (max-width: 1023px) {
-  .thesis-film,
-  .thesis-poster {
-    -webkit-mask-image: linear-gradient(to bottom, #000 18%, transparent 62%);
-    mask-image: linear-gradient(to bottom, #000 18%, transparent 62%);
-  }
-}
-.thesis-poster {
-  opacity: calc(var(--k) * var(--k));
-}
-.thesis-film {
-  opacity: 0;
-  transition: opacity 900ms ease;
-}
-.thesis[data-film] .thesis-film {
-  opacity: 1;
-}
-.thesis[data-film] .thesis-poster,
-.thesis[data-film] .thesis-furnace {
-  opacity: 0;
-}
 .thesis[data-gl] .thesis-furnace {
   opacity: calc(var(--k) * 0.3);
 }
 /* small type keeps a dark halo when molten metal runs behind it */
-.thesis :is(.label, .thesis-readout),
+.thesis :is(.label, .thesis-readout, .thesis-lines p),
 .thesis[data-gl] :is(.label, .font-mono) {
   text-shadow:
     0 0 14px rgba(13, 13, 11, 0.95),
@@ -1761,21 +1716,99 @@ html.lenis body {
   }
 }
 
-/* ---------- Footer: the cooled surface ---------- */
+/* ---------- Furnace (components/Furnace.tsx): heat in small doses ---------- */
+.furnace {
+  --heat: 1;
+  --reach: 80%; /* how high the waves rise before they fade out */
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+.furnace::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(75% 85% at 50% 120%, rgba(255, 150, 70, 0.3), rgba(255, 91, 31, 0.12) 40%, rgba(130, 22, 0, 0.05) 66%, rgba(130, 22, 0, 0) 86%);
+  opacity: var(--heat);
+}
+.furnace-waves {
+  position: absolute;
+  inset: 0;
+  opacity: calc(var(--heat) * 0.8);
+  -webkit-mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
+  mask: linear-gradient(to top, #000, rgba(0, 0, 0, 0.4) calc(var(--reach) * 0.45), transparent var(--reach));
+}
+.furnace-waves i {
+  position: absolute;
+  inset: 0 0 -160px -400px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 160' preserveAspectRatio='none'%3E%3Cfilter id='b' x='-10%25' y='-60%25' width='120%25' height='220%25'%3E%3CfeGaussianBlur stdDeviation='9'/%3E%3C/filter%3E%3Cg fill='none' filter='url(%23b)'%3E%3Cpath stroke='%23ff9a4a' stroke-opacity='.3' stroke-width='16' d='M0 50Q50 32 100 50T200 50T300 50T400 50'/%3E%3Cpath stroke='%23ff6a2a' stroke-opacity='.22' stroke-width='12' d='M0 122Q66.7 140 133.3 122T266.7 122T400 122'/%3E%3C/g%3E%3C/svg%3E") 0 0 / 400px 160px repeat;
+}
+.furnace-waves i + i {
+  inset: 0 -560px -220px 0;
+  background-size: 560px 220px;
+  opacity: 0.6;
+}
+.furnace-gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 900ms ease;
+}
+.furnace[data-gl] .furnace-gl {
+  opacity: 0.6;
+}
+.furnace[data-gl] .furnace-waves {
+  opacity: calc(var(--heat) * 0.4);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .furnace::before {
+    animation: furnace-breathe 5.5s ease-in-out infinite paused;
+  }
+  .furnace-waves i {
+    animation: heat-rise 5s linear infinite paused;
+  }
+  .furnace-waves i + i {
+    animation-name: heat-rise-wide;
+    animation-duration: 8s;
+  }
+  .furnace[data-live]::before,
+  .furnace[data-live] .furnace-waves i {
+    animation-play-state: running;
+  }
+}
+@keyframes furnace-breathe {
+  50% {
+    opacity: calc(var(--heat) * 0.72);
+  }
+}
+
+/* one tile up and one tile across per loop, so it never jumps */
+@keyframes heat-rise {
+  to {
+    translate: 400px -160px;
+  }
+}
+@keyframes heat-rise-wide {
+  to {
+    translate: -560px -220px;
+  }
+}
+
+/* ---------- Footer: dark, molten metal under the wordmark ----------
+   No background of its own: the page liquid (z-index:-1) shows through, and the furnace is transparent without heat. */
 .foot {
-  background: var(--cool);
-  color: var(--ink);
-  /* The hot front: an Ember edge that cools to bone as the footer comes into view (--p from data-scroll="enter"). */
-  box-shadow:
-    0 -2px 0 color-mix(in oklab, var(--ember) calc((1 - var(--p, 1)) * 100%), var(--cool)),
-    0 -18px 48px -12px color-mix(in oklab, var(--ember) calc((1 - var(--p, 1)) * 90%), transparent);
+  color: var(--bone);
 }
 .foot ::selection {
-  background: var(--ink);
-  color: var(--cool);
+  background: var(--ember);
+  color: var(--ground);
 }
 .foot :focus-visible {
-  outline-color: var(--ember-deep);
+  outline-color: var(--ember);
 }
 .foot-mail {
   font-size: clamp(1.25rem, 5.3vw, 3.5rem);
@@ -1785,7 +1818,7 @@ html.lenis body {
   text-decoration: underline;
   text-decoration-thickness: 0.06em;
   text-underline-offset: 0.14em;
-  text-decoration-color: color-mix(in oklab, var(--ink) 25%, transparent);
+  text-decoration-color: color-mix(in oklab, var(--bone) 30%, transparent);
   transition:
     color 200ms ease,
     text-decoration-color 200ms ease;
@@ -1796,20 +1829,21 @@ html.lenis body {
   }
 }
 .foot-mail:hover {
-  color: var(--ember-deep);
-  text-decoration-color: var(--ember-deep);
+  color: var(--ember);
+  text-decoration-color: var(--ember);
 }
 .foot-link {
   transition: color 200ms ease;
 }
 .foot-link:hover {
-  color: var(--ember-deep);
+  color: var(--ember);
 }
 .foot-giant {
   height: 19.5vw;
 }
 .foot-giant-inner {
-  color: var(--ink);
+  position: relative;
+  color: var(--bone);
   transform: translateY(calc((1 - var(--p, 1)) * 55%));
 }
 /* the Ember dot only lights once the wordmark has fully set */
