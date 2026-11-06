@@ -1,11 +1,11 @@
 // The liquid's fragment shader (GLSL ES 1.0, valid in WebGL1 and WebGL2) and its wave formula, shared by the worker
 // renderer, the main-thread fallback and the Thesis flames (lib/gl/molten.ts, which embeds `wavesGLSL` / `swellGLSL`, so
-// there is one formula and one crest look). The formula is the one in field.ts (`sample`, `cone`, `strength`), in GLSL.
+// there is one formula and one crest look). The formula is the one in field.ts (`sample`, `hullD`, `strength`), in GLSL.
 //
 // Crests are LINES: each event (a tap, a stroke) makes its own thin line, and lines combine as max(), never as summed
-// heights, so they cross cleanly. A tap is two concentric rings. A stroke is the boundary of the union of disks that
-// grow at wave speed from every point the pointer passed (cone segments between samples): a V behind a fast pointer, a
-// teardrop as it slows, no lens where it stops. Heights are only used for refraction (the slope bends what is under).
+// heights, so they cross cleanly. A tap is two concentric rings. A stroke is the boundary of the convex hull of the
+// disks that grow at wave speed from every point the pointer passed: a V behind a fast pointer, a teardrop as it slows, never
+// a notch where the path bends (the union of the disks would have creases and cusps there). Heights are only used for refraction (the slope bends what is under).
 
 import { CALM_MAX, DECAY, DISP, SEGSIG, SPEED, SPREAD, SWELL, TAPGAP, TRAIL } from './field';
 
@@ -20,28 +20,33 @@ uniform int uN;
 uniform vec4 uA[${cap}];
 uniform vec4 uB[${cap}];
 
-float coneD(vec2 p, vec2 a, vec2 b, float r1, float r2, out vec2 gr, out float s) {
-  vec2 ba = b - a;
-  float h = length(ba);
-  vec2 q = p - a;
-  if (h < 0.5 || abs(r1 - r2) >= 0.999 * h) {
-    if (r1 >= r2) { float l = max(length(q), 0.001); gr = q / l; s = 0.0; return l - r1; }
-    vec2 q2 = p - b; float l2 = max(length(q2), 0.001); gr = q2 / l2; s = 1.0; return l2 - r2;
+// One disk of a wake's convex hull and the bridge leaving it for the next disk (see hullD in field.ts): the signed distance to
+// the hull is the largest of the bridge's line and, when the point faces the disk's arc, the disk's own distance.
+void hullPiece(vec2 p, vec4 A, vec2 na, vec4 Q, vec2 nb, inout float dS, inout vec2 gS, inout float aS, inout float mS) {
+  vec2 v = p - A.xy;
+  float l = max(length(v), 0.001);
+  float r = ${f(SPEED)} * A.z;
+  bool single = dot(na, na) < 0.5;
+  bool inr = true;
+  if (!single) {
+    inr = (na.x * nb.y - na.y * nb.x >= 0.0)
+      ? (na.x * v.y - na.y * v.x >= 0.0 && v.x * nb.y - v.y * nb.x >= 0.0)
+      : !(nb.x * v.y - nb.y * v.x > 0.0 && v.x * na.y - v.y * na.x > 0.0);
   }
-  vec2 u = ba / h;
-  vec2 n = vec2(-u.y, u.x);
-  float y = dot(q, u);
-  float x = dot(q, n);
-  float sx = x < 0.0 ? -1.0 : 1.0;
-  float ax = abs(x);
-  float bb = (r1 - r2) / h;
-  float aa = sqrt(1.0 - bb * bb);
-  float k = -bb * ax + aa * y;
-  if (k < 0.0) { float l = max(length(vec2(ax, y)), 0.001); gr = (n * x + u * y) / l; s = 0.0; return l - r1; }
-  if (k > aa * h) { float l = max(length(vec2(ax, y - h)), 0.001); gr = (n * x + u * (y - h)) / l; s = 1.0; return l - r2; }
-  gr = n * (aa * sx) + u * bb;
-  s = clamp(y / h, 0.0, 1.0);
-  return aa * ax + bb * y - r1;
+  if (inr && l - r > dS) { dS = l - r; gS = v / l; aS = A.z; mS = A.w; }
+  if (!single) {
+    float dl = dot(v, nb) - r;
+    if (dl > dS) {
+      dS = dl;
+      gS = nb;
+      vec2 tg = vec2(-nb.y, nb.x);
+      vec2 Tp = A.xy + r * nb;
+      float len = dot(Q.xy + ${f(SPEED)} * Q.z * nb - Tp, tg);
+      float s = len > 0.001 ? clamp(dot(p - Tp, tg) / len, 0.0, 1.0) : 0.0;
+      aS = mix(A.z, Q.z, s);
+      mS = mix(A.w, Q.w, s);
+    }
+  }
 }
 float strength(float age, float amp) {
   float f = clamp((age - 1.8) / 1.0, 0.0, 1.0);
@@ -69,27 +74,32 @@ void waves(vec2 p, float pxs, out float line, out vec2 gp, out vec2 gf) {
   line = 0.0;
   gp = vec2(0.0);
   gf = vec2(0.0);
-  float dS = 1e3;
+  float dS = -1e3;
   vec2 gS = vec2(0.0);
   float aS = 0.0;
   float mS = 0.0;
+  vec4 pA = vec4(0.0);
+  vec2 pN = vec2(0.0);
+  vec4 fA = vec4(0.0);
+  vec2 fN = vec2(0.0);
+  int cnt = 0;
   for (int i = 0; i < ${cap}; i++) {
     if (i >= uN) break;
     vec4 a = uA[i];
     vec4 b = uB[i];
     if (b.w > 1.5) {
       if (b.w > 2.5) {
-        if (dS < 100.0) front(dS, gS, aS, mS, pxs, line, gp);
-        dS = 1e3;
+        if (cnt > 0) {
+          hullPiece(p, pA, pN, fA, fN, dS, gS, aS, mS);
+          if (dS < 100.0) front(dS, gS, aS, mS, pxs, line, gp);
+        }
+        dS = -1e3;
+        cnt = 0;
       }
-      float r1 = ${f(SPEED)} * a.z;
-      float r2 = ${f(SPEED)} * b.z;
-      float bound = length(p - 0.5 * (a.xy + b.xy)) - (0.5 * length(b.xy - a.xy) + max(r1, r2));
-      if (bound > ${f(3 * SEGSIG)} * (1.0 + ${f(DISP)} * max(a.z, b.z))) continue;
-      vec2 gr;
-      float s;
-      float d = coneD(p, a.xy, b.xy, r1, r2, gr, s);
-      if (d < dS) { dS = d; gS = gr; aS = mix(a.z, b.z, s); mS = a.w; }
+      if (cnt == 0) { fA = a; fN = b.xy; } else hullPiece(p, pA, pN, a, b.xy, dS, gS, aS, mS);
+      pA = a;
+      pN = b.xy;
+      cnt++;
       continue;
     }
     float age = a.z;
@@ -111,7 +121,10 @@ void waves(vec2 p, float pxs, out float line, out vec2 gp, out vec2 gf) {
       line = max(line, I * l);
     }
   }
-  if (dS < 100.0) front(dS, gS, aS, mS, pxs, line, gp);
+  if (cnt > 0) {
+    hullPiece(p, pA, pN, fA, fN, dS, gS, aS, mS);
+    if (dS < 100.0) front(dS, gS, aS, mS, pxs, line, gp);
+  }
 }`;
 }
 

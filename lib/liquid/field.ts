@@ -75,8 +75,81 @@ export function addSource(x: number, docY: number, amp = 0.6, size = 24, opts: {
 }
 
 type Pt = { x: number; y: number; t: number; amp: number };
-type Frame = { taps: Source[]; floats: Source[]; strokes: Pt[][]; key: string };
+type Frame = { taps: Source[]; floats: Source[]; strokes: Pt[][]; hulls: Piece[][]; key: string };
 let cached: Frame | null = null;
+
+type Disk = { x: number; y: number; r: number; amp: number; age: number };
+/** A disk of the wake's convex hull, in order around it. (nax, nay) = normal of the straight bridge that arrives at this disk
+ *  from the previous one; (0, 0) when the hull is this one disk. The disk's arc runs from that normal to the next disk's. */
+export type Piece = Disk & { nax: number; nay: number };
+const TAU = Math.PI * 2;
+
+/** The convex hull of a stroke's disks (every vertex is a disk of radius SPEED * age): bridges (tangent lines) and arcs. Wave
+ *  fronts that cross make creases and cusps where a path bends (the inside of a turn); the hull has none, so a wake is always
+ *  one smooth teardrop. `k` keeps every k-th vertex (and both ends) when the shader's entry budget is small. */
+function hullOf(st: Pt[], t: number, k: number): Piece[] {
+  const ds: Disk[] = [];
+  for (let i = 0; i < st.length; i += k) ds.push({ x: st[i].x, y: st[i].y, r: SPEED * (t - st[i].t), amp: st[i].amp, age: t - st[i].t });
+  if (k > 1 && (st.length - 1) % k) ds.push({ x: st[st.length - 1].x, y: st[st.length - 1].y, r: SPEED * (t - st[st.length - 1].t), amp: st[st.length - 1].amp, age: t - st[st.length - 1].t });
+  // drop disks that lie inside another
+  const keep: Disk[] = [];
+  for (let i = 0; i < ds.length; i++) {
+    let inside = false;
+    for (let j = 0; j < ds.length && !inside; j++) {
+      if (j === i) continue;
+      const m = Math.hypot(ds[i].x - ds[j].x, ds[i].y - ds[j].y) + ds[i].r - ds[j].r;
+      inside = m < -0.05 || (m <= 0.05 && j < i);
+    }
+    if (!inside) keep.push(ds[i]);
+  }
+  if (keep.length <= 1) return [{ ...keep[0], nax: 0, nay: 0 }];
+  // gift wrapping around the disks: from the one furthest along +x, always to the disk whose bridge turns next
+  let i0 = 0;
+  for (let i = 1; i < keep.length; i++) if (keep[i].x + keep[i].r > keep[i0].x + keep[i0].r) i0 = i;
+  const order = [i0];
+  const norm: number[] = []; // angle of the bridge leaving order[n]
+  let cur = i0;
+  let th = 0;
+  for (let it = 0; it <= keep.length + 1; it++) {
+    let best = -1;
+    let bd = 1e9;
+    let bphi = 0;
+    const c = keep[cur];
+    for (let j = 0; j < keep.length; j++) {
+      if (j === cur) continue;
+      const dx = keep[j].x - c.x;
+      const dy = keep[j].y - c.y;
+      const h = Math.hypot(dx, dy);
+      const phi = Math.atan2(dy, dx) - Math.acos(Math.max(-1, Math.min(1, (c.r - keep[j].r) / h)));
+      let dd = (((phi - th) % TAU) + TAU) % TAU;
+      if (dd > TAU - 1e-7) dd = 0;
+      if (dd < bd) {
+        bd = dd;
+        best = j;
+        bphi = phi;
+      }
+    }
+    if (best < 0) break;
+    norm.push(bphi);
+    th = bphi;
+    if (best === i0) break;
+    order.push(best);
+    cur = best;
+  }
+  if (order.length < 2 || norm.length !== order.length) {
+    const big = keep.reduce((a, b) => (b.r > a.r ? b : a));
+    return [{ ...big, nax: 0, nay: 0 }];
+  }
+  const out: Piece[] = [];
+  order.forEach((o, n) => {
+    const a = norm[(n + order.length - 1) % order.length];
+    const b = norm[n];
+    // a disk whose arc has no extent (collinear disks all touch the same two bridges) adds nothing: the bridges are one line
+    if (order.length > 3 && (((b - a) % TAU) + TAU) % TAU < 1e-3) return;
+    out.push({ ...keep[o], nax: Math.cos(a), nay: Math.sin(a) });
+  });
+  return out.length >= 2 ? out : [{ ...keep[order[0]], nax: 0, nay: 0 }];
+}
 
 /** What is alive at time t: taps, floaters' ripples and the strokes as polylines (points not yet born are cut off at the
  *  moment's position along their segment). Cached per (t, version): the CPU `sample()` and the packer share it. */
@@ -133,25 +206,24 @@ function collect(t: number): Frame {
         break;
       }
     }
-    if (live.length) strokes.push(live);
+    // vertices weakened to nothing (the approach to a tap) are not part of the wake
+    const kept = live.filter((p) => p.amp > 0.03);
+    if (kept.length) strokes.push(kept);
   }
   strokes.sort((p, q) => q[q.length - 1].t - p[p.length - 1].t);
-  cached = { taps, floats: fl, strokes, key };
+  const hulls = strokes.map((st) => hullOf(st, t, 1));
+  cached = { taps, floats: fl, strokes, hulls, key };
   return cached;
 }
 
-/** Live entries for the shader, as two vec4 arrays: a = (x, y, age, amp); b = tap/float: (size, 0, 0, kind 0|1), wake
- *  segment: (x1, y1, age1, kind 2 = same stroke as the previous segment | 3 = a new stroke). Newest first; a wake is cut
- *  to its budget by dropping the in-between vertices (never its ends), so the tail is not chopped off. `max` is the quality
- *  knob. Returns how many entries. */
+/** Live entries for the shader, as two vec4 arrays: a = (x, y, age, amp); b = tap/float: (size, 0, 0, kind 0|1), wake: one
+ *  entry per disk of the stroke's convex hull, in order (b = (nax, nay, 0, kind 2 = same stroke as the previous entry | 3 = a
+ *  new stroke), (nax, nay) = the bridge normal arriving at the disk, see `Piece`). Newest first. `max` is the quality knob: a
+ *  wake that would not fit is thinned (every k-th vertex, never its ends) before its hull is taken. Returns how many entries. */
 export function packSources(t: number, max: number, a: Float32Array, b: Float32Array) {
   const fr = collect(t);
   const nf = Math.min(fr.floats.length, max >= 16 ? 4 : max >= 12 ? 2 : 1);
   const nt = Math.min(fr.taps.length, max >= 24 ? 6 : max >= 12 ? 3 : 2);
-  const budget = Math.max(1, max - nf - nt);
-  let k = 1;
-  const count = (kk: number) => fr.strokes.reduce((n, s) => n + Math.ceil(Math.max(0, s.length - 1) / kk) + (s.length === 1 ? 1 : 0), 0);
-  while (k < 64 && count(k) > budget) k++;
   let n = 0;
   const put = (x: number, y: number, age: number, amp: number, b0: number, b1: number, b2: number, b3: number) => {
     a[n * 4] = x;
@@ -165,21 +237,13 @@ export function packSources(t: number, max: number, a: Float32Array, b: Float32A
     n++;
   };
   for (let i = 0; i < nt; i++) put(fr.taps[i].x, fr.taps[i].y, t - fr.taps[i].t0, fr.taps[i].amp, fr.taps[i].size, 0, 0, 0);
-  for (const st of fr.strokes) {
-    if (n >= max - nf) break;
-    const idx: number[] = [];
-    for (let i = 0; i < st.length - 1; i += k) idx.push(i);
-    idx.push(st.length - 1);
-    if (idx.length === 1) {
-      const p = st[idx[0]];
-      put(p.x, p.y, t - p.t, p.amp, p.x, p.y, t - p.t, 3);
-      continue;
-    }
-    for (let j = 0; j + 1 < idx.length && n < max - nf; j++) {
-      const p = st[idx[j]];
-      const q = st[idx[j + 1]];
-      put(p.x, p.y, t - p.t, q.amp, q.x, q.y, t - q.t, j === 0 ? 3 : 2);
-    }
+  for (let si = 0; si < fr.strokes.length; si++) {
+    const room = max - nf - n;
+    if (room < 1) break;
+    let hull = fr.hulls[si];
+    for (let k = 2; hull.length > room && k < 64; k++) hull = hullOf(fr.strokes[si], t, k);
+    if (hull.length > room) continue;
+    hull.forEach((p, i) => put(p.x, p.y, p.age, p.amp, p.nax, p.nay, 0, i === 0 ? 3 : 2));
   }
   for (let i = 0; i < nf; i++) put(fr.floats[i].x, fr.floats[i].y, t - fr.floats[i].t0, fr.floats[i].amp, fr.floats[i].size, 0, 0, 1);
   return n;
@@ -198,61 +262,57 @@ const out: Sample = { h: 0, gx: 0, gy: 0 };
 
 // --- the wave formula. Everything below is written twice, here and in GLSL (shader.ts): keep them the same. ---
 
-const co = { d: 0, gx: 0, gy: 0, s: 0 };
-/** Signed distance from (px, py) to the union of disks that grow along the segment a->b (radius r1 at a, r2 at b, linear):
- *  a cone segment. co.{gx,gy} = direction of increasing distance, co.s = where along the segment the nearest point is. */
-export function cone(px: number, py: number, ax: number, ay: number, bx: number, by: number, r1: number, r2: number) {
-  const bax = bx - ax;
-  const bay = by - ay;
-  const h = Math.hypot(bax, bay);
-  const qx = px - ax;
-  const qy = py - ay;
-  if (h < 0.5 || Math.abs(r1 - r2) >= 0.999 * h) {
-    // one disk holds the other (or a point): the bigger one
-    if (r1 >= r2) {
-      const l = Math.max(Math.hypot(qx, qy), 0.001);
-      co.gx = qx / l;
-      co.gy = qy / l;
-      co.s = 0;
-      return (co.d = l - r1);
+const co = { d: 0, gx: 0, gy: 0, age: 0, amp: 0 };
+/** Signed distance from (px, py) to the convex hull of a wake's disks (negative inside), exact: the hull's support function is
+ *  c.n + r over each disk's arc of normals, so the distance is the largest over every bridge line and every disk whose arc
+ *  faces the point. co.{gx,gy} = direction of increasing distance, co.{age,amp} = what the front there is made of (a bridge
+ *  blends its two disks'). */
+export function hullD(px: number, py: number, h: Piece[]) {
+  let d = -1e9;
+  const n = h.length;
+  for (let k = 0; k < n; k++) {
+    const P = h[k];
+    const Q = h[(k + 1) % n];
+    const vx = px - P.x;
+    const vy = py - P.y;
+    const l = Math.max(Math.hypot(vx, vy), 0.001);
+    const r = SPEED * P.age;
+    if (n === 1) {
+      co.gx = vx / l;
+      co.gy = vy / l;
+      co.age = P.age;
+      co.amp = P.amp;
+      return (co.d = l - r);
     }
-    const q2x = px - bx;
-    const q2y = py - by;
-    const l = Math.max(Math.hypot(q2x, q2y), 0.001);
-    co.gx = q2x / l;
-    co.gy = q2y / l;
-    co.s = 1;
-    return (co.d = l - r2);
+    const ux = P.nax;
+    const uy = P.nay;
+    const wx = Q.nax;
+    const wy = Q.nay;
+    // arc: the disk is the nearest part when the point's direction lies between the arriving and the leaving normal
+    const inr = ux * wy - uy * wx >= 0 ? ux * vy - uy * vx >= 0 && vx * wy - vy * wx >= 0 : !(wx * vy - wy * vx > 0 && vx * uy - vy * ux > 0);
+    if (inr && l - r > d) {
+      d = l - r;
+      co.gx = vx / l;
+      co.gy = vy / l;
+      co.age = P.age;
+      co.amp = P.amp;
+    }
+    // bridge to the next disk (its tangent line)
+    const dl = vx * wx + vy * wy - r;
+    if (dl > d) {
+      d = dl;
+      co.gx = wx;
+      co.gy = wy;
+      const tx = -wy;
+      const ty = wx;
+      const r2 = SPEED * Q.age;
+      const len = (Q.x + r2 * wx - P.x - r * wx) * tx + (Q.y + r2 * wy - P.y - r * wy) * ty;
+      const s = len > 0.001 ? Math.min(1, Math.max(0, ((px - P.x - r * wx) * tx + (py - P.y - r * wy) * ty) / len)) : 0;
+      co.age = P.age + (Q.age - P.age) * s;
+      co.amp = P.amp + (Q.amp - P.amp) * s;
+    }
   }
-  const ux = bax / h;
-  const uy = bay / h;
-  const nx = -uy;
-  const ny = ux;
-  const y = qx * ux + qy * uy;
-  const x = qx * nx + qy * ny;
-  const sx = x < 0 ? -1 : 1;
-  const axx = Math.abs(x);
-  const bb = (r1 - r2) / h;
-  const aa = Math.sqrt(1 - bb * bb);
-  const k = -bb * axx + aa * y;
-  if (k < 0) {
-    const l = Math.max(Math.hypot(axx, y), 0.001);
-    co.gx = (nx * x + ux * y) / l;
-    co.gy = (ny * x + uy * y) / l;
-    co.s = 0;
-    return (co.d = l - r1);
-  }
-  if (k > aa * h) {
-    const l = Math.max(Math.hypot(axx, y - h), 0.001);
-    co.gx = (nx * x + ux * (y - h)) / l;
-    co.gy = (ny * x + uy * (y - h)) / l;
-    co.s = 1;
-    return (co.d = l - r2);
-  }
-  co.gx = nx * aa * sx + ux * bb;
-  co.gy = ny * aa * sx + uy * bb;
-  co.s = Math.min(1, Math.max(0, y / h));
-  return (co.d = aa * axx + bb * y - r1);
+  return (co.d = d);
 }
 
 /** Crest strength 0..1 of a front of this age and amplitude: it fades with age and is gone by ~2.8 s. */
@@ -287,44 +347,18 @@ export function sample(x: number, docY: number, t = clock.t): Sample {
   };
   for (const s of fr.taps) ring(s);
   for (const s of fr.floats) ring(s);
-  // a wake: the hump rides the boundary of the union of its growing disks
-  for (const stroke of fr.strokes) {
-    const st = stroke.length === 1 ? [stroke[0], stroke[0]] : stroke;
-    let dS = 1e3;
-    let gsx = 0;
-    let gsy = 0;
-    let aS = 0;
-    let mS = 0;
-    for (let i = 0; i + 1 < st.length; i++) {
-      const p = st[i];
-      const q = st[i + 1];
-      const a0 = t - p.t;
-      const a1 = t - q.t;
-      const r1 = SPEED * a0;
-      const r2 = SPEED * a1;
-      const mx = (p.x + q.x) * 0.5;
-      const my = (p.y + q.y) * 0.5;
-      const bound = Math.hypot(x - mx, docY - my) - (Math.hypot(q.x - p.x, q.y - p.y) * 0.5 + Math.max(r1, r2));
-      if (bound > 3 * SEGSIG * (1 + DISP * Math.max(a0, a1))) continue;
-      const d = cone(x, docY, p.x, p.y, q.x, q.y, r1, r2);
-      if (d < dS) {
-        dS = d;
-        gsx = co.gx;
-        gsy = co.gy;
-        aS = a0 + (a1 - a0) * co.s;
-        mS = q.amp;
-      }
-    }
-    if (dS < 1e2) {
-      const sig = SEGSIG * (1 + DISP * aS);
-      if (Math.abs(dS) < 3 * sig) {
-        const R = SPEED * aS;
-        const A = (mS * Math.exp(-DECAY * aS)) / Math.sqrt((1 + R / SPREAD) * (1 + DISP * aS));
-        const e = Math.exp(-0.5 * (dS / sig) * (dS / sig));
-        h += A * e;
-        gx += gsx * (A * e * (-dS / (sig * sig)));
-        gy += gsy * (A * e * (-dS / (sig * sig)));
-      }
+  // a wake: the hump rides the boundary of the convex hull of its growing disks
+  for (const hull of fr.hulls) {
+    const dS = hullD(x, docY, hull);
+    const aS = co.age;
+    const sig = SEGSIG * (1 + DISP * aS);
+    if (Math.abs(dS) < 3 * sig) {
+      const R = SPEED * aS;
+      const A = (co.amp * Math.exp(-DECAY * aS)) / Math.sqrt((1 + R / SPREAD) * (1 + DISP * aS));
+      const e = Math.exp(-0.5 * (dS / sig) * (dS / sig));
+      h += A * e;
+      gx += co.gx * (A * e * (-dS / (sig * sig)));
+      gy += co.gy * (A * e * (-dS / (sig * sig)));
     }
   }
   for (const [ang, len, spd, a, ph] of SWELL) {
@@ -357,7 +391,7 @@ const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi 
 
 /**
  * Pointer, touch and scroll make waves. Moving or dragging lays a stroke: a vertex every ~22 px along the path, each a disk
- * that grows at wave speed, so the front is the boundary of their union (a V behind a fast pointer, a teardrop as it slows,
+ * that grows at wave speed, so the front is the boundary of their convex hull (a V behind a fast pointer, a teardrop as it slows,
  * nothing at all where it stops). A tap (down and up in place) is a ring. Scrolling moves the page under a resting cursor,
  * so the cursor's path in page space is a line and lays a stroke the same way (the scroll wake).
  */

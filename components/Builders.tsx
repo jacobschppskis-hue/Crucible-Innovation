@@ -66,7 +66,7 @@ export function Builders() {
   }
 
   return (
-    <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2100px', '--h-lg': '1200px' } as React.CSSProperties}>
+    <section aria-labelledby="who" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2070px', '--h-lg': '1160px' } as React.CSSProperties}>
       <h2 id="who" className="h-section">
         Meet the builders
       </h2>

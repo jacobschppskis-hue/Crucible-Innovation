@@ -5,7 +5,7 @@
 // capped fps, fewer packets) so the liquid still shows without starving the machine. `?liquid=full` (our own
 // screenshot checks) skips that and pins the top step: no software start, no adaptation.
 
-import { CALM_MAX, calm, MAX_SOURCES, packSources } from './field';
+import { CALM_MAX, calm, liveCount, MAX_SOURCES, packSources } from './field';
 import { fragment, VERT } from './shader';
 
 type Ctx = WebGLRenderingContext | WebGL2RenderingContext;
@@ -179,7 +179,7 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
       stats.q = q;
       // Reported as the peak of the last 2.5 s: on a slow phone (a few frames a second, input handled late) a bare
       // instantaneous count flickers to 0 between a burst of waves and the next look at it.
-      recent.push([t, n]);
+      recent.push([t, liveCount(t)]); // live wave sources (input samples, taps, floaters), not shader entries
       while (recent[0][0] < t - 2.5) recent.shift();
       stats.live = recent.reduce((m, r) => (r[1] > m ? r[1] : m), 0);
       return true;

@@ -35,6 +35,10 @@ function wrap() {
   let busy = false;
   const drain = () => {
     const t0 = performance.now();
+    // Nearest the reading line first, so what is on screen is wrapped before what is merely close.
+    const line = innerHeight * 0.85;
+    const key = new Map(queue.map((el) => [el, Math.abs(el.getBoundingClientRect().top - line)]));
+    queue.sort((a, b) => key.get(a)! - key.get(b)!);
     while (queue.length && performance.now() - t0 < 4) {
       const el = queue.shift()!;
       if (el.isConnected && !el.dataset.heat) wrapOne(el);

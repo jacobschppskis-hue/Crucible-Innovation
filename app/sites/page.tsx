@@ -59,7 +59,7 @@ export default function SitesPage() {
         <TryIt />
 
         {/* 3. Before / After */}
-        <section className="cv-auto container-x py-24 sm:py-32" style={{ '--h-sm': '760px', '--h-lg': '1250px' } as React.CSSProperties}>
+        <section className="cv-auto container-x py-24 sm:py-32" style={{ '--h-sm': '620px', '--h-lg': '1200px' } as React.CSSProperties}>
           <SectionHead
             title={[{ t: 'Same business, different decade' }]}
             sub="Drag the handle. Same services, same phone number. One of these gets the call."
@@ -82,7 +82,7 @@ export default function SitesPage() {
         </section>
 
         {/* 5. Work: live client sites first (data/work.ts clientSites), then concepts to fill the row. */}
-        <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1450px', '--h-lg': '710px' } as React.CSSProperties}>
+        <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1360px', '--h-lg': '620px' } as React.CSSProperties}>
           <SectionHead
             title={[{ t: 'Think in kelvin' }]}
             sub={
@@ -138,7 +138,7 @@ export default function SitesPage() {
         </section>
 
         {/* 6. Pricing */}
-        <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2120px', '--h-lg': '1100px' } as React.CSSProperties}>
+        <section id="pricing" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '2180px', '--h-lg': '1235px' } as React.CSSProperties}>
           <SectionHead title={[{ t: 'Simple packages, honest quotes' }]} sub="Pick a starting point. Every quote is tailored to your business." />
           <ul className="mt-14 grid gap-14 lg:grid-cols-3 lg:gap-10">
             {packages.map((p, i) => (
@@ -160,13 +160,13 @@ export default function SitesPage() {
         <Builders />
 
         {/* 8. FAQ */}
-        <section id="faq" className="cv-auto container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16" style={{ '--h-sm': '670px', '--h-lg': '600px' } as React.CSSProperties}>
+        <section id="faq" className="cv-auto container-x grid gap-10 pb-24 sm:pb-32 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16" style={{ '--h-sm': '580px', '--h-lg': '465px' } as React.CSSProperties}>
           <SectionHead title={[{ t: 'Questions, answered' }]} />
           <Faq />
         </section>
 
         {/* 9. Start a project */}
-        <section id="start" aria-labelledby="start-h" className="cv-auto container-x pt-8 pb-28 sm:pt-16 sm:pb-40" style={{ '--h-sm': '620px', '--h-lg': '530px' } as React.CSSProperties}>
+        <section id="start" aria-labelledby="start-h" className="cv-auto container-x pt-8 pb-28 sm:pt-16 sm:pb-40" style={{ '--h-sm': '470px', '--h-lg': '300px' } as React.CSSProperties}>
           <div className="grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-20">
             <div>
               <WordReveal id="start-h" segments={[{ t: 'Tell us about your business' }]} className="h-section qf-head" />

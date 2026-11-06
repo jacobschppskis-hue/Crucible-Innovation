@@ -304,17 +304,25 @@ html.lenis body {
     opacity 900ms var(--ease-out) var(--delay, 0s),
     transform 1100ms var(--ease-out) var(--delay, 0s);
 }
-.js [data-reveal]:not([data-in]) {
+.js [data-reveal][data-arm]:not([data-in]) {
   opacity: 0;
   transform: translateY(24px);
+}
+/* Shown by a jump, a restore, a pass or at rest (see InView): no transition, the first painted frame already has it. */
+[data-reveal][data-snap] {
+  transition: none;
 }
 
 /* ---------- Word-by-word blur-in ---------- */
 .words .w {
   display: inline-block;
 }
-.js .words:not([data-in]) .w {
+.js .words[data-arm]:not([data-in]) .w {
   opacity: 0;
+}
+/* Shown by a jump, a restore or a pass: no word animation (outranks .words[data-in] .w below). */
+.words[data-snap][data-in] .w {
+  animation: none;
 }
 .words[data-in] .w {
   animation: word-in 1000ms var(--ease-spring) both;
@@ -397,11 +405,11 @@ html.lenis body {
     animation: none;
   }
   .words .w,
-  .js .words:not([data-in]) .w {
+  .js .words[data-arm]:not([data-in]) .w {
     animation: none;
     opacity: 1;
   }
-  .js [data-reveal]:not([data-in]) {
+  .js [data-reveal][data-arm]:not([data-in]) {
     transform: none; /* keep the simple fade */
   }
   .btn-primary:hover::after {
@@ -905,10 +913,10 @@ html.lenis body {
   .js [data-cast] {
     --cast-ms: 1700ms;
   }
-  .js [data-cast]:not([data-in]) .cast-piece {
+  .js [data-cast][data-arm]:not([data-in]) .cast-piece {
     transform: translateY(-100%);
   }
-  .js [data-cast]:not([data-in]) .cast-piece > .cast-in {
+  .js [data-cast][data-arm]:not([data-in]) .cast-piece > .cast-in {
     transform: translateY(100%);
   }
   .js [data-cast][data-in] .cast-piece {
@@ -919,6 +927,9 @@ html.lenis body {
   }
   .js [data-cast][data-in] .cast-track {
     animation: cast-front var(--cast-ms) cubic-bezier(0.45, 0, 0.2, 1) var(--cast-delay, 150ms) both;
+  }
+  .js [data-cast][data-snap][data-in] :is(.cast-piece, .cast-piece > .cast-in, .cast-track, .wk-bp) {
+    animation: none;
   }
 }
 
@@ -998,6 +1009,16 @@ html.lenis body {
   --lo: 0.6;
   --hi: 0.86;
 }
+/* Until a block's words are wrapped (ReadingHeat does it as the block nears the viewport) it gets the same reading
+   order as a mask over the whole block: lit down to the front, dim below. Without it unwrapped text read as fully lit,
+   so on a fast jump the blocks still waiting to be wrapped stood out against dim wrapped ones. */
+@media (prefers-reduced-motion: no-preference) {
+  .js .heat-text[data-scroll]:not([data-heat]) {
+    --f: calc(var(--p, 1) * 125%);
+    -webkit-mask-image: linear-gradient(to bottom, rgb(0 0 0 / var(--hi)) var(--f), rgb(0 0 0 / var(--lo)) calc(var(--f) + 14%));
+    mask-image: linear-gradient(to bottom, rgb(0 0 0 / var(--hi)) var(--f), rgb(0 0 0 / var(--lo)) calc(var(--f) + 14%));
+  }
+}
 .heat-text span {
   opacity: calc(var(--lo) + (var(--hi) - var(--lo)) * clamp(0, (var(--p, 1) * (var(--n) + 10) - var(--i)) / 8, 1));
 }
@@ -1007,8 +1028,14 @@ html.lenis body {
   }
 }
 
+@property --fg {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
 /* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. */
 .thesis {
+  --fg: 1; /* how much of the CSS furnace shows: 1 until the GL flames have drawn, then eases down as they fade in */
   --k: 1;
   --xa: 1;
   --xb: 1;
@@ -1026,8 +1053,8 @@ html.lenis body {
   position: absolute;
   inset: auto 0 0 0;
   height: 80%;
-  background: radial-gradient(85% 80% at 50% 118%, rgba(255, 150, 70, 0.34), rgba(255, 91, 31, 0.15) 36%, rgba(130, 22, 0, 0.07) 60%, rgba(130, 22, 0, 0) 80%);
-  opacity: var(--k);
+  background: radial-gradient(85% 80% at 50% 118%, rgba(255, 150, 70, 0.62), rgba(255, 91, 31, 0.34) 36%, rgba(150, 26, 0, 0.16) 62%, rgba(130, 22, 0, 0) 84%);
+  opacity: calc(var(--k) * var(--fg));
   transform-origin: 50% 100%;
   transform: scaleY(calc(0.55 + var(--k) * 0.45));
   pointer-events: none;
@@ -1048,8 +1075,9 @@ html.lenis body {
 .thesis-crest {
   transition-duration: 0ms;
 }
-.thesis[data-gl] .thesis-furnace {
-  opacity: calc(var(--k) * 0.3);
+.thesis[data-gl] {
+  --fg: 0.3;
+  transition: --fg 900ms ease;
 }
 /* small type keeps a dark halo when molten metal runs behind it */
 .thesis :is(.label, .thesis-readout, .thesis-lines p),
@@ -1331,7 +1359,7 @@ html.lenis body {
   .btn {
     translate: none;
   }
-  .js [data-reveal]:not([data-in]) {
+  .js [data-reveal][data-arm]:not([data-in]) {
     transform: none;
     filter: none;
   }
