@@ -24,7 +24,7 @@ test('scrolling turns the frame into a phone, then recasts it as other businesse
 
   await to(0.3);
   await expect(device).toHaveAttribute('data-layout', 'phone');
-  // The frame eases into the phone shape (scroll progress catches up at a capped speed, slower on slow runners),
+  // The frame eases into the phone shape (scroll progress follows like a spring, a few hundredths of a second behind),
   // so wait for the shape rather than reading it the moment the layout flips.
   await expect
     .poll(async () => {
