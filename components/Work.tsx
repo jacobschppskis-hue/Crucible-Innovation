@@ -5,13 +5,23 @@ import './Work.css';
 
 /*
  * The /work list (app/work/page.tsx): one plate per item, caption on top and the work itself below, as large as the
- * screen allows. On wide screens the plates stack: each sticks under the nav and the next slides up over it, its
- * leading edge hot while it moves and cooling as it settles (--p from data-scroll="enter"). On phones, with reduced
- * motion and on short screens it's a plain list. Styles: components/Work.css.
+ * screen allows. On wide screens each group is a pinned scene (Stack): one plate at a time fills the screen under the
+ * nav; the next rises from below with a hot leading edge, and the one before steps back, dims and is wiped away above
+ * that edge, so two plates never show over each other (--p from data-scroll="pin" on the stack). On phones, short
+ * screens, with reduced motion and without JS it's a plain list. Styles: components/Work.css.
  */
 
+/** A group of plates. Wide screens with motion: a pinned scene, `n` plates long. Otherwise a plain list. */
+export function Stack({ n, children }: { n: number; children: React.ReactNode }) {
+  return (
+    <div data-scroll="pin" className="wk-stack" style={{ '--n': n } as React.CSSProperties}>
+      <div className="wk-frame">{children}</div>
+    </div>
+  );
+}
+
 type PlateProps = {
-  /** Position in its stack: the z-index, so each plate covers the one before it. */
+  /** Position in its stack (0-based): which stretch of the stack's scroll it holds, and its layer. */
   i: number;
   id: string;
   label: React.ReactNode;
@@ -22,7 +32,7 @@ type PlateProps = {
 
 export function Plate({ i, id, label, name, note, children }: PlateProps) {
   return (
-    <article aria-labelledby={id} data-scroll="enter" className="wk-plate" style={{ '--i': i + 1 } as React.CSSProperties}>
+    <article aria-labelledby={id} className="wk-plate" style={{ '--i': i } as React.CSSProperties}>
       <div className="container-x">
         <div className="wk-cap">
           <div>
@@ -165,37 +175,46 @@ export function Img({ shot, sizes, className }: { shot: Shot; sizes: string; cla
   );
 }
 
-/** The business card, front and back as printed (trim size, no bleed). The back sits over the front's empty corner. */
-export function CardPair({ front, back }: { front: Shot; back: Shot }) {
+export type CardSide = { src: { src: string; width: number; height: number }; alt: string };
+
+/**
+ * The business card, front and back side by side at the same size. The images are the print renders themselves
+ * (brand/business-card-*.png from `node brand/render-card.mjs`, imported by app/work/page.tsx), so /work shows whatever
+ * was last printed. They include the 0.125 in bleed; the frame crops to the 3.5 × 2 in trim.
+ */
+export function CardPair({ front, back }: { front: CardSide; back: CardSide }) {
   return (
     <div className="wk-cards">
-      <Img shot={front} sizes="(min-width: 1024px) 44rem, 92vw" className="wk-card wk-card-front" />
-      <Img shot={back} sizes="(min-width: 1024px) 34rem, 92vw" className="wk-card wk-card-back" />
-    </div>
-  );
-}
-
-/** The Split Ring, set and cooled in its mould (the foundry floor's .vf-mould), and the sizes it has to hold at. */
-export function MarkMould() {
-  return (
-    <div className="wk-mould">
-      <span className="vf-mould">
-        <SplitRing size="58%" title="The Split Ring, Crucible’s mark" />
-      </span>
-    </div>
-  );
-}
-
-export function MarkSizes() {
-  return (
-    <ul aria-label="The mark at small sizes" className="wk-sizes">
-      {[48, 32, 16].map((s) => (
-        <li key={s}>
-          <SplitRing size={s} title="" />
-          <span className="label">{s} px</span>
-        </li>
+      {[front, back].map((c) => (
+        <div key={c.src.src} className="wk-card">
+          <img src={c.src.src} width={c.src.width} height={c.src.height} alt={c.alt} loading="lazy" decoding="async" />
+        </div>
       ))}
-    </ul>
+    </div>
+  );
+}
+
+/**
+ * The Split Ring large, set and cooled in its mould (the foundry floor's .vf-mould), with the sizes it has to hold at
+ * beside it: one row, the big mark first, the small ones aligned to its foot.
+ */
+export function MarkPlate() {
+  return (
+    <div className="wk-mark">
+      <div className="wk-mould">
+        <span className="vf-mould">
+          <SplitRing size="58%" title="The Split Ring, Crucible’s mark" />
+        </span>
+      </div>
+      <ul aria-label="The mark at small sizes" className="wk-sizes">
+        {[48, 32, 16].map((s) => (
+          <li key={s}>
+            <SplitRing size={s} title="" />
+            <span className="label">{s} px</span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
 
