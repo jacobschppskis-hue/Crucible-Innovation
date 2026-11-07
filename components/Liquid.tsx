@@ -6,6 +6,40 @@ import { firstUse, richTier } from '@/lib/tier';
 /** Seconds after load + idle at which the liquid starts if nobody has scrolled, moved or pressed a key yet. */
 const UNTOUCHED = 2.5;
 
+/** Where a selection may start under the pointer: on words, or in a block of them (a line's end, between lines). */
+const WORDS = 'p,li,h1,h2,h3,h4,h5,h6,blockquote,figcaption,dt,dd,td,th,label,pre,code,input,textarea,select,[contenteditable]';
+
+/**
+ * Dragging across the page is how a visitor makes waves, so a mouse drag that starts on the liquid itself (empty page,
+ * a picture, an effect) selects nothing; one that starts on text selects it as usual, and so do the keyboard, shift-
+ * click and touch. (The browser would otherwise anchor a selection at the nearest words and paint it over everything
+ * the drag crosses.) The opening is a scene and selects nothing at all (app/globals.css .ig).
+ */
+function keepDragsForWaves() {
+  let down = false;
+  const press = (e: PointerEvent) => (down = e.pointerType === 'mouse' && e.button === 0 && !e.shiftKey);
+  const release = () => (down = false);
+  const start = (e: Event) => {
+    if (!down) return;
+    const t = e.target as Node;
+    if (t.nodeType === Node.TEXT_NODE) return;
+    const el = t as Element;
+    if (el.closest?.(WORDS)) return;
+    for (const n of el.childNodes) if (n.nodeType === Node.TEXT_NODE && n.textContent?.trim()) return;
+    e.preventDefault();
+  };
+  addEventListener('pointerdown', press, true);
+  addEventListener('pointerup', release, true);
+  addEventListener('pointercancel', release, true);
+  document.addEventListener('selectstart', start, true);
+  return () => {
+    removeEventListener('pointerdown', press, true);
+    removeEventListener('pointerup', release, true);
+    removeEventListener('pointercancel', release, true);
+    document.removeEventListener('selectstart', start, true);
+  };
+}
+
 /**
  * The liquid: one fixed canvas behind the whole page that paints the dark liquid (lib/liquid/render.ts), and the
  * floating of the page's text and blocks on it (lib/liquid/float.ts). Both load after load + idle, never in the
@@ -22,6 +56,7 @@ export function Liquid() {
     if (reducedMotion()) return;
     let stop: (() => void) | null = null;
     let stopFloat: (() => void) | null = null;
+    let stopGuard: (() => void) | null = null;
     let dead = false;
     let idleId = 0;
     let timer = 0;
@@ -35,6 +70,7 @@ export function Liquid() {
       if (dead) return;
       stop = startLiquid(ref.current!);
       if (!stop || dead) return;
+      stopGuard = keepDragsForWaves();
       const { startFloat } = await import('@/lib/liquid/float');
       if (dead) return;
       const ric = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
@@ -50,6 +86,7 @@ export function Liquid() {
       if (cic) cic(idleId);
       else clearTimeout(idleId);
       stopFloat?.();
+      stopGuard?.();
       stop?.();
     };
   }, []);

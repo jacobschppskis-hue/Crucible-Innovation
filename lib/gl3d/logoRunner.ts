@@ -1,14 +1,14 @@
 // The home logo, live: 2 arcs (each with its welded end cells), 16 upright cells and the core, each its own object on a
 // transparent canvas, all on the mark's lattice (lib/splitRing.ts).
-// The scroll story (squares scatter, arcs leave, everything fuses) comes from the Ignition's progress values; every
-// piece also floats on the page liquid on its own (buoy springs fed by `sample`) and the cursor can push it.
-// This file is DOM-free: it runs inside the scene worker (sceneWorker.ts) or, where OffscreenCanvas WebGL2 is missing,
-// on the main thread (logoScene.ts). Everything it needs from the page arrives in `LogoEnv`.
+// Every piece's pose comes from the main thread with each tick of the one clock (logoScene.ts: the scroll story's
+// offsets plus its floating on the page's wave grid, the cursor's push included); this file applies exactly that pose,
+// plays the pour (the floating fades in as the logo is released) and draws. It keeps no springs and no time of its own.
+// It is DOM-free: it runs inside the scene worker (sceneWorker.ts) or, where OffscreenCanvas WebGL2 is missing, on the
+// main thread (logoScene.ts). Everything else it needs from the page arrives in `LogoEnv`.
 import { createStage } from './core';
 import type { Obj, Stage } from './core';
 import { logoPieces } from './geometry';
 import type { Piece } from './geometry';
-import { sample } from '../liquid/field';
 import { createPour } from './pour';
 import type { Pour } from './pour';
 import { createAdapt } from './adapt';
@@ -19,30 +19,16 @@ export type LogoStory = { sm: number; sh: number; core: number; flare: number; o
 export const LOGO_SPAN = 2.4;
 const MARK = 64;
 
-const scatter = (i: number) => {
-  const r = (n: number) => ((Math.sin(i * 127.1 + n * 311.7) * 43758.5453) % 1 + 1) % 1;
-  return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 220 };
-};
-/** At rest a piece drifts at most this far from its lattice place (mark units: 10% of a cell) and tilts at most TILT
- * (rad), so the mark always reads as one aligned lattice. The cursor can push a piece up to PUSH units; it springs back. */
-const DRIFT = 0.3;
-const TILT = 0.05;
-const PUSH = 1.4;
-const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
-const hash = (i: number) => ((Math.sin(i * 91.7 + 3.1) * 43758.5453) % 1 + 1) % 1;
+/**
+ * Per piece (logoPieces() order: arc 0, arc 1, the 16 free cells, the core), POSE_STRIDE numbers in mark units (y up)
+ * and radians: the story's offset [x, y, z, rx, ry, rz, scale], then the floating [x, y, z, rx, ry, rz]. The floating
+ * is scaled by how much of it shows (0 while the metal is poured, 1 once released).
+ */
+export const POSE_STRIDE = 13;
 
-type Body = {
-  piece: Piece;
-  obj: Obj;
-  k: number; // square index 0..1 (story stagger)
-  sc: { dx: number; dy: number; dr: number };
-  phase: number;
-  // spring state: x, y (push), z (buoy), rx, ry (tilt), each with a velocity
-  s: Float32Array;
-  v: Float32Array;
-};
+type Body = { piece: Piece; obj: Obj };
 
-/** What the page tells the logo each frame (client px unless noted). */
+/** What the page tells the logo (client px unless noted). */
 export type LogoEnv = {
   /** The canvas' CSS layout size (it has no layout of its own in a worker). */
   css: { w: number; h: number };
@@ -51,17 +37,24 @@ export type LogoEnv = {
   scrollY: number;
   /** Client y below which the page is free of the nav (the crucible stays under it). */
   top?: number;
-  ptr: { x: number; y: number };
   story: LogoStory;
   /** Contact sheets (?pourdebug): the pour clock, in place of the real one. */
   pourT?: number;
 };
 
-export type LogoRunner = { frame(t: number): void; down(): void; dispose(): void };
+export type LogoRunner = {
+  /** Draw time `t` with these poses (POSE_STRIDE per piece; missing = at rest). */
+  frame(t: number, poses?: Float32Array): void;
+  /** How much of the floating shows now (0 during the pour, 1 once the logo is released). */
+  fl(): number;
+  down(): void;
+  dispose(): void;
+};
 
 /**
- * Build the logo on `canvas` (throws if WebGL2 is missing). `frame(t, dt)` draws one frame; the owner calls it from its
- * own loop. `emit` adds a small ripple to the page liquid (page px). `onFirst` is called after the first frame is drawn.
+ * Build the logo on `canvas` (throws if WebGL2 is missing). The owner calls `frame(t, poses)` from the one clock.
+ * `emit` adds a small ripple to the page liquid (page px: the pour's own splashes). `onRelease`: the pour has just let
+ * the logo go onto the liquid. `onFirst` is called after the first frame is drawn.
  */
 export function createLogoRunner(
   canvas: HTMLCanvasElement | OffscreenCanvas,
@@ -72,6 +65,7 @@ export function createLogoRunner(
     /** Play the pour (first visit). */
     pour?: { tempo: number };
     emit: (x: number, docY: number, amp: number, size: number, t: number) => void;
+    onRelease?: () => void;
     onFirst?: () => void;
     /** The logo is finished and floating (pour over, skipped or cut short by scrolling); called once. */
     onSettled?: () => void;
@@ -79,11 +73,7 @@ export function createLogoRunner(
 ): LogoRunner {
   const stage: Stage = createStage(canvas, { fov: 28, frame: MARK * LOGO_SPAN, quality: 1, dpr: Math.min(opts.dpr || 1, 1.5), exposure: 1, css: env.css, fidelity: opts.full });
   const adapt = createAdapt(stage, opts.full);
-  const bodies: Body[] = [];
-  let sq = 0;
-  const pieces = logoPieces();
-  const nSq = pieces.filter((p) => p.kind === 'square').length;
-  pieces.forEach((piece, i) => {
+  const bodies: Body[] = logoPieces().map((piece, i) => {
     const isCore = piece.kind === 'core';
     const obj = stage.add({
       mesh: piece.mesh,
@@ -92,25 +82,17 @@ export function createLogoRunner(
       seed: isCore ? 3 : 1 + (i % 5),
       position: [...piece.center],
     });
-    bodies.push({
-      piece,
-      obj,
-      k: piece.kind === 'square' ? sq++ / (nSq - 1) : 0,
-      sc: scatter(piece.kind === 'square' ? sq - 1 : 0),
-      phase: hash(i) * 6.28,
-      s: new Float32Array(5),
-      v: new Float32Array(5),
-    });
+    return { piece, obj };
   });
 
-  // The pour (opening): the pieces are cast in a sand mould, then released onto the liquid.
+  // The pour (opening): the metal fills the pieces' own shapes, then the logo is released onto the liquid.
   const headroom = () => {
     const px = env.rect.height / (MARK * LOGO_SPAN);
     return px > 0 ? (env.rect.top + env.rect.height / 2 - (env.top ?? 64) - 12) / px : 40;
   };
   let pour: Pour | undefined = opts.pour ? createPour(stage, bodies, headroom()) : undefined;
-  let fl = pour ? 0 : 1; // how much of the floating shows (0 while the logo is still in the mould)
-  // The pour runs on the wall clock from its first drawn frame (a slow software-GL frame rate drops frames, it never
+  let fl = pour ? 0 : 1; // how much of the floating shows (0 while the metal is still being poured)
+  // The pour runs on the one clock from its first drawn frame (a slow software-GL frame rate drops frames, it never
   // stretches the pour). The first frame's own cost (shader compile) is not counted.
   let pourStart = -1;
   const pourTau = (t: number) => (env.pourT !== undefined ? env.pourT : (t - pourStart) / opts.pour!.tempo);
@@ -122,25 +104,14 @@ export function createLogoRunner(
   };
   pour?.update(0);
 
-  const ptr = env.ptr;
-  let lastRipple = 0;
   let shown = false;
-  let lastT = 0;
 
-  const frame = (t: number) => {
+  const frame = (t: number, poses?: Float32Array) => {
     if (!adapt.allow(t)) return;
-    const dt = lastT ? Math.min(0.1, t - lastT) : 1 / 60;
-    lastT = t;
     const story = env.story;
     const rect = env.rect;
     const px = rect.height / (MARK * LOGO_SPAN); // client px per mark unit
     if (px <= 0) return;
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const sy = env.scrollY;
-    const step = Math.min(dt, 1 / 30);
-    const R = Math.max(70, px * 14); // cursor reach, px
-    const sx0 = cx, sy0 = cy;
     let tick: ReturnType<Pour['update']> | undefined;
     if (pour && shown) {
       if (story.out > 0.02 || story.sm > 0.01) {
@@ -153,6 +124,7 @@ export function createLogoRunner(
         if (pourStart < 0) pourStart = t;
         tick = pour.update(pourTau(t));
         fl = tick.float;
+        if (tick.release) opts.onRelease?.();
         if (tick.done) {
           pour.dispose();
           pour = undefined;
@@ -162,76 +134,25 @@ export function createLogoRunner(
       }
     }
 
-    for (const b of bodies) {
-      const { obj, piece, s, v } = b;
-      const [bx, by] = piece.center;
-      // Story offsets (mark units, y up).
-      let ox = 0, oy = 0, oz = 0, rx = 0, ry = 0, rz = 0, sc = 1;
-      if (piece.kind === 'square') {
-        const q = clamp(story.sm * 1.6 - b.k * 0.6, 0, 1);
-        ox = b.sc.dx * q;
-        oy = -b.sc.dy * q;
-        oz = -22 * q;
-        // Scattered squares only tilt a little (never a 45-degree diamond).
-        rz = (-b.sc.dr / 110) * q * 0.2;
-        rx = (b.sc.dr / 110) * q * 0.35;
-        ry = (b.sc.dy / 32) * q * 0.3;
-        sc = 1 - q * 0.45;
-      } else if (piece.kind === 'arc') {
-        const h = story.sh;
-        ox = -34 * h;
-        oz = -34 * h;
-        ry = (piece.ring === 0 ? 1 : -1) * 0.9 * h;
-        sc = 1 - h * 0.78;
-      } else {
-        sc = 1 + story.flare * 0.3; // same size in every beat, so the same halo
+    const P = poses && poses.length >= bodies.length * POSE_STRIDE ? poses : null;
+    for (let i = 0; i < bodies.length; i++) {
+      const { obj, piece } = bodies[i];
+      const [bx, by] = piece.center; // in the mark's plane (z 0), as each mesh is centred on its own box
+      if (!P) {
+        obj.position = [bx, by, 0];
+        obj.rotation = [0, 0, 0];
+        obj.scale = 1;
+        continue;
       }
-
-      // Where the piece is on the page now, then the liquid under it.
-      const gx = cx + (bx + ox + s[0]) * px;
-      const gy = cy - (by + oy + s[1]) * px;
-      const w = sample(gx, gy + sy, t);
-      // Cursor push: away from the pointer, springing back.
-      let ax = 0, ay = 0;
-      const dx = gx - ptr.x, dy = gy - ptr.y;
-      const d = Math.hypot(dx, dy);
-      let pushed = 0;
-      if (d < R && d > 0.5 && fl > 0.05) {
-        const f = (1 - d / R) * 5200;
-        ax = (dx / d) * f;
-        ay = -(dy / d) * f; // mark y is up
-        pushed = f;
-      }
-      const idle = t * 1.1 + b.phase;
-      const tz = w.h * 7 + Math.sin(idle) * 0.7;
-      const trx = clamp(-w.gy * 4 + Math.sin(idle * 0.8 + 1) * 0.012, -TILT, TILT);
-      const try_ = clamp(w.gx * 4 + Math.cos(idle * 0.9) * 0.012, -TILT, TILT);
-      // Springs (units, 1/s²): x,y return to rest and drift gently downhill; z, rx, ry follow the surface.
-      const targets = [clamp(-w.gx * 30, -DRIFT, DRIFT), clamp(w.gy * 30, -DRIFT, DRIFT), tz, trx, try_];
-      for (let j = 0; j < 5; j++) {
-        const kk = j < 2 ? 22 : 55;
-        const cc = j < 2 ? 5 : 6.5;
-        let acc = kk * (targets[j] - s[j]) - cc * v[j];
-        if (j === 0) acc += ax / px;
-        if (j === 1) acc += ay / px;
-        v[j] += acc * step;
-        s[j] += v[j] * step;
-      }
-      s[0] = clamp(s[0], -PUSH, PUSH);
-      s[1] = clamp(s[1], -PUSH, PUSH);
-      // A hard shove sheds a tiny ripple (rate-limited).
-      if (pushed > 1800 && t - lastRipple > 0.28) {
-        lastRipple = t;
-        opts.emit(gx, gy + sy, 0.22, 7, t);
-      }
-
-      obj.position = [bx + ox + s[0] * fl, by + oy + s[1] * fl, oz + s[2] * fl];
-      obj.rotation = [rx + s[3] * fl, ry + s[4] * fl, rz];
-      if (tick?.release) v[2] -= 9 + hash(b.phase * 7) * 4; // landing in the liquid
-      obj.scale = sc;
+      const o = i * POSE_STRIDE;
+      obj.position = [bx + P[o] + P[o + 7] * fl, by + P[o + 1] + P[o + 8] * fl, P[o + 2] + P[o + 9] * fl];
+      obj.rotation = [P[o + 3] + P[o + 10] * fl, P[o + 4] + P[o + 11] * fl, P[o + 5] + P[o + 12] * fl];
+      obj.scale = P[o + 6];
     }
     if (tick) {
-      for (const r of tick.ripples) opts.emit(sx0 + r.x * px, sy0 - r.y * px + sy, r.amp, r.size, t);
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      for (const r of tick.ripples) opts.emit(cx + r.x * px, cy - r.y * px + env.scrollY, r.amp, r.size, t);
     }
     stage.render();
     if (!shown) {
@@ -241,5 +162,5 @@ export function createLogoRunner(
     }
   };
 
-  return { frame, down: adapt.down, dispose: () => stage.dispose() };
+  return { frame, fl: () => fl, down: adapt.down, dispose: () => stage.dispose() };
 }

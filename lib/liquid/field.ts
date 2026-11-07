@@ -1,13 +1,9 @@
 // The liquid's public face for everything that floats on it.
 //
-// v2: the surface is the wave grid in sim.ts (main thread) plus the analytic idle swell in swell.ts. DOM floaters and the
-// harness read it in CSS px through `samplePx` / `sampleGrid` / `footprint` (see float.ts and .board/v2/a/API.md).
-//
-// The 3D workers (logo, ingots) have no grid yet. Until they move onto it (main-thread poses from `footprint`), they
-// keep the v1 API below, `sample(x, docY)` -> {h, gx, gy} in v1 units, computed from the swell plus a light model of the
-// sources the page posts them (taps and a coarse trace of the pointer, as expanding rings). Ripples that floating things
-// shed (`kind: 'float'`) are drawn in the liquid but never read back by this model, so nothing is rocked by its own
-// ripples. The same model runs on the main thread, so a 3D runner on the main-thread fallback moves exactly as in its worker.
+// v2: the surface is the wave grid in sim.ts (main thread) plus the analytic idle swell in swell.ts. Everything that
+// floats reads it in CSS px through `samplePx` / `sampleGrid` / `footprint` (see .board/v2/a/API.md): the DOM floaters
+// (float.ts), and the 3D logo pieces and ingots, whose poses are computed on the main thread and posted to their
+// renderers with the clock's tick (lib/gl3d/logoScene.ts, ingotPose.ts). There is no second, interim wave model.
 
 import { clock } from './loop';
 import { swellAt, type HG } from './swell';
@@ -111,26 +107,14 @@ export function heightPatch(x: number, y: number, w: number, h: number, nx: numb
   return { x, y, w, h, nx, ny, data };
 }
 
-// ---- v1 API (3D runners, interim) --------------------------------------------------------------------------------
+// ---- wave sources posted from outside the grid -------------------------------------------------------------------
 
-/** v1 units = px * K_LEGACY for the swell: gentle enough that the 3D runners' slope gains (e.g. the ingots' 300 rad per unit
- *  slope, clamped at 0.05) never saturate on the swell alone (v1's bang-bang tilt). A posted tap ring is ~1, as in v1. */
-export const K_LEGACY = 0.0015;
-export const LIFE = 4; // s a posted source lives
-export const SPEED = 420; // px/s, same as the grid's waves
-const DISP = 0.8;
-const DECAY = 0.45;
-const SPREAD = 80;
+/** How long (s) a posted source counts as live (`liveCount`, the liquid canvas' data-live). */
+export const LIFE = 4;
 
-export type Source = { x: number; y: number; t0: number; amp: number; size: number; f?: boolean };
-export type Sample = { h: number; gx: number; gy: number };
-
-/** Every new source is passed on (the 3D scenes forward them to their workers). */
-export const hooks: { onAdd: ((s: Source, kind: 'ring' | 'float') => void) | null; also: Set<(s: Source, kind: 'ring' | 'float') => void> } = { onAdd: null, also: new Set() };
-
-const RING_SLOTS = 64;
-const rings: (Source | null)[] = new Array(RING_SLOTS).fill(null);
-let ri = 0;
+const SLOTS = 64;
+const posted = new Float64Array(SLOTS).fill(-1e9); // birth times of the coarse pointer trace input.ts posts
+let pi = 0;
 let liveFloats: number[] = [];
 
 let floatSink: ((x: number, y: number, amp: number, size: number, t: number) => void) | null = null;
@@ -142,59 +126,22 @@ export function setFloatSink(f: typeof floatSink) {
 const nowT = () => (typeof performance === 'undefined' ? clock.t : Math.max(clock.t, performance.now() / 1000));
 
 /**
- * A wave source at page px (x, docY): `kind: 'ring'` (taps and the pointer's coarse trace, posted by input.ts) feeds the
- * interim model; `kind: 'float'` (a floating thing's own ripple: the logo, an ingot, the pour) is drawn in the liquid
- * and never read back by the model.
+ * A wave source at page px (x, docY). `kind: 'float'`: a floating thing's own ripple (a logo piece, an ingot, a DOM
+ * floater, the pour's splashes) becomes a small ringing drop in the grid. `kind: 'ring'` (the coarse pointer trace
+ * input.ts still posts) is only counted: the grid already has those waves from input.ts itself.
  */
 export function addSource(x: number, docY: number, amp = 0.6, size = 24, opts: { kind?: 'ring' | 'float'; t?: number } = {}) {
-  const s: Source = { x, y: docY, t0: opts.t ?? nowT(), amp, size, f: opts.kind === 'float' };
-  if (s.f) {
-    floatSink?.(x, docY, amp, size, s.t0);
-    liveFloats.push(s.t0);
-  } else rings[ri++ % RING_SLOTS] = s;
-  const kind = s.f ? 'float' : 'ring';
-  hooks.onAdd?.(s, kind);
-  for (const f of hooks.also) f(s, kind);
+  const t0 = opts.t ?? nowT();
+  if (opts.kind === 'float') {
+    floatSink?.(x, docY, amp, size, t0);
+    liveFloats.push(t0);
+  } else posted[pi++ % SLOTS] = t0;
 }
 
-const out: Sample = { h: 0, gx: 0, gy: 0 };
-
-/** v1-compatible: surface height and slope (v1 units) at page px, from the swell and the posted rings. */
-export function sample(x: number, docY: number, t = clock.t): Sample {
-  swellAt(x, docY, t, sw);
-  let h = sw.h * K_LEGACY;
-  let gx = sw.gx * K_LEGACY;
-  let gy = sw.gy * K_LEGACY;
-  for (const s of rings) {
-    if (!s) continue;
-    const age = t - s.t0;
-    if (age < 0 || age >= LIFE) continue;
-    const dx = x - s.x;
-    const dy = docY - s.y;
-    const r = Math.hypot(dx, dy);
-    const sig = s.size * (1 + DISP * age);
-    const R = SPEED * age;
-    const d = r - R;
-    if (Math.abs(d) > 3 * sig) continue;
-    // a ring hump that fades in over its first 80 ms (no step when it is born) and out over its life
-    const born = Math.min(1, age / 0.08);
-    const A = (s.amp * born * Math.exp(-DECAY * age) * (1 - (age / LIFE) ** 4)) / Math.sqrt((1 + R / SPREAD) * (1 + DISP * age));
-    const e = Math.exp(-0.5 * (d / sig) * (d / sig));
-    h += A * e;
-    const dh = (A * e * -(d / (sig * sig))) / Math.max(r, 0.001);
-    gx += dh * dx;
-    gy += dh * dy;
-  }
-  out.h = h;
-  out.gx = gx;
-  out.gy = gy;
-  return out;
-}
-
-/** Posted sources alive now (rings + floats), for v1 callers. */
+/** Posted sources alive now (the pointer trace + ripples of floating things). */
 export function liveCount(t = clock.t) {
   let n = 0;
-  for (const s of rings) if (s && t - s.t0 < LIFE && t >= s.t0) n++;
+  for (let i = 0; i < SLOTS; i++) if (t - posted[i] < LIFE && t >= posted[i]) n++;
   if (liveFloats.length && liveFloats[0] < t - LIFE) liveFloats = liveFloats.filter((v) => v >= t - LIFE);
   return n + liveFloats.length;
 }

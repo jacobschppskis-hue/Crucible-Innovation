@@ -26,6 +26,10 @@ const GHOST_LINES = (() => {
   return `${arcs}M${-GM + 2} ${c}H${64 + GM - 2}M${c} ${-GM + 2}V${c - core}`;
 })();
 const CROP = 'M0 2.4V0h2.4M61.6 0H64v2.4M64 61.6V64h-2.4M2.4 64H0v-2.4';
+/** Pour time (s at full tempo) by which the ghost has faded (app/globals.css: --gd 2700 ms + 350 ms): just as the
+ *  metal has filled the last outline (3.05 s), while it is still hot; it sets (crust, then bone) from about 3.3 s
+ *  (lib/gl3d/pour.ts). */
+const GHOST_GONE = 3.05;
 
 /** Live scroll state, read every frame by the 3D logo. */
 export type IgnitionState = { sm: number; sh: number; core: number; flare: number; out: number };
@@ -47,6 +51,7 @@ export type IgnitionState = { sm: number; sh: number; core: number; flare: numbe
 export function Ignition() {
   const ref = useRef<HTMLElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
+  const ghostRef = useRef<HTMLDivElement>(null);
   const state = useRef<IgnitionState>({ sm: 0, sh: 0, core: 1, flare: 0, out: 0 });
 
   useEffect(() => {
@@ -55,24 +60,60 @@ export function Ignition() {
     const root = document.documentElement;
     const set = (k: string, v: number) => el.style.setProperty(k, v.toFixed(4));
     const s = state.current;
+    // Phones and tablets (the headline above its text, the ring in the upper half): the first line comes in as the
+    // headline leaves and each line rolls into the next, so no scroll position leaves the lower half empty; the ring
+    // moves down to the middle of what is left (--ry). Desktop keeps its pauses between lines: there the ring fills
+    // the stage.
+    const wide = matchMedia('(min-width: 1024px)');
     const off = trackScroll(el, 'pin', (p) => {
+      const ph = !wide.matches;
       s.out = ease.inOut(seg(p, 0, 0.14));
       // Machine half scatters ("Not the person."), comes back while the human half leaves ("Not the model."), then both fuse.
       s.sm = ease.inOut(seg(p, 0.17, 0.3)) * (1 - ease.inOut(seg(p, 0.42, 0.54)));
       s.sh = ease.inOut(seg(p, 0.42, 0.54)) * (1 - ease.inOut(seg(p, 0.64, 0.74)));
       s.core = 1 - ease.out(seg(p, 0.15, 0.22)) + ease.out(seg(p, 0.7, 0.8));
       s.flare = seg(p, 0.7, 0.76) * (1 - ease.out(seg(p, 0.77, 0.92)));
+      // Each line rises in from below and leaves upward: --tN is its opacity, --yN its offset (in its own heights).
+      // On phones one line rolls up and away as the next rolls in, more than a line apart, so they never overlap.
+      const in1 = ph ? seg(p, 0.055, 0.115) : seg(p, 0.2, 0.26);
+      const out1 = ph ? seg(p, 0.38, 0.44) : seg(p, 0.36, 0.42);
+      const in2 = ph ? seg(p, 0.4, 0.46) : seg(p, 0.46, 0.52);
+      const out2 = ph ? seg(p, 0.64, 0.7) : seg(p, 0.6, 0.66);
+      // The last line settles fully only once the ring has fused (core lit at 0.8).
+      const in3 = ease.out(ph ? seg(p, 0.65, 0.85) : seg(p, 0.74, 0.86));
       set('--o', s.out);
       set('--sm', s.sm);
       set('--sh', s.sh);
       set('--core', s.core);
       set('--flare', s.flare);
-      set('--f', seg(p, 0.12, 0.2));
-      set('--t1', seg(p, 0.2, 0.26) * (1 - seg(p, 0.36, 0.42)));
-      set('--t2', seg(p, 0.46, 0.52) * (1 - seg(p, 0.6, 0.66)));
-      set('--t3', ease.out(seg(p, 0.74, 0.86)));
-      el.toggleAttribute('data-out', s.out > 0.5);
+      const k = ph ? 1 : 0.4;
+      set('--t1', in1 * (1 - out1));
+      set('--y1', ((1 - in1) - out1) * k);
+      set('--t2', in2 * (1 - out2));
+      set('--y2', ((1 - in2) - out2) * k);
+      set('--t3', in3);
+      set('--y3', (1 - in3) * (ph ? 1 : 0.45));
+      // The copy is out of reach (links, focus) once it has faded out (its lines are gone at 0.77).
+      el.toggleAttribute('data-out', s.out > 0.8);
     });
+
+    // Where the ring goes as the headline leaves (phones and tablets): to the middle between the nav and the story
+    // lines. Measured only when the layout changes (the scroll story itself only moves things with transforms).
+    const stage = el.querySelector<HTMLElement>('.ig-stage')!;
+    const area = el.querySelector<HTMLElement>('.ig-ring-area')!;
+    const fuse = el.querySelector<HTMLElement>('.ig-fuse')!;
+    const place = () => {
+      if (wide.matches || getComputedStyle(fuse).position !== 'absolute') return el.style.removeProperty('--ry');
+      const top = stage.getBoundingClientRect().top;
+      const a = area.getBoundingClientRect();
+      const from = a.top + a.height / 2 - top;
+      const to = (parseFloat(getComputedStyle(stage).paddingTop) + fuse.getBoundingClientRect().top - top) / 2;
+      el.style.setProperty('--ry', `${Math.max(0, Math.round(to - from))}px`);
+    };
+    const ro = new ResizeObserver(place);
+    ro.observe(stage);
+    ro.observe(area);
+    ro.observe(fuse);
 
     // Rich tier (every visit but reduced motion): the 3D logo's canvas is mounted as soon as the opening is within a
     // screen or two of the viewport, and pours the metal on the first visit to the page. It never gets in the way of
@@ -85,12 +126,18 @@ export function Ignition() {
     let stopLogo: (() => void) | undefined;
     let io: IntersectionObserver | undefined;
     let failed = false;
+    let stopGhost: (() => void) | undefined;
+    const ghostOff = () => {
+      stopGhost?.();
+      stopGhost = undefined;
+    };
     // Failsafe only: the headline is on screen from the first paint; this just lets it lift if the scene is very slow.
     const late = setTimeout(() => {
       wantPour = false;
       go();
     }, 3000);
     const unmount = () => {
+      ghostOff();
       stopLogo?.();
       stopLogo = undefined;
       el.removeAttribute('data-3d');
@@ -99,7 +146,8 @@ export function Ignition() {
     };
     // ?pourdebug (contact sheets): the pour clock is window.__pourT, in the worker and here, for the ghost's CSS.
     let dbgRaf = 0;
-    if (/[?&]pourdebug\b/.test(location.search)) {
+    const dbg = /[?&]pourdebug\b/.test(location.search);
+    if (dbg) {
       el.setAttribute('data-pourdebug', '');
       const tick = () => {
         el.style.setProperty('--pt', String((window as unknown as { __pourT?: number }).__pourT ?? 0));
@@ -108,16 +156,42 @@ export function Ignition() {
       tick();
     }
     if (root.dataset.tier === 'rich') {
-      import('@/lib/gl3d/logoScene').then(({ mountLogo }) => {
+      Promise.all([import('@/lib/gl3d/logoScene'), import('@/lib/liquid/loop')]).then(([{ mountLogo }, { onFrame }]) => {
         if (dead) return;
+        // The ghost keeps the metal's time: its scan and its fade are scrubbed (--pt, s at full tempo) from the one
+        // clock the pour is drawn on, from the pour's first frame, so whatever the frame rate (or a stepped capture)
+        // it is gone while the metal is still hot, never left over the cooled ring.
+        const ghostClock = () => {
+          const g = ghostRef.current;
+          if (dbg || !g) return;
+          let t0 = -1;
+          stopGhost = onFrame((t) => {
+            if (t0 < 0) t0 = t;
+            const pt = (t - t0) / tempo;
+            g.style.setProperty('--pt', pt.toFixed(3));
+            if (pt > GHOST_GONE + 0.1) ghostOff();
+          });
+        };
         const mount = () => {
           if (stopLogo || failed || !hostRef.current) return;
           stopLogo = mountLogo({
             host: hostRef.current,
             story: () => state.current,
-            pour: wantPour ? { tempo, start: () => ((wantPour = false), clearTimeout(late), el.setAttribute('data-pouring', ''), go()) } : undefined,
+            pour: wantPour
+              ? {
+                  tempo,
+                  start: () => {
+                    wantPour = false;
+                    clearTimeout(late);
+                    el.setAttribute('data-pouring', '');
+                    go();
+                    ghostClock();
+                  },
+                }
+              : undefined,
             onReady: () => el.setAttribute('data-3d', ''),
             onSettled: () => {
+              ghostOff();
               el.setAttribute('data-settled', ''); // pour over, ring floating (screenshot tools wait on it)
               el.removeAttribute('data-pouring');
             },
@@ -137,6 +211,7 @@ export function Ignition() {
     return () => {
       dead = true;
       off();
+      ro.disconnect();
       io?.disconnect();
       unmount();
       clearTimeout(late);
@@ -176,7 +251,7 @@ export function Ignition() {
               </g>
             </svg>
             {/* The pour's ghost, under the 3D canvas (shown only while a pour plays; see app/globals.css). */}
-            <div aria-hidden className="ig-ghost">
+            <div ref={ghostRef} aria-hidden className="ig-ghost">
               <div className="ig-ghost-scan">
                 <svg viewBox={`${-GM} ${-GM} ${64 + 2 * GM} ${64 + 2 * GM}`} className="block h-full w-full" fill="none" stroke="currentColor">
                   <path className="ig-ghost-lines" d={GHOST_LINES} strokeWidth={0.13} strokeDasharray="1.4 0.7" />
@@ -230,10 +305,6 @@ export function Ignition() {
           <div className="ig-fl ig-t3">
             <h2 className="h-display text-5xl sm:text-7xl">Neither, alone</h2>
           </div>
-        </div>
-
-        <div aria-hidden className="ig-cue">
-          <span />
         </div>
       </div>
     </section>

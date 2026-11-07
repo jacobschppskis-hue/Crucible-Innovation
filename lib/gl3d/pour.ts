@@ -6,7 +6,8 @@
 // just inside each piece's edge, so the opaque metal hides them exactly where it is). It cools from white-hot through
 // orange to bone, the core stays orange, and the logo is released onto the liquid. Nothing breaks away.
 // Pure function of the pour clock `tau` (seconds at full tempo; the caller scales a quick repeat intro). Beats follow
-// the CSS timings in app/globals.css (ghost scan 0-0.9 s, headline lift from 1.8 s, ghost fade 4.0-4.4 s).
+// the CSS timings in app/globals.css (ghost scan 0-0.9 s and ghost fade 2.7-3.05 s, both scrubbed from this clock by
+// Ignition.tsx; headline lift from 1.8 s).
 import type { Obj, Stage } from './core';
 import type { Piece, Vec3 } from './geometry';
 import { RING } from '../splitRing';

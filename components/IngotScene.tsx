@@ -98,6 +98,7 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}
         decoding="async"
+        draggable={false}
         className="ing-still"
       />
       <canvas key={gen} ref={canvasRef} aria-hidden className="ing-canvas" />

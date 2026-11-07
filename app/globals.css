@@ -16,6 +16,7 @@
   --ink: #16150f;
   --ink-dim: #5e5b52; /* 5.3:1 on bone */
   --ember-deep: #a8380c; /* Ember text on bone (the same heat, dark enough for AA: 5.1:1) */
+  --ember-tint: rgb(255 91 31 / 0.3); /* selected text: a light heat over the text, which keeps its own colour */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --nav-h: 4rem;
@@ -57,8 +58,18 @@
     overflow-x: clip;
   }
   ::selection {
-    background: var(--ember);
-    color: var(--ground);
+    background: var(--ember-tint);
+  }
+  /* Pictures and effect layers (the liquid, 3D and flame canvases, logos, ingot stills, portraits) are never text: a
+     drag across them makes waves, never a selection tint over them and never a dragged copy of the picture (Firefox
+     needs draggable={false} on the img for that). */
+  :is(canvas, img, svg, video) {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+  :is(canvas, img, svg, video)::selection {
+    background: transparent;
   }
   :focus-visible {
     outline: 2px solid var(--ember);
@@ -474,14 +485,18 @@ html.lenis body {
 
 /* ---------- Ignition: the home opening (components/Ignition.tsx) ----------
    Defaults are the finished state (no JS, reduced motion, short landscape screens). The intro runs once on load
-   (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --f, --t1..--t3 from lib/scroll.ts. */
+   (pure CSS); the scroll story is driven by --o, --sm, --sh, --core, --flare, --t1..--t3, --y1, --y2 (and --ry, where
+   the ring goes on phones) from Ignition.tsx. The opening is a scene, not a page of text: a drag anywhere on it makes
+   waves and selects nothing (its words are still in the DOM for readers and find-in-page); only the paragraph is
+   text a visitor may want to copy. */
 .ig {
+  -webkit-user-select: none;
+  user-select: none;
   --o: 0;
   --sm: 0;
   --sh: 0;
   --core: 1;
   --flare: 0;
-  --f: 1;
   --t1: 0;
   --t2: 0;
   --t3: 1;
@@ -568,6 +583,10 @@ html.lenis body {
 .ig-ghost-lines {
   opacity: 0.7;
 }
+.ig-meta p {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* Sized so "Intelligence," spans ~90% of the container (Archivo sets it at ~5.05em wide), capped by height. */
 .ig-title {
@@ -633,9 +652,6 @@ html.lenis body {
 .ig-t2 {
   color: var(--bone-dim);
 }
-.ig-cue {
-  display: none;
-}
 
 /* Intro (see the Ignition docblock). Times are for the first visit (--T: 1); repeat visits run at 0.45. The rich tier's
    pour is drawn in 3D (lib/gl3d/pour.ts); everything below is the headline and page furniture rising in step with it.
@@ -689,8 +705,11 @@ html.lenis body {
   }
   /* Until the 3D logo has drawn, the ghost stands there faintly (no dead first second). When the pour starts
      (.ig[data-pouring], set on the same frame as html[data-go]) its scan front draws it in from the top (0-0.9 s); the
-     metal covers its outlines as it fills them; what is left of it fades at 4.0-4.4 s, before the logo is released.
-     If the scene isn't up in time (no pour), it simply goes. --gd is each animation's delay at full tempo. */
+     metal covers its outlines as it fills them (all by 3.05 s); what is left of it (crop marks, construction lines)
+     fades at 2.7-3.05 s, while the metal is still hot (it sets from about 3.3 s): never over the cooled ring. Both are scrubbed from the
+     pour's own clock (--pt, s at full tempo, written by Ignition.tsx from the one clock, or from window.__pourT under
+     ?pourdebug), so they keep time with the metal at any frame rate. If the scene isn't up in time (no pour), the
+     ghost simply goes. --gd is each animation's delay at full tempo. */
   html[data-tier='rich'][data-pour]:not([data-go]) .ig-svg {
     opacity: 0;
   }
@@ -703,15 +722,15 @@ html.lenis body {
     animation: ig-ghost-scan calc(900ms * var(--T)) cubic-bezier(0.45, 0, 0.35, 1) calc(var(--gd) * var(--T)) both;
   }
   .js .ig[data-pouring] .ig-ghost {
-    --gd: 4000ms;
-    animation: ig-ghost-out calc(400ms * var(--T)) ease-in calc(var(--gd) * var(--T)) both;
+    --gd: 2700ms;
+    animation: ig-ghost-out calc(350ms * var(--T)) ease-in calc(var(--gd) * var(--T)) both;
   }
-  /* ?pourdebug: the pour clock comes from window.__pourT (--pt, seconds), so the ghost, the headline and the glow are
-     scrubbed with the metal (contact sheets). Same delays as above. */
-  .js .ig[data-pourdebug] :is(.ig-ghost, .ig-ghost-scan) {
+  .js .ig:is([data-pouring], [data-pourdebug]) :is(.ig-ghost, .ig-ghost-scan) {
     animation-play-state: paused;
     animation-delay: calc((var(--gd) - var(--pt, 0) * 1000ms) * var(--T));
   }
+  /* ?pourdebug: the pour clock comes from window.__pourT (--pt, seconds), so the headline and the glow are scrubbed
+     with the metal too (contact sheets). Same delays as above. */
   .js .ig[data-pourdebug] .ig-in {
     animation-play-state: paused;
     animation-delay: calc((1800ms + var(--ld, 0ms) - var(--pt, 0) * 1000ms) * var(--T));
@@ -786,7 +805,6 @@ html.lenis body {
 @media (prefers-reduced-motion: no-preference) and (min-height: 540px) {
   .js .ig {
     height: 420vh;
-    --f: 0;
     --t3: 0;
   }
   .js .ig-stage {
@@ -801,7 +819,7 @@ html.lenis body {
   }
   .js .ig-ring {
     width: min(var(--rs), 100cqh);
-    transform: translate3d(0, calc(var(--o) * 2svh), 0) scale(calc(1 + var(--o) * 0.14));
+    transform: translate3d(0, calc(var(--o) * var(--ry, 2svh)), 0) scale(calc(1 + var(--o) * 0.14));
   }
   .js .ig-l1 {
     transform: translate3d(calc(var(--o) * -24vw), 0, 0);
@@ -814,6 +832,12 @@ html.lenis body {
   .js .ig-meta {
     transform: translate3d(0, calc(var(--o) * 3rem), 0);
     opacity: calc(1 - var(--o) * 2.2);
+  }
+  /* Phones and tablets: the text under the headline is where the first story line comes in; it is gone first. */
+  @media (max-width: 1023.98px) {
+    .js .ig-meta {
+      opacity: calc(1 - var(--o) * 3.2);
+    }
   }
   .js .ig[data-out] .ig-copy {
     visibility: hidden;
@@ -860,48 +884,18 @@ html.lenis body {
   .js .ig-t2 {
     color: var(--bone);
   }
+  /* --y1..--y3: offsets in each line's own height (a wrapped line travels its full height). */
   .js .ig-t1 {
     opacity: var(--t1);
-    transform: translateY(calc((1 - var(--t1)) * 22px));
+    transform: translateY(calc(var(--y1, 0) * 100%));
   }
   .js .ig-t2 {
     opacity: var(--t2);
-    transform: translateY(calc((1 - var(--t2)) * 22px));
+    transform: translateY(calc(var(--y2, 0) * 100%));
   }
   .js .ig-t3 {
     opacity: var(--t3);
-    transform: translateY(calc((1 - var(--t3)) * 30px)) scale(calc(0.97 + var(--t3) * 0.03));
-  }
-  .js .ig-cue {
-    position: absolute;
-    bottom: 1.5rem;
-    left: 50%;
-    display: none;
-    width: 1px;
-    height: 2.5rem;
-    overflow: hidden;
-    background: var(--line-strong);
-    opacity: calc(1 - var(--o) * 5);
-  }
-  @media (min-width: 1024px) {
-    .js .ig-cue {
-      display: block;
-    }
-  }
-  .js .ig-cue span {
-    display: block;
-    height: 50%;
-    background: var(--bone);
-    animation: cue 2.4s var(--ease-spring) infinite;
-  }
-}
-@keyframes cue {
-  0% {
-    transform: translateY(-100%);
-  }
-  65%,
-  100% {
-    transform: translateY(200%);
+    transform: translateY(calc(var(--y3, 0) * 100%)) scale(calc(0.97 + var(--t3) * 0.03));
   }
 }
 
@@ -1318,10 +1312,6 @@ html.lenis body {
    No background of its own: the page liquid (z-index:-1) shows through, and the furnace is transparent without heat. */
 .foot {
   color: var(--bone);
-}
-.foot ::selection {
-  background: var(--ember);
-  color: var(--ground);
 }
 .foot :focus-visible {
   outline-color: var(--ember);
