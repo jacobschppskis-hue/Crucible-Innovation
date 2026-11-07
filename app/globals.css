@@ -241,13 +241,12 @@ html.lenis body {
   white-space: nowrap;
   overflow: hidden;
   isolation: isolate;
-  translate: var(--mx-px, 0px) var(--my-px, 0px);
+  /* translate is written by JS only (lib/liquid/lean.ts, float.ts): one writer, no CSS transition on it */
   transition:
     box-shadow 200ms ease,
     background-color 200ms ease,
     border-color 200ms ease,
     color 200ms ease,
-    translate 600ms var(--ease-spring),
     scale 180ms ease;
 }
 .btn:active {
@@ -1137,9 +1136,6 @@ html.lenis body {
 }
 .thesis[data-gl] .thesis-gl {
   opacity: 1;
-}
-.thesis-crest {
-  transition-duration: 0ms;
 }
 .thesis[data-gl] {
   --fg: 0.3;

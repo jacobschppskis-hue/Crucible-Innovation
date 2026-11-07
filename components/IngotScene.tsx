@@ -26,7 +26,9 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
     let broken = false;
     let near = false;
     let worker = true; // false once the worker could not draw: the main thread then does
-    const across = () => !!el.closest('.vf-track') && matchMedia('(min-width: 1024px) and (min-height: 600px)').matches;
+    const onTrack = !!el.closest('.vf-track');
+    const wide = matchMedia('(min-width: 1024px) and (min-height: 600px)');
+    const across = () => onTrack && wide.matches; // read every frame: one MediaQueryList, not a new one each time
     const release = () => {
       const was = stop || starting;
       stop?.();
@@ -39,6 +41,8 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
       if (dead || !near || stop || starting || broken) return;
       starting = true;
       import('@/lib/gl3d/ingotScene')
+        // each bar starts in a task of its own, so several coming near at once never add up to one long task
+        .then((m) => new Promise<typeof m>((res) => setTimeout(() => res(m), 0)))
         .then(({ startIngot }) => {
           if (dead || !starting || stop) return;
           const canvas = canvasRef.current;
@@ -89,7 +93,7 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
         srcSet={`/film/ingots/${slug}-600.webp 600w, /film/ingots/${slug}-1200.webp 1200w, /film/ingots/${slug}-2400.webp 2400w`}
         sizes={sizes}
         width={1200}
-        height={750}
+        height={960}
         alt=""
         loading={eager ? 'eager' : 'lazy'}
         fetchPriority={eager ? 'high' : undefined}

@@ -105,8 +105,5 @@
   pointer-events: none;
 }
 
-/* Large visuals drawn toward the cursor (components/Magnetic.tsx) */
-[data-pull] {
-  translate: var(--pull-x, 0px) var(--pull-y, 0px);
-  transition: translate 900ms var(--ease-spring);
-}
+/* Large visuals drawn toward the cursor ([data-pull], components/Magnetic.tsx): their translate is written by JS only
+   (lib/liquid/lean.ts springs, composed with the floating in float.ts), so there is no CSS rule or transition here. */

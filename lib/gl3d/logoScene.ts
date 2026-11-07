@@ -4,7 +4,7 @@
 // ripples the logo sheds back. Where OffscreenCanvas WebGL2 is missing, or the worker can't get a context, the same
 // runner draws on the main thread from the shared frame loop (and loads its code only then).
 import { addSource, hooks } from '../liquid/field';
-import { onFrame } from '../liquid/loop';
+import { onFrame, renderer } from '../liquid/loop';
 import { onLongTasks } from './watchdog';
 import type { LogoEnv, LogoStory } from './logoRunner';
 
@@ -114,9 +114,29 @@ export function mountLogo(opts: {
       [off],
     );
     let dead = false;
+    // one clock: a tick per main frame, never two in flight (the newest waits for the last 'tock')
+    const reg = renderer('logo', 'worker');
+    let busy = false;
+    let pending = -1;
+    const tick = (t: number) => {
+      if (busy) {
+        pending = t;
+        return;
+      }
+      busy = true;
+      post({ type: 'tick', t });
+    };
     worker.onmessage = (e: MessageEvent) => {
       const m = e.data;
-      if (m.type === 'ready') first();
+      if (m.type === 'tock') {
+        busy = false;
+        reg.done(m.t);
+        if (pending >= 0) {
+          const p = pending;
+          pending = -1;
+          tick(p);
+        }
+      } else if (m.type === 'ready') first();
       else if (m.type === 'settled') opts.onSettled?.();
       else if (m.type === 'emit') addSource(m.x, m.y, m.amp, m.size, { kind: 'float', t: m.t });
       else if (m.type === 'fail' && !dead) {
@@ -139,19 +159,22 @@ export function mountLogo(opts: {
       post({ type: 'src', x: s.x, y: s.y, t0: s.t0, amp: s.amp, size: s.size, kind });
     hooks.also.add(forward);
     let lastKey = '';
-    const offFrame = onFrame(() => {
+    const offFrame = onFrame((t) => {
       if (document.hidden) return;
       const env = envNow(cv, ptr);
       const key = JSON.stringify(env);
-      if (key === lastKey) return;
-      lastKey = key;
-      post({ type: 'state', env });
+      if (key !== lastKey) {
+        lastKey = key;
+        post({ type: 'state', env });
+      }
+      tick(t);
     }, { early: true });
     const onVis = () => post({ type: 'vis', hidden: document.hidden });
     document.addEventListener('visibilitychange', onVis);
     const offLong = onLongTasks(() => post({ type: 'down' }));
     function stop() {
       hooks.also.delete(forward);
+      reg.off();
       offFrame();
       offLong();
       document.removeEventListener('visibilitychange', onVis);
@@ -176,6 +199,7 @@ export function mountLogo(opts: {
           onSettled: opts.onSettled,
         });
         const offLong = onLongTasks(() => runner.down());
+        const reg = renderer('logo', 'main');
         const offFrame = onFrame((t) => {
           const n = envNow(cv, ptr);
           env.css.w = n.css.w;
@@ -186,8 +210,10 @@ export function mountLogo(opts: {
           env.story = n.story;
           env.pourT = n.pourT;
           runner.frame(t);
+          reg.done(t);
         });
         stopFn = () => {
+          reg.off();
           offFrame();
           offLong();
           runner.dispose();

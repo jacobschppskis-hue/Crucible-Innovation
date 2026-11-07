@@ -1,92 +1,62 @@
-// The liquid's renderer, off the main thread: owns the OffscreenCanvas (WebGL2) and draws on its own clock. The main
-// thread only posts tiny messages (new packets, scrollY, viewport, visibility); see render.ts for the other side.
-// Time is aligned to the page's rAF clock (performance.now() of the main thread) via the time origins, so packet
-// birth times from the main thread mean the same here and `sample()` over there matches what is drawn.
+// The liquid's renderer, off the main thread: owns the OffscreenCanvas (WebGL2) and draws exactly what the main frame
+// posts (time, scroll, the grid's heights). It keeps no clock and runs no animation loop of its own: one main frame,
+// one message, one draw, one 'drawn' back (with the heights buffer, so the main thread can reuse it). See render.ts.
 
-import { createEngine, type Engine } from './engine';
-import { addSource, setCalm } from './field';
-import { clock } from './loop';
+import { createEngine, type Engine, type GridMeta } from './engine';
 
 type Msg =
-  | { type: 'init'; canvas: OffscreenCanvas; origin: number; full: boolean; w: number; h: number; dpr: number; scroll: number }
-  | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float' }
-  | { type: 'calm'; rects: number[] }
+  | { type: 'init'; canvas: OffscreenCanvas; full: boolean; w: number; h: number; dpr: number }
   | { type: 'view'; w: number; h: number; dpr: number }
-  | { type: 'scroll'; y: number }
-  | { type: 'vis'; hidden: boolean }
-  | { type: 'freeze'; t: number | null }
-  | { type: 'down' };
+  | { type: 'frame'; t: number; sy: number; late: number; hold: boolean; meta: GridMeta; heights: Float32Array | null; mask: Uint8Array | null };
 
 const ctx = self as unknown as {
-  postMessage(m: unknown): void;
+  postMessage(m: unknown, transfer?: Transferable[]): void;
   onmessage: ((e: { data: Msg }) => void) | null;
-  requestAnimationFrame?: (cb: () => void) => number;
 };
 
 let engine: Engine | null = null;
-let origin = 0;
-let scroll = 0;
-let hidden = false;
-let running = false;
-let frames = 0;
-let lastPost = 0;
 let ready = false;
-let frozen: number | null = null; // screenshot checks (?liquid=full): draw this field time instead of the clock
-
-const now = () => (performance.timeOrigin + performance.now() - origin) / 1000;
-
-function loop() {
-  if (!engine || hidden) {
-    running = false;
-    return;
-  }
-  const t = frozen ?? now();
-  clock.t = t;
-  if (engine.draw(t, scroll)) {
-    frames++;
-    ctx.postMessage({ type: 'frame', t }); // the field time of the frame just drawn (data-t on the canvas)
-    if (!ready) {
-      ready = true;
-      ctx.postMessage({ type: 'ready' });
-    }
-    if (t - lastPost > 0.25) {
-      lastPost = t;
-      ctx.postMessage({ type: 'stats', frames, live: engine.stats.live, q: engine.stats.q, soft: engine.stats.soft });
-    }
-  }
-  if (ctx.requestAnimationFrame) ctx.requestAnimationFrame(loop);
-  else setTimeout(loop, 16);
-}
-
-function kick() {
-  if (running || !engine || hidden) return;
-  running = true;
-  engine.resume();
-  loop();
-}
+let frames = 0;
+let lastT = -1; // the last frame drawn (time, scroll): redrawn at once after a resize, so the canvas is never blank
+let lastSy = 0;
 
 ctx.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'init') {
-    origin = m.origin;
-    scroll = m.scroll;
     let gl: WebGL2RenderingContext | null = null;
     try {
-      gl = m.canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'low-power' }) as WebGL2RenderingContext | null;
+      gl = m.canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'low-power', desynchronized: false }) as WebGL2RenderingContext | null;
     } catch {
       gl = null;
     }
     engine = gl ? createEngine(gl, m.canvas, { full: m.full }) : null;
-    if (!engine) return ctx.postMessage({ type: 'fail' });
+    if (!engine) {
+      ctx.postMessage({ type: 'fail' });
+      return;
+    }
     engine.setView(m.w, m.h, m.dpr);
-    kick();
-  } else if (m.type === 'calm') setCalm(m.rects);
-  else if (m.type === 'src') addSource(m.x, m.y, m.amp, m.size, { kind: m.kind, t: m.t0 });
-  else if (m.type === 'view') engine?.setView(m.w, m.h, m.dpr);
-  else if (m.type === 'scroll') scroll = m.y;
-  else if (m.type === 'vis') {
-    hidden = m.hidden;
-    if (!hidden) kick();
-  } else if (m.type === 'freeze') frozen = m.t;
-  else if (m.type === 'down') engine?.stepDown(now());
+    ctx.postMessage({ type: 'ok', soft: engine.stats.soft });
+  } else if (m.type === 'view') {
+    if (!engine) return;
+    engine.setView(m.w, m.h, m.dpr);
+    if (lastT >= 0) engine.draw(lastT, lastSy, 0, true);
+  }
+  else if (m.type === 'frame') {
+    if (!engine) return;
+    engine.upload(m.meta, m.heights, m.mask);
+    const drew = engine.draw(m.t, m.sy, m.late, m.hold);
+    if (drew) {
+      frames++;
+      lastT = m.t;
+      lastSy = m.sy;
+    }
+    const back: Transferable[] = m.heights ? [m.heights.buffer] : [];
+    // Acknowledge after this task: the frame is committed to the page's canvas by then.
+    const reply = { type: 'drawn', t: m.t, drew, frames, q: engine.stats.q, scale: engine.stats.scale, heights: m.heights };
+    setTimeout(() => ctx.postMessage(reply, back), 0);
+    if (drew && !ready) {
+      ready = true;
+      ctx.postMessage({ type: 'ready' });
+    }
+  }
 };

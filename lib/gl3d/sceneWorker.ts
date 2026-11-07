@@ -1,7 +1,7 @@
-// The 3D logo + pour, off the main thread: owns the OffscreenCanvas (WebGL2) and draws on its own clock, so a slow or
-// software GL never blocks the page. The main thread (logoScene.ts) posts what changes: scroll progress, the pointer,
-// the canvas' box, the viewport and the liquid's new wave sources (so `sample()` here matches what is drawn). Ripples
-// the logo sheds go back as 'emit' messages. Time is aligned to the page clock via the time origins, like the liquid.
+// The 3D logo + pour, off the main thread: owns the OffscreenCanvas (WebGL2), so a slow or software GL never blocks the
+// page. It keeps no clock of its own: the main thread (logoScene.ts) posts a 'tick' with the time of each frame of the
+// one clock (lib/liquid/loop.ts) and what changed (scroll progress, the pointer, the canvas' box, the liquid's new wave
+// sources); the worker draws exactly that time and answers 'tock'. Ripples the logo sheds go back as 'emit' messages.
 import { addSource } from '../liquid/field';
 import { clock } from '../liquid/loop';
 import { createLogoRunner, type LogoEnv, type LogoRunner, type LogoStory } from './logoRunner';
@@ -11,13 +11,13 @@ type Msg =
   | { type: 'state'; env: EnvMsg }
   | { type: 'src'; x: number; y: number; t0: number; amp: number; size: number; kind: 'ring' | 'float' }
   | { type: 'vis'; hidden: boolean }
+  | { type: 'tick'; t: number }
   | { type: 'down' };
 type EnvMsg = { css: { w: number; h: number }; rect: LogoEnv['rect']; scrollY: number; top?: number; ptr: { x: number; y: number }; story: LogoStory; pourT?: number };
 
 const ctx = self as unknown as {
   postMessage(m: unknown): void;
   onmessage: ((e: { data: Msg }) => void) | null;
-  requestAnimationFrame?: (cb: () => void) => number;
 };
 
 const env: LogoEnv = { css: { w: 1, h: 1 }, rect: { left: 0, top: 0, width: 1, height: 1 }, scrollY: 0, ptr: { x: -9999, y: -9999 }, story: { sm: 0, sh: 0, core: 1, flare: 0, out: 0 } };
@@ -34,35 +34,12 @@ const setEnv = (m: EnvMsg) => {
 };
 
 let runner: LogoRunner | null = null;
-let origin = 0;
 let hidden = false;
-let running = false;
 let ready = false;
-
-const now = () => (performance.timeOrigin + performance.now() - origin) / 1000;
-
-function loop() {
-  if (!runner || hidden) {
-    running = false;
-    return;
-  }
-  const t = now();
-  clock.t = t;
-  runner.frame(t);
-  if (ctx.requestAnimationFrame) ctx.requestAnimationFrame(loop);
-  else setTimeout(loop, 16);
-}
-
-function kick() {
-  if (running || !runner || hidden) return;
-  running = true;
-  loop();
-}
 
 ctx.onmessage = (e) => {
   const m = e.data;
   if (m.type === 'init') {
-    origin = m.origin;
     setEnv(m.env);
     try {
       runner = createLogoRunner(m.canvas, env, {
@@ -82,11 +59,15 @@ ctx.onmessage = (e) => {
       runner = null;
       return ctx.postMessage({ type: 'fail' });
     }
-    kick();
+  } else if (m.type === 'tick') {
+    // draw the main frame's time, then acknowledge once this task (and its commit) is done
+    if (runner && !hidden) {
+      clock.t = m.t;
+      runner.frame(m.t);
+    }
+    setTimeout(() => ctx.postMessage({ type: 'tock', t: m.t }), 0);
   } else if (m.type === 'state') setEnv(m.env);
   else if (m.type === 'src') addSource(m.x, m.y, m.amp, m.size, { kind: m.kind, t: m.t0 });
-  else if (m.type === 'vis') {
-    hidden = m.hidden;
-    if (!hidden) kick();
-  } else if (m.type === 'down') runner?.down();
+  else if (m.type === 'vis') hidden = m.hidden;
+  else if (m.type === 'down') runner?.down();
 };

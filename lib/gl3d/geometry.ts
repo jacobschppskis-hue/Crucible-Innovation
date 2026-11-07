@@ -202,27 +202,83 @@ export function logoPieces(depth = 2.4, bev = 0.4): Piece[] {
   return out;
 }
 
-/** A sand-mould brick: a block, w × h × d (front toward +z), with a pocket cut into its front. */
-export function mouldBrick(hw: number, hh: number, d: number, cw: number, ch: number, depth: number, bev = 2): Mesh {
-  const front = d / 2;
-  const body = slab(hw, hh, d, bev, 3, { front: false, back: true });
-  const b = new Builder();
-  b.p = Array.from(body.p); b.n = Array.from(body.n); b.i = Array.from(body.i);
-  const ob = hw - bev, oh = hh - bev;
-  const outer: Pt[] = [[-ob, -oh], [ob, -oh], [ob, oh], [-ob, oh]];
-  const inner: Pt[] = [[-cw, -ch], [cw, -ch], [cw, ch], [-cw, ch]];
-  const fl = 1.2, floor: Pt[] = inner.map(([x, y]) => [x - Math.sign(x) * fl, y - Math.sign(y) * fl]);
-  const zf = front - depth;
-  const O = outer.map(([x, y]) => b.v(x, y, front, 0, 0, 1));
-  const I = inner.map(([x, y]) => b.v(x, y, front, 0, 0, 1));
-  for (let k = 0; k < 4; k++) b.quad(O[k], O[(k + 1) % 4], I[(k + 1) % 4], I[k]);
-  for (let k = 0; k < 4; k++) {
-    const a = inner[k], c2 = inner[(k + 1) % 4], f0 = floor[k], f1 = floor[(k + 1) % 4];
-    const nx = -(c2[1] - a[1]), ny = c2[0] - a[0], l = Math.hypot(nx, ny);
-    const t = [b.v(a[0], a[1], front, nx / l, ny / l, 0.15), b.v(c2[0], c2[1], front, nx / l, ny / l, 0.15), b.v(f1[0], f1[1], zf, nx / l, ny / l, 0.15), b.v(f0[0], f0[1], zf, nx / l, ny / l, 0.15)];
-    b.quad(t[0], t[1], t[2], t[3]);
+/**
+ * The ventures' cast bar (a gold-bar ingot) in object units: length along x, width along y, the stamped top face toward
+ * +z, centred on the origin. A frustum lofted from rounded-rect sections, every section an exact inward offset of the
+ * base outline, so the plan corners are drafted cones (radius `r` at the top edge, larger at the foot) and all walls lean
+ * in by the same draft. Every edge is filleted (`f`), so the whole bar is one smooth surface. The top face is cast:
+ * it dips by `dip` toward the middle (shrinkage) and its pitting is the shader's noise. Normals are analytic.
+ */
+export const BAR = { L: 100, W: 46, H: 24, draft: 0.3, r: 3, f: 1.6, dip: 0.6 } as const;
+/** Half extents of the bar's plan outline at height z (object units), for the shaders' temperature and temper fields. */
+export const barHalf = (z: number, b = BAR) => {
+  const o = -(z + b.H / 2) * Math.tan(b.draft);
+  return [b.L / 2 + o, b.W / 2 + o] as const;
+};
+export function goldBar(b = BAR): Mesh {
+  const { L, W, H, draft: th, r: rTop, f, dip } = b;
+  const a0 = L / 2, b0 = W / 2, hz = H / 2, s = Math.sin(th), c = Math.cos(th);
+  // The section loop: a fixed set of plan points (same count on every ring), each with its plan normal.
+  const NC = 7, NL = 18, NW = 8; // segments per corner, long edge, short edge
+  type P = { cx: number; cy: number; nx: number; ny: number; ex: number; ey: number }; // corner sign, normal, edge param
+  const loop: P[] = [];
+  const corner = (sx: number, sy: number, a: number) => {
+    for (let k = 0; k < NC; k++) { const t = a + (k / NC) * (Math.PI / 2); loop.push({ cx: sx, cy: sy, nx: Math.cos(t), ny: Math.sin(t), ex: 0, ey: 0 }); }
+  };
+  const edge = (n: number, nx: number, ny: number, from: [number, number], to: [number, number]) => {
+    for (let k = 0; k < n; k++) { const t = k / n; loop.push({ cx: 0, cy: 0, nx, ny, ex: from[0] + (to[0] - from[0]) * t, ey: from[1] + (to[1] - from[1]) * t }); }
+  };
+  // CCW from the right end: corner (+,+), top long edge, corner (-,+), left end, corner (-,-), bottom long edge, corner (+,-), right end.
+  corner(1, 1, 0); edge(NL, 0, 1, [1, 1], [-1, 1]);
+  corner(-1, 1, Math.PI / 2); edge(NW, -1, 0, [-1, 1], [-1, -1]);
+  corner(-1, -1, Math.PI); edge(NL, 0, -1, [-1, -1], [1, -1]);
+  corner(1, -1, 1.5 * Math.PI); edge(NW, 1, 0, [1, -1], [1, 1]);
+  const N = loop.length;
+  // A section offset outward by o (negative = inward) from the base outline: half extents a0 + o, b0 + o; the corner
+  // radius follows the offset (exact), never below 0.4.
+  const at = (q: P, o: number, k = 1): [number, number] => {
+    const ha = a0 + o, hb = b0 + o, rr = Math.max(0.4, r0 + o);
+    if (q.ex || q.ey) {
+      // straight edge: run between the corner arcs
+      const x = q.ny ? q.ex * (ha - rr) : q.nx * ha, y = q.nx ? q.ey * (hb - rr) : q.ny * hb;
+      return [x * k, y * k];
+    }
+    return [(q.cx * (ha - rr) + rr * q.nx) * k, (q.cy * (hb - rr) + rr * q.ny) * k];
+  };
+  const bld = new Builder();
+  const rows: number[][] = [];
+  // profile rows, bottom centre to top centre: [offset, z, normal angle (in the outward/z plane), scale for the faces]
+  const prof: { o: number; z: number; al: number; k: number; dz?: number }[] = [];
+  const cb = -f * (1 + s) / c; // bottom fillet centre offset (z = -hz + f)
+  const ct = -f / c - s * (H - f) / c; // top fillet centre offset (z = hz - f) = where the top face starts
+  const r0 = rTop - ct; // the foot's corner radius that gives rTop at the top edge
+  const FS = 7, FACE = 9;
+  for (let i = 0; i <= 2; i++) prof.push({ o: cb, z: -hz, al: -Math.PI / 2, k: Math.max(0.0001, i / 2) });
+  for (let i = 1; i <= FS; i++) { const al = -Math.PI / 2 + (i / FS) * (Math.PI / 2 + th); prof.push({ o: cb + f * Math.cos(al), z: -hz + f + f * Math.sin(al), al, k: 1 }); }
+  for (let i = 0; i <= FS; i++) { const al = th + (i / FS) * (Math.PI / 2 - th); prof.push({ o: ct + f * Math.cos(al), z: hz - f + f * Math.sin(al), al, k: 1 }); }
+  for (let i = FACE - 1; i >= 0; i--) {
+    const k = Math.max(0.0001, i / FACE), w = 1 - k * k; // shrinkage dip: smooth at the rim (zero slope), deepest in the middle
+    prof.push({ o: ct, z: hz - dip * w * w, al: Math.PI / 2, k, dz: dip * 4 * k * (1 - k * k) });
   }
-  const F = floor.map(([x, y]) => b.v(x, y, zf, 0, 0, 1));
-  b.quad(F[0], F[1], F[2], F[3]);
-  return b.done();
+  for (const q of prof) {
+    const row: number[] = [];
+    for (let j = 0; j < N; j++) {
+      const P = loop[j];
+      const [x, y] = at(P, q.o, q.k);
+      let nx = P.nx * Math.cos(q.al), ny = P.ny * Math.cos(q.al), nz = Math.sin(q.al);
+      if (q.dz !== undefined) {
+        // the dip's slope, radial from the middle: dz/dk spread over this point's distance from the centre at k = 1
+        const [X, Y] = at(P, q.o, 1), R = Math.hypot(X, Y) || 1, g = q.dz / R;
+        nx = (-X / R) * g; ny = (-Y / R) * g; nz = 1; // rises outward, so it faces a little inward
+        const l = Math.hypot(nx, ny, nz); nx /= l; ny /= l; nz /= l;
+      }
+      row.push(bld.v(x, y, q.z, nx, ny, nz));
+    }
+    rows.push(row);
+  }
+  for (let r = 0; r < rows.length - 1; r++) for (let j = 0; j < N; j++) {
+    const j1 = (j + 1) % N;
+    bld.quad(rows[r][j], rows[r][j1], rows[r + 1][j1], rows[r + 1][j]);
+  }
+  return bld.done();
 }
