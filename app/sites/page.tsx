@@ -87,8 +87,8 @@ export default function SitesPage() {
             title={[{ t: 'Think in kelvin' }]}
             sub={
               clientSites.length
-                ? 'Measure from absolute zero, not from where everyone else starts. Every site here began as a blank page.'
-                : 'Measure from absolute zero, not from where everyone else starts. Every concept here began as a blank page. Real client work lands here as it ships.'
+                ? 'We measure from absolute zero and work from first principles, so every site here began as a blank page.'
+                : 'We measure from absolute zero and work from first principles, so every concept here began as a blank page. Real client work lands here as it ships.'
             }
           />
           <ul className="mt-14 grid gap-x-6 gap-y-14 md:grid-cols-3">

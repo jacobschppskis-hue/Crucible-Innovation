@@ -1,63 +1,130 @@
 'use client';
 import Image from 'next/image';
 import { useEffect, useRef } from 'react';
-import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
+import { reducedMotion } from '@/lib/scroll';
+import './BeforeAfter.css';
 
 type Props = { before: { src: string; alt: string }; after: { src: string; alt: string } };
 
+// The demo the first time it comes into view: from the centre the divider swings to show most of the old site, then
+// most of the new one, and settles back in the centre, where both are in view. [ms to get there, position].
+const DEMO: [number, number][] = [
+  [450, 50], // a beat on screen first
+  [1300, 80],
+  [180, 80],
+  [2000, 20],
+  [180, 20],
+  [1300, 50],
+];
+const sine = (t: number) => 0.5 - Math.cos(Math.PI * t) / 2;
+const clamp = (v: number) => Math.max(0, Math.min(100, v));
+
 /**
- * Scroll it in and the new site is swept across the old one; then drag to compare. The handle follows the pointer on a spring (it glides rather than snapping), drag works
- * anywhere on the image while vertical page scroll still works on touch, and a real range input underneath
- * gives keyboard and screen reader control. Labels fade as the handle covers them.
+ * Same business, different decade. The divider rests in the centre (also without JS and with reduced motion). The
+ * first time it is in view it sweeps to one side, then the other, and comes back to the centre; after that it is
+ * the visitor's: drag anywhere on the image (vertical page scroll still works on touch), or use the arrow keys on the
+ * range input underneath (its focus ring is drawn on the handle). The divider is the hot front: Ember while it
+ * moves, cooling to bone when it stops. Labels fade as the handle covers them.
  */
 export function BeforeAfter({ before, after }: Props) {
   const root = useRef<HTMLDivElement>(null);
   const input = useRef<HTMLInputElement>(null);
-  const state = useRef({ pos: 50, target: 50, raf: 0, touched: false });
+  const state = useRef({ pos: 50, target: 50, raf: 0, demo: 0, cool: 0, touched: false });
 
   const paint = (v: number) => {
-    root.current!.style.setProperty('--pos', `${v.toFixed(2)}%`);
-    root.current!.style.setProperty('--posn', v.toFixed(2));
+    const el = root.current!;
+    el.style.setProperty('--pos', `${v.toFixed(2)}%`);
+    el.style.setProperty('--posn', v.toFixed(2));
     input.current!.value = String(Math.round(v));
+  };
+
+  // Hot while it moves; cools a moment after it stops.
+  const heat = () => {
+    const s = state.current;
+    root.current!.dataset.hot = '';
+    clearTimeout(s.cool);
+    s.cool = window.setTimeout(() => delete root.current?.dataset.hot, 260);
+  };
+
+  // The visitor takes over: the demo stops where it is and the handle glides to them.
+  const take = () => {
+    const s = state.current;
+    s.touched = true;
+    cancelAnimationFrame(s.demo);
+    s.demo = 0;
+    delete root.current!.dataset.demo;
   };
 
   const glideTo = (target: number) => {
     const s = state.current;
-    s.target = Math.max(0, Math.min(100, target));
+    s.target = clamp(target);
     if (reducedMotion()) return paint((s.pos = s.target));
     if (s.raf) return;
     const step = () => {
       s.pos += (s.target - s.pos) * 0.22;
       if (Math.abs(s.target - s.pos) < 0.05) s.pos = s.target;
       paint(s.pos);
+      heat();
       s.raf = s.pos === s.target ? 0 : requestAnimationFrame(step);
     };
     s.raf = requestAnimationFrame(step);
   };
 
-  // The renovation: until the visitor takes the handle, scrolling it into view sweeps the new site across the old
-  // one. The divider is the hot front: Ember while it moves, cooling to bone when it stops.
   useEffect(() => {
     const el = root.current!;
+    const s = state.current;
+    paint(s.pos);
     if (reducedMotion()) return;
-    let last = -1;
-    let cool = 0;
-    const off = trackScroll(el, 'reveal', (p) => {
-      const s = state.current;
-      if (s.touched) return;
-      const v = 96 - ease.inOut(seg(p, 0.1, 1)) * 76;
-      s.pos = s.target = v;
-      paint(v);
-      if (last >= 0 && Math.abs(v - last) > 0.08) {
-        el.dataset.hot = '';
-        clearTimeout(cool);
-        cool = window.setTimeout(() => delete el.dataset.hot, 260);
-      }
-      last = v;
-    });
+
+    const play = () => {
+      el.dataset.demo = '';
+      let t = 0;
+      let last = 0;
+      let from = s.pos;
+      let i = 0;
+      const frame = (now: number) => {
+        // Local time, so a hidden tab or a long frame pauses the demo instead of skipping it.
+        t += last ? Math.min(250, now - last) : 0;
+        last = now;
+        while (i < DEMO.length && t >= DEMO[i][0]) {
+          t -= DEMO[i][0];
+          from = DEMO[i][1];
+          i++;
+        }
+        if (i >= DEMO.length) {
+          s.pos = s.target = 50;
+          paint(50);
+          s.demo = 0;
+          delete el.dataset.demo;
+          return;
+        }
+        const [ms, to] = DEMO[i];
+        const v = from + (to - from) * sine(t / ms);
+        if (Math.abs(v - s.pos) > 0.02) heat();
+        s.pos = s.target = v;
+        paint(v);
+        s.demo = requestAnimationFrame(frame);
+      };
+      s.demo = requestAnimationFrame(frame);
+    };
+
+    // Starts once the comparison is well in view (most of it, or most of a short screen), only once per visit.
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting || s.touched) return;
+        const seen = e.intersectionRect.height;
+        if (seen < Math.min(e.boundingClientRect.height * 0.8, innerHeight * 0.6)) return;
+        io.disconnect();
+        play();
+      },
+      { threshold: [0, 0.2, 0.4, 0.6, 0.7, 0.8, 0.9, 1] },
+    );
+    io.observe(el);
     return () => {
-      off();
-      clearTimeout(cool);
+      io.disconnect();
+      cancelAnimationFrame(s.demo);
+      cancelAnimationFrame(s.raf);
+      clearTimeout(s.cool);
     };
   }, []);
 
@@ -71,7 +138,7 @@ export function BeforeAfter({ before, after }: Props) {
       ref={root}
       className="ba group relative aspect-[5/4] touch-pan-y select-none overflow-hidden bg-ground-2 [--pos:50%] sm:aspect-[16/10]"
       onPointerDown={(e) => {
-        state.current.touched = true;
+        take();
         e.currentTarget.setPointerCapture(e.pointerId);
         root.current!.dataset.dragging = '';
         fromPointer(e);
@@ -107,8 +174,17 @@ export function BeforeAfter({ before, after }: Props) {
         max={100}
         defaultValue={50}
         aria-label="Before and after comparison. Higher values show more of the old site."
+        onKeyDown={(e) => {
+          // Arrow keys move in visible steps (the native step of 1% barely moves it); Home and End go all the way.
+          const by = { ArrowLeft: -5, ArrowDown: -5, ArrowRight: 5, ArrowUp: 5, PageDown: -20, PageUp: 20 }[e.key];
+          const to = e.key === 'Home' ? 0 : e.key === 'End' ? 100 : by === undefined ? null : state.current.target + by;
+          if (to === null) return;
+          e.preventDefault();
+          take();
+          glideTo(to);
+        }}
         onInput={(e) => {
-          state.current.touched = true;
+          take();
           glideTo(Number(e.currentTarget.value));
         }}
         className="sr-only"

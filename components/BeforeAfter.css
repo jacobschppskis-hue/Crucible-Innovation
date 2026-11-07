@@ -1,0 +1,13 @@
+/* Before/after (components/BeforeAfter.tsx). The divider is the hot front of the renovation: a crisp Ember line with a
+   faint glow while it moves (the demo sweep, a drag, the arrow keys), cooling to bone when it stops. The glow stays
+   tight so the two sites it separates are never washed over. */
+.ba-line {
+  background: var(--bone);
+  transition:
+    background-color 300ms ease,
+    box-shadow 300ms ease;
+}
+.ba[data-hot] .ba-line {
+  background: var(--ember);
+  box-shadow: 0 0 8px var(--ember);
+}
