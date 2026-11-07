@@ -11,6 +11,9 @@ const scatter = (i: number) => {
   const r = (n: number) => ((Math.sin(i * 127.1 + n * 311.7) * 43758.5453) % 1 + 1) % 1;
   return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 23 };
 };
+const FREE = cells().filter((q) => !q.weld); // the welded end cells are part of the arcs' outlines
+/** The farthest a scattered cell goes right of the core (mark units). */
+const SCATTER_FAR = Math.max(...FREE.map((q, k) => q.x - RING.c + scatter(k).dx));
 
 // The pour's ghost: a hairline technical drawing of the mark that the 3D metal is poured into (rich tier, first visit).
 // Each piece's outline sits GHOST_IN units inside its edge, so the opaque metal drawn over it (the 3D pieces lie on the
@@ -102,18 +105,27 @@ export function Ignition() {
     const stage = el.querySelector<HTMLElement>('.ig-stage')!;
     const area = el.querySelector<HTMLElement>('.ig-ring-area')!;
     const fuse = el.querySelector<HTMLElement>('.ig-fuse')!;
+    // The flat ring's scatter (no WebGL) is squeezed so its farthest cell stays on screen (--fs, see .ig-px).
+    const ring = el.querySelector<HTMLElement>('.ig-ring')!;
     const place = () => {
-      if (wide.matches || getComputedStyle(fuse).position !== 'absolute') return el.style.removeProperty('--ry');
+      if (wide.matches || getComputedStyle(fuse).position !== 'absolute') {
+        el.style.removeProperty('--fs');
+        return el.style.removeProperty('--ry');
+      }
       const top = stage.getBoundingClientRect().top;
       const a = area.getBoundingClientRect();
       const from = a.top + a.height / 2 - top;
       const to = (parseFloat(getComputedStyle(stage).paddingTop) + fuse.getBoundingClientRect().top - top) / 2;
       el.style.setProperty('--ry', `${Math.max(0, Math.round(to - from))}px`);
+      const ppu = (ring.offsetWidth * 1.14) / 64; // px per mark unit once the ring has taken the stage (scale 1.14)
+      const room = (stage.clientWidth / 2 - 14) / ppu - (RING.px / 2) * 0.8; // to 14 px inside the edge, a cell at 80%
+      el.style.setProperty('--fs', Math.min(1, Math.max(0, (room - 8) / (SCATTER_FAR - 8))).toFixed(3));
     };
     const ro = new ResizeObserver(place);
     ro.observe(stage);
     ro.observe(area);
     ro.observe(fuse);
+    ro.observe(ring);
 
     // Rich tier (every visit but reduced motion): the 3D logo's canvas is mounted as soon as the opening is within a
     // screen or two of the viewport, and pours the metal on the first visit to the page. It never gets in the way of
@@ -220,7 +232,6 @@ export function Ignition() {
   }, []);
 
   const { c, px, rings } = RING;
-  const free = cells().filter((q) => !q.weld); // the welded end cells are part of the arcs' outlines
 
   return (
     <section ref={ref} aria-label="Crucible" className="ig relative">
@@ -237,9 +248,9 @@ export function Ignition() {
                   <path key={r} d={arcOutline(r)} fill="currentColor" />
                 ))}
               </g>
-              {free.map(({ x, y }, k) => {
+              {FREE.map(({ x, y }, k) => {
                 const s = scatter(k);
-                const style = { '--dx': s.dx, '--dy': s.dy, '--dr': s.dr, '--k': (k / (free.length - 1)).toFixed(3) } as React.CSSProperties;
+                const style = { '--dx': s.dx, '--dy': s.dy, '--dr': s.dr, '--bx': x - c, '--k': (k / (FREE.length - 1)).toFixed(3) } as React.CSSProperties;
                 return (
                   <g key={k} className="ig-px" style={style}>
                     <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" />

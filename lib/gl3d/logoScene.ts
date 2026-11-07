@@ -70,6 +70,17 @@ const scatter = (i: number) => {
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const hash = (i: number) => ((Math.sin(i * 91.7 + 3.1) * 43758.5453) % 1 + 1) % 1;
 
+// The story's pieces stay on screen: on a narrow screen (phones, where the ring fills the width) the arcs' way left
+// and the cells' scatter right are shortened so every piece stays EDGE px inside the screen at its farthest, and
+// shrinks away there (as on desktop) instead of sitting cut off at the edge. Where there is room (desktop) both
+// factors are exactly 1 and nothing changes.
+const EDGE = 14;
+/** The arcs' story: 34 units left and back, down to 22% (an arc is 33 units wide: half of it at 22%). */
+const ARC_DX = 34, ARC_DZ = 34, ARC_SHRINK = 0.78, ARC_HALF = 16.5;
+/** The cells' scatter: back 22 units, down to 55%; on a narrow screen it is squeezed toward this x (units right of
+ *  the core) so the farthest cell lands at the edge. */
+const SQ_DZ = 22, SQ_SHRINK = 0.45, SQ_PIVOT = 8;
+
 type Body = {
   id: string;
   kind: 'arc' | 'square' | 'core';
@@ -130,6 +141,8 @@ type Box = { left: number; top: number; width: number; height: number };
 function createLogoFloat() {
   const B = bodies();
   const out = new Float32Array(B.length * STRIDE);
+  const arc0 = B.find((b) => b.kind === 'arc')!; // the outer arc goes farthest left
+  const sqFar = Math.max(...B.filter((b) => b.kind === 'square').map((b) => b.bx + b.sc.dx)); // the farthest scattered cell
   const g: HG = { h: 0, gx: 0, gy: 0 };
   const s: HG = { h: 0, gx: 0, gy: 0 };
   const P = new Float64Array(2 * 16); // this piece's sample points, client px
@@ -140,7 +153,7 @@ function createLogoFloat() {
   let lastAny = -1e9;
   let kick = false;
 
-  const step = (t: number, dt: number, rect: Box, story: LogoStory, ptr: { x: number; y: number; t: number }, fl: number, sx: number, sy: number) => {
+  const step = (t: number, dt: number, rect: Box, story: LogoStory, ptr: { x: number; y: number; t: number }, fl: number, sx: number, sy: number, vw = Infinity) => {
     dt = Math.min(Math.max(dt, 0), 0.1);
     const ppu = rect.height / (MARK * LOGO_SPAN); // client px per mark unit (in the mark's plane)
     if (!(ppu > 0)) return out;
@@ -155,6 +168,10 @@ function createLogoFloat() {
       from.y = ptr.y;
     }
     const ae = 1 - Math.exp(-dt / E_TAU);
+    // How much of the arcs' way left and of the cells' scatter right fits on this screen (1 = all of it).
+    const kzA = (ppu * DIST) / (DIST + ARC_DZ), kzS = (ppu * DIST) / (DIST + SQ_DZ);
+    const fitA = clamp(((cx - EDGE) / kzA - ARC_HALF * (1 - ARC_SHRINK) + arc0.bx) / ARC_DX, 0, 1);
+    const fitS = clamp(((vw - cx - EDGE) / kzS - (RING.px / 2) * (1 - SQ_SHRINK) - SQ_PIVOT) / (sqFar - SQ_PIVOT), 0, 1);
     probe.t = t;
     probe.fl = fl;
     for (let i = 0; i < B.length; i++) {
@@ -163,20 +180,21 @@ function createLogoFloat() {
       let ox = 0, oy = 0, oz = 0, rx = 0, ry = 0, rz = 0, sc = 1;
       if (b.kind === 'square') {
         const q = clamp(story.sm * 1.6 - b.k * 0.6, 0, 1);
-        ox = b.sc.dx * q;
+        // = dx * q where there is room; squeezed toward SQ_PIVOT where there isn't
+        ox = (b.sc.dx * fitS + (b.bx - SQ_PIVOT) * (fitS - 1)) * q;
         oy = -b.sc.dy * q;
-        oz = -22 * q;
+        oz = -SQ_DZ * q;
         // Scattered squares only tilt a little (never a 45-degree diamond).
         rz = (-b.sc.dr / 110) * q * 0.2;
         rx = (b.sc.dr / 110) * q * 0.35;
         ry = (b.sc.dy / 32) * q * 0.3;
-        sc = 1 - q * 0.45;
+        sc = 1 - q * SQ_SHRINK;
       } else if (b.kind === 'arc') {
         const h = story.sh;
-        ox = -34 * h;
-        oz = -34 * h;
+        ox = -ARC_DX * fitA * h;
+        oz = -ARC_DZ * h;
         ry = (b.ring === 0 ? 1 : -1) * 0.9 * h;
-        sc = 1 - h * 0.78;
+        sc = 1 - h * ARC_SHRINK;
       } else {
         sc = 1 + story.flare * 0.3; // same size in every beat, so the same halo
       }
@@ -351,7 +369,7 @@ export function mountLogo(opts: {
   const dbgPour = location.search.includes('pourdebug');
   // Layout reads (boxes, nav bottom) are cached: re-read only after a scroll/resize, or every 0.7 s as a safety net.
   // Reading them every frame forced a style + layout pass after the floaters' writes (costly on phones).
-  let lay: { css: { w: number; h: number }; rect: Box; top: number } | null = null;
+  let lay: { css: { w: number; h: number }; rect: Box; top: number; vw: number } | null = null;
   let layDirty = true;
   let layAt = 0;
   const dirty = () => (layDirty = true);
@@ -365,6 +383,7 @@ export function mountLogo(opts: {
         css: { w: cv.clientWidth, h: cv.clientHeight },
         rect: { left: r.left, top: r.top, width: r.width, height: r.height },
         top: document.querySelector('header, nav')?.getBoundingClientRect().bottom ?? 64,
+        vw: document.documentElement.clientWidth,
       };
       layDirty = false;
       layAt = now;
@@ -405,7 +424,10 @@ export function mountLogo(opts: {
   const w = window as unknown as { __logo?: typeof float.probe };
   w.__logo = float.probe;
   let fl = opts.pour ? 0 : 1; // how much of the floating the renderer shows (it tells us)
-  const poses = (cv: HTMLCanvasElement, t: number, dt: number) => float.step(t, dt, layout(cv).rect, opts.story(), ptr, fl, scrollX, scrollY);
+  const poses = (cv: HTMLCanvasElement, t: number, dt: number) => {
+    const l = layout(cv);
+    return float.step(t, dt, l.rect, opts.story(), ptr, fl, scrollX, scrollY, l.vw);
+  };
 
   const startWorker = (cv: HTMLCanvasElement): (() => void) | null => {
     if (typeof Worker === 'undefined' || typeof cv.transferControlToOffscreen !== 'function') return null;

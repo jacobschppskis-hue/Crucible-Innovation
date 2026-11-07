@@ -833,10 +833,22 @@ html.lenis body {
     transform: translate3d(0, calc(var(--o) * 3rem), 0);
     opacity: calc(1 - var(--o) * 2.2);
   }
-  /* Phones and tablets: the text under the headline is where the first story line comes in; it is gone first. */
+  /* Phones and tablets: the text under the headline is where the first story line comes in; it is gone first. The
+     headline fills the width there, so it can't part sideways (it would leave past the screen edges): each line rolls
+     up into its own mask (.ig-line) instead, the first a beat ahead, the way the story lines roll. `translate` on the
+     word, so it composes with the intro's lift (transform). */
   @media (max-width: 1023.98px) {
     .js .ig-meta {
       opacity: calc(1 - var(--o) * 3.2);
+    }
+    .js :is(.ig-l1, .ig-l2) {
+      transform: none;
+    }
+    .js .ig-l1 .ig-in {
+      translate: 0 calc(min(1, var(--o) * 1.4) * -1.3em);
+    }
+    .js .ig-l2 .ig-in {
+      translate: 0 calc(clamp(0, var(--o) * 1.4 - 0.25, 1) * -1.3em);
     }
   }
   .js .ig[data-out] .ig-copy {
@@ -846,11 +858,13 @@ html.lenis body {
     transform: translateX(calc(var(--sh) * -30px));
     opacity: calc(1 - var(--sh));
   }
+  /* --fs < 1 (phones, set by Ignition.tsx) squeezes the scatter toward x = 8 units right of the core so the farthest
+     cell stays on screen (as the 3D logo does, lib/gl3d/logoScene.ts); 1 = the full scatter. */
   .js .ig-px {
     --q: clamp(0, var(--sm) * 1.6 - var(--k) * 0.6, 1);
     transform-box: fill-box;
     transform-origin: center;
-    transform: translate(calc(var(--dx) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px))
+    transform: translate(calc((var(--dx) * var(--fs, 1) + (var(--bx) - 8) * (var(--fs, 1) - 1)) * var(--q) * 1px), calc(var(--dy) * var(--q) * 1px))
       rotate(calc(var(--dr) * var(--q) * 1deg)) scale(calc(1 - var(--q) * 0.2));
     opacity: calc(1 - var(--q) * 0.9);
   }
