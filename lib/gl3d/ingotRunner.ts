@@ -22,6 +22,9 @@ export type IngotRunner = {
   frame(t: number, pose: IngotPose, held: boolean): boolean;
   /** Long tasks keep landing on the main thread: step down. */
   down(): void;
+  /** Call `cb` once the GPU has finished everything drawn so far (a fence, polled; never blocks). The worker acks a
+   *  frame only then, so a GPU slower than the clock's ticks paces the ticks instead of queueing frame after frame. */
+  afterGPU(cb: () => void): void;
   readonly q: number;
   dispose(): void;
 };
@@ -65,6 +68,7 @@ export function createIngotRunner(
   };
 
   let drawn = false;
+  const gl = canvas.getContext('webgl2') as WebGL2RenderingContext | null; // the stage's own context (same canvas, same type)
   return {
     get q() { return q; },
     frame(t, pose, held) {
@@ -80,6 +84,20 @@ export function createIngotRunner(
       return true;
     },
     down() { if (cool <= 0) stepDown(); },
+    afterGPU(cb) {
+      const sync = gl && !gl.isContextLost() ? gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0) : null;
+      if (!gl || !sync) { setTimeout(cb, 0); return; }
+      gl.flush();
+      const t0 = performance.now();
+      const poll = () => {
+        const r = gl.isContextLost() ? gl.WAIT_FAILED : gl.clientWaitSync(sync, 0, 0);
+        // a fence that never signals (lost context, driver trouble) must not hold the clock: give up after 2 s
+        if (r === gl.TIMEOUT_EXPIRED && performance.now() - t0 < 2000) { setTimeout(poll, 1); return; }
+        if (!gl.isContextLost()) gl.deleteSync(sync);
+        cb();
+      };
+      setTimeout(poll, 0);
+    },
     dispose() { canvas.removeEventListener('webglcontextlost', lost); stage.dispose(); },
   };
 }

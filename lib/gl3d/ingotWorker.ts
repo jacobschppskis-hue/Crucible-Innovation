@@ -1,7 +1,8 @@
 // A venture's bar, off the main thread (one worker per ingot canvas): owns the OffscreenCanvas (WebGL2) and draws
 // exactly what the main frame posts (ingotScene.ts): the time on the one clock, the canvas' CSS size and the bar's pose
 // (computed there, on the liquid's grid). It keeps no clock and runs no loop of its own: one tick, one draw (or a skip
-// under the fps cap), one 'drawn' back after the drawing task, so the frame is committed by then. It also draws the
+// under the fps cap), one 'drawn' back once the GPU has finished that frame (a fence), so the frame is committed by then
+// and a slow GPU paces the ticks instead of queueing them. It also draws the
 // relief map (lettering, mark) with the site's Archivo loaded here via FontFace, so a slow or software GL (Lighthouse,
 // PageSpeed) never blocks the page.
 import { createIngotRunner, type IngotRunner } from './ingotRunner';
@@ -57,7 +58,11 @@ ctx.onmessage = (e) => {
       css.w = m.css.w;
       css.h = m.css.h;
       const drew = runner.frame(t, m.pose, m.held);
-      setTimeout(() => ctx.postMessage({ type: 'drawn', t, drew }), 0);
+      const ack = () => ctx.postMessage({ type: 'drawn', t, drew });
+      // Acked once the GPU has drawn it, not when the commands were issued: otherwise a slow GPU (software GL) gets
+      // frame after frame queued (the first harness screenshot on /ventures waited ~60 s for ~450 queued bars).
+      if (drew) runner.afterGPU(ack);
+      else setTimeout(ack, 0);
     };
     if (runner) draw();
     else ready?.then(draw);

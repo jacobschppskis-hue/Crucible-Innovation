@@ -228,11 +228,11 @@ html.lenis body {
 }
 
 /* ---------- Nav ---------- */
-/* Always solid (background + hairline) at every scroll position: it never waits on a scroll handler and never animates. */
+/* Always solid (background + hairline) at every scroll position: it never waits on a scroll handler and never animates.
+   Opaque ground, no backdrop blur: through any translucency a bright object passing under it (a bar, the logo) showed as
+   a grey box, and a blur over the ever-moving liquid is a re-blur every frame. Over the liquid it looks the same. */
 .nav {
-  background: color-mix(in srgb, var(--ground) 92%, transparent);
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
+  background: var(--ground);
   border-bottom: 1px solid var(--line);
 }
 
