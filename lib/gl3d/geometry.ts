@@ -1,5 +1,5 @@
 // Mesh builders for the 3D logo and ingots: beveled extrusions of 2D outlines, spheres, boxes. Pure JS, no GL.
-import { RING, pixels } from '../splitRing';
+import { RING, cells } from '../splitRing';
 
 export type Vec3 = [number, number, number];
 export type Mesh = { p: Float32Array; n: Float32Array; i: Uint16Array | Uint32Array };
@@ -112,17 +112,51 @@ const rectChains = (hw: number, hh: number): Chains => (k) => {
 export const slab = (hw: number, hh: number, depth: number, bev: number, seg = 3, caps?: { front: boolean; back: boolean }) =>
   extrude(rectChains(hw, hh), depth, bev, seg, caps);
 
-/** A half-ring band in world space (y up, ring centre at the origin), from θ0 to θ1 counter-clockwise. */
-function arcChains(r: number, w: number, a0: number, a1: number): Chains {
-  const n = Math.max(12, Math.round(((a1 - a0) * r) / 1.2));
-  return (k) => {
-    const ro = r + w / 2 - k, ri = r - w / 2 + k, s = k / r, t0 = a0 + s, t1 = a1 - s;
-    const at = (R: number, t: number): Pt => [R * Math.cos(t), R * Math.sin(t)];
-    const outer = Array.from({ length: n + 1 }, (_, j) => at(ro, t0 + ((t1 - t0) * j) / n));
-    const inner = Array.from({ length: n + 1 }, (_, j) => at(ri, t1 - ((t1 - t0) * j) / n));
-    return [outer, [outer[n], inner[0]], inner, [inner[n], outer[0]]];
+/**
+ * The human half of the ring of radius `r` with its two welded end cells, as one outline (y up, ring centre at the
+ * origin; lib/splitRing.ts `arcOutline` is the same contour in SVG): the cells' outer edges run straight from x = 3w/2 to
+ * x = 0, where they are tangent to the circles, then the half circles round the left. Chains break at the cells'
+ * right-hand corners; insets are miter offsets of the whole outline.
+ */
+function weldedArcChains(r: number, w: number): Chains {
+  const h = w / 2, ro = r + h, ri = r - h;
+  const arc = (R: number, a: number, b: number): Pt[] => {
+    const n = 2 * Math.max(6, Math.round((Math.abs(b - a) * R) / 2.4)); // even: a vertex at 9 o'clock, so the box is exact
+    return Array.from({ length: n + 1 }, (_, j) => {
+      const t = a + ((b - a) * j) / n;
+      return [R * Math.cos(t), R * Math.sin(t)] as Pt;
+    });
   };
+  const H = Math.PI / 2;
+  const base: Pt[][] = [
+    [[3 * h, ri], [3 * h, ro]],
+    [[3 * h, ro], ...arc(ro, H, 3 * H), [3 * h, -ro]],
+    [[3 * h, -ro], [3 * h, -ri]],
+    [[3 * h, -ri], ...arc(ri, 3 * H, H), [3 * h, ri]],
+  ];
+  // The closed outline (CCW), each chain's last point being the next chain's first.
+  const loop: Pt[] = base.flatMap((ch) => ch.slice(0, -1));
+  const m = loop.length;
+  const miter: Pt[] = loop.map((p, k) => {
+    const a = loop[(k + m - 1) % m], b = loop[(k + 1) % m];
+    const n1 = norm([-(p[1] - a[1]), p[0] - a[0]]), n2 = norm([-(b[1] - p[1]), b[0] - p[0]]); // inward (left) normals
+    const d = 1 + n1[0] * n2[0] + n1[1] * n2[1];
+    return [(n1[0] + n2[0]) / d, (n1[1] + n2[1]) / d];
+  });
+  const idx: number[][] = [];
+  let o = 0;
+  for (const ch of base) {
+    idx.push(ch.map((_, j) => (o + j) % m));
+    o += ch.length - 1;
+  }
+  return (k) => idx.map((ch) => ch.map((g) => [loop[g][0] + k * miter[g][0], loop[g][1] + k * miter[g][1]] as Pt));
 }
+/** One ring's arc outline as the 3D logo extrudes it (closed, CCW, y up, ring centre at the origin): for checks against the SVG. */
+export const arcOutline3d = (r: number): Pt[] => weldedArcChains(r, RING.px)(0).flatMap((ch) => ch.slice(0, -1));
+const norm = (v: Pt): Pt => {
+  const l = Math.hypot(v[0], v[1]) || 1;
+  return [v[0] / l, v[1] / l];
+};
 
 export function sphere(r: number, nu = 28, nv = 18): Mesh {
   const b = new Builder();
@@ -147,24 +181,23 @@ export function recentre(m: Mesh): Vec3 {
 export type Piece = { id: string; kind: 'arc' | 'square' | 'core'; mesh: Mesh; center: Vec3; ring?: 0 | 1 };
 
 /**
- * The mark as separate pieces: 2 arcs, 18 upright squares, the core. Units are mark units (64 across), origin at the
- * ring centre, y up, front toward +z. Each mesh is centred on its own bounding box; `center` is that rest position.
+ * The mark as separate pieces: 2 arcs (each with its welded end cells), 16 free upright cells, the core. Units are mark
+ * units (64 across), origin at the ring centre, y up, front toward +z. Each mesh is centred on its own bounding box;
+ * `center` is that rest position. Free cells sit on the lattice (lib/splitRing.ts `cells()`), ring 0 then 1, top → bottom.
  */
 export function logoPieces(depth = 2.4, bev = 0.4): Piece[] {
   const { c, px, rings, core } = RING;
   const out: Piece[] = [];
-  rings.forEach(({ r, n }, ri) => {
-    const e = px / 2 / r;
-    const mesh = extrude(arcChains(r, px, Math.PI / 2 - e, (3 * Math.PI) / 2 + e), depth, bev);
+  rings.forEach(({ r }, ri) => {
+    const mesh = extrude(weldedArcChains(r, px), depth, bev);
     out.push({ id: `arc${ri}`, kind: 'arc', mesh, center: recentre(mesh), ring: ri as 0 | 1 });
   });
-  rings.forEach(({ r, n }, ri) => {
-    pixels(r, n).forEach((q, k) => {
-      const mesh = slab(px / 2, px / 2, depth, bev);
-      const center: Vec3 = [q.x - c, c - q.y, 0];
-      out.push({ id: `sq${ri}-${k}`, kind: 'square', mesh, center, ring: ri as 0 | 1 });
-    });
-  });
+  const k = [0, 0];
+  for (const q of cells()) {
+    if (q.weld) continue;
+    const mesh = slab(px / 2, px / 2, depth, bev);
+    out.push({ id: `sq${q.ring}-${k[q.ring]++}`, kind: 'square', mesh, center: [q.x - c, c - q.y, 0], ring: q.ring });
+  }
   out.push({ id: 'core', kind: 'core', mesh: sphere(core), center: [0, 0, 0] });
   return out;
 }

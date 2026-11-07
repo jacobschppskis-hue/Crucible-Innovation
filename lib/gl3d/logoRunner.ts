@@ -1,4 +1,5 @@
-// The home logo, live: 2 arcs, 18 upright squares and the core, each its own object on a transparent canvas.
+// The home logo, live: 2 arcs (each with its welded end cells), 16 upright cells and the core, each its own object on a
+// transparent canvas, all on the mark's lattice (lib/splitRing.ts).
 // The scroll story (squares scatter, arcs leave, everything fuses) comes from the Ignition's progress values; every
 // piece also floats on the page liquid on its own (buoy springs fed by `sample`) and the cursor can push it.
 // This file is DOM-free: it runs inside the scene worker (sceneWorker.ts) or, where OffscreenCanvas WebGL2 is missing,
@@ -22,8 +23,11 @@ const scatter = (i: number) => {
   const r = (n: number) => ((Math.sin(i * 127.1 + n * 311.7) * 43758.5453) % 1 + 1) % 1;
   return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 220 };
 };
-/** Most a piece drifts from its place, in mark units (about 1.5% of the logo, a few px at any width). */
-const DRIFT = 1.4;
+/** At rest a piece drifts at most this far from its lattice place (mark units: 10% of a cell) and tilts at most TILT
+ * (rad), so the mark always reads as one aligned lattice. The cursor can push a piece up to PUSH units; it springs back. */
+const DRIFT = 0.3;
+const TILT = 0.05;
+const PUSH = 1.4;
 const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
 const hash = (i: number) => ((Math.sin(i * 91.7 + 3.1) * 43758.5453) % 1 + 1) % 1;
 
@@ -98,16 +102,6 @@ export function createLogoRunner(
       v: new Float32Array(5),
     });
   });
-
-  // End squares of each ring sit on the arc's tips: they take their arc's drift instead of drifting alone.
-  const tipArc = new Map<Body, Body>();
-  for (const b of bodies) {
-    if (b.piece.kind !== 'square') continue;
-    const [, ri, k] = /^sq(\d)-(\d+)$/.exec(b.piece.id) || [];
-    const arc = bodies.find((a) => a.piece.id === `arc${ri}`);
-    const last = ri === '0' ? 10 : 6;
-    if (arc && (+k === 0 || +k === last)) tipArc.set(b, arc);
-  }
 
   // The pour (opening): the pieces are cast in a sand mould, then released onto the liquid.
   const headroom = () => {
@@ -210,18 +204,11 @@ export function createLogoRunner(
       }
       const idle = t * 1.1 + b.phase;
       const tz = w.h * 7 + Math.sin(idle) * 0.7;
-      const trx = clamp(-w.gy * 4, -0.2, 0.2) + Math.sin(idle * 0.8 + 1) * 0.04;
-      const try_ = clamp(w.gx * 4, -0.2, 0.2) + Math.cos(idle * 0.9) * 0.04;
+      const trx = clamp(-w.gy * 4 + Math.sin(idle * 0.8 + 1) * 0.012, -TILT, TILT);
+      const try_ = clamp(w.gx * 4 + Math.cos(idle * 0.9) * 0.012, -TILT, TILT);
       // Springs (units, 1/s²): x,y return to rest and drift gently downhill; z, rx, ry follow the surface.
       const targets = [clamp(-w.gx * 30, -DRIFT, DRIFT), clamp(w.gy * 30, -DRIFT, DRIFT), tz, trx, try_];
-      const tipOf = tipArc.get(b);
-      if (tipOf) {
-        // Arc-tip squares ride with their arc, so arc ends stay clean.
-        for (let j = 0; j < 5; j++) {
-          s[j] = tipOf.s[j];
-          v[j] = tipOf.v[j];
-        }
-      } else for (let j = 0; j < 5; j++) {
+      for (let j = 0; j < 5; j++) {
         const kk = j < 2 ? 22 : 55;
         const cc = j < 2 ? 5 : 6.5;
         let acc = kk * (targets[j] - s[j]) - cc * v[j];
@@ -230,8 +217,8 @@ export function createLogoRunner(
         v[j] += acc * step;
         s[j] += v[j] * step;
       }
-      s[0] = clamp(s[0], -DRIFT, DRIFT);
-      s[1] = clamp(s[1], -DRIFT, DRIFT);
+      s[0] = clamp(s[0], -PUSH, PUSH);
+      s[1] = clamp(s[1], -PUSH, PUSH);
       // A hard shove sheds a tiny ripple (rate-limited).
       if (pushed > 1800 && t - lastRipple > 0.28) {
         lastRipple = t;

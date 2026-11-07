@@ -169,8 +169,19 @@ test('reduced motion shows the static SVG logo and the ingot stills, with no can
   await page.waitForTimeout(1000);
   await expect(page.locator('section.ig')).not.toHaveAttribute('data-3d', '');
   await expect(page.locator('section.ig .ig-svg')).toBeVisible();
-  // The 18 squares of the ring stay upright in the rendered logo.
-  expect(await page.locator('.ig-svg rect[transform]').count()).toBe(0);
+  // The ring's 16 free cells (the 4 welded ones are part of the arcs' outlines) stay upright in the rendered logo: no
+  // transforms, and each one's on-screen box is exactly one lattice cell (3 of the 64 units; a rotated square's box is larger).
+  const cells = page.locator('.ig-svg rect');
+  await expect(cells).toHaveCount(16);
+  expect(await page.locator('.ig-svg [transform]').count()).toBe(0);
+  const unit = ((await page.locator('.ig-svg').boundingBox())?.width ?? 0) / 64;
+  expect(unit).toBeGreaterThan(0);
+  for (let i = 0; i < 16; i++) {
+    const b = (await cells.nth(i).boundingBox())!;
+    expect(Math.abs(b.width - 3 * unit), `cell ${i} width`).toBeLessThan(0.5);
+    expect(Math.abs(b.height - 3 * unit), `cell ${i} height`).toBeLessThan(0.5);
+  }
+  await expect(page.locator('.ig-svg .ig-human path')).toHaveCount(2);
   await expect(page.locator('.ig-3d')).toHaveCount(0);
   expect(await page.locator('.ing[data-on]').count()).toBe(0);
   expect(await page.locator('.ing-still').count()).toBeGreaterThan(0);

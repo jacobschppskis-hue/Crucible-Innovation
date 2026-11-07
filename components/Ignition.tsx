@@ -1,15 +1,16 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef } from 'react';
-import { RING, arcPath, pixels } from '@/lib/splitRing';
+import { RING, arcOutline, cells } from '@/lib/splitRing';
 import { ease, reducedMotion, seg, trackScroll } from '@/lib/scroll';
 import { HeatField } from './HeatField';
 import { ArrowRight } from './Icons';
 
-// Deterministic scatter for the machine pixels (same on server and client).
+// Deterministic scatter for the machine cells (same on server and client). Scattered cells only tilt a little, as in
+// the 3D logo (about 11 degrees at most): squares stay upright everywhere.
 const scatter = (i: number) => {
   const r = (n: number) => ((Math.sin(i * 127.1 + n * 311.7) * 43758.5453) % 1 + 1) % 1;
-  return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 220 };
+  return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 23 };
 };
 
 /** Live scroll state, read every frame by the 3D logo. */
@@ -112,9 +113,8 @@ export function Ignition() {
     };
   }, []);
 
-  const { c, px, stroke, rings } = RING;
-  let k = 0;
-  const total = rings.reduce((n, r) => n + r.n, 0);
+  const { c, px, rings } = RING;
+  const free = cells().filter((q) => !q.weld); // the welded end cells are part of the arcs' outlines
 
   return (
     <section ref={ref} aria-label="Crucible" className="ig relative">
@@ -132,20 +132,18 @@ export function Ignition() {
             <svg aria-hidden viewBox="0 0 64 64" className="ig-svg relative block h-full w-full overflow-visible">
               <g className="ig-human">
                 {rings.map(({ r }) => (
-                  <path key={r} d={arcPath(r)} fill="none" stroke="currentColor" strokeWidth={stroke} />
+                  <path key={r} d={arcOutline(r)} fill="currentColor" />
                 ))}
               </g>
-              {rings.map(({ r, n }) =>
-                pixels(r, n).map(({ x, y }, i) => {
-                  const s = scatter(k);
-                  const style = { '--dx': s.dx, '--dy': s.dy, '--dr': s.dr, '--k': (k++ / (total - 1)).toFixed(3) } as React.CSSProperties;
-                  return (
-                    <g key={`${r}-${i}`} className="ig-px" style={style}>
-                      <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" />
-                    </g>
-                  );
-                }),
-              )}
+              {free.map(({ x, y }, k) => {
+                const s = scatter(k);
+                const style = { '--dx': s.dx, '--dy': s.dy, '--dr': s.dr, '--k': (k / (free.length - 1)).toFixed(3) } as React.CSSProperties;
+                return (
+                  <g key={k} className="ig-px" style={style}>
+                    <rect x={x - px / 2} y={y - px / 2} width={px} height={px} fill="currentColor" />
+                  </g>
+                );
+              })}
               <g className="ig-core-g">
                 <circle cx={c} cy={c} r={RING.core} fill="var(--ember)" />
               </g>
