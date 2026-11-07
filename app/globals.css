@@ -838,8 +838,9 @@ html.lenis body {
      up into its own mask (.ig-line) instead, the first a beat ahead, the way the story lines roll. `translate` on the
      word, so it composes with the intro's lift (transform). */
   @media (max-width: 1023.98px) {
+    /* Gone at --o 0.28 (p 0.049), before "Not the person" starts where the buttons were (p 0.058, Ignition.tsx). */
     .js .ig-meta {
-      opacity: calc(1 - var(--o) * 3.2);
+      opacity: calc(1 - var(--o) * 3.6);
     }
     .js :is(.ig-l1, .ig-l2) {
       transform: none;

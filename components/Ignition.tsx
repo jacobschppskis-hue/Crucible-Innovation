@@ -70,7 +70,9 @@ export function Ignition() {
     const wide = matchMedia('(min-width: 1024px)');
     const off = trackScroll(el, 'pin', (p) => {
       const ph = !wide.matches;
-      s.out = ease.inOut(seg(p, 0, 0.14));
+      // Phones: the headline leaves at an even pace from the first pixel of scrolling (smoothstep), not with inOut's
+      // rush through the middle, where half of it went in 80 px (a few frames of a swipe).
+      s.out = (ph ? ease.smooth : ease.inOut)(seg(p, 0, 0.14));
       // Machine half scatters ("Not the person."), comes back while the human half leaves ("Not the model."), then both fuse.
       s.sm = ease.inOut(seg(p, 0.17, 0.3)) * (1 - ease.inOut(seg(p, 0.42, 0.54)));
       s.sh = ease.inOut(seg(p, 0.42, 0.54)) * (1 - ease.inOut(seg(p, 0.64, 0.74)));
@@ -78,7 +80,9 @@ export function Ignition() {
       s.flare = seg(p, 0.7, 0.76) * (1 - ease.out(seg(p, 0.77, 0.92)));
       // Each line rises in from below and leaves upward: --tN is its opacity, --yN its offset (in its own heights).
       // On phones one line rolls up and away as the next rolls in, more than a line apart, so they never overlap.
-      const in1 = ph ? seg(p, 0.055, 0.115) : seg(p, 0.2, 0.26);
+      // The first comes in where the buttons were: only once they have faded out completely (--o 0.28 = p 0.049,
+      // app/globals.css), a beat later.
+      const in1 = ph ? seg(p, 0.058, 0.115) : seg(p, 0.2, 0.26);
       const out1 = ph ? seg(p, 0.38, 0.44) : seg(p, 0.36, 0.42);
       const in2 = ph ? seg(p, 0.4, 0.46) : seg(p, 0.46, 0.52);
       const out2 = ph ? seg(p, 0.64, 0.7) : seg(p, 0.6, 0.66);
