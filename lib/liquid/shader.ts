@@ -6,8 +6,11 @@
 // - environment: it reflects a very dark sky, near black below and dark warm grey towards the top of the screen, so
 //   every slope shows as a tonal band. At rest the swell moves only this faint, broad sheen (never a line, never Ember).
 // - key: a warm light low on the bottom edge (Blinn-Phong). Interaction waves (the grid: cursor, taps, fingers, scroll)
-//   catch it: a soft lobe gives their lit faces a warm body and the far faces fall into shadow, and a sharp core gives
-//   crisp Ember glints. The swell is too gentle to reach it, so Ember lives only where something just happened.
+//   catch it: a soft lobe gives their lit faces a warm body and the far faces fall into shadow, and the sharp core gives
+//   crisp Ember glints. The light is a strip along that edge (wide across the screen, narrow up it), so every crest
+//   flank that faces it catches a streak along the crest, not one fleck; glints only show where the surface curves
+//   (a crest), never as a wide puddle where a gentle slope happens to face the light. The swell is too gentle to reach
+//   it, so Ember lives only where something just happened.
 // - caustic: a faint warm brightening where the surface focuses light (-laplacian of the height): the refraction cue.
 // - behind text and portraits (the mask texture) the key is capped, so text keeps AA contrast.
 
@@ -24,13 +27,15 @@ export const LOOK = {
   key: [-0.2, 0.5, 0.84], // direction to the warm key light (x right, y down the screen, z out of it)
   soft: 48, // Blinn-Phong exponent of the soft lobe (the warm body of lit faces)
   softK: 0.2, // its strength (x Ember)
-  core: 0.999, // n.h above which the sharp core glints (about 2.6 degrees)
+  core: 0.999, // n.h above which the sharp core glints (about 2.6 degrees up the screen; coreX times that across)
   coreK: 1.0,
+  coreX: 4, // the key's width across the screen relative to its height (1 = a round lamp, more = a strip of light)
+  crisp: [0.002, 0.005] as number[], // curvature (|laplacian|, 1/px) over which a glint fades in: off when [0, 0]
   shade: 0.55, // far faces fall into shadow: darkening of the ground (0..1) at full turn-away
   env: [0.15, 0.14, 0.13], // the sky's brightest (dark warm grey), towards the top of the screen
   envW: 0.38, // its spread (tilt)
   caustic: 0.025,
-  textCap: 0.25, // the key behind body text: at most this (bone-dim text keeps 4.5:1)
+  textCap: 0.2, // the key behind body text: at most this (bone-dim text keeps 4.7:1 even at the centre of a glint)
 };
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
@@ -114,8 +119,13 @@ void main() {
   vec3 n = normalize(vec3(-gr * ${f(LOOK.relief)}, 1.0));
   float nh = max(dot(n, HK), 0.0);
   float soft = max(pow(nh, ${f(LOOK.soft)}) - pow(HK.z, ${f(LOOK.soft)}), 0.0);
-  float aa = max(fwidth(nh), 1e-5);
-  float core = smoothstep(${f(LOOK.core)} - aa, ${f(LOOK.core)} + aa, nh) * (0.6 + 0.4 * smoothstep(${f(LOOK.core)}, 1.0, nh));
+  // the key's reflection: where the surface's tilt is within the lamp's shape around the mirror tilt (an ellipse in
+  // tilt space, ${f(LOOK.coreX)} x wider across the screen than up it)
+  vec2 dd = (-gr * ${f(LOOK.relief)} - HK.xy / HK.z) / vec2(${f(Math.tan(Math.acos(LOOK.core)) * LOOK.coreX)}, ${f(Math.tan(Math.acos(LOOK.core)))});
+  float m = dot(dd, dd);
+  float am = max(fwidth(m), 1e-4);
+  float core = (1.0 - smoothstep(1.0 - am, 1.0 + am, m)) * (0.6 + 0.4 * (1.0 - smoothstep(0.0, 1.0, m)));
+  ${LOOK.crisp[1] > 0 ? `core *= smoothstep(${f(LOOK.crisp[0])}, ${f(LOOK.crisp[1])}, abs(lap));` : ''}
   // far faces turn away from the key and fall into shadow
   float away = clamp((KEY.z - dot(n, KEY)) * 3.0, 0.0, 1.0);
   col *= 1.0 - ${f(LOOK.shade)} * away;

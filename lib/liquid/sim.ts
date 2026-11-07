@@ -12,9 +12,9 @@
 export const HZ = 120; // fixed substeps per second
 const DT = 1 / HZ;
 /** Tunables (the look lab overrides them): wave speed (px/s), amplitude damping (1/s), viscosity of the shortest waves
- *  (per substep). Ripples travel 300-600 px before they fade. At 8 px cells and 120 Hz the Courant number is capped well
- *  inside the 9-point scheme's stability limit (see r2). */
-export const SIM = { speed: 420, damp: 0.6, visc: 0.01 };
+ *  (per substep). Ripples travel 200-400 px before they fade, so a wake trails the pointer instead of filling the page.
+ *  At 8 px cells and 120 Hz the Courant number is capped well inside the 9-point scheme's stability limit (see r2). */
+export const SIM = { speed: 420, damp: 1.2, visc: 0.01 };
 const SPONGE = 8; // cells of absorbing border
 const MAX_SUB = 8; // substeps per frame at most (a long frame slows the water down instead of stalling the page)
 
