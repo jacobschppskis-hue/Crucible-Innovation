@@ -3,10 +3,13 @@ import { Footer } from '@/components/Footer';
 import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
 import { WordReveal } from '@/components/WordReveal';
-import { CardPair, ClientFrame, ConceptDevices, MarkMould, MarkSizes, Plate, ShotDevices, type Shot } from '@/components/Work';
+import { CardPair, ClientFrame, ConceptDevices, MarkPlate, Plate, ShotDevices, Stack, type CardSide, type Shot } from '@/components/Work';
 import { clientSites, work } from '@/data/work';
 import { conceptFonts } from '@/lib/conceptFonts';
 import '@/components/Ventures.css'; // .vf-link and .vf-mould, shared with the venture pages
+// The card as printed: the renders of brand/business-card.html (`node brand/render-card.mjs`), so /work follows the card.
+import cardBack from '@/brand/business-card-back.png';
+import cardFront from '@/brand/business-card-front.png';
 
 const title = 'Work · Crucible';
 const description =
@@ -37,20 +40,14 @@ const site: Record<'desktop' | 'phone', Shot> = {
     alt: 'The same home page on a phone.',
   },
 };
-const card: Record<'front' | 'back', Shot> = {
+const card: Record<'front' | 'back', CardSide> = {
   front: {
-    src: '/work/business-card-front.webp',
-    widths: [800, 1344],
-    width: 1344,
-    height: 768,
-    alt: 'Front of the Crucible Sites business card: the Split Ring and the crucible wordmark, and the line “Websites that actually look good.”',
+    src: cardFront,
+    alt: 'Front of the Crucible Sites business card: the Split Ring beside the wordmark “crucible sites”, and the line “Websites that actually look good. For local businesses. Live in about a week.”',
   },
   back: {
-    src: '/work/business-card-back.webp',
-    widths: [800, 1344],
-    width: 1344,
-    height: 768,
-    alt: 'Back of the card: Jacob Schopp, co-founder, his email and the site address, and a QR code.',
+    src: cardBack,
+    alt: 'Back of the card: Jacob Schopp, co-founder of Crucible Sites, his email and the site address, and a QR code to scan for examples and a free quote.',
   },
 };
 
@@ -75,7 +72,7 @@ export default function WorkPage() {
             <div className="container-x wk-group">
               <WordReveal id="clients-h" segments={[{ t: 'Client sites' }]} className="wk-h2" />
             </div>
-            <div className="wk-stack">
+            <Stack n={clientSites.length}>
               {clientSites.map((c, i) => (
                 <Plate
                   key={c.slug}
@@ -103,7 +100,7 @@ export default function WorkPage() {
                   <ClientFrame c={c} />
                 </Plate>
               ))}
-            </div>
+            </Stack>
           </section>
         )}
 
@@ -112,20 +109,20 @@ export default function WorkPage() {
             <WordReveal id="concepts-h" segments={[{ t: 'Concept sites' }]} className="wk-h2" />
             <p className="wk-group-note">Fictional businesses, built as real pages. The phones scroll.</p>
           </div>
-          <div className="wk-stack">
+          <Stack n={work.length}>
             {work.map((w, i) => (
               <Plate key={w.slug} i={i} id={`concept-${w.slug}`} label={`${w.label} · ${w.type}`} name={w.name} note={<p>{w.blurb}</p>}>
                 <ConceptDevices w={w} />
               </Plate>
             ))}
-          </div>
+          </Stack>
         </section>
 
         <section aria-labelledby="own-h" className="wk-section wk-section-last">
           <div className="container-x wk-group">
             <WordReveal id="own-h" segments={[{ t: 'Crucible’s own' }]} className="wk-h2" />
           </div>
-          <div className="wk-stack">
+          <Stack n={3}>
             <Plate
               i={0}
               id="own-site"
@@ -133,8 +130,8 @@ export default function WorkPage() {
               name="This site"
               note={
                 <p>
-                  It opens with a pour: molten metal fills a mould of the mark and sets. CSS and SVG on every device; WebGL only once a
-                  device proves it can keep up.
+                  It opens with a pour: molten metal fills a mould of the mark and sets. Real-time WebGL on every device, with a still
+                  version for reduced motion.
                 </p>
               }
             >
@@ -155,18 +152,15 @@ export default function WorkPage() {
               label="Mark"
               name="The Split Ring"
               note={
-                <>
-                  <p>
-                    A drawn line and a run of machine pixels, exactly as thick as each other, around an Ember core. The same geometry draws
-                    the favicon and the share images.
-                  </p>
-                  <MarkSizes />
-                </>
+                <p>
+                  A drawn line and a run of machine pixels, exactly as thick as each other, around an Ember core. The same geometry draws the
+                  favicon and the share images.
+                </p>
               }
             >
-              <MarkMould />
+              <MarkPlate />
             </Plate>
-          </div>
+          </Stack>
         </section>
       </main>
       <Footer />

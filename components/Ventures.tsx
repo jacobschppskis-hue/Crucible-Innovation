@@ -13,8 +13,7 @@ import './Ventures.css';
 export const hasIngot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
 
 /**
- * The foundry floor. Each venture is a cast object: Crucible Sites has set and cooled; the next ones are still glowing
- * in their moulds. On wide screens the floor is a pinned horizontal track that scrolls sideways; on phones, with
+ * The foundry floor. Each venture is a cast bar: Crucible Sites has set and cooled; the next ones are still glowing. On wide screens the floor is a pinned horizontal track that scrolls sideways; on phones, with
  * reduced motion and without JS it's a plain vertical list.
  */
 const WORDS = ['no', 'one', 'two', 'three', 'four', 'five'];
@@ -80,7 +79,8 @@ export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eag
   return hasIngot(v.ingot) ? <IngotScene slug={v.ingot!} sizes={sizes} eager={eager} /> : <MarkCast v={v} />;
 }
 
-/** The fallback visual: the venture's mark in its mould. */
+/** The fallback visual (a venture without an ingot still): its mark, cool when live, glowing while it's forging. Verge's V is the
+ * display face, as on its 3D bar (TODO(jakob): Verge's real mark). */
 export function MarkCast({ v }: { v: Venture }) {
   return (
     <span className="vf-mould">
@@ -97,7 +97,7 @@ export function MarkCast({ v }: { v: Venture }) {
       )}
       {v.slug === 'verge' && (
         <svg viewBox="0 0 512 512" className="vf-mark" aria-hidden>
-          <text x="256" y="400" fontFamily="Georgia, 'Times New Roman', serif" fontSize="460" fontWeight="600" textAnchor="middle" fill="currentColor">
+          <text x="256" y="420" fontFamily="var(--font-display)" fontSize="460" fontWeight="800" textAnchor="middle" fill="currentColor">
             V
           </text>
         </svg>

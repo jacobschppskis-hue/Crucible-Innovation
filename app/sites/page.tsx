@@ -87,8 +87,8 @@ export default function SitesPage() {
             title={[{ t: 'Think in kelvin' }]}
             sub={
               clientSites.length
-                ? 'Measure from absolute zero, not from where everyone else starts. Every site here began as a blank page.'
-                : 'Measure from absolute zero, not from where everyone else starts. Every concept here began as a blank page. Real client work lands here as it ships.'
+                ? 'We measure from absolute zero and work from first principles, so every site here began as a blank page.'
+                : 'We measure from absolute zero and work from first principles, so every concept here began as a blank page. Real client work lands here as it ships.'
             }
           />
           <ul className="mt-14 grid gap-x-6 gap-y-14 md:grid-cols-3">
@@ -98,7 +98,7 @@ export default function SitesPage() {
                   <a href={c.url} target="_blank" rel="noopener" tabIndex={-1} aria-hidden data-scroll="view" data-pull="10" className="parallax relative block aspect-[16/10] overflow-hidden bg-ground-2">
                     {c.image ? (
                       <span className="parallax-inner absolute inset-0">
-                        <Image src={c.image} alt="" fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top transition-transform duration-[1200ms] ease-[var(--ease-out)] group-hover:scale-[1.03]" />
+                        <Image src={c.image} alt="" fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-[34%_0%] origin-left transition-transform duration-[1200ms] ease-[var(--ease-out)] group-hover:scale-[1.03]" />
                       </span>
                     ) : (
                       <span className="wide absolute inset-0 grid place-items-center font-display text-xl font-semibold text-bone-dim">{new URL(c.url).hostname.replace(/^www\./, '')}</span>
@@ -121,7 +121,7 @@ export default function SitesPage() {
                 <article className="group">
                   <div data-scroll="view" data-pull="10" className="parallax relative aspect-[16/10] overflow-hidden bg-ground-2">
                     <div className="parallax-inner absolute inset-0">
-                      <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-top transition-transform duration-[1200ms] ease-[var(--ease-out)] group-hover:scale-[1.03]" />
+                      <Image src={w.image} alt={w.alt} fill sizes="(min-width: 768px) 33vw, 94vw" className="object-cover object-[34%_0%] origin-left transition-transform duration-[1200ms] ease-[var(--ease-out)] group-hover:scale-[1.03]" />
                     </div>
                   </div>
                   <h3 className="wide mt-5 font-display text-xl font-semibold tracking-[-0.01em]">{w.name}</h3>

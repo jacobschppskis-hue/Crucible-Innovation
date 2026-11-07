@@ -11,9 +11,9 @@ type Props = {
 };
 
 /**
- * The Thesis's furnace in small doses: a low glow off the floor with heat rising from it in waves. Pure CSS (the
- * waves only move while it's on screen, see InView); a static glow with reduced motion. Place it inside an
- * `isolate` box with overflow hidden: it sits behind that box's content.
+ * Molten metal glowing up from the floor, with heat rising from it in waves. The CSS layer is complete on its own (the
+ * waves only move while it's on screen, see InView; still with reduced motion); on the rich tier the GL surface fades
+ * in over it on the one clock. Place it inside an `isolate` box: it sits behind that box's content.
  */
 export function Furnace({ heat = 1, reach, molten, className = '' }: Props) {
   return (

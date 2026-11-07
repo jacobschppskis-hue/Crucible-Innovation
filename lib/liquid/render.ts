@@ -1,187 +1,305 @@
-// Paints the dark liquid: ONE fixed full-viewport canvas behind the page (z-index -1). Near-black body with a faint
-// procedural texture that refracts a little as waves pass, and the wave crests as crisp, thin Ember contour lines.
-// The shader is shader.ts, the GL engine (quality steps, adaptation) engine.ts.
+// The liquid, main-thread side: ONE fixed full-viewport canvas behind the page (z-index -1) that paints the dark liquid.
+// Every frame of the one clock (loop.ts): the input becomes impulses, the wave grid steps (sim.ts), and the frame
+// {t, scroll, heights} goes to the renderer. Normally that is a Web Worker drawing on an OffscreenCanvas (WebGL2), so
+// a slow or software GL never blocks the page; where the worker can't get WebGL2 (Playwright WebKit, older Safari) the
+// same engine draws here, in the same frame. The worker draws exactly the frames it is sent and acknowledges each; the
+// page never queues a second frame while one is out (the newest waits and goes as soon as the last is done).
 //
-// Normally the canvas is handed to a Web Worker (OffscreenCanvas, WebGL2; liquidWorker.ts) so a slow or software GL
-// never blocks the main thread: this side only posts tiny messages. Where that is missing (older Safari) or the worker
-// can't get a context, the same engine runs on the main thread from the shared rAF loop.
-//
-// Software GL (SwiftShader etc.) starts at the lowest quality; a main-thread watchdog (longtask) steps it down further
-// if long tasks keep coming. `?liquid=full` skips that and pins full quality (for our own screenshot checks only).
+// Hooks: window.__liquid (stats, sources, sample, near) for tests and the motion harness; the canvas carries data-on,
+// data-t (time of the last frame drawn), data-frames, data-live (input events that made waves in the last 3 s),
+// data-q (quality step), data-path (worker | main).
 
-import { createEngine } from './engine';
-import { bindInput, hooks, setCalm } from './field';
-import { onFrame } from './loop';
+import { createEngine, type Engine, type GridMeta } from './engine';
+import { activity, attachSim, liveCount as liveFloats, setFloatSink, addSource, samplePx, sampleGrid, textMask } from './field';
+import { createInput } from './input';
+import { clock, onFrame, renderer, clockHeld } from './loop';
+import { createSim } from './sim';
 
-// Crest lines fade out inside the ASCII portraits (transparent, so the lines would show through the faces). Page-px
-// rects of the portrait images, refreshed on resize and every second or so (layout and lazy images settle late).
-function watchCalm(apply: (rects: number[]) => void) {
-  let last = '';
-  const read = () => {
-    const r: number[] = [];
-    for (const el of document.querySelectorAll('img[alt^="ASCII portrait"]')) {
-      const b = el.getBoundingClientRect();
-      if (b.width > 0 && b.height > 0) r.push(Math.round(b.left + scrollX), Math.round(b.top + scrollY), Math.round(b.width), Math.round(b.height));
-    }
-    const k = r.join();
-    if (k !== last) {
-      last = k;
-      apply(r);
-    }
-  };
-  read();
-  const id = setInterval(read, 1000);
-  addEventListener('resize', read);
-  addEventListener('load', read);
-  return () => {
-    clearInterval(id);
-    removeEventListener('resize', read);
-    removeEventListener('load', read);
-  };
-}
+/** A floating thing's ripple of v1 amplitude `amp` (0.12 a heading, 0.22 an ingot, 0.55 the pour landing) becomes a drop
+ *  of this strength per unit: the landing is about half a tap, an ingot's ripple a faint ring. */
+const FLOAT_DROP = 50;
 
 const full = () => /[?&]liquid=full\b/.test(location.search);
 
-function startWorker(canvas: HTMLCanvasElement, onFail: () => void): (() => void) | null {
-  if (typeof Worker === 'undefined' || typeof canvas.transferControlToOffscreen !== 'function') return null;
-  let worker: Worker;
-  let off: OffscreenCanvas;
-  try {
-    worker = new Worker(new URL('./liquidWorker.ts', import.meta.url));
-    off = canvas.transferControlToOffscreen();
-  } catch {
-    return null;
-  }
-  const post = (m: unknown, tr?: Transferable[]) => worker.postMessage(m, tr ?? []);
-  // Screenshot checks only (?liquid=full): `__liquidFreeze(t)` draws the field at one fixed time (null releases it), so a shot
-  // shows the moment it is named for however late a software-GL frame is composited.
-  if (full()) (window as unknown as { __liquidFreeze: (t: number | null) => void }).__liquidFreeze = (t) => { (window as unknown as { __liquidT: number | null }).__liquidT = t; post({ type: 'freeze', t }); };
-  const view = () => post({ type: 'view', w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1 });
-  post(
-    { type: 'init', canvas: off, origin: performance.timeOrigin, full: full(), w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1, scroll: scrollY },
-    [off],
-  );
-  let failed = false;
-  worker.onmessage = (e: MessageEvent) => {
-    const m = e.data;
-    if (m.type === 'fail') {
-      failed = true;
-      stop();
-      onFail();
-    } else if (m.type === 'frame') canvas.dataset.t = m.t.toFixed(3);
-    else if (m.type === 'ready') canvas.dataset.on = '';
-    else if (m.type === 'stats') {
-      canvas.dataset.frames = String(m.frames);
-      canvas.dataset.live = String(m.live);
-      canvas.dataset.q = String(m.q);
-      canvas.dataset.soft = String(m.soft);
-    }
-  };
-  worker.onerror = () => {
-    if (!failed) {
-      failed = true;
-      stop();
-      onFail();
-    }
-  };
-  hooks.onAdd = (s, kind) => post({ type: 'src', x: s.x, y: s.y, t0: s.t0, amp: s.amp, size: s.size, kind });
-  const unbind = bindInput();
-  const unCalm = watchCalm((rects) => post({ type: 'calm', rects }));
-  const onScroll = () => post({ type: 'scroll', y: scrollY });
-  const onVis = () => post({ type: 'vis', hidden: document.hidden });
-  addEventListener('scroll', onScroll, { passive: true });
-  addEventListener('resize', view);
-  document.addEventListener('visibilitychange', onVis);
+type Path = 'worker' | 'main';
 
-  // Watchdog: if long tasks keep landing on the main thread, the liquid is part of the problem (or must give way).
-  let po: PerformanceObserver | null = null;
-  if (!full()) {
-    const recent: [number, number][] = [];
-    let cool = 0;
-    try {
-      po = new PerformanceObserver((list) => {
-        const t = performance.now();
-        for (const en of list.getEntries()) recent.push([en.startTime, en.duration]);
-        while (recent.length && recent[0][0] < t - 3000) recent.shift();
-        const total = recent.reduce((a, r) => a + r[1], 0);
-        if (recent.length >= 3 && total > 300 && t > cool) {
-          cool = t + 2000;
-          post({ type: 'down' });
-        }
-      });
-      po.observe({ type: 'longtask', buffered: false });
-    } catch {
-      po = null;
-    }
-  }
+export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
+  if (typeof WebGL2RenderingContext === 'undefined') return null;
+  const sim = createSim();
+  const cellFor = () => 8;
+  // sized in the first frame (reading the scroll position here could force a style and layout pass into the task that
+  // loads this module: one long task at start-up)
+  let sized = false;
+  const input = createInput((x, y, amp, size) => addSource(x, y, amp, size, { kind: 'ring' }));
+  attachSim(sim);
+  // ripples shed by floating things (the pour landing, an ingot, a heading rocked hard): small ringing drops, so they
+  // spread as clean rings, never as a smooth blob
+  setFloatSink((x, y, amp) => input.drop(x, y, amp * FLOAT_DROP));
 
-  function stop() {
-    hooks.onAdd = null;
-    unbind();
-    unCalm();
-    po?.disconnect();
-    removeEventListener('scroll', onScroll);
-    removeEventListener('resize', view);
-    document.removeEventListener('visibilitychange', onVis);
-    worker.terminate();
-    delete canvas.dataset.on;
-  }
-  return stop;
-}
-
-function startMain(canvas: HTMLCanvasElement): (() => void) | null {
-  const gl = canvas.getContext('webgl', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'low-power' });
-  if (!gl) return null;
-  const engine = createEngine(gl, canvas, { full: full() });
-  if (!engine) return null;
-  const size = () => engine.setView(innerWidth, innerHeight, devicePixelRatio || 1);
-  size();
-  addEventListener('resize', size);
-  const unbind = bindInput();
-  const unCalm = watchCalm(setCalm);
-  canvas.dataset.on = '';
+  let path: Path = 'main';
+  let stopRender: (() => void) | null = null;
+  let drawnT = -1;
   let frames = 0;
-  if (full()) (window as unknown as { __liquidFreeze: (t: number | null) => void }).__liquidFreeze = (t) => { (window as unknown as { __liquidT: number | null }).__liquidT = t; frozen = t; };
-  let frozen: number | null = null;
-  const off = onFrame((t0) => {
+  let q = 0;
+  let soft = false;
+  const reg = renderer('liquid', 'worker');
+
+  // ---- the frame: input -> grid -> renderer ----
+  let meta: GridMeta = { cols: 0, rows: 0, x0: 0, y0: 0, cell: 8, on: false };
+  let maskOut: Uint8Array | null = null;
+  let maskV = -1;
+  let send: ((t: number, sy: number, dt: number) => void) | null = null;
+  let begin: (() => void) | null = null;
+  const offFrame = onFrame((t, dt) => {
     if (document.hidden) return;
-    const t = frozen ?? t0;
-    if (engine.draw(t, scrollY)) {
-      canvas.dataset.t = t.toFixed(3);
-      if (++frames % 3 === 0) {
-        canvas.dataset.frames = String(frames);
-        canvas.dataset.live = String(engine.stats.live);
-        canvas.dataset.q = String(engine.stats.q);
+    const sy = scrollY;
+    if (!sized) {
+      sized = true;
+      sim.resize(innerWidth, innerHeight, cellFor(), sy);
+    }
+    const stamps = input.stamps(dt, sim.cell);
+    activity.last = input.lastUser();
+    const shifted = sim.follow(sy);
+    sim.advance(dt, stamps);
+    // the text mask is rebuilt only when the boxes or the grid's window changed (never every frame)
+    if (shifted || textMask.version !== maskV) {
+      maskV = textMask.version;
+      if (sim.setMask(textMask.rects)) maskOut = sim.mask;
+    }
+    if (sim.takeMaskDirty()) maskOut = sim.mask;
+    meta = { cols: sim.cols, rows: sim.rows, x0: sim.x0, y0: sim.y0, cell: sim.cell, on: !sim.quiet };
+    begin?.();
+    send?.(t, sy, dt);
+    if (frames % 4 === 0) {
+      canvas.dataset.live = String(input.liveCount(t) + liveFloats(t));
+    }
+  });
+
+  const onResize = () => {
+    sim.resize(innerWidth, innerHeight, cellFor(), scrollY);
+    maskOut = sim.mask;
+    view?.();
+  };
+  let view: (() => void) | null = null;
+  addEventListener('resize', onResize);
+
+  const drew = (t: number, n: number, qq: number) => {
+    drawnT = t;
+    frames = n;
+    q = qq;
+    reg.done(t);
+    canvas.dataset.t = t.toFixed(3);
+    if (n % 3 === 0 || n < 3) {
+      canvas.dataset.frames = String(n);
+      canvas.dataset.q = String(qq);
+    }
+  };
+
+  // ---- worker path ----
+  function startWorker(cv: HTMLCanvasElement): boolean {
+    if (typeof Worker === 'undefined' || typeof cv.transferControlToOffscreen !== 'function') return false;
+    let worker: Worker;
+    let off: OffscreenCanvas;
+    try {
+      worker = new Worker(new URL('./liquidWorker.ts', import.meta.url));
+      off = cv.transferControlToOffscreen();
+    } catch {
+      return false;
+    }
+    path = 'worker';
+    reg.path = 'worker';
+    cv.dataset.path = 'worker';
+    const pool: Float32Array[] = [];
+    let busy = false;
+    let pending: { t: number; sy: number } | null = null;
+    let late = 0;
+    let dead = false;
+    const post = (t: number, sy: number) => {
+      let heights: Float32Array | null = null;
+      if (meta.on) {
+        const N = meta.cols * meta.rows;
+        heights = pool.pop() ?? null;
+        if (!heights || heights.length !== N) heights = new Float32Array(N);
+        heights.set(sim.out.subarray(0, N));
+      }
+      const mask = maskOut ? maskOut.slice() : null;
+      maskOut = null;
+      const tr: Transferable[] = heights ? [heights.buffer] : [];
+      worker.postMessage({ type: 'frame', t, sy, late, hold: clockHeld(), meta, heights, mask }, tr);
+      late = 0;
+      busy = true;
+    };
+    // While nothing moves (a quiet grid, no scrolling, no new mask) only the slow swell changes: 30 frames a second
+    // are plenty and halve the cost. A harness that steps time gets every frame.
+    let lastPost = -1;
+    let lastSy = NaN;
+    send = (t, sy) => {
+      if (!meta.on && !maskOut && sy === lastSy && !clockHeld() && t - lastPost < 1 / 40 && t >= lastPost) return;
+      if (busy) {
+        pending = { t, sy };
+        late++;
+        return;
+      }
+      lastPost = t;
+      lastSy = sy;
+      post(t, sy);
+    };
+    worker.onmessage = (e: MessageEvent) => {
+      const m = e.data;
+      if (m.type === 'drawn') {
+        busy = false;
+        if (m.heights && pool.length < 3) pool.push(m.heights);
+        drew(m.t, m.frames, m.q);
+        if (pending) {
+          const p = pending;
+          pending = null;
+          post(p.t, p.sy);
+        }
+      } else if (m.type === 'ok') {
+        soft = !!m.soft;
+        cv.dataset.soft = String(soft);
+      } else if (m.type === 'ready') cv.dataset.on = '';
+      else if (m.type === 'fail') fail();
+    };
+    worker.onerror = () => fail();
+    function fail() {
+      if (dead) return;
+      dead = true;
+      stop();
+      // A canvas handed to a worker can't get a context again: swap in a fresh one for the main-thread path.
+      const fresh = cv.cloneNode(false) as HTMLCanvasElement;
+      delete fresh.dataset.on;
+      // React's node stays in the tree (spent, hidden, unclassed): on a client-side navigation React inserts the next
+      // page's nodes before it, and a node it can't find there throws NotFoundError and drops the page (WebKit: no
+      // worker WebGL2, so this path runs on every Safari visit).
+      cv.after(fresh);
+      cv.removeAttribute('class');
+      cv.style.display = 'none';
+      canvas = fresh;
+      if (!startMain(fresh)) {
+        fresh.style.display = 'none';
+        reg.setPaused(true);
       }
     }
-  });
-  const lost = (e: Event) => {
-    e.preventDefault();
-    off();
-    canvas.style.display = 'none';
-  };
-  canvas.addEventListener('webglcontextlost', lost);
-  return () => {
-    off();
-    unbind();
-    unCalm();
-    removeEventListener('resize', size);
-    canvas.removeEventListener('webglcontextlost', lost);
-    delete canvas.dataset.on;
-  };
-}
+    view = () => worker.postMessage({ type: 'view', w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1 });
+    const onVis = () => reg.setPaused(document.hidden);
+    document.addEventListener('visibilitychange', onVis);
+    worker.postMessage({ type: 'init', canvas: off, full: full(), w: innerWidth, h: innerHeight, dpr: devicePixelRatio || 1 }, [off]);
+    function stop() {
+      send = null;
+      document.removeEventListener('visibilitychange', onVis);
+      worker.terminate();
+    }
+    stopRender = stop;
+    return true;
+  }
 
-/**
- * Start the liquid on `canvas`. Returns a stop function, or null if neither path is available (the page stays plain
- * dark). A canvas that was handed to the worker can't get a context again, so a failed worker swaps in a fresh canvas.
- */
-export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
-  let stopMain: (() => void) | null = null;
-  const stopWorker = startWorker(canvas, () => {
-    const fresh = canvas.cloneNode(false) as HTMLCanvasElement;
-    canvas.replaceWith(fresh);
-    stopMain = startMain(fresh);
-  });
-  if (stopWorker) return () => (stopWorker(), stopMain?.());
-  return startMain(canvas);
+  // ---- main-thread path ----
+  function startMain(cv: HTMLCanvasElement): boolean {
+    let gl: WebGL2RenderingContext | null = null;
+    try {
+      gl = cv.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'low-power' });
+    } catch {
+      gl = null;
+    }
+    if (!gl) return false;
+    const engine: Engine | null = createEngine(gl, cv, { full: full() });
+    if (!engine) return false;
+    path = 'main';
+    reg.path = 'main';
+    cv.dataset.path = 'main';
+    soft = engine.stats.soft;
+    cv.dataset.soft = String(soft);
+    view = () => engine.setView(innerWidth, innerHeight, devicePixelRatio || 1);
+    view();
+    let n = 0;
+    let lastOn = false;
+    send = (t, sy, dt) => {
+      // heights straight from the grid (no copy); unchanged quiet grids are not uploaded again
+      const on = meta.on;
+      engine.upload(meta, on || lastOn ? sim.out : null, maskOut);
+      lastOn = on;
+      maskOut = null;
+      if (engine.draw(t, sy, dt > 0.034 ? 1 : 0, clockHeld())) n++;
+      drew(t, n, engine.stats.q);
+      if (n === 1) cv.dataset.on = '';
+    };
+    const lost = (e: Event) => {
+      e.preventDefault();
+      send = null;
+      cv.style.display = 'none';
+      reg.setPaused(true);
+    };
+    cv.addEventListener('webglcontextlost', lost);
+    stopRender = () => {
+      send = null;
+      cv.removeEventListener('webglcontextlost', lost);
+    };
+    return true;
+  }
+
+  // The renderer starts in the first frame: handing the canvas to a worker makes the browser resolve its style and
+  // layout, which then belongs to that frame instead of the task that loaded this module. Without OffscreenCanvas the
+  // main-thread engine starts at once.
+  const canWorker = typeof Worker !== 'undefined' && typeof canvas.transferControlToOffscreen === 'function';
+  begin = () => {
+    begin = null;
+    if (!startWorker(canvas) && !startMain(canvas)) {
+      canvas.style.display = 'none';
+      reg.setPaused(true);
+    }
+  };
+  if (!canWorker) {
+    begin();
+    if (!send) {
+      offFrame();
+      input.unbind();
+      attachSim(null);
+      setFloatSink(null);
+      reg.off();
+      removeEventListener('resize', onResize);
+      return null;
+    }
+  }
+
+  // ---- hooks for tests and the harness ----
+  const hooks = {
+    v: 2,
+    stats(at?: { x: number; y: number; r?: number }) {
+      return {
+        t: clock.t,
+        drawnT,
+        live: input.liveCount() + liveFloats(),
+        q,
+        soft,
+        path,
+        frames,
+        cell: sim.cell,
+        cols: sim.cols,
+        rows: sim.rows,
+        quiet: sim.quiet,
+        peak: sim.peak,
+        contexts: 1,
+        near: at ? sim.near(at.x, at.y, at.r ?? 150) : null,
+      };
+    },
+    sources: (since?: number) => input.sources(since),
+    sample: (x: number, docY: number, t?: number) => ({ ...samplePx(x, docY, t) }),
+    grid: (x: number, docY: number) => ({ ...sampleGrid(x, docY) }),
+    near: (x: number, docY: number, r = 150) => sim.near(x, docY, r),
+  };
+  (window as unknown as { __liquid?: typeof hooks }).__liquid = hooks;
+
+  return () => {
+    offFrame();
+    stopRender?.();
+    input.unbind();
+    attachSim(null);
+    setFloatSink(null);
+    reg.off();
+    removeEventListener('resize', onResize);
+    delete canvas.dataset.on;
+    const w = window as unknown as { __liquid?: unknown };
+    if (w.__liquid === hooks) delete w.__liquid;
+  };
 }

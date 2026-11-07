@@ -1,6 +1,7 @@
-// Meshes for the pour (lib/gl3d/pour.ts): a lathed crucible, the stream, sand trays for the mould. Pure JS, no GL.
-import { extrude, recentre, slab, sphere } from './geometry';
-import type { Mesh, Vec3 } from './geometry';
+// Meshes for the pour (lib/gl3d/pour.ts): a lathed crucible, the stream, the trickles down the arcs. Pure JS, no GL.
+// The mark's own pieces (lib/gl3d/geometry.ts logoPieces) are what the metal fills: there is no mould.
+import { slab, sphere } from './geometry';
+import type { Mesh } from './geometry';
 
 type Pt = [number, number];
 
@@ -47,74 +48,31 @@ export function poolMesh(): Mesh {
   const prof: Pt[] = [[0, -10.3], [2.6, -10.2], [3.7, -9.5], [4.75, -5], [5.4, -0.3], [5.4, 0.2], [0, 0.2]].map(([r, y]) => [r * f, y] as Pt);
   return lathe(prof, 32);
 }
-/** Unit-height tapered cylinder, centred, radius .5 at the top and .33 at the bottom. */
+/** Unit-height tapered cylinder, centred, radius .5 at the top and .4 at the bottom (a falling stream thins a little). */
 export function streamMesh(): Mesh {
-  return lathe([[0, 0.5], [0.5, 0.5], [0.33, -0.5], [0, -0.5]], 16);
+  return lathe([[0, 0.5], [0.5, 0.5], [0.4, -0.5], [0, -0.5]], 20);
 }
 
-export function translate(m: Mesh, d: Vec3): Mesh {
-  const p = new Float32Array(m.p);
-  for (let k = 0; k < p.length; k++) p[k] += d[k % 3];
-  return { ...m, p };
-}
-export function merge(parts: Mesh[]): Mesh {
-  let nv = 0, ni = 0;
-  for (const m of parts) { nv += m.p.length; ni += m.i.length; }
-  const p = new Float32Array(nv), n = new Float32Array(nv), idx: number[] = [];
-  let o = 0;
-  for (const m of parts) {
-    p.set(m.p, o); n.set(m.n, o);
-    const base = o / 3;
-    for (let k = 0; k < m.i.length; k++) idx.push(m.i[k] + base);
-    o += m.p.length;
+/**
+ * A thin tube along the half circle of radius `r` (ring centre at the origin, z = 0) from the top round the left to the
+ * bottom: the line a hot trickle runs down, ahead of the fill. Normals point out of the tube.
+ */
+export function arcTube(r: number, tube: number, seg = 72, ring = 10): Mesh {
+  const p: number[] = [], n: number[] = [], idx: number[] = [];
+  for (let s = 0; s <= seg; s++) {
+    const th = Math.PI / 2 + (Math.PI * s) / seg, c = Math.cos(th), sn = Math.sin(th);
+    for (let k = 0; k <= ring; k++) {
+      const ps = (2 * Math.PI * k) / ring, a = Math.cos(ps), b = Math.sin(ps);
+      n.push(a * c, a * sn, b);
+      p.push((r + tube * a) * c, (r + tube * a) * sn, tube * b);
+    }
   }
-  return { p, n, i: nv / 3 > 65535 ? new Uint32Array(idx) : new Uint16Array(idx) };
-}
-
-const WALL = 1.5; // sand wall thickness
-const ZW = 2.4; // walls stand this far in front of and behind the mark plane
-const FLOOR = 1.2;
-const BEV = 0.4;
-
-/** A tray for one square: a floor and four walls around a (2·hw)² pocket. Centred on the square. */
-export function squareTray(hw: number, openLeft = false): Mesh {
-  const o = hw + WALL, mid = hw + WALL / 2;
-  const wall = (w: number, h: number, x: number, y: number) => translate(slab(w, h, ZW * 2, BEV, 2), [x, y, 0]);
-  return merge([
-    translate(slab(o, o, FLOOR, BEV, 2), [0, 0, -ZW + FLOOR / 2]),
-    wall(o, WALL / 2, 0, mid), wall(o, WALL / 2, 0, -mid),
-    wall(WALL / 2, hw, mid, 0), ...(openLeft ? [] : [wall(WALL / 2, hw, -mid, 0)]),
-  ]);
-}
-
-const band = (r: number, w: number, a0: number, a1: number) => {
-  const n = Math.max(14, Math.round(((a1 - a0) * r) / 1.1));
-  return (k: number): Pt[][] => {
-    const ro = r + w / 2 - k, ri = r - w / 2 + k, s = k / r, t0 = a0 + s, t1 = a1 - s;
-    const at = (R: number, t: number): Pt => [R * Math.cos(t), R * Math.sin(t)];
-    const outer = Array.from({ length: n + 1 }, (_, j) => at(ro, t0 + ((t1 - t0) * j) / n));
-    const inner = Array.from({ length: n + 1 }, (_, j) => at(ri, t1 - ((t1 - t0) * j) / n));
-    return [outer, [outer[n], inner[0]], inner, [inner[n], outer[0]]];
-  };
-};
-const disc = (r: number) => (k: number): Pt[][] => {
-  const n = 40, R = r - k;
-  return [Array.from({ length: n + 1 }, (_, j) => [R * Math.cos((j / n) * Math.PI * 2), R * Math.sin((j / n) * Math.PI * 2)] as Pt)];
-};
-
-/** A tray for a half-ring channel of radius r and width w, from a0 to a1 (radians, ring centre at the origin). Returns the recentred mesh and its centre. */
-export function arcTray(r: number, w: number, a0: number, a1: number): { mesh: Mesh; center: Vec3 } {
-  const tw = w + WALL * 2;
-  const floor = translate(extrude(band(r, tw, a0, a1), FLOOR, BEV, 2), [0, 0, -ZW + FLOOR / 2]);
-  const wallOf = (rr: number) => extrude(band(rr, WALL, a0, a1), ZW * 2, BEV, 2);
-  const mesh = merge([floor, wallOf(r + w / 2 + WALL / 2), wallOf(r - w / 2 - WALL / 2)]);
-  return { mesh, center: recentre(mesh) };
-}
-
-/** A tray for the round core: a floor disc and a wall around the sphere. */
-export function coreTray(r: number): Mesh {
-  const half = (a0: number) => extrude(band(r + WALL / 2 + 0.2, WALL, a0, a0 + Math.PI), ZW * 2, BEV, 2);
-  return merge([translate(extrude(disc(r + WALL + 0.2), FLOOR, BEV, 2), [0, 0, -ZW + FLOOR / 2]), half(0), half(Math.PI)]);
+  const m = ring + 1;
+  for (let s = 0; s < seg; s++) for (let k = 0; k < ring; k++) {
+    const a = s * m + k, b = a + m;
+    idx.push(a, b, b + 1, a, b + 1, a + 1);
+  }
+  return { p: new Float32Array(p), n: new Float32Array(n), i: new Uint16Array(idx) };
 }
 
 export const smallSphere = (r: number) => sphere(r, 12, 8);

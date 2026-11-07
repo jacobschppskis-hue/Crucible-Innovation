@@ -1,15 +1,15 @@
 # film/: Blender reference imagery and the house look
 
-The site's 3D is now real-time (`lib/gl3d/`, procedural materials; see `CLAUDE.md`). Nothing in `public/film/` comes from these Blender scripts any more: `public/film/ingots/` holds transparent stills captured from our own renderer by `node scripts/ingot-stills.mjs` (square-on, constant slight tilt from `lib/gl3d/ingotPose.ts`; sizes `<slug>-{600,1200,2400}.webp`), and `node scripts/venture-og.mjs` builds `public/og/<slug>.jpg` from them. They are the static version for reduced motion, no JS and no WebGL. The scripts here are kept as the look reference (Blender/Cycles from Python, no .blend files, fixed seeds).
+The site's 3D is now real-time (`lib/gl3d/`, procedural materials; see `CLAUDE.md`). Nothing in `public/film/` comes from these Blender scripts any more: `public/film/ingots/` holds transparent stills captured from our own renderer by `node scripts/ingot-stills.mjs` (each venture's cast bar at its resting pose, `REST` in `lib/gl3d/ingotPose.ts`: lying on the liquid, top face toward you, a 3/4 turn; 5:4, sizes `<slug>-{600,1200,2400}.webp`), and `node scripts/venture-og.mjs` builds `public/og/<slug>.jpg` from them. They are the static version for reduced motion, no JS and no WebGL. The scripts here are kept as the look reference (Blender/Cycles from Python, no .blend files, fixed seeds).
 
 | file | what it is |
 | --- | --- |
 | `common.py` | Cycles setup (AgX, OIDN, fixed seeds), a small node-graph DSL, Blackbody heat emission, lights, camera |
-| `ingots.py` | one cast plaque per venture (`sites`, `verge`, `trellis`), the original reference for `lib/gl3d/ingots.ts` |
-| `iron.py`, `ring.py` | older scenes (heated iron, the Split Ring as a cast object); no longer used by the site |
+| `ingots.py` | one cast plaque per venture (`sites`, `verge`, `trellis`), the original look reference; the live ingots are now cast bars (`goldBar()` in `lib/gl3d/geometry.ts`) and no longer follow it |
+| `iron.py`, `ring.py` | older scenes (heated iron, the old Split Ring as a cast object, before the lattice ring); no longer used by the site |
 | `grade.py` | the house grade: warm highlights, blacks lifted to `#0d0d0b`, vignette |
 | `encode.py` | raw PNGs to graded WebP |
-| `fonts/` | Archivo ExtraBold (names) and Gelasio SemiBold (the Blender reference's serif V; the live Verge mark is an Archivo V), static instances (OFL, licences alongside) |
+| `fonts/` | Archivo ExtraBold (names) and Gelasio SemiBold (the Blender reference's serif V; the live Verge bar carries its name in Archivo), static instances (OFL, licences alongside) |
 
 ## The house look
 

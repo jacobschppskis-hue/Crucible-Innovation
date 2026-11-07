@@ -33,5 +33,5 @@ export function PortraitImg({ src, alt, sizes }: { src: string; alt: string; siz
       window.removeEventListener('load', later);
     };
   }, []);
-  return <Image ref={ref} src={src} alt={alt} width={800} height={956} sizes={sizes} loading="lazy" fetchPriority="low" className="absolute inset-0 h-full w-full object-contain" />;
+  return <Image ref={ref} src={src} alt={alt} width={800} height={956} sizes={sizes} loading="lazy" fetchPriority="low" draggable={false} className="absolute inset-0 h-full w-full object-contain" />;
 }

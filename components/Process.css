@@ -2,11 +2,15 @@
    One variable drives the scene: --day, the day on the timeline (0 → 7), made from --p (data-scroll="pin",
    lib/scroll.ts). Every default below is the finished state (--day: 7): with reduced motion, on short screens and
    without JS the days are a plain list beside the finished, live site. Colour means temperature: the day in progress,
-   the casting front, the element being edited and the live site are Ember; finished days cool to bone.
+   the casting front, the tool at work (a guide being drawn, the crop handles, the colour pick, the element being
+   edited) and the live site are Ember; finished days and finished work cool to bone (or the site's own colours).
 
-   Timeline (days):  0.1–0.9 the call's notes are typed  ·  1.1–2 the wireframe is drawn  ·  2.1–2.8 the first draft
-   is cast over it  ·  3–4 edits, round one: the headline  ·  4–5 round one: the photo  ·  5–6 round two: the colour
-   ·  6.1–6.7 the address fills in and the site goes live. */
+   Nothing is a template being filled: the site is made by hand, one decision at a time.
+   Timeline (days):  0.1–0.9 the call's notes are typed  ·  1–1.3 a blank page is poured  ·  1.34–1.8 layout lines
+   snap into place  ·  1.8–2.5 the type is set (nav, tagline, the headline word by word, the lead, the buttons)  ·
+   2.5–2.85 a photo is placed and cropped  ·  2.8–3 a colour is picked, the guides are cleared  ·  3–4 edits, round
+   one: the headline  ·  4–5 round one: the photo  ·  5–6 round two: the colour  ·  6.1–6.7 the address fills in and
+   the site goes live. */
 
 /* Typed, so each resolves to one number where it's declared (not a growing chain of var() text in every descendant),
    and the ones only their own element reads don't inherit. Without @property support they work as plain variables. */
@@ -55,14 +59,44 @@
   inherits: false;
   initial-value: 0;
 }
-@property --drawn {
+@property --edit {
   syntax: '<number>';
   inherits: false;
   initial-value: 1;
 }
-@property --edit {
+@property --g {
   syntax: '<number>';
   inherits: false;
+  initial-value: 1;
+}
+@property --g-hot {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+@property --s {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+@property --pick {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+@property --place {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 1;
+}
+@property --crop {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+@property --sel {
+  syntax: '<number>';
+  inherits: true;
   initial-value: 1;
 }
 @property --typed {
@@ -136,9 +170,13 @@
   font-variant-numeric: tabular-nums;
   color: var(--bone);
 }
-/* An odometer: each numeral rolls up out of the window as the next rolls in, right on the day's boundary. */
+/* An odometer: each numeral rolls up out of the window as the next rolls in, right on the day's boundary.
+   The window clips (overflow), which makes a flex item's automatic minimum width 0: without flex: none it was squeezed
+   whenever the column was narrower than "Day 7", cutting the numeral off part way across. The counter is also sized to
+   its column (29cqi: "Day 7" is about 3.3em wide), so it always fits. */
 .days-num {
   display: inline-grid;
+  flex: none;
   overflow: hidden;
 }
 .days-num > span {
@@ -254,7 +292,7 @@
   color: var(--bone-dim);
 }
 .days-screen {
-  --cast: clamp(0, (var(--day) - 2.08) / 0.75, 1); /* the cast of the first draft */
+  --cast: clamp(0, (var(--day) - 1.02) / 0.3, 1); /* the blank page is poured */
   --cast-e: calc(var(--cast) * var(--cast) * (3 - 2 * var(--cast)));
   position: relative;
   flex: 1;
@@ -263,7 +301,7 @@
   background: var(--ground);
 }
 
-/* ---------- Day 1: the notes from the call, on a blank page ---------- */
+/* ---------- Day 1: the notes from the call ---------- */
 .days-notes {
   --u: calc(100cqw / 1280);
   position: absolute;
@@ -293,15 +331,11 @@
   clip-path: inset(-0.2em calc((1 - var(--note)) * (100% + 0.2em) - 0.2em) -0.2em 0);
 }
 
-/* ---------- Day 3: the first draft is cast over the wireframe (shared .cast-* classes) ---------- */
-.days-wire {
-  position: absolute;
-  inset: 0;
-}
-.days-screen .days-real {
+/* ---------- Day 2: a blank page is poured in (shared .cast-* classes); everything on it is made from here ---------- */
+.days-screen .days-board {
   transform: translateY(calc((var(--cast-e) - 1) * 100%));
 }
-.days-screen .days-real > .cast-in {
+.days-screen .days-board > .cast-in {
   transform: translateY(calc((1 - var(--cast-e)) * 100%));
 }
 .days-screen .days-front {
@@ -316,8 +350,10 @@
   --fs-paper: #f3f1ea;
   --fs-ink: #16271d;
   --fs-soft: #4a5e51;
-  /* round two of edits: the draft's leaf green deepens to the forest green they asked for */
-  --fs-k: clamp(0, (var(--day) - 5.2) / 0.6, 1);
+  --fs-rule: #c5cbbd;
+  /* Day 3: the colour is picked; round two: the draft's leaf green deepens to the forest green they asked for */
+  --pick: clamp(0, (var(--day) - 2.9) / 0.07, 1);
+  --fs-k: clamp(0, (var(--day) - 5.4) / 0.45, 1);
   --fs-green: color-mix(in oklab, #1f3a2b calc(var(--fs-k) * 100%), #477620);
   position: absolute;
   inset: 0;
@@ -328,15 +364,14 @@
   font-size: calc(16 * var(--u));
   line-height: 1.4;
   text-align: left;
+  background: var(--fs-paper);
+  color: var(--fs-ink);
 }
 .fs :where(p) {
   margin: 0;
 }
-.fs-real {
-  background: var(--fs-paper);
-  color: var(--fs-ink);
-}
 .fs-nav {
+  position: relative;
   display: flex;
   align-items: center;
   gap: calc(28 * var(--u));
@@ -354,7 +389,6 @@
   width: calc(28 * var(--u));
   height: calc(28 * var(--u));
   border-radius: calc(8 * var(--u)) calc(8 * var(--u)) calc(8 * var(--u)) 0;
-  background: var(--fs-green);
 }
 .fs-links {
   display: flex;
@@ -374,12 +408,17 @@
   font-weight: 600;
   white-space: nowrap;
 }
+/* until the colour is picked, the mark and the buttons are outlines with ink labels */
+.fs-mark,
 .fs-btn {
-  background: var(--fs-green);
-  color: var(--fs-paper);
+  background: color-mix(in oklab, var(--fs-green) calc(var(--pick) * 100%), transparent);
+  box-shadow: inset 0 0 0 calc(1.5 * var(--u)) color-mix(in oklab, var(--fs-rule) calc((1 - var(--pick)) * 100%), transparent);
+}
+.fs-btn {
+  color: color-mix(in oklab, var(--fs-paper) calc(var(--pick) * 100%), var(--fs-ink));
 }
 .fs-ghost {
-  box-shadow: inset 0 0 0 calc(1.5 * var(--u)) #c5cbbd;
+  box-shadow: inset 0 0 0 calc(1.5 * var(--u)) var(--fs-rule);
 }
 .fs-burger {
   display: none;
@@ -401,12 +440,13 @@
   padding: calc(20 * var(--u)) calc(64 * var(--u)) calc(64 * var(--u));
 }
 .fs-copy {
+  position: relative;
   align-self: center;
 }
 .fs-tag {
   font-size: calc(14 * var(--u));
   font-weight: 600;
-  color: var(--fs-green);
+  color: color-mix(in oklab, var(--fs-green) calc(var(--pick) * 100%), var(--fs-soft));
 }
 .fs-h1 {
   position: relative;
@@ -431,6 +471,7 @@
 }
 .fs-ctas {
   display: flex;
+  align-items: center;
   gap: calc(12 * var(--u));
   margin-top: calc(30 * var(--u));
 }
@@ -440,12 +481,169 @@
 .fs-pic {
   position: relative;
   min-height: calc(200 * var(--u));
+  --r: calc(22 * var(--u));
 }
-.fs-pic > i {
+.fs-pic-a,
+.fs-pic-a > b,
+.fs-pic-b {
   position: absolute;
   inset: 0;
-  border-radius: calc(22 * var(--u));
+  border-radius: var(--r);
   background: center / cover no-repeat;
+}
+
+/* ---------- Day 2: layout lines snap into place, then the type is set ----------
+   A guide runs from the edge of the block it lays out, right across the page. It draws hot (Ember, in progress) and
+   cools to a rule; the guides are cleared when the draft is done. */
+.fs-guide {
+  --g: clamp(0, (var(--day) - 1.34 - var(--k) * 0.07) / 0.12, 1);
+  --g-hot: clamp(0, 1 - (var(--day) - 1.34 - var(--k) * 0.07 - 0.12) * 9, 1);
+  position: absolute;
+  z-index: 2;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--ember) calc(var(--g-hot) * 100%), var(--fs-rule));
+  opacity: calc(1 - clamp(0, (var(--day) - 2.86) / 0.12, 1));
+}
+.fs-gx {
+  left: -200cqw;
+  right: -200cqw;
+  height: 1px;
+  transform-origin: 50% 0;
+  transform: scaleX(var(--g));
+}
+.fs-gy {
+  top: -200cqh;
+  bottom: -200cqh;
+  width: 1px;
+  transform-origin: 0 50%;
+  transform: scaleY(var(--g));
+}
+.fs-nav > .fs-gx {
+  bottom: 0;
+}
+.fs-copy > .fs-gy,
+.fs-gl {
+  left: 0;
+}
+.fs-gr {
+  right: 0;
+}
+.fs-gt {
+  top: 0;
+}
+.fs-gb {
+  bottom: 0;
+}
+/* each piece is set where the lines put it: it comes in from just off its line and settles */
+.fs-set,
+.fs-w {
+  --s: clamp(0, (var(--day) - var(--t)) / 0.06, 1);
+  opacity: var(--s);
+  translate: 0 calc((1 - var(--s)) * 8 * var(--u));
+}
+/* the headline is set a word at a time, the caret after the word just set */
+.fs-w {
+  --s: clamp(0, (var(--day) - var(--t)) / 0.025, 1);
+  translate: none;
+}
+/* an inline caret that takes no room: its margins cancel its width */
+.fs-w::after {
+  --cw: max(2px, calc(3 * var(--u)));
+  content: '';
+  display: inline-block;
+  width: var(--cw);
+  height: 0.78em;
+  margin: 0 calc(-0.06em - var(--cw)) 0 0.06em;
+  vertical-align: -0.04em;
+  background: var(--ember);
+  opacity: calc(clamp(0, (var(--day) - var(--t)) / 0.01, 1) * clamp(0, (var(--t) + var(--dt) - var(--day)) / 0.01, 1));
+}
+
+/* ---------- Day 3: a photo is placed and cropped, and a colour is picked ---------- */
+.fs-pic-a {
+  --place: clamp(0, (var(--day) - 2.5) / 0.08, 1);
+  --crop: clamp(0, (var(--day) - 2.6) / 0.2, 1);
+  --bleed: calc((1 - var(--crop)) * 11%);
+  clip-path: inset(calc(var(--bleed) * -1) round var(--r));
+  border-radius: 0;
+  opacity: var(--place);
+}
+/* placed oversized, so the crop decides what's in frame; what falls outside it shows faintly until it's cut */
+.fs-pic-a > b {
+  border-radius: 0;
+  transform: scale(calc(1.22 + (1 - var(--place)) * 0.08));
+  -webkit-mask:
+    linear-gradient(#000, #000) center / 82% 82% no-repeat,
+    linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.45));
+  mask:
+    linear-gradient(#000, #000) center / 82% 82% no-repeat,
+    linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.45));
+}
+/* the crop handles: four hot corners that close in on the frame */
+.fs-crop {
+  --crop: clamp(0, (var(--day) - 2.6) / 0.2, 1);
+  --c: calc(22 * var(--u));
+  --w: max(2px, calc(3 * var(--u)));
+  --e: linear-gradient(var(--ember), var(--ember));
+  position: absolute;
+  inset: calc((1 - var(--crop)) * -11%);
+  z-index: 3;
+  pointer-events: none;
+  background:
+    var(--e) left top / var(--c) var(--w),
+    var(--e) left top / var(--w) var(--c),
+    var(--e) right top / var(--c) var(--w),
+    var(--e) right top / var(--w) var(--c),
+    var(--e) left bottom / var(--c) var(--w),
+    var(--e) left bottom / var(--w) var(--c),
+    var(--e) right bottom / var(--c) var(--w),
+    var(--e) right bottom / var(--w) var(--c);
+  background-repeat: no-repeat;
+  opacity: calc(clamp(0, (var(--day) - 2.54) / 0.04, 1) * clamp(0, (2.86 - var(--day)) / 0.04, 1));
+}
+/* the swatch: three greens and a hot ring on the one being picked */
+.fs-swatch {
+  --d: calc(18 * var(--u));
+  --gap: calc(8 * var(--u));
+  --sel: clamp(0, (var(--day) - 5.24) / 0.12, 1); /* round two moves the pick to the deeper green */
+  position: relative;
+  display: inline-flex;
+  gap: var(--gap);
+  margin-left: calc(6 * var(--u));
+  padding: calc(8 * var(--u));
+  border-radius: 999px;
+  background: var(--fs-paper);
+  box-shadow:
+    inset 0 0 0 1px var(--fs-rule),
+    0 calc(6 * var(--u)) calc(18 * var(--u)) calc(-8 * var(--u)) var(--fs-soft);
+  opacity: calc(
+    clamp(0, (var(--day) - 2.8) / 0.04, 1) * clamp(0, (3.02 - var(--day)) / 0.05, 1) +
+      clamp(0, (var(--day) - 5.08) / 0.05, 1) * clamp(0, (5.95 - var(--day)) / 0.06, 1)
+  );
+  pointer-events: none;
+}
+.fs-swatch i {
+  width: var(--d);
+  height: var(--d);
+  border-radius: 50%;
+  background: #477620;
+}
+.fs-swatch i:nth-child(2) {
+  background: #1f3a2b;
+}
+.fs-swatch i:nth-child(3) {
+  background: #b0703a;
+}
+.fs-swatch b {
+  position: absolute;
+  top: calc(8 * var(--u) - 4 * var(--u));
+  left: calc(8 * var(--u) - 4 * var(--u));
+  width: calc(var(--d) + 8 * var(--u));
+  height: calc(var(--d) + 8 * var(--u));
+  border: 2px solid var(--ember);
+  border-radius: 50%;
+  transform: translateX(calc(var(--sel) * (var(--d) + var(--gap))));
+  opacity: clamp(0, (var(--day) - 2.85) / 0.03, 1);
 }
 
 /* ---------- Days 4 to 6: two rounds of edits. What's being edited is outlined hot while it changes. ---------- */
@@ -461,7 +659,7 @@
   --e0: 5.06;
   --e1: 5.94;
 }
-.fs-real .fs-edit::after {
+.fs-edit::after {
   content: '';
   position: absolute;
   inset: calc(-10 * var(--u));
@@ -470,73 +668,15 @@
   opacity: calc(clamp(0, (var(--day) - var(--e0)) / 0.08, 1) * clamp(0, (var(--e1) - var(--day)) / 0.08, 1));
   pointer-events: none;
 }
-/* round one: the draft's headline is taken back and theirs is written in */
-.fs-real .fs-v1 {
+/* round one: the draft's headline is taken back from the end, and theirs is set word by word */
+.fs-v1 {
   --edit: clamp(0, (var(--day) - 3.18) / 0.24, 1);
   clip-path: inset(-0.3em calc(var(--edit) * (100% + 0.3em) - 0.3em) -0.3em 0);
 }
-.fs-real .fs-v2 {
-  --edit: clamp(0, (var(--day) - 3.5) / 0.35, 1);
-  clip-path: inset(-0.3em calc((1 - var(--edit)) * (100% + 0.3em) - 0.3em) -0.3em 0);
-}
 /* and the stock picture gives way to a photo of their own work */
-.fs-real .fs-pic-b {
+.fs-pic-b {
   --edit: clamp(0, (var(--day) - 4.22) / 0.58, 1);
-  clip-path: inset(0 calc((1 - var(--edit)) * 100%) 0 0 round calc(22 * var(--u)));
-}
-
-/* ---------- Day 2: the wireframe, drawn block by block ---------- */
-.fs-wire,
-.fs-wire * {
-  color: transparent;
-}
-/* greeked text: each line becomes a bar about the height of its lowercase letters */
-.fs-wire .tx {
-  background: linear-gradient(var(--line-strong), var(--line-strong)) 0 55% / 100% 0.5em no-repeat;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-.fs-wire .fs-mark {
-  background: none;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-.fs-wire :is(.fs-btn, .fs-ghost) {
-  background: none;
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-.fs-wire .fs-burger i {
-  background: var(--line-strong);
-}
-/* the picture box: an outline with a cross through it (two hairlines corner to corner) */
-.fs-wire .fs-pic {
-  --cross: transparent calc(50% - 0.6px), var(--line-strong) calc(50% - 0.6px) calc(50% + 0.6px), transparent calc(50% + 0.6px);
-  border-radius: calc(22 * var(--u));
-  background:
-    linear-gradient(to top right, var(--cross)),
-    linear-gradient(to bottom right, var(--cross));
-  box-shadow: inset 0 0 0 1px var(--line-strong);
-}
-.fs-wire :is(.fs-nav, .fs-pic, .fs-tag, .fs-h1, .fs-lead, .fs-ctas) {
-  --drawn: clamp(0, (var(--day) - 1.12 - var(--k) * 0.13) / 0.2, 1);
-  clip-path: inset(-2px calc((1 - var(--drawn)) * (100% + 2px) - 2px) -2px 0);
-}
-.fs-wire .fs-nav {
-  --k: 0;
-}
-.fs-wire .fs-pic {
-  --k: 1;
-}
-.fs-wire .fs-tag {
-  --k: 2;
-}
-.fs-wire .fs-h1 {
-  --k: 3;
-}
-.fs-wire .fs-lead {
-  --k: 4;
-}
-.fs-wire .fs-ctas {
-  --k: 5;
+  clip-path: inset(0 calc((1 - var(--edit)) * 100%) 0 0 round var(--r));
 }
 
 /* ---------- A narrow frame: the same site, in its phone layout ---------- */
@@ -601,15 +741,9 @@
     font-size: calc(13 * var(--u));
   }
   .fs-pic {
+    --r: calc(16 * var(--u));
     flex: 1;
     min-height: calc(110 * var(--u));
-  }
-  .fs-pic > i,
-  .fs-wire .fs-pic {
-    border-radius: calc(16 * var(--u));
-  }
-  .fs-real .fs-pic-b {
-    clip-path: inset(0 calc((1 - var(--edit)) * 100%) 0 0 round calc(16 * var(--u)));
   }
 }
 /* a short phone screen: keep the headline, the button and the photo */
@@ -670,6 +804,12 @@
   .js .days-rail {
     display: flex;
   }
+  .js .days-text {
+    container-type: inline-size;
+  }
+  .js .days-count {
+    font-size: clamp(3rem, min(7.2vw, 12svh, 29cqi), 7.5rem);
+  }
   .js .days-steps {
     margin-top: 1.5rem;
   }
@@ -706,7 +846,7 @@
       gap: 3.5rem;
     }
     .js .days-count {
-      font-size: clamp(3rem, min(6.6vw, 12svh), 7rem);
+      font-size: clamp(3rem, min(6.6vw, 12svh, 29cqi), 7rem);
     }
     .js .days-shot {
       order: 0;
