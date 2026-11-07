@@ -1,16 +1,49 @@
-// Rich tier for the home Thesis: a surface of iron that heats with scroll (293 K → 1811 K).
+// Rich tier for the home Thesis: rising fluid flames that climb with the reading (293 K → 1811 K).
 //
-// One fullscreen fragment shader: domain-warped noise for the metal, coloured on a blackbody ramp. Cold, only the
-// cracks glow dull red; as it heats the whole surface brightens and starts to flow. It is hottest at the floor and
-// fades out toward the top so the type stays clean. Rendered at reduced resolution, only while on screen.
-import { dropToLight } from '@/lib/tier';
+// One fullscreen fragment shader: domain-warped noise carried upward, coloured on a blackbody ramp. The canvas is
+// transparent wherever there is no flame so the page liquid shows through. At 293 K only a low bed of dull embers;
+// the reach grows with heat until the fire fills most of the viewport. Reduced resolution, only while on screen,
+// and it steps its resolution down on slow frames.
+import { packSources } from '@/lib/liquid/field';
+import { clock } from '@/lib/liquid/loop';
+import { swellGLSL, wavesGLSL } from '@/lib/liquid/shader';
 
-type Options = { canvas: HTMLCanvasElement; heat: () => number; onReady?: () => void; onFail?: () => void };
+type Options = { canvas: HTMLCanvasElement; crest?: HTMLCanvasElement | null; heat: () => number; onReady?: () => void; onFail?: () => void };
 
 const VERT = `attribute vec2 aPos; void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
+const CAP = 48; // wave entries the flame/crest shaders read (the liquid's newest ones)
+// The liquid's wave formula (lib/liquid/shader.ts, field.ts): the same entries, taps, wake fronts and idle swell, page coords.
+const WAVES = `
+uniform vec2 uOrg; // canvas top-left in page CSS px
+uniform vec2 uCss; // canvas size in CSS px
+uniform float uClock;
+${wavesGLSL(CAP)}
+${swellGLSL()}
+vec2 pagePos(vec2 uv) { return uOrg + vec2(uv.x, 1.0 - uv.y) * uCss; }
+`;
+
+// Crest lines: the liquid's own thin Ember lines (same formula, same look) at full resolution over the flames. Nothing
+// else: no dark edge, no emboss. Where there is no flame they land exactly on the liquid's own lines.
+const CREST = `
+precision highp float;
+uniform float uScale;
+${WAVES}
+void main() {
+  vec2 uv = gl_FragCoord.xy / (uCss * uScale);
+  vec2 p = pagePos(uv);
+  float px = 1.0 / uScale;
+  float line, sl;
+  vec2 gp, gf, gs;
+  waves(p, px, line, gp, gf);
+  swell(p, uClock, px, gs, sl);
+  float l = max(line * 0.95, sl);
+  gl_FragColor = vec4(vec3(1.0, 0.357, 0.122) * l, l);
+}`;
+
 const FRAG = `
-precision mediump float;
+precision highp float;
+${WAVES}
 uniform vec2 uRes;
 uniform float uTime, uK;
 uniform vec3 uMouse; // px from bottom-left, strength
@@ -34,31 +67,52 @@ vec3 blackbody(float t) {
   return mix(c, vec3(1.0, 0.95, 0.86), smoothstep(0.88, 1.0, t));
 }
 void main() {
-  vec2 uv = gl_FragCoord.xy / uRes;
-  vec2 p = vec2(uv.x * uRes.x / uRes.y, uv.y) * 2.6;
-  float t = uTime * (0.015 + uK * 0.07);
-  vec2 q = vec2(fbm(p + vec2(0.0, t)), fbm(p + vec2(5.2, 1.3) - t));
-  vec2 r = vec2(fbm(p + 3.2 * q + vec2(1.7, 9.2) + t * 1.4), fbm(p + 3.2 * q + vec2(8.3, 2.8)));
-  float n = fbm(p + 2.8 * r);
-  float cracks = pow(1.0 - abs(n * 2.0 - 1.0), 7.0);           // thin bright seams in cold metal
-  float field = mix(cracks * 0.85, n * 1.15, smoothstep(0.35, 1.0, uK)); // melting: the whole surface takes over
-  float floorHeat = smoothstep(1.0, 0.0, uv.y);
-  float temp = field * (0.05 + uK * 0.95) * (0.3 + floorHeat * 0.85);
-  vec2 d = gl_FragCoord.xy - uMouse.xy;
-  temp += uMouse.z * 0.35 * exp(-dot(d, d) / (0.02 * uRes.y * uRes.y)) * (0.4 + uK);
-  temp = clamp(temp, 0.0, 0.9); // never white-hot across the board: the type sits on top of this
+  vec2 uv0 = gl_FragCoord.xy / uRes;
+  float asp = uRes.x / uRes.y;
+  float k = uK;
+  // refraction: the flames are seen through the liquid surface, so they bend along its slope
+  float line, sl; vec2 gp, gf, gs;
+  waves(pagePos(uv0), 1.0, line, gp, gf);
+  swell(pagePos(uv0), uClock, 1.0, gs, sl);
+  vec2 bend = (gp + gf + gs) * 45.0 / uCss * vec2(1.0, -1.0); // only a slight shift of the flames under a crest
+  vec2 uv = uv0 + bend;
+  float x = uv.x * asp, y = uv.y;
+  float t = uTime * (0.4 + k * 0.8);
+  // Tongue height: a low bed of embers at 293 K, most of the screen at 1811 K; it varies slowly across the width.
+  float reach = 0.14 + 1.25 * k * (0.55 + 0.45 * k);
+  // Sway grows with height; the flow is carried upward (sample coordinates move down).
+  float sway = fbm(vec2(x * 1.4, y * 1.1 - t * 0.9)) - 0.5;
+  float xs = x + sway * (0.15 + 0.9 * y);
+  float lick = noise(vec2(xs * 2.3 + 3.0, t * 0.55)) * 0.6 + noise(vec2(xs * 5.0, t * 1.1 + 9.0)) * 0.4;
+  float H = reach * (0.35 + 0.85 * lick);
+  float yn = y / max(H, 0.02);
+  // Vertical streaks (x stretched vs y) give tongues; finer scales break them up as they climb.
+  float tg = fbm(vec2(xs * 3.2, y * 1.5 - t * 1.5));
+  float fine = fbm(vec2(xs * 7.0 + 5.0, y * 4.0 - t * 2.8));
+  float d = (1.0 - yn) * 1.0 + (tg - 0.5) * 1.3 - (fine - 0.5) * 0.8 * (0.3 + yn) - 0.1;
+  float a = smoothstep(0.0, 0.2, d);
+  // Internal structure: hot veins inside each tongue, cooler edges and tips, dim pockets in the base.
+  float vein = fbm(vec2(xs * 4.5 + 2.0, y * 2.2 - t * 2.0));
+  float temp = d * 0.55 + (vein - 0.5) * 1.3 + (tg - 0.5) * 0.4 + 0.12 + k * 0.08;
+  temp = clamp(temp, 0.0, 1.0) * (0.6 + 0.4 * k);
+  temp = min(temp, 0.72);
+  a *= 0.4 + 0.6 * smoothstep(0.05, 0.4, temp + (fine - 0.5) * 0.5);
   vec3 col = blackbody(temp);
-  float fade = smoothstep(0.6, 0.0, uv.y);                      // metal pools in the lower part; the type stays clear
-  float a = fade * (0.45 + 0.55 * smoothstep(0.0, 0.25, temp));
+  vec2 dm = gl_FragCoord.xy - uMouse.xy;
+  float m = uMouse.z * 0.3 * exp(-dot(dm, dm) / (0.02 * uRes.y * uRes.y));
+  col += vec3(1.0, 0.45, 0.1) * m * a;
+  // The type band is cooler and thinner so the copy stays legible over the fire.
+  float band = smoothstep(0.18, 0.4, uv0.y) * smoothstep(0.78, 0.55, uv0.y);
+  a = clamp(a * (0.5 + 0.5 * k), 0.0, 1.0) * (1.0 - 0.55 * band);
+  col *= 1.0 - 0.3 * band;
   gl_FragColor = vec4(col * a, a);
 }`;
 
-export function startMolten({ canvas, heat, onReady, onFail }: Options): () => void {
-  const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
-  if (!gl) {
-    onFail?.();
-    return () => {};
-  }
+type Pass = { gl: WebGLRenderingContext; u: (n: string) => WebGLUniformLocation | null };
+
+function makePass(canvas: HTMLCanvasElement, frag: string, opts: WebGLContextAttributes): Pass | null {
+  const gl = canvas.getContext('webgl', opts);
+  if (!gl) return null;
   const sh = (type: number, src: string) => {
     const s = gl.createShader(type)!;
     gl.shaderSource(s, src);
@@ -67,35 +121,69 @@ export function startMolten({ canvas, heat, onReady, onFail }: Options): () => v
     return s;
   };
   const prog = gl.createProgram()!;
-  try {
-    gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
-    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FRAG));
-    gl.linkProgram(prog);
-    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('link');
-  } catch (e) {
-    console.warn('[crucible] molten surface disabled:', e);
-    onFail?.();
-    return () => {};
-  }
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VERT));
+  gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, frag));
+  gl.linkProgram(prog);
+  if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error('link');
   gl.useProgram(prog);
   gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
   const aPos = gl.getAttribLocation(prog, 'aPos');
   gl.enableVertexAttribArray(aPos);
   gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
-  const uRes = gl.getUniformLocation(prog, 'uRes');
-  const uTime = gl.getUniformLocation(prog, 'uTime');
-  const uK = gl.getUniformLocation(prog, 'uK');
-  const uMouse = gl.getUniformLocation(prog, 'uMouse');
+  return { gl, u: (n) => gl.getUniformLocation(prog, n) };
+}
 
-  // Soft noise doesn't need full resolution: render small and let the browser scale it up.
+export function startMolten({ canvas, crest, heat, onReady, onFail }: Options): () => void {
+  let flame: Pass | null = null;
+  let line: Pass | null = null;
+  try {
+    flame = makePass(canvas, FRAG, { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
+    if (flame && crest) line = makePass(crest, CREST, { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
+  } catch (e) {
+    console.warn('[crucible] molten surface disabled:', e);
+    flame = null;
+  }
+  if (!flame) {
+    onFail?.();
+    return () => {};
+  }
+  const gl = flame.gl;
+  const uRes = flame.u('uRes');
+  const uTime = flame.u('uTime');
+  const uK = flame.u('uK');
+  const uMouse = flame.u('uMouse');
+  const passes = [flame, ...(line ? [line] : [])].map((p) => ({
+    p,
+    org: p.u('uOrg'),
+    css: p.u('uCss'),
+    clk: p.u('uClock'),
+    n: p.u('uN'),
+    a: p.u('uA'),
+    b: p.u('uB'),
+    scale: p.u('uScale'),
+  }));
+  const A = new Float32Array(CAP * 4);
+  const B = new Float32Array(CAP * 4);
+
+  // Soft noise doesn't need full resolution: render small and let the browser scale it up. The crest lines are
+  // one pixel wide, so they render at (nearly) full resolution and only step down when frames run slow.
   const scales = [0.5, 0.35, 0.25];
+  const lineScales = [1, 0.75, 0.5];
+  const sources = [CAP, 24, 12];
   let q = 0;
   const resize = () => {
-    const s = scales[q] * Math.min(devicePixelRatio || 1, 2);
+    const d = Math.min(devicePixelRatio || 1, 2);
+    const s = scales[q] * d;
     canvas.width = Math.max(1, Math.round(canvas.clientWidth * s));
     canvas.height = Math.max(1, Math.round(canvas.clientHeight * s));
     gl.viewport(0, 0, canvas.width, canvas.height);
+    if (line && crest) {
+      const c = lineScales[q] * Math.min(d, 1.5);
+      crest.width = Math.max(1, Math.round(crest.clientWidth * c));
+      crest.height = Math.max(1, Math.round(crest.clientHeight * c));
+      line.gl.viewport(0, 0, crest.width, crest.height);
+    }
   };
   resize();
   const ro = new ResizeObserver(resize);
@@ -127,18 +215,32 @@ export function startMolten({ canvas, heat, onReady, onFail }: Options): () => v
     slow = dt > 26 ? slow + dt : Math.max(0, slow - dt * 0.5);
     if (slow > 1500 && now - t0 > 2000) {
       slow = 0;
-      // Slow: render at a lower resolution (down to the last step, where it stays).
+      // Slow: render at a lower resolution and read fewer wave sources (down to the last step, where it stays).
       if (q + 1 < scales.length) {
         q++;
         resize();
       }
     }
     mouse.s += ((now - mouse.moved < 900 ? 1 : 0) - mouse.s) * Math.min(1, dt / 300);
+    const r = canvas.getBoundingClientRect();
+    const T = (window as unknown as { __liquidT?: number | null }).__liquidT ?? clock.t; // frozen only by our screenshot checks
+    const n = packSources(T, sources[q], A, B);
+    for (const { p, org, css, clk, n: un, a, b, scale } of passes) {
+      p.gl.uniform2f(org, r.left + scrollX, r.top + scrollY);
+      p.gl.uniform2f(css, r.width, r.height);
+      p.gl.uniform1f(clk, T);
+      p.gl.uniform1i(un, n);
+      p.gl.uniform4fv(a, A);
+      p.gl.uniform4fv(b, B);
+      if (scale) p.gl.uniform1f(scale, (crest?.width ?? 1) / r.width);
+    }
     gl.uniform2f(uRes, canvas.width, canvas.height);
     gl.uniform1f(uTime, now / 1000);
     gl.uniform1f(uK, heat());
     gl.uniform3f(uMouse, mouse.x, mouse.y, mouse.s);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    line?.gl.drawArrays(line.gl.TRIANGLES, 0, 3);
+    canvas.dataset.t = T.toFixed(3); // field time of the last frame drawn here (screenshot checks wait on it)
     if (!ready) {
       ready = true;
       onReady?.();
@@ -146,11 +248,6 @@ export function startMolten({ canvas, heat, onReady, onFail }: Options): () => v
   };
   function loop() {
     if (!raf && !stopped) raf = requestAnimationFrame(frame);
-  }
-  function fail() {
-    stop();
-    dropToLight();
-    onFail?.();
   }
   function stop() {
     stopped = true;

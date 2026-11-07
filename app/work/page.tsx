@@ -6,6 +6,7 @@ import { WordReveal } from '@/components/WordReveal';
 import { CardPair, ClientFrame, ConceptDevices, MarkMould, MarkSizes, Plate, ShotDevices, type Shot } from '@/components/Work';
 import { clientSites, work } from '@/data/work';
 import { conceptFonts } from '@/lib/conceptFonts';
+import '@/components/Ventures.css'; // .vf-link and .vf-mould, shared with the venture pages
 
 const title = 'Work · Crucible';
 const description =

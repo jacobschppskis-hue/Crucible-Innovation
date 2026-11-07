@@ -108,16 +108,15 @@
   }
 }
 
-/* ---------- The heat wake (components/Wake.tsx): behind everything, never over content ---------- */
-.wake {
+/* ---------- The liquid (components/Liquid.tsx): one canvas behind everything, never over content ----------
+   Every section background is transparent so it shows everywhere; text, buttons and images paint above it. */
+.liquid {
   position: fixed;
-  left: -8px;
-  top: -8px;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: -1;
   pointer-events: none;
-  image-rendering: auto;
-  /* the grid is coarse (8–10px cells): blur it into a smooth surface */
-  filter: blur(7px);
 }
 
 /* Large visuals drawn toward the cursor (components/Magnetic.tsx) */

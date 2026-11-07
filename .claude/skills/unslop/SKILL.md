@@ -15,7 +15,7 @@ Jacob's rule (2026-11-04): avoid these *excessively* and never stack them. One u
 - Instrument Serif, or any serif italic used as an "accent word" at the end of a headline.
 - Cards inside cards (a bordered, rounded box containing more bordered, rounded boxes).
 - Decorative gradient backgrounds. A glow is allowed only where hot metal is in the picture.
-- ASCII images. Dithering is only acceptable as a site-wide art direction, which this site does not have.
+- ASCII images, except the founders' portraits (bone characters on the black, `public/team/*-bone.webp`). Dithering is otherwise only acceptable as a site-wide art direction, which this site does not have.
 - Code breadcrumbs (`~/crucible/sites $`, `// section`, `<Ventures />` as decoration).
 - Verbose, redundant copy. Say it once. If two sentences say the same thing, cut one.
 - Over-detailed diagrams. One idea per visual.
@@ -39,7 +39,7 @@ Jacob's rule (2026-11-04): avoid these *excessively* and never stack them. One u
 
 ## The house concept: "One pour"
 
-- **The whole site is one continuous casting.** Each section is something the metal does: it pours, fills a mould, sets, or cools. Hand off between sections with motion or a surface flip, not a hard edge.
+- **The whole site is one continuous casting, on a dark liquid.** Each section is something the metal does: it pours, fills a mould, sets, or cools. Hand off between sections with motion, not a hard edge; section backgrounds stay transparent so the liquid shows through.
 - **Colour means temperature.**
   - Ember (`--ember`) is hot: active, interactive, live, hovered, focused, in progress.
   - Bone is cooled: settled, read, done.
@@ -48,8 +48,8 @@ Jacob's rule (2026-11-04): avoid these *excessively* and never stack them. One u
 - **One art direction for all imagery:** a foundry at night, shot on a macro lens.
   - A warm key light from below and a faint cool fill from above.
   - Sand-cast metal with real surface variation.
-  - Blender sources live in `film/`. Never mix in stock photos, clip art or other styles.
-- **No real photos of people.** The founders appear as engraved line portraits.
+  - Real-time 3D in `lib/gl3d/` (Blender references in `film/`). Never mix in stock photos, clip art or other styles.
+- **No real photos of people.** The founders appear as ASCII portraits in bone.
 
 ## Type
 

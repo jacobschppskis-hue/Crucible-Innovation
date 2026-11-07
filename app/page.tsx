@@ -6,7 +6,6 @@ import { Nav } from '@/components/Nav';
 import { Story } from '@/components/Story';
 import { Thesis } from '@/components/Thesis';
 import { Ventures } from '@/components/Ventures';
-import { filmInfo } from '@/lib/filmAssets';
 
 export const metadata: Metadata = {
   title: 'Crucible: Intelligence, alloyed.',
@@ -21,7 +20,7 @@ export default function Home() {
       <Nav variant="home" />
       <main id="main">
         {/* The opening: ignition on load, then the ring comes apart and fuses as you scroll */}
-        <Ignition film={filmInfo('ring')} />
+        <Ignition />
 
         {/* Jacob's story: why Crucible exists and where the name comes from */}
         <Story />
@@ -29,7 +28,7 @@ export default function Home() {
         {/* Ventures: the live one casts a concept site as it scrolls in; the rest are still in the furnace */}
         <Ventures />
 
-        <Thesis film={filmInfo('iron')} />
+        <Thesis />
       </main>
       <Footer />
       <JsonLd page="home" />

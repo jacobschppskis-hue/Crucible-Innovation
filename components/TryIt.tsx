@@ -2,6 +2,7 @@
 import { useId, useState } from 'react';
 import { ArrowRight } from './Icons';
 import { LiveSite, type Theme } from './LiveSite';
+import './TryIt.css';
 
 const trades: { theme: Theme; label: string }[] = [
   { theme: 'cafe', label: 'Café' },
@@ -38,7 +39,7 @@ export function TryIt() {
   };
 
   return (
-    <section id="try" aria-labelledby={`${id}-h`} className="try container-x cv-auto" style={{ '--h-sm': '1500px', '--h-lg': '900px' } as React.CSSProperties}>
+    <section id="try" aria-labelledby={`${id}-h`} className="try container-x cv-auto" style={{ '--h-sm': '1172px', '--h-lg': '599px' } as React.CSSProperties}>
       <div className="try-controls">
         <h2 id={`${id}-h`} className="h-section try-h max-w-[10ch]">
           Try it with your business

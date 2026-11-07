@@ -40,15 +40,15 @@
 }
 .vx-visual {
   position: relative;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   aspect-ratio: 4 / 3;
-  overflow: hidden;
-  background: var(--ground-2);
 }
 .vx-visual .vf-mould > * {
   transition: transform 1.2s var(--ease-out);
 }
-.group:hover .vx-visual :is(.vf-img, .vf-mould > *) {
+.group:hover .vx-visual .vf-mould > * {
   transform: scale(1.04);
 }
 .vx-text {

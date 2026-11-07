@@ -8,7 +8,7 @@
 // a scene that can't start at all (no WebGL, a lost context). `?tier=rich|light` forces one (tests and demos).
 
 /** Runs inline in <head>: sets html.js, data-tier and data-intro before first paint. Keep it tiny and ES5. */
-export const TIER_SCRIPT = `(function(d,w){d.classList.add('js');var q=/[?&]tier=(rich|light)/.exec(location.search);d.setAttribute('data-tier',q?q[1]:w.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'light':'rich');try{if(/^\\/(index\\.html)?$/.test(location.pathname)){if(sessionStorage.getItem('crucible:lit'))d.setAttribute('data-intro','quick');else sessionStorage.setItem('crucible:lit','1')}}catch(e){}})(document.documentElement,window)`;
+export const TIER_SCRIPT = `(function(d,w){d.classList.add('js');var q=/[?&]tier=(rich|light)/.exec(location.search);d.setAttribute('data-tier',q?q[1]:w.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'light':'rich');try{if(/^\\/(index\\.html)?$/.test(location.pathname)){if(sessionStorage.getItem('crucible:lit'))d.setAttribute('data-intro','quick');else sessionStorage.setItem('crucible:lit','1');d.setAttribute('data-pour','');setTimeout(function(){d.setAttribute('data-go','')},3500)}}catch(e){}})(document.documentElement,window)`;
 
 let verdict: Promise<boolean> | undefined;
 
@@ -41,8 +41,34 @@ export function dropToLight() {
   document.documentElement.dataset.tier = 'light';
 }
 
+/** Sets html[data-fonts] once the page is loaded and idle. The concept sites' faces (lib/conceptFonts.ts) are held back
+ * until then (LiveSite.css), so their ~31 KB don't compete with the scripts that start the page. Runs for every tier. */
+let fontsQueued = false;
+export function releaseConceptFonts() {
+  if (fontsQueued) return;
+  fontsQueued = true;
+  afterIdle(() => document.documentElement.setAttribute('data-fonts', ''));
+}
+
 function afterIdle(fn: () => void) {
   const idle = () => (window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 300)))(fn, { timeout: 2500 });
   if (document.readyState === 'complete') idle();
   else addEventListener('load', idle, { once: true });
+}
+
+/** Runs `fn` once, when `el` is within `margin` (CSS rootMargin) of the viewport; returns the cancel. A far-off scene
+ * (Thesis flames, footer furnace) then creates its GL context when you near it, not during the page's first seconds. */
+export function whenNear(el: Element, fn: () => void, margin = '150% 0px 150% 0px'): () => void {
+  if (typeof IntersectionObserver === 'undefined') {
+    fn();
+    return () => {};
+  }
+  const io = new IntersectionObserver((es) => {
+    if (es.some((e) => e.isIntersecting)) {
+      io.disconnect();
+      fn();
+    }
+  }, { rootMargin: margin });
+  io.observe(el);
+  return () => io.disconnect();
 }

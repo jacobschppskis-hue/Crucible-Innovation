@@ -14,7 +14,7 @@ function ColdRing() {
       {rings.map(({ r, n }) => (
         <g key={r}>
           <path d={arcPath(r)} fill="none" stroke="currentColor" strokeWidth={stroke} />
-          {pixels(r, n).map(({ x, y, deg }, i) => {
+          {pixels(r, n).map(({ x, y }, i) => {
             const j = k++;
             const drift = ((Math.sin(j * 12.9898) * 43758.5453) % 1 + 1) % 1;
             return (
@@ -26,7 +26,7 @@ function ColdRing() {
                 height={px}
                 fill="currentColor"
                 opacity={1 - drift * 0.6}
-                transform={`rotate(${deg + drift * 70} ${x} ${y})`}
+                transform={`rotate(${drift * 70} ${x} ${y})`}
               />
             );
           })}

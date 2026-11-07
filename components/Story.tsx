@@ -2,12 +2,12 @@ import { stories, type FounderStory } from '@/data/story';
 import { Portrait } from './Builders';
 import { HeatText } from './HeatText';
 import { WordReveal } from './WordReveal';
+import './Story.css';
 
 /**
  * "Why Crucible": the co-founders in their own words, one chapter each (Jacob first). On wide screens the portrait
  * stays pinned beside the text while it is read; the text warms from dim to bone as it goes. Between Jacob's
- * paragraphs, two moments from his own account are shown rather than told: one company splitting into six, and
- * iron becoming steel. The words are theirs and are never edited (data/story.ts).
+ * paragraphs, one moment from his own account is shown rather than told: one company splitting into six. The words are theirs and are never edited (data/story.ts).
  */
 export function Story() {
   return (
@@ -53,7 +53,6 @@ function Chapter({ s, first }: { s: FounderStory; first: boolean }) {
                 <p className="wide font-display font-semibold">{s.pullQuote}</p>
               </blockquote>
             )}
-            {first && i === 2 && <AlloyBeat />}
           </div>
         ))}
         {statement && (
@@ -76,31 +75,11 @@ function SplitBeat() {
         <span className="split-name">PayPal</span>
         {OFFSHOOTS.map((name, i) => (
           <span key={name} className="split-piece" style={{ '--i': i, '--c': i % 3, '--r': Math.floor(i / 3) } as React.CSSProperties}>
+            <span className="split-tile" />
             <span className="split-label">{name}</span>
           </span>
         ))}
       </div>
-    </figure>
-  );
-}
-
-// "Steel, being mostly iron with a small amount of carbon added, is far stronger than the iron it is made from."
-function AlloyBeat() {
-  return (
-    <figure data-scroll="view" className="beat beat-alloy" aria-label="Iron, plus a little carbon, becomes steel.">
-      <div aria-hidden className="alloy">
-        <span className="alloy-block">
-          <span className="alloy-sym alloy-fe">Fe</span>
-          <span className="alloy-sym alloy-steel">Steel</span>
-        </span>
-        <span className="alloy-c">
-          <i />C
-        </span>
-      </div>
-      <figcaption aria-hidden className="alloy-cap">
-        <span className="alloy-cap-a">Iron, and a little carbon</span>
-        <span className="alloy-cap-b">Steel</span>
-      </figcaption>
     </figure>
   );
 }

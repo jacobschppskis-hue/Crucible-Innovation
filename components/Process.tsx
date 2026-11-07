@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import './Process.css';
 
 // The facts are the FAQ's (data/faq.ts): a first draft in about three days, two rounds of edits, live in about a week.
 // `from`/`to` are the days (on the scrubbed timeline) while each step is the one being read.

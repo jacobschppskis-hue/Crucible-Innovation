@@ -7,6 +7,7 @@ import { Reveal } from '@/components/Reveal';
 import { VentureObject } from '@/components/Ventures';
 import { WordReveal } from '@/components/WordReveal';
 import { ventures, ventureHref, type Venture } from '@/data/ventures';
+import '@/components/VenturePages.css';
 
 const all = ventures as readonly Venture[];
 const live = all.filter((v) => v.status === 'live');

@@ -1,6 +1,7 @@
 import type { ClientSite, Work } from '@/data/work';
 import { LiveSite, type Theme } from './LiveSite';
 import { SplitRing } from './SplitRing';
+import './Work.css';
 
 /*
  * The /work list (app/work/page.tsx): one plate per item, caption on top and the work itself below, as large as the

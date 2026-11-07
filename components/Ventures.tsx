@@ -3,10 +3,12 @@ import path from 'node:path';
 import Link from 'next/link';
 import { ventures, ventureHref, type Venture } from '@/data/ventures';
 import { ArrowRight } from './Icons';
+import { IngotScene } from './IngotScene';
 import { SplitRing } from './SplitRing';
 import { WordReveal } from './WordReveal';
+import './Ventures.css';
 
-// Rendered ingots (film/ingots.py → public/film/ingots/<slug>-<w>.webp). Checked at build time, so a venture without a
+// Ingot stills (scripts/ingot-stills.mjs → public/film/ingots/<slug>-<w>.webp, transparent). Checked at build time, so a venture without a
 // render falls back to its mark drawn in CSS: cool for a live venture, still glowing for one in the mould.
 export const hasIngot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
 
@@ -70,27 +72,12 @@ function VentureCast({ v }: { v: Venture }) {
 }
 
 /**
- * A venture's cast object, decorative: its rendered ingot when one exists, else its mark in the mould. The caller sets
+ * A venture's cast object, decorative: its freestanding 3D ingot (a transparent still until the scene starts) when one exists, else its mark. The caller sets
  * the temperature (`data-hot` on an ancestor while the venture is still forging) and the frame's size. Also used by
  * the /ventures pages.
  */
 export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager }: { v: Venture; sizes?: string; eager?: boolean }) {
-  return hasIngot(v.ingot) ? (
-    <img
-      src={`/film/ingots/${v.ingot}-1200.webp`}
-      srcSet={`/film/ingots/${v.ingot}-600.webp 600w, /film/ingots/${v.ingot}-1200.webp 1200w, /film/ingots/${v.ingot}-2400.webp 2400w`}
-      sizes={sizes}
-      width={1200}
-      height={750}
-      alt=""
-      loading={eager ? 'eager' : 'lazy'}
-      fetchPriority={eager ? 'high' : undefined}
-      decoding="async"
-      className="vf-img"
-    />
-  ) : (
-    <MarkCast v={v} />
-  );
+  return hasIngot(v.ingot) ? <IngotScene slug={v.ingot!} sizes={sizes} eager={eager} /> : <MarkCast v={v} />;
 }
 
 /** The fallback visual: the venture's mark in its mould. */
