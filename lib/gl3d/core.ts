@@ -28,6 +28,9 @@ export type ObjectInit = {
   clip?: [number, number, number, number];
   /** Hot metal: temperature per world unit of height (temp = temp + tgrad * y), for a heat gradient across objects. */
   tgrad?: number;
+  /** Hot metal: this much cooler where the surface turns away from the eye (0..1; never below a glowing orange, so no
+   * crust), so a stream or a drop reads as white at its heart and orange at its edges. */
+  edge?: number;
   parent?: Obj;
   visible?: boolean;
 };
@@ -111,7 +114,7 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
   gl.useProgram(prog);
   const U: Record<string, WebGLUniformLocation | null> = {};
-  for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uCav', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy']) U[n] = gl.getUniformLocation(prog, n);
+  for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uCav', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy', 'uEdge']) U[n] = gl.getUniformLocation(prog, n);
 
   const meshes = new WeakMap<Mesh, { vao: WebGLVertexArrayObject; bufs: WebGLBuffer[]; n: number; type: number }>();
   const texes = new WeakMap<object, WebGLTexture>();
@@ -207,7 +210,7 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
         for (let c = 0; c < 3; c++) { const l = Math.hypot(M[c * 4], M[c * 4 + 1], M[c * 4 + 2]) || 1; nm.push(M[c * 4] / l, M[c * 4 + 1] / l, M[c * 4 + 2] / l); }
         gl.uniformMatrix3fv(U.uNM, false, nm);
         gl.uniform1i(U.uMat, MATERIALS[o.material]);
-        gl.uniform4f(U.uClip, o.clip?.[0] ?? 0, o.clip?.[1] ?? 1, o.clip?.[2] ?? 0, o.clip?.[3] ?? 1e6); gl.uniform1f(U.uTy, o.tgrad ?? 0);
+        gl.uniform4f(U.uClip, o.clip?.[0] ?? 0, o.clip?.[1] ?? 1, o.clip?.[2] ?? 0, o.clip?.[3] ?? 1e6); gl.uniform1f(U.uTy, o.tgrad ?? 0); gl.uniform1f(U.uEdge, o.edge ?? 0);
         gl.uniform1f(U.uTone, o.tone ?? 0); gl.uniform1f(U.uTemp, o.temp); gl.uniform1f(U.uGlow, o.glow); gl.uniform1f(U.uSeed, o.seed); gl.uniform1f(U.uGrain, o.grain);
         const r = o.relief, c = o.cavity, t = o.temper;
         gl.uniform1f(U.uRel, r ? r.strength ?? 1.2 : 0);

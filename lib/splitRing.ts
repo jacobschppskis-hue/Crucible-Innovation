@@ -53,6 +53,25 @@ export function arcOutline(r: number, c: number = RING.c) {
   );
 }
 
+/**
+ * Every piece's outline as one path, for the pour's ghost drawing (components/Ignition.tsx): the two arcs (each with its
+ * welded cells, the `arcOutline` contour) and the 16 free cells, each pulled in by `inset` units, so a hairline stroked
+ * on it lies wholly inside its piece and the solid mark (the 3D metal over it) covers it exactly. The core's outline is
+ * the circle of radius RING.core − inset.
+ */
+export function outlinePath(inset = 0, c: number = RING.c): string {
+  const h = RING.px / 2;
+  const arcs = RING.rings.map(({ r }) => {
+    const ro = f3(r + h - inset), ri = f3(r - h + inset), x2 = f3(c + 3 * h - inset);
+    return `M${x2} ${f3(c - ri)}V${f3(c - ro)}H${c}A${ro} ${ro} 0 0 0 ${c} ${f3(c + ro)}H${x2}V${f3(c + ri)}H${c}A${ri} ${ri} 0 0 1 ${c} ${f3(c - ri)}Z`;
+  });
+  const a = h - inset, s = f3(2 * a);
+  const free = cells(c)
+    .filter((q) => !q.weld)
+    .map(({ x, y }) => `M${f3(x - a)} ${f3(y - a)}h${s}v${s}h${-s}Z`);
+  return [...arcs, ...free].join('');
+}
+
 /** Standalone SVG markup, for places that can't use CSS variables (favicon, apple icon, OG images, the card). */
 export function splitRingSvg({ fg = '#E8E4D8', core = '#FF5B1F', bg, square = false, viewBox = '0 0 64 64' }: { fg?: string; core?: string; bg?: string; square?: boolean; viewBox?: string } = {}) {
   const { c, px, rings } = RING;

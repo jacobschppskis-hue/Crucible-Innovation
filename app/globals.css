@@ -550,6 +550,25 @@ html.lenis body {
   opacity: 0;
   transition: opacity 1ms linear 320ms;
 }
+/* The pour's ghost: the hairline drawing of the mark the metal is poured into, under the 3D canvas (6-unit margin round
+   the 64-unit box). Shown only while a pour plays (see the intro below). Its mask is twice its height: the upper half is
+   the drawing at ghost strength with a bright scan front at the bottom, the lower half the faint drawing still to come;
+   sliding the mask up scans it in from the top. */
+.ig-ghost {
+  position: absolute;
+  inset: calc(-100% * 6 / 64);
+  display: none;
+  pointer-events: none;
+}
+.ig-ghost-scan {
+  position: absolute;
+  inset: 0;
+  -webkit-mask: linear-gradient(to bottom, rgb(0 0 0 / 0.42) 45%, #000 49.5%, rgb(0 0 0 / 0.1) 50%) 0 100% / 100% 200% no-repeat;
+  mask: linear-gradient(to bottom, rgb(0 0 0 / 0.42) 45%, #000 49.5%, rgb(0 0 0 / 0.1) 50%) 0 100% / 100% 200% no-repeat;
+}
+.ig-ghost-lines {
+  opacity: 0.7;
+}
 
 /* Sized so "Intelligence," spans ~90% of the container (Archivo sets it at ~5.05em wide), capped by height. */
 .ig-title {
@@ -669,10 +688,57 @@ html.lenis body {
   html[data-tier='rich'][data-pour]:not([data-go]) .ig-cool::after {
     animation-play-state: paused;
   }
-  /* Until the 3D logo has drawn, the ring stands there as a faint cold mould (no dead first second); the 3D mould
-     takes over from it. */
+  /* Until the 3D logo has drawn, the ghost stands there faintly (no dead first second). When the pour starts
+     (.ig[data-pouring], set on the same frame as html[data-go]) its scan front draws it in from the top (0-0.9 s); the
+     metal covers its outlines as it fills them; what is left of it fades at 4.0-4.4 s, before the logo is released.
+     If the scene isn't up in time (no pour), it simply goes. --gd is each animation's delay at full tempo. */
   html[data-tier='rich'][data-pour]:not([data-go]) .ig-svg {
-    opacity: 0.16;
+    opacity: 0;
+  }
+  html[data-tier='rich'][data-pour]:not([data-go]) .ig-ghost,
+  .js .ig[data-pouring] .ig-ghost {
+    display: block;
+  }
+  .js .ig[data-pouring] .ig-ghost-scan {
+    --gd: 0ms;
+    animation: ig-ghost-scan calc(900ms * var(--T)) cubic-bezier(0.45, 0, 0.35, 1) calc(var(--gd) * var(--T)) both;
+  }
+  .js .ig[data-pouring] .ig-ghost {
+    --gd: 4000ms;
+    animation: ig-ghost-out calc(400ms * var(--T)) ease-in calc(var(--gd) * var(--T)) both;
+  }
+  /* ?pourdebug: the pour clock comes from window.__pourT (--pt, seconds), so the ghost, the headline and the glow are
+     scrubbed with the metal (contact sheets). Same delays as above. */
+  .js .ig[data-pourdebug] :is(.ig-ghost, .ig-ghost-scan) {
+    animation-play-state: paused;
+    animation-delay: calc((var(--gd) - var(--pt, 0) * 1000ms) * var(--T));
+  }
+  .js .ig[data-pourdebug] .ig-in {
+    animation-play-state: paused;
+    animation-delay: calc((1800ms + var(--ld, 0ms) - var(--pt, 0) * 1000ms) * var(--T));
+  }
+  .js .ig[data-pourdebug] .ig-cool::after {
+    animation-play-state: paused;
+    animation-delay: calc((400ms - var(--pt, 0) * 1000ms) * var(--T));
+  }
+  .js .ig[data-pourdebug] .ig-meta > * {
+    animation-play-state: paused;
+    animation-delay: calc((2100ms + var(--mi, 0) * 110ms - var(--pt, 0) * 1000ms) * var(--T));
+  }
+  .js .ig[data-pourdebug] .ig-glow span {
+    animation-play-state: paused;
+    animation-delay: calc((1800ms - var(--pt, 0) * 1000ms) * var(--T)), calc((4400ms - var(--pt, 0) * 1000ms) * var(--T));
+  }
+}
+@keyframes ig-ghost-scan {
+  to {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+}
+@keyframes ig-ghost-out {
+  to {
+    opacity: 0;
   }
 }
 @keyframes ig-glow {

@@ -11,7 +11,7 @@ export const FS = `#version 300 es
 precision highp float;
 in vec3 vP;in vec3 vW;in vec3 vO;out vec4 o;
 uniform int uMat;uniform float uTone,uTemp,uGlow,uSeed,uGrain,uExp,uRel;uniform vec2 uTemper;
-uniform vec3 uEye;uniform vec4 uCav,uRelP,uClip;uniform float uTy;uniform mat3 uNM;uniform sampler2D uRelT;
+uniform vec3 uEye;uniform vec4 uCav,uRelP,uClip;uniform float uTy,uEdge;uniform mat3 uNM;uniform sampler2D uRelT;
 float h3(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float vn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
 return mix(mix(mix(h3(i),h3(i+vec3(1,0,0)),f.x),mix(h3(i+vec3(0,1,0)),h3(i+vec3(1,1,0)),f.x),f.y),
@@ -65,7 +65,7 @@ col=min(col,vec3(1.,.4,.12));
 col+=vec3(1.,.8,.55)*(pow(max(dot(n,normalize(normalize(vec3(-.55,.65,.72))+v)),0.),70.)*.85+pow(max(dot(n,normalize(normalize(vec3(.1,-.9,.4))+v)),0.),30.)*.25)*(1.-.5*bl);
 }else if(uMat==2){
 vec3 q=p*uGrain*1.6+uSeed*3.;q+=vec3(vn(q*1.7),vn(q*1.7+4.),vn(q*1.7+9.))*1.1;float cn=.6*vn(q)+.4*vn(q*2.1);
-float Tl=clamp(uTemp+uTy*vW.y,0.,1.);float T=clamp(Tl+(h0-.5)*.1+rl*.1,0.,1.);
+float Tl=clamp(uTemp+uTy*vW.y,0.,1.);Tl=max(Tl-uEdge*(1.-abs(dot(n,v))),min(Tl,.48));float T=clamp(Tl+(h0-.5)*.1+rl*.1,0.,1.);
 vec3 em=ramp(T);
 float cv=smoothstep(.42,.6,(1.-T)*1.6-.5+(cn-.5)*1.25);
 vec3 al=bone*mix(.05,1.,pow(1.-Tl,6.))*(.74+.5*h0)*(1.+.07*rl);
