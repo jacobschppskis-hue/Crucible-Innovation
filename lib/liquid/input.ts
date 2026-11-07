@@ -10,6 +10,17 @@
 // 24 px, each ringing from its own start: at sweep speed their phases fell a third of a period apart and cancelled near
 // the pointer, so the wake only lined up 50-150 px behind it.) A tap is one bigger ringing drop.
 //
+// Faster than the waves (a flick, a drag) the source hands over to drops along the path, one every `dgap` px, each
+// ringing a few cycles from the moment the pointer passed it: their rings line up into the two arms of a V, a few ridges
+// each. A drop's strength is per px of path, so a faster stroke leaves at least as much wake as a slower one (v2r2's
+// drops were per unit of time: a 3000 px/s drag left a seventh of the sweep's wake, one faint outline).
+//
+// Scroll: a pointer resting on the glass while the page scrolls moves through the water (anchored to the page) at the
+// scroll's speed, mostly SLOWER than the waves (a 275 px/s scroll is Mach 0.65). Any source there, oscillating or not,
+// makes rings that enclose the pointer and stay with it on screen: v2r2's "sonar tunnel". So the scroll wake goes to the
+// fine band (sim.ts FINE: short ripples that are slower, 170 px/s, and die out within ~300 px), always as drops: the same
+// scroll outruns those ripples, and they trail behind the pointer in a narrow V of two or three ridges.
+//
 // Touch: a finger that pans the page moves WITH the page, so in page space it barely moves; its source sits at the spot
 // it touches and sings by how fast it moves on the glass. `touchmove` (passive) keeps arriving during a native pan,
 // unlike pointer events (the browser cancels those). After the finger lifts, its last position on the glass acts like a
@@ -22,9 +33,11 @@ import { HZ, SIM, type Stamp } from './sim';
  *  pointer's strength at 400 px/s (velocity kicks, px of height per second, at the crest of the oscillation); up /
  *  down: how fast it starts and how long it rings out after the pointer stops (s). mach: speeds (in wave speeds) over
  *  which it hands over to drops along the path (dropK: their strength relative to `rate`). gap / every: px of path or s
- *  between drops and recorded sources (`__liquid.sources()`). drop / tap: how long a drop rings (s) and its decay (s); tapK: a tap's total
- *  strength relative to one second of `rate`. */
-export const TUNE = { osc: 8.5, rate: 70, size: 1.8, up: 0.03, down: 0.12, mach: [1.6, 3], dropK: 2.2, gap: 24, every: 0.1, dropLen: 0.24, dropTau: 0.07, tapK: 0.9, tapLen: 0.5, tapTau: 0.14 };
+ *  between recorded sources (`__liquid.sources()`); dgap: px of path between drops. drop / path / tap: how long a
+ *  floater's drop, a path drop and a tap ring (s) and their decay (s); tapK: a tap's total strength relative to one
+ *  second of `rate`. fosc / fK / fLen / fTau: the scroll wake's drops in the fine band (Hz, strength relative to path
+ *  drops, ring time, decay). */
+export const TUNE = { osc: 8.5, rate: 70, size: 1.8, up: 0.03, down: 0.12, mach: [1.6, 3], dropK: 3, gap: 24, dgap: 10, every: 0.1, dropLen: 0.24, dropTau: 0.07, pathLen: 0.42, pathTau: 0.14, tapK: 0.9, tapLen: 0.5, tapTau: 0.14, fosc: 5, fK: 1.5, fLen: 0.6, fTau: 0.22 };
 const K_SCROLL = 0.75; // the page moving past a resting pointer (relative)
 const K_PAN = 0.8; // a finger panning the page (relative, by its speed on the glass)
 const TAP_PX = 10; // travel between down and up above which it was a drag, not a tap
@@ -38,7 +51,7 @@ const strength = (v: number) => {
 export type Kind = 'move' | 'tap' | 'scroll' | 'touch' | 'float';
 export type SourceRec = { x: number; y: number; t0: number; amp: number; kind: Kind };
 
-type Burst = { x: number; y: number; a: number; t0: number; len: number; tau: number; s: number };
+type Burst = { x: number; y: number; a: number; t0: number; len: number; tau: number; s: number; w: number; b: 0 | 1 };
 
 type Ptr = {
   cx: number; // client px now
@@ -57,9 +70,10 @@ type Ptr = {
   a: number; // the moving source's strength now (eased towards the pointer's)
   agg: number; // px of path since the last notification (interim 3D sources)
   aggT: number;
+  drem: number; // px of path until the next drop (faster than the waves)
 };
 
-const fresh = (): Ptr => ({ cx: 0, cy: 0, lx: NaN, ly: NaN, lcx: 0, lcy: 0, lcx0: 0, lcy0: 0, pts: [], speed: 0, pspeed: 0, rem: 0, lastDrop: -9, a: 0, agg: 0, aggT: 0 });
+const fresh = (): Ptr => ({ cx: 0, cy: 0, lx: NaN, ly: NaN, lcx: 0, lcy: 0, lcx0: 0, lcy0: 0, pts: [], speed: 0, pspeed: 0, rem: 0, lastDrop: -9, a: 0, agg: 0, aggT: 0, drem: 0 });
 
 /**
  * Listen to the page. `notify` hears a coarse version of the same events (a point every ~40 px of travel, taps), for
@@ -165,10 +179,10 @@ export function createInput(notify: (x: number, y: number, amp: number, size: nu
 
   const sigma = { s: 10.4, m: 10.4 }; // px: a drop's kernel, the moving source's
   /** A ringing drop at page px (x, y): `a` = its total strength (velocity kicks summed over its life, px). */
-  function burst(x: number, y: number, a: number, t0: number, len = TUNE.dropLen, tau = TUNE.dropTau, s = sigma.s, user = true) {
+  function burst(x: number, y: number, a: number, t0: number, len = TUNE.dropLen, tau = TUNE.dropTau, s = sigma.s, user = true, b: 0 | 1 = 0) {
     if (user) lastUser = Math.max(lastUser, t0);
     // normalise so `a` is the drop's total (the ringing envelope integrates to about tau)
-    bursts.push({ x, y, a: a / tau, t0, len, tau, s });
+    bursts.push({ x, y, a: a / tau, t0, len, tau, s, w: 2 * Math.PI * (b ? TUNE.fosc : TUNE.osc), b });
   }
 
   /** Walk one pointer's path since the last frame: its source sings along it, and the path is recorded. */
@@ -185,6 +199,7 @@ export function createInput(notify: (x: number, y: number, amp: number, size: nu
       P.pspeed = 0;
       P.a = 0;
       P.rem = TUNE.gap * 0.5;
+      P.drem = 0;
       return;
     }
     // the path in page px: last end, the events' own points, now
@@ -220,9 +235,11 @@ export function createInput(notify: (x: number, y: number, amp: number, size: nu
     const pan = touch && fs > 0 ? Lc - L : 0;
     const k = TUNE.rate * fs * Math.max(moving ? (byScroll ? K_SCROLL : 1) : 0, pan > 1.5 ? K_PAN : 0);
     // Faster than the waves (a flick) the source hands over to drops: each spot of the path rings from the moment the
-    // pointer passed it, so the drops' rings line up into the two smooth arms of a V, each a short ripple train. (The
-    // oscillator alone would alternate its sign every half period along a fast path: beads, not arms.)
-    const m = moving ? Math.min(1, Math.max(0, (P.pspeed / SIM.speed - TUNE.mach[0]) / (TUNE.mach[1] - TUNE.mach[0]))) : 0;
+    // pointer passed it, so the drops' rings line up into the two arms of a V, each a short ripple train. (The
+    // oscillator alone would alternate its sign every half period along a fast path: beads, not arms.) The scroll wake
+    // is always drops, in the fine band (see the top of this file).
+    const fine = byScroll;
+    const m = fine ? 1 : moving ? Math.min(1, Math.max(0, (P.pspeed / SIM.speed - TUNE.mach[0]) / (TUNE.mach[1] - TUNE.mach[0]))) : 0;
     const wd = m * m * (3 - 2 * m);
     sing(P, path, L, dt, t, k * (1 - wd));
     if (k > 0) lastUser = t;
@@ -233,26 +250,35 @@ export function createInput(notify: (x: number, y: number, amp: number, size: nu
       coarse(P, x1, y1, pan, fs, t);
     }
     if (!moving) return;
-    // record where the source went: a point every `gap` px of path, or every `every` s while it moves slowly
+    // record where the source went: a point every `gap` px of path, or every `every` s while it moves slowly; faster
+    // than the waves, a drop every `dgap` px
     let s = 0;
     let next = P.rem;
+    let nextD = P.drem;
+    const dgap = TUNE.dgap;
+    // a drop's strength per px of path; the scroll wake's stops growing above 400 px/s (a fast wheel would otherwise
+    // draw a long bright needle: its V is narrow anyway)
+    const kd = (fine ? Math.min(k, TUNE.rate * K_SCROLL) * TUNE.fK : k) * TUNE.dropK;
     const t0 = t - dt;
     for (let i = 2; i < path.length; i += 2) {
       const ax = path[i - 2];
       const ay = path[i - 1];
       const l = Math.hypot(path[i] - ax, path[i + 1] - ay);
+      while (nextD <= s + l) {
+        const u = l ? (nextD - s) / l : 1;
+        if (wd > 0) burst(ax + (path[i] - ax) * u, ay + (path[i + 1] - ay) * u, (kd * wd * dgap) / 400, t0 + (dt * nextD) / L, fine ? TUNE.fLen : TUNE.pathLen, fine ? TUNE.fTau : TUNE.pathTau, sigma.s, true, fine ? 1 : 0);
+        nextD += dgap;
+      }
       while (next <= s + l) {
         const u = l ? (next - s) / l : 1;
         const tt = t0 + (dt * next) / L;
-        const x = ax + (path[i] - ax) * u;
-        const y = ay + (path[i + 1] - ay) * u;
-        if (wd > 0) burst(x, y, k * TUNE.dropK * wd * Math.min(0.1, Math.max(1 / 240, tt - P.lastDrop)), tt);
-        record(x, y, k, kind, tt);
+        record(ax + (path[i] - ax) * u, ay + (path[i + 1] - ay) * u, k, kind, tt);
         P.lastDrop = tt;
         next += TUNE.gap;
       }
       s += l;
     }
+    P.drem = nextD - s;
     P.rem = next - s;
     if (t - P.lastDrop >= TUNE.every) {
       record(x1, y1, k, kind, t);
@@ -343,7 +369,6 @@ export function createInput(notify: (x: number, y: number, amp: number, size: nu
     // every live drop rings: 4 samples per frame (smooth at 120 Hz substeps), each with its moment in the frame
     const out: Stamp[] = sung.slice();
     const J = 4;
-    const w = 2 * Math.PI * TUNE.osc;
     for (let i = bursts.length - 1; i >= 0; i--) {
       const b = bursts[i];
       for (let j = 0; j < J; j++) {
@@ -351,7 +376,7 @@ export function createInput(notify: (x: number, y: number, amp: number, size: nu
         const tau = t - dt + f * dt - b.t0;
         if (tau < 0 || tau > b.len) continue;
         const env = Math.exp(-tau / b.tau) * (1 - tau / b.len);
-        out.push({ x: b.x, y: b.y, a: (b.a * env * Math.cos(w * tau) * dt) / J, s: b.s, f });
+        out.push({ x: b.x, y: b.y, a: (b.a * env * Math.cos(b.w * tau) * dt) / J, s: b.s, f, b: b.b });
       }
       if (t - b.t0 > b.len) bursts.splice(i, 1);
     }

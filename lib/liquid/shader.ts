@@ -5,8 +5,10 @@
 // The surface is SHADED, not outlined:
 // - environment: it reflects a very dark sky, near black below and dark warm grey towards the top of the screen, so
 //   every slope shows as a tonal band. At rest the swell moves only this faint, broad sheen (never a line, never Ember).
+//   Waves only ever ADD light to the surface around them: a steep face that would reflect the black part of the sky
+//   keeps the swell's own sheen, so a wake, a trough or the steep water right at the pointer never reads as a hole.
 // - key: a warm light low on the bottom edge (Blinn-Phong). Interaction waves (the grid: cursor, taps, fingers, scroll)
-//   catch it: a soft lobe gives their lit faces a warm body and the far faces fall into shadow, and the sharp core gives
+//   catch it: a soft lobe gives their lit faces a warm body and the far faces a light shadow, and the sharp core gives
 //   crisp Ember glints. The light is a strip along that edge (wide across the screen, narrow up it), so every crest
 //   flank that faces it catches a streak along the crest, not one fleck; glints only show where the surface curves
 //   (a crest), never as a wide puddle where a gentle slope happens to face the light. The swell is too gentle to reach
@@ -31,11 +33,13 @@ export const LOOK = {
   coreK: 1.0,
   coreX: 4, // the key's width across the screen relative to its height (1 = a round lamp, more = a strip of light)
   crisp: [0.002, 0.005] as number[], // curvature (|laplacian|, 1/px) over which a glint fades in: off when [0, 0]
-  shade: 0.55, // far faces fall into shadow: darkening of the ground (0..1) at full turn-away
+  shade: 0.15, // faces tilted away from the key (towards the top of the screen) fall into a light shadow (0..1)
+  dip: -0.01, // how much darker than the swell's own sheen a wave may reflect (sky units): never a hole
   env: [0.15, 0.14, 0.13], // the sky's brightest (dark warm grey), towards the top of the screen
   envW: 0.38, // its spread (tilt)
   caustic: 0.025,
-  textCap: 0.2, // the key behind body text: at most this (bone-dim text keeps 4.7:1 even at the centre of a glint)
+  textCap: 0.17, // the key behind body text: at most this (bone-dim text keeps 4.65:1 even at the centre of a glint
+  // on the swell's brightest sheen, worked out from this formula)
 };
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
@@ -112,7 +116,11 @@ void main() {
 
   // environment: the whole surface (interaction waves + swell) reflects the dark sky; flat = exactly the ground
   vec2 ta = gr * ${f(LOOK.relief)} + sw.yz * ${f(LOOK.reliefSwell)};
-  float env = sky(-2.0 * ta) - sky(vec2(0.0));
+  // Interaction waves only ever add sky to what the swell shows: a steep face that would reflect the black part of the
+  // sky keeps the swell's own sheen (a hair darker at most), so a wake or a trough never reads as a hole.
+  float s0 = sky(vec2(0.0));
+  float es = sky(-2.0 * sw.yz * ${f(LOOK.reliefSwell)}) - s0;
+  float env = es + max(sky(-2.0 * ta) - s0 - es, ${f(LOOK.dip)});
   vec3 col = GROUND + (${v3(LOOK.env)} - GROUND) * env * mix(1.0, 0.6, clamp(mk, 0.0, 1.0));
 
   // key: interaction waves only (the swell never reaches it)
@@ -126,8 +134,9 @@ void main() {
   float am = max(fwidth(m), 1e-4);
   float core = (1.0 - smoothstep(1.0 - am, 1.0 + am, m)) * (0.6 + 0.4 * (1.0 - smoothstep(0.0, 1.0, m)));
   ${LOOK.crisp[1] > 0 ? `core *= smoothstep(${f(LOOK.crisp[0])}, ${f(LOOK.crisp[1])}, abs(lap));` : ''}
-  // far faces turn away from the key and fall into shadow
-  float away = clamp((KEY.z - dot(n, KEY)) * 3.0, 0.0, 1.0);
+  // faces turned away from the key (towards the top of the screen) fall into a light shadow; a face that only leans
+  // sideways or is steep does not (v2r2 darkened every steep face by up to 55%: a black core at the pointer)
+  float away = clamp(dot(gr * ${f(LOOK.relief)}, KEY.xy) * 3.0, 0.0, 1.0);
   col *= 1.0 - ${f(LOOK.shade)} * away;
   // caustic: faint warm light where the surface focuses it
   float ca = ${f(LOOK.caustic)} * smoothstep(0.0, 0.01, -lap) * smoothstep(0.01, 0.06, length(gr));

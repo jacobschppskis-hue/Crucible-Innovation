@@ -1,14 +1,19 @@
 // Rich tier for the home Thesis: a fire that comes up with the reading (293 K → 1811 K).
 //
-// One fragment shader on a canvas that covers only the bottom of the scene (the fire never climbs higher), transparent
-// wherever there is no flame so the page liquid shows through, around the tongues and between them. Two inputs, kept
-// apart on purpose:
-//   - time only carries the flames upward, at one calm pace (RISE) whatever the heat, so the fire never speeds up;
-//   - heat only shapes it: how wide the burning bed is, how tall the tongues reach, how bright and how hot they look.
-// Nothing glows below ~800 K (the Draper point); at 1811 K a bed of separate tongues burns along the floor, about a
-// sixth of the screen high, dark red at the tips and orange in the cores. Every tongue has a crisp edge at screen
-// resolution (a threshold of a smooth field, antialiased over about a pixel), so it reads as flame, not as a blurred
-// texture. Heat is followed with a rate-limited ease, so a scroll jump still brings the fire up gradually.
+// How it is drawn (the P5c lab, .board/v2/p5c/LAB.md): every point of the fire is gas that left the burning bed at one
+// place and one moment and has risen since at exactly RISE, so its age is its height / RISE, and everything in the
+// flames (necks, ripples, a top that lets go) climbs at that one pace whatever the heat. The outline is where that gas
+// has burnt out: gas burns until its age reaches its fuel * LIFE. The bases along the floor release their fuel in puffs
+// that start quickly and thin out fast, so inside a puff the later, leaner gas burns out first: the puff necks, lets go,
+// and its top keeps climbing at RISE while it burns away from below. (With smooth, even bursts the oldest gas at the top
+// would die first, the tops would be eaten from above and the tongues would pulse in place.)
+// Heat never touches time: it sets how long the gas burns (how tall the tongues reach), how much of the floor burns and
+// how bright and hot the light is. Nothing glows below ~800 K and the fire stays small and sparse to ~1200 K; at 1811 K
+// tall tongues stand in clusters, the tallest near a fifth of the screen, with licks and dark gaps over one warm bed.
+// Colour is temperature: amber cores low in the thick tongues, orange bodies, deep red thin tips and let-go pieces.
+// Every edge is crisp at screen resolution (a threshold antialiased over about a pixel); the canvas is transparent around
+// and between the tongues, so the liquid shows through. Heat is followed with a rate-limited ease, so a scroll jump still
+// brings the fire up gradually.
 // Drawn on the one clock (`onFrame`) only while on screen; it steps its resolution down on slow frames (never while a
 // harness drives the clock).
 import { clock, clockHeld, onFrame, renderer } from '@/lib/liquid/loop';
@@ -27,14 +32,16 @@ ${swellGLSL()}
 vec2 canvasPos(vec2 uv) { return vec2(uv.x, 1.0 - uv.y) * uCss; }
 `;
 
-// Upward flow in viewport heights per second. One constant for every heat: the tongues climb at the same pace at
-// 800 K and at 1811 K.
+// Upward flow in viewport heights per second. One constant for every heat: the gas climbs at the same pace at 800 K
+// and at 1811 K.
 const RISE = 0.17;
 
-// The canvas covers this share of the scene's height, from the floor up (globals.css `.thesis-gl`).
+// The canvas covers this share of the scene's height, from the floor up (globals.css `.thesis-gl`); at 1811 K the
+// tallest clusters reach about 0.2, and nothing can pass 0.29.
 export const FLAME_SPAN = 0.3;
 
 // Units: P = canvas px / uVh, so heights are fractions of the scene (viewport) height and x is in the same unit.
+// Noise: simplex 2D/3D by Ian McEwan, Ashima Arts (MIT); hash by Dave Hoskins, "Hash without Sine" (MIT).
 const FRAG = `
 precision highp float;
 ${WAVES}
@@ -44,103 +51,225 @@ uniform float uTime, uK; // flow time (s), heat 0..1
 uniform vec3 uMouse; // canvas px from bottom-left, strength
 const float RISE = ${RISE.toFixed(3)};
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float noise(vec2 p) {
-  vec2 i = floor(p), f = fract(p);
-  vec2 u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y);
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
+vec3 permute(vec3 x) { return mod289(((x * 34.0) + 10.0) * x); }
+vec4 permute(vec4 x) { return mod289(((x * 34.0) + 10.0) * x); }
+float snoise(vec2 v) {
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439, -0.577350269189626, 0.024390243902439);
+  vec2 i = floor(v + dot(v, C.yy));
+  vec2 x0 = v - i + dot(i, C.xx);
+  vec2 i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);
+  vec4 x12 = x0.xyxy + C.xxzz;
+  x12.xy -= i1;
+  i = i - floor(i * (1.0 / 289.0)) * 289.0;
+  vec3 p = permute(permute(i.y + vec3(0.0, i1.y, 1.0)) + i.x + vec3(0.0, i1.x, 1.0));
+  vec3 m = max(0.5 - vec3(dot(x0, x0), dot(x12.xy, x12.xy), dot(x12.zw, x12.zw)), 0.0);
+  m = m * m;
+  m = m * m;
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;
+  vec3 h = abs(x) - 0.5;
+  vec3 ox = floor(x + 0.5);
+  vec3 a0 = x - ox;
+  m *= 1.79284291400159 - 0.85373472095314 * (a0 * a0 + h * h);
+  vec3 g;
+  g.x = a0.x * x0.x + h.x * x0.y;
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;
+  return 130.0 * dot(m, g);
 }
-float fbm(vec2 p) {
-  float v = 0.0, a = 0.5;
-  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
-  for (int i = 0; i < 3; i++) { v += a * noise(p); p = m * p; a *= 0.5; }
-  return v / 0.875;
+float snoise(vec3 v) {
+  const vec2 C = vec2(1.0 / 6.0, 1.0 / 3.0);
+  const vec4 D = vec4(0.0, 0.5, 1.0, 2.0);
+  vec3 i = floor(v + dot(v, C.yyy));
+  vec3 x0 = v - i + dot(i, C.xxx);
+  vec3 g = step(x0.yzx, x0.xyz);
+  vec3 l = 1.0 - g;
+  vec3 i1 = min(g.xyz, l.zxy);
+  vec3 i2 = max(g.xyz, l.zxy);
+  vec3 x1 = x0 - i1 + C.xxx;
+  vec3 x2 = x0 - i2 + C.yyy;
+  vec3 x3 = x0 - D.yyy;
+  i = mod289(i);
+  vec4 p = permute(permute(permute(i.z + vec4(0.0, i1.z, i2.z, 1.0)) + i.y + vec4(0.0, i1.y, i2.y, 1.0)) + i.x + vec4(0.0, i1.x, i2.x, 1.0));
+  vec3 ns = 0.142857142857 * D.wyz - D.xzx;
+  vec4 j = p - 49.0 * floor(p * ns.z * ns.z);
+  vec4 x_ = floor(j * ns.z);
+  vec4 y_ = floor(j - 7.0 * x_);
+  vec4 x = x_ * ns.x + ns.yyyy;
+  vec4 y = y_ * ns.x + ns.yyyy;
+  vec4 h = 1.0 - abs(x) - abs(y);
+  vec4 b0 = vec4(x.xy, y.xy);
+  vec4 b1 = vec4(x.zw, y.zw);
+  vec4 s0 = floor(b0) * 2.0 + 1.0;
+  vec4 s1 = floor(b1) * 2.0 + 1.0;
+  vec4 sh = -step(h, vec4(0.0));
+  vec4 a0 = b0.xzyw + s0.xzyw * sh.xxyy;
+  vec4 a1 = b1.xzyw + s1.xzyw * sh.zzww;
+  vec3 p0 = vec3(a0.xy, h.x);
+  vec3 p1 = vec3(a0.zw, h.y);
+  vec3 p2 = vec3(a1.xy, h.z);
+  vec3 p3 = vec3(a1.zw, h.w);
+  vec4 norm = 1.79284291400159 - 0.85373472095314 * vec4(dot(p0, p0), dot(p1, p1), dot(p2, p2), dot(p3, p3));
+  p0 *= norm.x;
+  p1 *= norm.y;
+  p2 *= norm.z;
+  p3 *= norm.w;
+  vec4 m = max(0.5 - vec4(dot(x0, x0), dot(x1, x1), dot(x2, x2), dot(x3, x3)), 0.0);
+  m = m * m;
+  return 105.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
 }
-vec3 blackbody(float t) {
-  vec3 c = mix(vec3(0.035, 0.03, 0.025), vec3(0.4, 0.04, 0.0), smoothstep(0.0, 0.35, t));
-  c = mix(c, vec3(1.0, 0.357, 0.122), smoothstep(0.3, 0.62, t));
-  c = mix(c, vec3(1.0, 0.702, 0.278), smoothstep(0.6, 0.85, t));
+// Blackbody colour on the site's stops: dark, deep red, Ember (#ff5b1f), ember-hot (#ffb347), white heat.
+vec3 heatRamp(float t) {
+  vec3 c = mix(vec3(0.05, 0.012, 0.0), vec3(0.42, 0.045, 0.0), smoothstep(0.0, 0.32, t));
+  c = mix(c, vec3(1.0, 0.357, 0.122), smoothstep(0.28, 0.62, t));
+  c = mix(c, vec3(1.0, 0.702, 0.278), smoothstep(0.6, 0.86, t));
   return mix(c, vec3(1.0, 0.95, 0.86), smoothstep(0.88, 1.0, t));
 }
-// One row of tongues, one per slot along the floor (jittered), each with its own height that breathes slowly: widest a
-// little above the base, tapering to a thin point, and frayed toward the tip by the rising turbulence tb. Returns
-// the row's light (premultiplied): a crisp edge about a device pixel wide, hotter and denser toward the core and base.
-vec4 tongues(float xs, float y, float slot, float seed, float lo, float hi, float tb, float gas, float k, float Hmax, float hw, float wv, float t) {
-  float fx = xs / slot;
-  float ci = floor(fx);
-  float dd = -1.0, yt = 1.0, wd = 1.0;
+// How much of the floor burns: a patch in the middle at first glow, the whole width when hot; its ends wander.
+float bedMask(float x, float wv, float e, float t) {
+  float cx = abs(x / wv - 0.5) * 2.0;
+  float hw = mix(0.16, 1.32, pow(e, 0.8));
+  return 1.0 - smoothstep(hw - 0.3, hw, cx + 0.2 * snoise(vec2(x * 1.3 + 7.0, t * 0.05)));
+}
+// Two strong bases merged into one tongue still stay inside the band: fuel is capped softly at 1.1 (1.1 tanh(f / 1.1)),
+// which leaves one base's fuel nearly as it is.
+float softcap(float f) {
+  float q = exp(-1.8182 * f);
+  return 1.1 * (1.0 - q) / (1.0 + q);
+}
+// A value that wanders smoothly over time (0..1), one per cell.
+float wob(float c, float te, float seed) {
+  float i = floor(te), f = fract(te);
+  return mix(hash12(vec2(c + seed, i)), hash12(vec2(c + seed, i + 1.0)), f * f * (3.0 - 2.0 * f));
+}
+// Where the fire gathers: one cluster in every 0.6-vh stretch of floor, wandering inside it, 0.24-0.38 vh wide, its
+// strength drifting; between them only low licks over the bed. (Explicit, so every screen has clusters and gaps: a
+// smooth noise is often nearly flat across one screen and then the bed burns evenly.)
+float clusters(float x, float te) {
+  const float CW = 0.6;
+  float ci = floor(x / CW), m = 0.0;
   for (int j = -1; j <= 1; j++) {
     float c = ci + float(j);
-    float r1 = hash(vec2(c, seed)), r2 = hash(vec2(c, seed + 4.6)), r3 = hash(vec2(c, seed + 8.2));
-    float xc = c + 0.5 + (r1 - 0.5) * 0.6;
-    // tongues toward the ends of the bed are shorter
-    float bc = 1.0 - smoothstep(hw - 0.4, hw, abs(xc * slot / wv - 0.5) * 2.0);
-    float hc = Hmax * mix(lo, hi, r3) * (0.7 + 0.6 * noise(vec2(c * 1.7 + seed, t * (0.22 + 0.16 * r2)))) * bc;
-    float yn = y / max(hc, 0.002);
-    float w0 = 0.4 + 0.25 * r2;
-    float hwd = w0 * pow(max(1.0 - yn, 0.0), 1.15) * (1.0 + 0.9 * yn);
-    float dj = (hwd - abs(fx - xc)) * slot - max(yn - 1.0, 0.0) * hc;
-    if (dj > dd) { dd = dj; yt = yn; wd = w0 * slot; }
+    float xc = (c + 0.25 + 0.5 * wob(c, te * 0.06, 1.0)) * CW;
+    float hw = CW * (0.2 + 0.12 * wob(c, te * 0.08, 7.0));
+    float amp = 0.7 + 0.3 * wob(c, te * 0.1, 3.0);
+    m = max(m, amp * (1.0 - smoothstep(0.35, 1.0, abs(x - xc) / hw)));
   }
-  float d = dd + (tb - 0.5) * wd * (0.1 + 1.3 * clamp(yt, 0.0, 1.2)) - 0.0015;
-  float w = fwidth(d);
-  w = (w > 0.0 && w < 0.02) ? w * 0.7 : 0.02;
-  float inside = smoothstep(-w, w, d);
-  float core = clamp(d / (0.75 * wd), 0.0, 1.0);
-  float base = 1.0 - clamp(yt, 0.0, 1.0);
-  float temp = mix(0.3, 0.45, k) + (0.08 + 0.13 * k) * core * sqrt(base) + 0.07 * base * base + (gas - 0.5) * 0.08;
-  float a = inside * (0.34 + 0.56 * core) * (0.5 + 0.5 * base) * (0.9 + 0.2 * gas);
-  return vec4(blackbody(clamp(temp, 0.0, 0.72)) * a, a);
+  return m;
+}
+// A base's puffs at emission time te: x = fuel 0..1 (a quick start, then a tail that thins out and ends at exactly 0,
+// each puff its own strength), y = how far through its puff. Every base keeps its own pace, about 1-1.6 puffs a second.
+vec2 puff(float c, float te, float seed, float rate) {
+  float nu = rate * (0.8 + 0.45 * hash12(vec2(c, seed + 3.1)));
+  float ph = te * nu + hash12(vec2(c, seed + 7.7)) + 0.25 * snoise(vec2(c * 0.61 + seed, te * 0.35));
+  float n = floor(ph), u = fract(ph);
+  float A = 0.3 + 0.7 * hash12(vec2(c * 1.13 + seed, n));
+  return vec2(A * smoothstep(0.0, 0.18, u) * (exp(-2.8 * u) - 0.0608) * 1.8, u);
+}
+// One family of tongue bases, one per slot, each wandering along the floor. Across a base the fuel is a candle profile
+// (steep sides, a pointed top) that widens over its puff (a narrow jet first); neighbours add, so two bases that drift
+// together merge into one taller tongue, and part again. s = how strongly this stretch of floor burns.
+float bases(float x0, float te, float slot, float seed, float amp, float s, float rate) {
+  float ci = floor(x0 / slot);
+  float f = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    float c = ci + float(j);
+    float xi = (c + 0.5 + 0.48 * snoise(vec2(c * 0.73 + seed, te * 0.25))) * slot;
+    vec2 pf = puff(c, te, seed, rate);
+    float q = s * (0.18 + 0.82 * pf.x);
+    float w = slot * 0.6 * (0.5 + 0.4 * q) * (0.45 + 0.55 * smoothstep(0.0, 0.35, pf.y) * (1.0 - smoothstep(0.7, 1.0, pf.y)));
+    f += amp * q * pow(max(0.0, 1.0 - abs(x0 - xi) / w), 0.75);
+  }
+  return f;
 }
 void main() {
-  float k = uK;
-  // Heat sets how tall the tongues may reach and how much they glow: nothing below ~800 K, a sixth of the scene high at
-  // 1811 K.
-  float glow = smoothstep(0.2, 0.62, k);
-  float Hmax = 0.17 * smoothstep(0.17, 1.0, k);
+  // Nothing glows below ~800 K (k 0.33, the Draper point); all of the fire at 1811 K.
+  float e = clamp((uK - 0.32) / 0.68, 0.0, 1.0);
+  if (e <= 0.0) { gl_FragColor = vec4(0.0); return; }
   vec2 uv0 = gl_FragCoord.xy / uRes;
   // refraction: seen through the liquid, the flames shift a few px along the swell's slope
   vec3 sw = swell(canvasPos(uv0));
   vec2 P = (gl_FragCoord.xy + sw.yz * vec2(1.0, -1.0) * 90.0 * uRes / uCss) / uVh;
-  float y = P.y;
-  // Above the tallest possible tip: nothing to draw.
-  if (y > Hmax * 1.6 + 0.004) { gl_FragColor = vec4(0.0); return; }
+  // A narrow screen sees a narrower slice of the same bed, with slimmer tongues, so a phone still shows several.
+  float xs = clamp(uRes.x / uVh / 1.2, 0.65, 1.0);
+  float x = P.x / xs, y = P.y, wv = uRes.x / uVh / xs;
+  float LIFE = 0.42 + 1.08 * e * sqrt(e); // how long the richest gas burns (s): how tall the tongues reach (small and
+  // gentle up to ~1200 K, the tallest clusters near a fifth of the screen at 1811 K)
+  float a = y / RISE; // the age of the gas here
+  if (a > LIFE + 0.25) { gl_FragColor = vec4(0.0); return; }
   float t = uTime;
-  float up = t * RISE; // how far the flow has climbed: never depends on the heat
-  // The bed: how much of the floor burns. A patch in the middle when it first glows, nearly the whole width when hot;
-  // its ends wander slowly so they never read as a stencil.
-  float wv = uRes.x / uVh;
-  float cx = abs(P.x / wv - 0.5) * 2.0;
-  float hw = mix(0.2, 1.08, smoothstep(0.2, 1.0, k));
-  float bed = 1.0 - smoothstep(hw - 0.35, hw, cx + (noise(vec2(P.x * 2.0 + 7.0, t * 0.05)) - 0.5) * 0.3);
-  // Sway: a lean that travels up the tongues at the flow's pace (an S-curve in the tall ones), more toward the tips.
-  float sway = noise(vec2(P.x * 6.0, (y - up) * 7.0 + 3.0)) - 0.5;
-  float xs = P.x + sway * (0.004 + 0.36 * y);
-  // Turbulence carried upward at the same pace frays the tongues toward their tips, which break off into wisps.
-  float tb = fbm(vec2(xs * 34.0, (y - up) * 11.0));
-  // Brighter and darker gas rising through the tongues, at the same pace.
-  float gas = noise(vec2(xs * 26.0 + 5.0, (y - up) * 16.0));
-  // Two rows of tongues, their light adding up where they cross: tall ones behind, short ones licking in front.
-  // Neighbours merge low down and part higher up, so the liquid shows between them.
-  vec4 back = tongues(xs, y, 0.05, 3.1, 0.5, 1.0, tb, gas, k, Hmax, hw, wv, t);
-  vec4 front = tongues(xs + 0.017, y, 0.034, 11.7, 0.2, 0.55, 1.0 - tb, 1.0 - gas, k, Hmax, hw, wv, t + 40.0);
-  vec4 f = back * 0.85 + front;
-  f.a = min(1.0, f.a);
+  float te = t - a; // when it left the bed
+  float fy = y - RISE * t; // the gas's own frame: whatever is drawn in it climbs at RISE
+  // Where it left the bed: undo a sway carried up with the gas (the upper parts of tall tongues whip a little) and the
+  // sideways drift it was born with (a bend that travels up the tongue).
+  float sway = a * a * 0.04 * snoise(vec3(x * 9.0, fy * 7.0, t * 0.3));
+  float x0 = x - sway;
+  for (int i = 0; i < 2; i++) x0 = x - sway - a * 0.03 * snoise(vec2(x0 * 3.1 + 11.0, te * 0.5));
+  // The strong bases stand in clusters (tall tongues), low licks and dark gaps between; while the bed is still narrow,
+  // its first flames stand in its middle.
+  float bm = bedMask(x0, wv, e, te);
+  float cl = max(clusters(x0, te), (1.0 - e) * (1.0 - smoothstep(0.0, 0.5, abs(x0 / wv - 0.5) * 2.0)));
+  float f1 = mix(0.08, 0.18, e), f2 = mix(0.3, 0.5, e); // the bed between clusters fills in a little as it heats
+  float s1 = bm * (f1 + (1.0 - f1) * cl), s2 = bm * (f2 + (1.0 - f2) * cl);
+  // The most fuel any gas here could carry (two bases of each family on one spot, at a full puff): where even that has
+  // burnt out, skip the bases.
+  float fuel = 0.0;
+  if (a / LIFE < softcap(2.0 * (s1 + 0.6 * s2)) + 0.12) {
+    // two families of bases with incommensurate slots: tall tongues, and licks
+    fuel = softcap(bases(x0, te, 0.047, 0.0, 1.0, s1, 1.25) + bases(x0, te, 0.029, 17.0, 0.6, s2, 1.9));
+  }
+  // edge ripples carried up with the gas, none at the floor
+  float rip = 0.04 * snoise(vec3(x * 20.0, fy * 13.0, t * 0.4));
+  float phi = fuel - a / LIFE + rip * smoothstep(0.0, 0.25, a / LIFE);
+  float w = clamp(fwidth(phi), 1e-5, 0.03);
+  float cov = smoothstep(-0.7 * w, 0.7 * w, phi);
+  // Light is temperature. The gas is hottest where it is fresh and deep inside a thick tongue: low in the strong tongues
+  // the core is amber (ember-hot, a touch of white at 1811 K); the body is orange; thin tips, the rim and let-go pieces
+  // are deep red and darker as they burn out, and let the liquid through. At lower heat every part is redder.
+  float burnt = clamp(a / max(fuel * LIFE, 0.04), 0.0, 1.0); // how far through its burn this gas is
+  float fresh = 1.0 - burnt;
+  float rim = smoothstep(0.0, 0.08, phi); // just inside the edge
+  float depth = smoothstep(0.06, 0.6, phi); // deep inside a thick tongue
+  float temp = 0.3 + mix(0.6, 1.0, e) * (rim * (0.14 + 0.2 * fresh) + (0.08 + 0.2 * e) * depth * fresh);
+  float op = cov * mix(0.75, 1.0, rim) * mix(1.0, 0.45, burnt * burnt) * mix(0.6, 1.0, e);
+  vec4 f = vec4(heatRamp(temp) * op, op);
+  // The bed: one low glowing band, its top uneven and slowly changing, brightest under the bases burning hardest.
+  if (y < 0.022) {
+    float top = mix(0.006, 0.011, e) * (1.0 + 0.45 * snoise(vec2(x * 21.0, t * 0.25)) + 0.25 * snoise(vec2(x * 63.0 + 3.0, t * 0.5)));
+    float hot = 0.5 + 0.5 * snoise(vec2(x * 7.0 - t * 0.03, t * 0.12));
+    float bw = 0.75 / uVh; // the band's edge is horizontal-ish: antialias it over about a pixel without derivatives
+    float bc = smoothstep(-bw, bw, top - y) * bedMask(x, wv, e, t);
+    float base = clamp(fuel * 1.3, 0.0, 1.0);
+    float bo = bc * mix(0.5, 0.9, e) * mix(0.75, 1.0, base);
+    // a warm glow, orange under the bases burning hardest, deep red between them
+    f += vec4(heatRamp(0.28 + mix(0.6, 1.0, e) * (0.12 * hot + 0.3 * base)) * bo, bo) * (1.0 - f.a);
+  }
   vec2 dm = gl_FragCoord.xy - uMouse.xy;
   f.rgb *= 1.0 + uMouse.z * 0.25 * exp(-dot(dm, dm) / (0.02 * uVh * uVh));
-  // The floor: the tongues rise out of the dark rather than from a lit line, so the scene's lower edge never shows.
-  f *= glow * bed * smoothstep(0.0, 0.014, y);
+  // the first flames come up softly over the first ~150 K above the Draper point
+  f *= smoothstep(0.0, 0.15, e);
   gl_FragColor = vec4(min(f.rgb, vec3(1.0)), f.a);
 }`;
 
 type Pass = { gl: WebGLRenderingContext; u: (n: string) => WebGLUniformLocation | null };
+
+// Software GL (no GPU): the renderer's name, as lib/liquid/engine.ts and lib/gl3d/core.ts tell it.
+function softwareGL(gl: WebGLRenderingContext) {
+  try {
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return /swiftshader|llvmpipe|software|basic render/i.test(String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER)));
+  } catch {
+    return false;
+  }
+}
 
 function makePass(canvas: HTMLCanvasElement, frag: string, opts: WebGLContextAttributes): Pass | null {
   const gl = canvas.getContext('webgl', opts);
   if (!gl) return null;
   // fwidth() for the crisp edges (supported everywhere WebGL is; without it the edge falls back to a soft one).
   const deriv = !!gl.getExtension('OES_standard_derivatives');
-  const src = deriv ? `#extension GL_OES_standard_derivatives : enable\n${frag}` : frag.replace('float w = fwidth(d);', 'float w = 0.08;');
+  const src = deriv ? `#extension GL_OES_standard_derivatives : enable\n${frag}` : frag.replace('float w = clamp(fwidth(phi), 1e-5, 0.03);', 'float w = 0.03;');
   const sh = (type: number, src: string) => {
     const s = gl.createShader(type)!;
     gl.shaderSource(s, src);
@@ -166,7 +295,7 @@ function makePass(canvas: HTMLCanvasElement, frag: string, opts: WebGLContextAtt
 // second, so even a jump (End key, anchor, a landing scroll progress) brings the fire up over most of a second.
 const HEAT_LAG = 0.3;
 const HEAT_RATE = 1.1;
-// The flames fade in over this long (clock seconds) from their first frame, over the CSS furnace (globals.css --fg).
+// The flames fade in over this long (clock seconds) from their first frame, over the CSS furnace (globals.css --gl).
 const FADE_IN = 0.8;
 
 export function startMolten({ canvas, heat, onReady, onFail }: Options): () => void {
@@ -192,9 +321,11 @@ export function startMolten({ canvas, heat, onReady, onFail }: Options): () => v
   const ph = new Float32Array(4);
   const scene = canvas.parentElement!;
 
-  // Full resolution (the edges are drawn at the pixel), stepping down only on slow frames.
+  // Full resolution (the edges are drawn at the pixel), stepping down only on slow frames. Software GL (SwiftShader,
+  // llvmpipe: CI, PageSpeed, VMs; no GPU) starts at the last step, as the liquid and the 3D do; `?liquid=full` (screenshots)
+  // keeps full resolution there too.
   const scales = [1, 0.75, 0.5];
-  let q = 0;
+  let q = softwareGL(gl) && !/[?&]liquid=full\b/.test(location.search) ? scales.length - 1 : 0;
   let vh = 1;
   const resize = () => {
     const s = scales[q] * Math.min(devicePixelRatio || 1, 2);
