@@ -75,6 +75,7 @@ function SplitBeat() {
         <span className="split-name">PayPal</span>
         {OFFSHOOTS.map((name, i) => (
           <span key={name} className="split-piece" style={{ '--i': i, '--c': i % 3, '--r': Math.floor(i / 3) } as React.CSSProperties}>
+            <span className="split-tile" />
             <span className="split-label">{name}</span>
           </span>
         ))}

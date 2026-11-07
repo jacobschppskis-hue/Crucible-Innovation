@@ -18,7 +18,7 @@ const pages = [
 export function Footer() {
   return (
     <footer className="foot relative">
-      <div className="container-x pt-24 pb-10 sm:pt-32">
+      <div data-scroll="reveal" className="foot-top container-x pt-24 pb-10 sm:pt-32">
         <p className="text-bone-dim">Write to us</p>
         <a href={`mailto:${site.email}`} className="foot-mail wide mt-3 inline-block font-display font-semibold">
           {site.email}

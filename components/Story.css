@@ -56,8 +56,7 @@
   width: calc(var(--w0) * (1 - var(--s)) + var(--w1) * var(--s));
   height: var(--h);
 }
-.split-piece::before {
-  content: '';
+.split-tile {
   position: absolute;
   inset: 0;
   /* cast metal, not a control: chamfered corners, a lit top face falling off to a cooler foot (no hard bottom edge),

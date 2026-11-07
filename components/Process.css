@@ -318,7 +318,7 @@
   --fs-soft: #4a5e51;
   /* round two of edits: the draft's leaf green deepens to the forest green they asked for */
   --fs-k: clamp(0, (var(--day) - 5.2) / 0.6, 1);
-  --fs-green: color-mix(in oklab, #1f3a2b calc(var(--fs-k) * 100%), #6f9e3a);
+  --fs-green: color-mix(in oklab, #1f3a2b calc(var(--fs-k) * 100%), #477620);
   position: absolute;
   inset: 0;
   display: flex;

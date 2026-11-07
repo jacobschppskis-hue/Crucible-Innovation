@@ -29,8 +29,10 @@ export function InView() {
     const pending = new Set<Element>(); // not yet shown
     const armed = new Set<Element>(); // hidden, waiting to enter
     let lastY = scrollY;
+    let sizedAt = -1e9; // a resize (device emulation, a full-page capture, rotation) reveals without any scrolling
+    const resized = () => performance.now() - sizedAt < 1000;
     const show = (el: Element, snap: boolean) => {
-      if (snap) el.setAttribute('data-snap', '');
+      el.toggleAttribute('data-snap', snap); // armed elements carry data-snap until their animated entrance
       el.setAttribute('data-in', '');
       pending.delete(el);
       armed.delete(el);
@@ -42,7 +44,7 @@ export function InView() {
         for (const e of entries) {
           if (!e.isIntersecting || !armed.has(e.target)) continue;
           const vh = e.rootBounds?.height ?? innerHeight;
-          if (e.intersectionRatio >= 0.15 || e.intersectionRect.height >= vh * 0.15) show(e.target, Math.abs(scrollY - lastY) > vh * 0.5);
+          if (e.intersectionRatio >= 0.15 || e.intersectionRect.height >= vh * 0.15) show(e.target, Math.abs(scrollY - lastY) > vh * 0.5 || resized());
         }
       },
       { threshold: [0, 0.01, 0.05, 0.15, 0.3] },
@@ -65,8 +67,9 @@ export function InView() {
         const wasArmed = armed.has(el);
         if (calm || r.top < vh * (wasArmed ? edge : 1)) {
           // In view or above: shown. Never hidden, passed, jumped to, restored or at rest: no animation.
-          show(el, calm || !wasArmed || jumped || r.bottom <= 0 || !moved);
+          show(el, calm || !wasArmed || jumped || r.bottom <= 0 || !moved || resized());
         } else if (!wasArmed) {
+          el.setAttribute('data-snap', ''); // hidden at once: arming must not itself be a visible fade-out
           el.setAttribute('data-arm', '');
           armed.add(el);
           io.observe(el);
@@ -86,7 +89,11 @@ export function InView() {
     sweep(); // arms what is below the fold and shows the rest
     addEventListener('scroll', soon, { passive: true });
     addEventListener('scrollend', atRest);
-    addEventListener('resize', soon);
+    const onResize = () => {
+      sizedAt = performance.now();
+      soon();
+    };
+    addEventListener('resize', onResize);
     const cv = [...document.querySelectorAll('.cv-auto')];
     cv.forEach((c) => c.addEventListener('contentvisibilityautostatechange', soon));
     const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(soon);
@@ -150,7 +157,7 @@ export function InView() {
       cv.forEach((c) => c.removeEventListener('contentvisibilityautostatechange', soon));
       removeEventListener('scroll', soon);
       removeEventListener('scrollend', atRest);
-      removeEventListener('resize', soon);
+      removeEventListener('resize', onResize);
     };
   }, [pathname]);
   return null;

@@ -1292,6 +1292,11 @@ html.lenis body {
 .foot-link:hover {
   color: var(--ember);
 }
+/* A hairline above the footer text warms toward Ember as the footer is scrolled in (something at the page end answers
+   the scroll). The text itself stays at full contrast in every state. */
+.foot-top {
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--ember) calc(var(--p, 0) * 55%), color-mix(in oklab, var(--bone) 10%, transparent));
+}
 .foot-giant {
   height: 19.5vw;
 }
