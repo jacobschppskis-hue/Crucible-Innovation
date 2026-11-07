@@ -22,81 +22,169 @@
   margin: 4.5rem 0;
 }
 
-/* ---------- One company splits into six ----------
-   --p comes from data-scroll="view". Each piece has its own eased progress --s, staggered by --i; the cut is hot
-   (Ember) while the pieces separate and cools to bone once they settle. Pieces move by left/width/top on six elements,
-   which is cheap. Final layout: two rows of three on phones, one row of six from 640px. */
-.split {
-  --g: 0.625rem;
-  --cols: 3;
-  --h: 3.75rem;
-  --row: 6.75rem;
+/* ---------- One pour, six castings ----------
+   What came out of PayPal, drawn as a casting tree: metal is poured into "PayPal", runs down one sprue and out through
+   six gates into six moulds shaped like the names. Everything is in em of the names' size, so the tree scales as one.
+   --p (data-scroll="view") drives one timeline --t; each piece has a fill window (--a start, --d length) and a cooling
+   window (--c start, --cd length), set inline by Story.tsx. Liquid metal is Ember and glows, white-hot where it is still
+   flowing; as it cools it reddens and its glow goes, then it sets: a bone front runs back from the far end towards the
+   sprue (directional solidification), so PayPal, the feeder, sets last. The faint mould is knocked away at the end.
+   Without JS and with reduced motion --p is 1: the cast, cooled tree. */
+.sp {
+  --t: clamp(0, (var(--p, 1) - 0.1) / 0.5, 1);
+  --mo: clamp(0, (1 - var(--t)) * 10, 1);
+  --front: color-mix(in oklab, var(--ember-hot) 40%, var(--bone));
   position: relative;
-  height: calc(var(--row) * 2);
+  height: 7.4em;
+  margin-top: 2.6em; /* room for the stream (collapses with the figure's own margin) */
+  font-size: clamp(1.5rem, 7.8vw, 2.75rem);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  font-variation-settings: 'wdth' 112;
+  -webkit-user-select: none; /* a drawing: its words are in the figure's label */
+  user-select: none;
 }
-@media (min-width: 640px) {
-  .split {
-    --cols: 6;
-    height: var(--row);
-  }
-  .split-piece {
-    --c: var(--i) !important;
-    --r: 0 !important;
-  }
+/* every piece of metal: --f how full, --h how hot (1 just poured .. 0 cooled), --k how much has set */
+.sp-m {
+  --f: clamp(0, (var(--t) - var(--a)) / var(--d), 1);
+  --h: clamp(0, 1 - (var(--t) - var(--c)) / var(--cd), 1);
+  --k: clamp(0, (var(--t) - var(--c) - var(--cd) * 0.55) / (var(--cd) * 0.45), 1);
+  --hot: color-mix(in oklab, var(--ember-hot) calc(clamp(0, var(--h) * 2 - 1, 1) * 100%), var(--ember));
+  --liq: color-mix(in oklab, var(--hot) calc(clamp(0, var(--h) * 2, 1) * 100%), var(--ember-deep));
+  --glow: color-mix(in oklab, var(--ember) calc(var(--h) * 80%), transparent);
+  /* the white-hot front shows only while this piece is filling */
+  --fo: calc(clamp(0, var(--f) * 30, 1) * clamp(0, (1 - var(--f)) * 30, 1));
 }
-.split-piece {
-  --s0: clamp(0, (var(--p, 1) - 0.1 - var(--i) * 0.02) * 3.2, 1);
-  --s: calc(var(--s0) * var(--s0) * (3 - 2 * var(--s0)));
-  --heat: calc(var(--s) * (1 - var(--s)) * 4);
-  --w0: calc(100% / 6);
-  --w1: calc((100% - (var(--cols) - 1) * var(--g)) / var(--cols));
+
+/* the stream from the crucible, falling into PayPal; when the pour ends its tail drops in after it */
+.sp-stream {
   position: absolute;
-  top: calc(var(--r) * var(--row) * var(--s));
-  left: calc(var(--i) * var(--w0) * (1 - var(--s)) + var(--c) * (var(--w1) + var(--g)) * var(--s));
-  width: calc(var(--w0) * (1 - var(--s)) + var(--w1) * var(--s));
-  height: var(--h);
+  left: calc(50% - 0.05em);
+  width: 0.1em;
+  top: -2.4em;
+  height: 2.75em;
+  background: var(--front);
+  box-shadow: 0 0 0.3em var(--ember);
+  -webkit-mask-image: linear-gradient(transparent, #000 45%);
+  mask-image: linear-gradient(transparent, #000 45%);
+  clip-path: inset(calc(clamp(0, (var(--t) - 0.55) / 0.07, 1) * 100%) -0.5em calc((1 - clamp(0, var(--t) / 0.05, 1)) * 100%) -0.5em);
 }
-.split-tile {
+
+/* the names: the mould (::before, an outline), then the liquid metal (real text), its white-hot front, and the set
+   metal in bone. --e: edge of the liquid, --s: edge of the set metal (both measured from the box edge they leave) */
+.sp-w {
+  --e: calc((1 - var(--f)) * (100% + 0.5em) - 0.5em);
+  --s: calc(var(--k) * (100% + 0.5em) - 0.5em);
+  --x: calc((1 - var(--k)) * (100% + 1em) - 0.5em);
+  position: absolute;
+  top: calc(var(--y) * 1em);
+  translate: 0 -0.5em;
+}
+.sp-w::before {
+  content: attr(data-w);
   position: absolute;
   inset: 0;
-  /* cast metal, not a control: chamfered corners, a lit top face falling off to a cooler foot (no hard bottom edge),
-     a hairline seam down each side so the six cuts show even while the bar is whole */
-  clip-path: polygon(0.5rem 0, calc(100% - 0.5rem) 0, 100% 0.5rem, 100% calc(100% - 0.5rem), calc(100% - 0.5rem) 100%, 0.5rem 100%, 0 calc(100% - 0.5rem), 0 0.5rem);
-  background:
-    linear-gradient(180deg, rgb(255 250 240 / 0.55), transparent 35%, color-mix(in oklab, var(--ink) 14%, transparent)),
-    color-mix(in oklab, var(--ember) calc(var(--heat) * 100%), var(--bone));
-  box-shadow:
-    inset 1px 0 0 color-mix(in oklab, var(--ink) 38%, transparent),
-    inset -1px 0 0 color-mix(in oklab, var(--ink) 38%, transparent);
+  color: transparent;
+  -webkit-text-stroke: 1px var(--line-strong);
+  opacity: var(--mo);
 }
-.split-name {
-  position: absolute;
-  z-index: 1;
-  left: 0;
-  right: 0;
-  top: 0;
-  height: var(--h);
-  display: flex;
-  align-items: center;
-  padding-left: 1.25rem;
-  font-variation-settings: 'wdth' 125;
-  font-weight: 800;
-  font-size: 1.5rem;
-  /* stamped into the metal: recessed, darker than the bar */
-  color: color-mix(in oklab, var(--ink) 62%, var(--bone));
-  text-shadow: 0 1px 0 rgb(255 250 240 / 0.7);
-  opacity: clamp(0, 1 - (var(--p, 1) - 0.12) * 5, 1);
-  pointer-events: none;
+.sp-w > span {
+  display: block;
+  color: var(--liq);
+  text-shadow: 0 0 calc(var(--h) * 0.3em) var(--glow);
 }
-.split-label {
+.sp-w > span:nth-child(n + 2) {
   position: absolute;
-  left: 0;
-  top: calc(var(--h) + 0.55rem);
-  font-size: 0.875rem;
-  font-weight: 500;
-  white-space: nowrap;
+  inset: 0;
+  text-shadow: none;
+}
+.sp-w > span:nth-child(2) {
+  color: var(--front);
+  opacity: var(--fo);
+}
+.sp-w > span:nth-child(3) {
   color: var(--bone);
-  opacity: clamp(0, var(--s) * 2 - 1, 1);
+}
+/* left of the sprue: fills from its right (the gate), sets from its left (the far end) */
+.sp-l {
+  right: calc(50% + 0.95em - var(--in) * 1em);
+}
+.sp-l > span {
+  clip-path: inset(-0.5em 0 -0.5em max(var(--e), var(--s)));
+}
+.sp-l > span:nth-child(2) {
+  clip-path: inset(-0.5em calc(100% - var(--e) - 0.12em) -0.5em var(--e));
+}
+.sp-l > span:nth-child(3) {
+  clip-path: inset(-0.5em var(--x) -0.5em -0.5em);
+}
+/* right of the sprue: the mirror image */
+.sp-r {
+  left: calc(50% + 0.95em - var(--in) * 1em);
+}
+.sp-r > span {
+  clip-path: inset(-0.5em max(var(--e), var(--s)) -0.5em 0);
+}
+.sp-r > span:nth-child(2) {
+  clip-path: inset(-0.5em var(--e) -0.5em calc(100% - var(--e) - 0.12em));
+}
+.sp-r > span:nth-child(3) {
+  clip-path: inset(-0.5em -0.5em -0.5em var(--x));
+}
+/* PayPal is the pouring basin: it fills from the bottom up and sets from the top down */
+.sp-head {
+  left: 50%;
+  top: 0;
+  translate: -50% 0;
+  font-size: 1.5em;
+  font-weight: 800;
+  font-variation-settings: 'wdth' 125;
+}
+.sp-head > span {
+  clip-path: inset(max(var(--e), var(--s)) -0.5em -0.5em -0.5em);
+}
+.sp-head > span:nth-child(2) {
+  clip-path: inset(var(--e) -0.5em calc(100% - var(--e) - 0.08em) -0.5em);
+}
+.sp-head > span:nth-child(3) {
+  clip-path: inset(-0.5em -0.5em var(--x) -0.5em);
+}
+
+/* sprue and gates: one SVG in em units (100 = 1em), centred on the sprue */
+.sp-net {
+  position: absolute;
+  top: 0;
+  left: calc(50% - 0.95em);
+  width: 1.9em;
+  height: 7.4em;
+  overflow: visible;
+  fill: none;
+}
+.sp-net .sp-wall {
+  stroke: var(--line-strong);
+  stroke-width: 1px;
+  opacity: var(--mo);
+}
+/* liquid fills along each path; the set metal (paths drawn from the far end) runs back over it */
+.sp-net .sp-m {
+  stroke: var(--liq);
+  stroke-dasharray: 1 2;
+  stroke-dashoffset: calc(1 - var(--f));
+}
+.sp-net .sp-set {
+  stroke: var(--bone-dim);
+  stroke-dashoffset: calc(1 - var(--k));
+}
+.sp-net .sp-fr {
+  stroke: var(--front);
+  stroke-dasharray: 0.03 2;
+  stroke-dashoffset: calc(0.03 - var(--f));
+  opacity: var(--fo);
+}
+.sp-net .sp-halo {
+  stroke: var(--glow);
+  stroke-linecap: round;
 }
 
 @media (prefers-reduced-motion: reduce) {
