@@ -10,7 +10,7 @@ export const ROLL = 0.025;
 
 export type BuiltIngot = { stage: Stage; root: Obj; hot: Obj | null };
 
-export function buildIngot(canvas: HTMLCanvasElement, kind: IngotKind, opts: StageOptions = {}): BuiltIngot {
+export function buildIngot(canvas: HTMLCanvasElement | OffscreenCanvas, kind: IngotKind, opts: StageOptions = {}): BuiltIngot {
   const stage = createStage(canvas, { frame: FRAME, ...opts });
   const { root, parts } = addIngot(stage, ingot(kind));
   root.rotation = [PITCH, 0, ROLL];

@@ -39,11 +39,12 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  display: none;
+  display: block;
+  visibility: hidden; /* a worker's canvas keeps compositing while hidden; it shows once it has drawn */
   pointer-events: none;
 }
 .ing[data-on] .ing-canvas {
-  display: block;
+  visibility: visible;
 }
 .ing[data-on] .ing-still {
   visibility: hidden;

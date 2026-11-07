@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { reducedMotion } from '@/lib/scroll';
 import { richTier } from '@/lib/tier';
 import type { IngotKind } from '@/lib/gl3d';
@@ -13,6 +13,8 @@ import type { IngotKind } from '@/lib/gl3d';
 export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string; eager?: boolean }) {
   const host = useRef<HTMLSpanElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  // A canvas handed to a worker (transferControlToOffscreen) is spent: after a release the next start needs a fresh one.
+  const [gen, setGen] = useState(0);
 
   useEffect(() => {
     const el = host.current;
@@ -22,35 +24,52 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
     let io: IntersectionObserver | null = null;
     let starting = false;
     let broken = false;
+    let near = false;
+    let worker = true; // false once the worker could not draw: the main thread then does
     const across = () => !!el.closest('.vf-track') && matchMedia('(min-width: 1024px) and (min-height: 600px)').matches;
     const release = () => {
+      const was = stop || starting;
       stop?.();
       stop = null;
       el.removeAttribute('data-on');
       starting = false;
+      if (was && !dead) setGen((g) => g + 1);
+    };
+    const start = () => {
+      if (dead || !near || stop || starting || broken) return;
+      starting = true;
+      import('@/lib/gl3d/ingotScene')
+        .then(({ startIngot }) => {
+          if (dead || !starting || stop) return;
+          const canvas = canvasRef.current;
+          if (!canvas) return;
+          try {
+            stop = startIngot(canvas, el, slug as IngotKind, {
+              across,
+              worker,
+              onDrawn: () => el.setAttribute('data-on', ''),
+              onLost: () => { broken = true; release(); },
+              onFail: () => { broken = true; release(); }, // no WebGL: the still stays
+              onWorkerFail: () => {
+                worker = false;
+                release();
+                requestAnimationFrame(() => requestAnimationFrame(start)); // after the fresh canvas has mounted
+              },
+            });
+          } catch {
+            broken = true;
+            starting = false;
+          }
+        })
+        .catch(() => { broken = true; starting = false; });
     };
     richTier().then(() => {
       if (dead || document.documentElement.dataset.tier !== 'rich') return;
       io = new IntersectionObserver(
         (entries) => {
-          const near = entries[entries.length - 1].isIntersecting;
+          near = entries[entries.length - 1].isIntersecting;
           if (!near) return release();
-          if (stop || starting || broken) return;
-          starting = true;
-          import('@/lib/gl3d/ingotScene')
-            .then(async ({ startIngot, loadIngotFont }) => {
-              await loadIngotFont(); // the lettering is drawn once, so the site's Archivo has to be in first
-              if (dead || !starting) return;
-              const canvas = canvasRef.current;
-              if (!canvas) return;
-              try {
-                stop = startIngot(canvas, el, slug as IngotKind, across, () => { broken = true; release(); }, () => el.setAttribute('data-on', ''));
-              } catch {
-                broken = true; // no WebGL: the still stays
-                starting = false;
-              }
-            })
-            .catch(() => { broken = true; starting = false; });
+          start();
         },
         { rootMargin: '100% 100% 100% 100%' },
       );
@@ -77,7 +96,7 @@ export function IngotScene({ slug, sizes, eager }: { slug: string; sizes: string
         decoding="async"
         className="ing-still"
       />
-      <canvas ref={canvasRef} aria-hidden className="ing-canvas" />
+      <canvas key={gen} ref={canvasRef} aria-hidden className="ing-canvas" />
     </span>
   );
 }
