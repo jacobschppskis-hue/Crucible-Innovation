@@ -58,7 +58,9 @@ export function Footer() {
         <p className="mt-16 text-sm text-bone-dim">© {new Date().getFullYear()} Crucible</p>
       </div>
 
-      <div aria-hidden data-scroll="reveal" className="foot-giant relative isolate">
+      {/* Composed from its first frame (a jump to the page end included): the wordmark sits in its furnace, it never
+          slides in; only the hairline above answers the scroll. */}
+      <div aria-hidden className="foot-giant relative isolate">
         <Furnace heat={1} reach="100%" molten={0.8} className="foot-furnace" />
         <div className="foot-giant-clip overflow-hidden">
           <div className="foot-giant-inner flex justify-center text-[24vw] leading-[0.8]">

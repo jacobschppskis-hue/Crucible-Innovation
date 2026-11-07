@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react';
+import { Fragment, type CSSProperties } from 'react';
 import './Process.css';
 
 // The facts are the FAQ's (data/faq.ts): a first draft in about three days, two rounds of edits, live in about a week.
@@ -22,11 +22,11 @@ const vars = (v: Record<string, number>) => v as CSSProperties;
 
 /**
  * Process on /sites: seven days you can scrub. A pinned scene (data-scroll="pin" → --p, eased by lib/scroll.ts)
- * runs a day counter from Day 1 to Day 7 while a website builds itself in the browser frame beside it: the notes from
- * the call on a blank page, a wireframe, the first draft cast over it, two rounds of edits (the headline, the photo,
- * the colour), then the address fills in and it goes live. Pure CSS off one variable (components/Process.css), so it
- * ships no JavaScript of its own. With reduced motion, on short screens and without JS it is a plain list of the days
- * beside the finished site.
+ * runs a day counter from Day 1 to Day 7 while a website is made by hand in the browser frame beside it: the notes
+ * from the call, a blank page poured in, layout lines snapped into place, the type set word by word, a photo placed
+ * and cropped, a colour picked, then two rounds of edits (the headline, the photo, the colour) and the address fills in
+ * as it goes live. Pure CSS off one variable (components/Process.css), so it ships no JavaScript of its own. With
+ * reduced motion, on short screens and without JS it is a plain list of the days beside the finished site.
  */
 export function Process() {
   return (
@@ -63,7 +63,7 @@ export function Process() {
           <figure
             className="days-shot"
             role="img"
-            aria-label="A concept website for a fictional landscaper building itself over a week: the notes from the call on a blank page, a wireframe, the first draft, two rounds of edits to the headline, the photo and the colour, then live at its own address."
+            aria-label="A concept website for a fictional landscaper, made over a week: the notes from the call, a blank page, layout lines, the type set, a photo placed and cropped, a colour picked, two rounds of edits to the headline, the photo and the colour, then live at its own address."
           >
             <div aria-hidden data-unslop-ok className="days-frame">
               <div className="days-bar">
@@ -90,10 +90,7 @@ export function Process() {
                     </div>
                   ))}
                 </div>
-                <div className="days-wire">
-                  <Site wire />
-                </div>
-                <div className="cast-layer days-real">
+                <div className="cast-layer days-board">
                   <div className="cast-in">
                     <Site />
                   </div>
@@ -149,51 +146,89 @@ const THEIRS = picture(
     flowers.map(([cx, cy, fill]) => `<circle cx='${cx}' cy='${cy}' r='4.5' fill='${fill}'/>`).join(''),
 );
 
-/** The site being built, in HTML. `wire` renders the same layout as a wireframe, so the draft is cast over it exactly. */
-function Site({ wire = false }: { wire?: boolean }) {
-  // In the wireframe each run of text is greeked into a bar; the finished site just has the text.
-  const t = (s: string) => (wire ? <span className="tx">{s}</span> : s);
+// When each piece is set on Day 2 (in days on the timeline, read by .fs-set in Process.css).
+const at = (t: number) => vars({ '--t': t });
+// A line of type set a word at a time, with a hot caret after the word just set (the last one keeps it a moment).
+const words = (text: string, t0: number, dt: number) =>
+  text.split(' ').map((w, i, all) => (
+    <Fragment key={i}>
+      <span className="fs-w" style={vars({ '--t': t0 + i * dt, '--dt': i < all.length - 1 ? dt : 0.14 })}>
+        {w}
+      </span>
+      {i < all.length - 1 ? ' ' : ''}
+    </Fragment>
+  ));
+
+/**
+ * The site being made, in HTML, in its finished state; Process.css takes it back to a blank page and builds it up
+ * piece by piece. The guides (.fs-guide) are the layout lines, drawn from the edges of the blocks they lay out.
+ */
+function Site() {
   return (
-    <div className={`fs ${wire ? 'fs-wire' : 'fs-real'}`}>
+    <div className="fs">
       <div className="fs-nav">
         <span className="fs-logo">
-          <i className="fs-mark" />
-          {t('Fieldstone')}
+          <i className="fs-mark fs-set" style={at(1.8)} />
+          <span className="fs-set" style={at(1.84)}>
+            Fieldstone
+          </span>
         </span>
         <span className="fs-links">
-          {['Services', 'Our work', 'About'].map((l) => (
-            <span key={l} className={wire ? 'tx' : undefined}>
+          {['Services', 'Our work', 'About'].map((l, i) => (
+            <span key={l} className="fs-set" style={at(1.88 + i * 0.03)}>
               {l}
             </span>
           ))}
         </span>
-        <span className="fs-btn fs-nav-btn">{t('Free estimate')}</span>
-        <span className="fs-burger">
+        <span className="fs-btn fs-nav-btn fs-set" style={at(1.97)}>
+          Free estimate
+        </span>
+        <span className="fs-burger fs-set" style={at(1.97)}>
           <i />
           <i />
         </span>
+        <i className="fs-guide fs-gx" style={vars({ '--k': 0 })} />
       </div>
       <div className="fs-hero">
         <div className="fs-copy">
-          <p className="fs-tag">{t('Serving the whole county')}</p>
+          <i className="fs-guide fs-gy" style={vars({ '--k': 1 })} />
+          <p className="fs-tag fs-set" style={at(2.02)}>
+            Serving the whole county
+          </p>
           {/* Round one of edits rewrites the draft's headline. */}
           <div className="fs-h1 fs-edit">
-            <span className="fs-v1">{t('Landscaping you can count on')}</span>
-            {!wire && <span className="fs-v2">Yards worth coming home to</span>}
+            <span className="fs-v1">{words('Landscaping you can count on', 2.08, 0.045)}</span>
+            <span className="fs-v2">{words('Yards worth coming home to', 3.5, 0.06)}</span>
           </div>
-          <p className="fs-lead">{t('Design, planting, patios and weekly care, from a local crew that shows up.')}</p>
+          <p className="fs-lead fs-set" style={at(2.32)}>
+            Design, planting, patios and weekly care, from a local crew that shows up.
+          </p>
           <div className="fs-ctas">
-            <span className="fs-btn fs-cta fs-edit">{t('Get a free estimate')}</span>
-            <span className="fs-ghost">{t('See our work')}</span>
+            <span className="fs-btn fs-cta fs-edit fs-set" style={at(2.4)}>
+              Get a free estimate
+            </span>
+            <span className="fs-ghost fs-set" style={at(2.44)}>
+              See our work
+            </span>
+            {/* The colour being picked: on Day 3 the draft's green, in round two the deeper one they asked for. */}
+            <span className="fs-swatch">
+              <i />
+              <i />
+              <i />
+              <b />
+            </span>
           </div>
         </div>
         <div className="fs-pic fs-edit">
-          {!wire && (
-            <>
-              <i className="fs-pic-a" style={{ backgroundImage: STOCK }} />
-              <i className="fs-pic-b" style={{ backgroundImage: THEIRS }} />
-            </>
-          )}
+          <i className="fs-guide fs-gy fs-gl" style={vars({ '--k': 2 })} />
+          <i className="fs-guide fs-gy fs-gr" style={vars({ '--k': 3 })} />
+          <i className="fs-guide fs-gx fs-gt" style={vars({ '--k': 4 })} />
+          <i className="fs-guide fs-gx fs-gb" style={vars({ '--k': 5 })} />
+          <i className="fs-pic-a">
+            <b style={{ backgroundImage: STOCK }} />
+          </i>
+          <i className="fs-pic-b" style={{ backgroundImage: THEIRS }} />
+          <i className="fs-crop" />
         </div>
       </div>
     </div>

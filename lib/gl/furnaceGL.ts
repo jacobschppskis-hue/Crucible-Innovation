@@ -1,14 +1,17 @@
 // The footer furnace: molten iron under the wordmark. Own copy of the original molten surface shader (the Thesis one
 // moved on to flames), transparent where there is no heat so the page liquid shows through; premultiplied alpha.
-// It is hottest at the floor and fades out toward the top. Reduced resolution, only while on screen.
-import { dropToLight } from '@/lib/tier';
+// It is hottest at the floor and fades out toward the top. Reduced resolution, drawn on the one clock (`onFrame`) only
+// while on screen; it fades in over the CSS band so the footer is composed before and after it arrives.
+import { clock, clockHeld, onFrame, renderer } from '@/lib/liquid/loop';
 
 type Options = { canvas: HTMLCanvasElement; heat: () => number; onReady?: () => void; onFail?: () => void };
 
 const VERT = `attribute vec2 aPos; void main() { gl_Position = vec4(aPos, 0.0, 1.0); }`;
 
+// highp: with mediump, Apple GPUs (Safari) compute in half floats, where the hashed noise collapses and the metal loses
+// its veins; every engine should draw the same furnace.
 const FRAG = `
-precision mediump float;
+precision highp float;
 uniform vec2 uRes;
 uniform float uTime, uK;
 uniform vec3 uMouse; // px from bottom-left, strength
@@ -64,6 +67,9 @@ void main() {
   gl_FragColor = vec4(min(col, vec3(a)), a);
 }`;
 
+// The furnace fades in over this long (clock seconds) from its first frame, over the CSS band (globals.css --gl).
+const FADE_IN = 0.8;
+
 export function startFurnaceGL({ canvas, heat, onReady, onFail }: Options): () => void {
   const gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false });
   if (!gl) {
@@ -98,6 +104,7 @@ export function startFurnaceGL({ canvas, heat, onReady, onFail }: Options): () =
   const uTime = gl.getUniformLocation(prog, 'uTime');
   const uK = gl.getUniformLocation(prog, 'uK');
   const uMouse = gl.getUniformLocation(prog, 'uMouse');
+  const box = canvas.parentElement!;
 
   // Soft noise doesn't need full resolution: render small and let the browser scale it up.
   const scales = [0.5, 0.35, 0.25];
@@ -112,66 +119,75 @@ export function startFurnaceGL({ canvas, heat, onReady, onFail }: Options): () =
   const ro = new ResizeObserver(resize);
   ro.observe(canvas);
 
-  const mouse = { x: 0, y: 0, s: 0, moved: 0 };
+  const mouse = { x: 0, y: 0, s: 0, moved: -1 };
   const onMove = (e: PointerEvent) => {
     if (e.pointerType !== 'mouse') return;
     const r = canvas.getBoundingClientRect();
     mouse.x = ((e.clientX - r.left) / r.width) * canvas.width;
     mouse.y = (1 - (e.clientY - r.top) / r.height) * canvas.height;
-    mouse.moved = performance.now();
+    mouse.moved = clock.t;
   };
   addEventListener('pointermove', onMove, { passive: true });
 
-  let raf = 0, visible = false, stopped = false, last = 0, slow = 0, t0 = 0, ready = false;
-  const io = new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible) loop();
-  });
-  io.observe(canvas);
-  const frame = (now: number) => {
-    raf = 0;
-    if (stopped || !visible || document.hidden) return;
-    raf = requestAnimationFrame(frame);
-    if (!t0) t0 = now;
-    const dt = last ? now - last : 16;
-    last = now;
-    slow = dt > 26 ? slow + dt : Math.max(0, slow - dt * 0.5);
-    if (slow > 1500 && now - t0 > 2000) {
-      slow = 0;
-      // Slow: render at a lower resolution (down to the last step, where it stays).
-      if (q + 1 < scales.length) {
-        q++;
-        resize();
+  // On the one clock, as renderer 'furnace' (paused off screen). t0: the surface's time starts small (mediump floats),
+  // already rolling; fade: its opacity over the CSS band, on the clock (a CSS transition runs on wall-clock time).
+  const rd = renderer('furnace', 'main');
+  rd.setPaused(true);
+  let off: (() => void) | undefined, stopped = false, slow = 0, run = 0, t0 = -1, fade = 0, ready = false;
+  const frame = (T: number, dt: number) => {
+    if (stopped || document.hidden) return;
+    if (t0 < 0) t0 = T - 20;
+    run += dt;
+    if (!clockHeld()) {
+      slow = dt > 0.026 ? slow + dt : Math.max(0, slow - dt * 0.5);
+      if (slow > 1.5 && run > 2) {
+        slow = 0;
+        // Slow: render at a lower resolution (down to the last step, where it stays).
+        if (q + 1 < scales.length) {
+          q++;
+          resize();
+        }
       }
     }
-    mouse.s += ((now - mouse.moved < 900 ? 1 : 0) - mouse.s) * Math.min(1, dt / 300);
+    mouse.s += ((mouse.moved >= 0 && T - mouse.moved < 0.9 ? 1 : 0) - mouse.s) * Math.min(1, dt / 0.3);
     gl.uniform2f(uRes, canvas.width, canvas.height);
-    gl.uniform1f(uTime, now / 1000);
+    gl.uniform1f(uTime, T - t0);
     gl.uniform1f(uK, heat());
     gl.uniform3f(uMouse, mouse.x, mouse.y, mouse.s);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (fade < 1) {
+      fade = Math.min(1, fade + dt / FADE_IN);
+      box.style.setProperty('--gl', (fade * fade * (3 - 2 * fade)).toFixed(3));
+    }
+    rd.done(T);
     if (!ready) {
       ready = true;
       onReady?.();
     }
   };
-  function loop() {
-    if (!raf && !stopped) raf = requestAnimationFrame(frame);
-  }
-  function fail() {
-    stop();
-    dropToLight();
-    onFail?.();
-  }
+  // Starts a little before it scrolls into view, so on a normal scroll it is already burning when it arrives.
+  const io = new IntersectionObserver(
+    ([e]) => {
+      if (stopped) return;
+      if (e.isIntersecting && !off) off = onFrame(frame);
+      else if (!e.isIntersecting && off) {
+        off();
+        off = undefined;
+      }
+      rd.setPaused(!off);
+    },
+    { rootMargin: '25% 0px 25% 0px' },
+  );
+  io.observe(canvas);
   function stop() {
     stopped = true;
-    cancelAnimationFrame(raf);
+    off?.();
+    off = undefined;
+    rd.off();
     io.disconnect();
     ro.disconnect();
     removeEventListener('pointermove', onMove);
-    document.removeEventListener('visibilitychange', onVis);
+    box.style.removeProperty('--gl');
   }
-  const onVis = () => !document.hidden && loop();
-  document.addEventListener('visibilitychange', onVis);
   return stop;
 }

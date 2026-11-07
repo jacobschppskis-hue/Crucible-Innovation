@@ -1,79 +1,103 @@
-// A venture's live ingot, DOM-free: it runs inside the ingot worker (ingotWorker.ts) or, where OffscreenCanvas WebGL2
-// is missing, on the main thread (ingotScene.ts). Everything it needs from the page arrives in `IngotEnv`; the relief
-// maps (lettering, lattice) are drawn here too, so in the worker they never cost a main-thread task.
-import { clock } from '../liquid/loop';
-import { sample } from '../liquid/field';
-import { buildIngot, PITCH, ROLL } from './ingotPose';
+// A venture's live bar, DOM-free: it draws inside the ingot worker (ingotWorker.ts) or, where OffscreenCanvas WebGL2 is
+// missing, on the main thread (ingotScene.ts). It keeps no clock and makes no motion of its own: the main frame of the
+// one clock computes the pose (ingotPose.ts, on the liquid's grid) and the owner calls `frame(t, pose)`, which draws
+// exactly that. The relief map (the stamp's lettering and mark) is drawn here too, so in the worker it never costs a
+// main-thread task.
+//
+// Quality: render scale and an fps cap step down on slow frames and back up after a long calm run, but each level is
+// retried at most once (a level that was slow twice is never used again), so it can't oscillate; a step scales the
+// stage's offscreen target, never the canvas itself (ingotStage.ts `fixed`), so no step ever shows a blank frame.
+// A GPU starts at full quality, software GL (CI, PageSpeed) at a low step; `full` (?liquid=full, screenshots) pins full
+// quality; while a harness holds the clock nothing adapts.
+import { buildIngot } from './ingotStage';
+import { FRAME, type IngotPose } from './ingotPose';
 import type { IngotKind } from './ingots';
-import { createAdapt } from './adapt';
 
-const clamp = (v: number, lo: number, hi: number) => (v < lo ? lo : v > hi ? hi : v);
-const YAW = 1.3; // radians of turn from one edge of the viewport to the other (about 75°)
-const SLOPE_GAIN = 300; // wave slope (per px) → tilt (rad), then clamped
-const DRIFT = 9000; // wave slope → buoy drift (world units), then clamped
-const BOB = 26; // wave height → world units
+// [render scale, fps cap (0 = every frame)]
+const STEPS: [number, number][] = [[1, 0], [0.8, 0], [0.66, 0], [0.5, 30], [0.4, 24], [0.33, 15]];
+const SOFT_START = 4;
 
-/** What the page tells the ingot (client px): the host's box now, the viewport, the scroll, and whether it travels sideways. */
-export type IngotEnv = {
-  /** The canvas' CSS layout size (an OffscreenCanvas has none; the owner updates it in place). */
-  css: { w: number; h: number };
-  rect: { left: number; top: number; width: number; height: number };
-  vw: number;
-  vh: number;
-  scrollX: number;
-  scrollY: number;
-  /** The ingot travels sideways (the pinned track) rather than up the page: decides what "scrolling through" means. */
-  across: boolean;
+export type IngotRunner = {
+  /** Draw the frame for time t (s) at `pose`; `held`: a harness holds the clock (don't adapt). False = skipped (fps cap). */
+  frame(t: number, pose: IngotPose, held: boolean): boolean;
+  /** Long tasks keep landing on the main thread: step down. */
+  down(): void;
+  /** Call `cb` once the GPU has finished everything drawn so far (a fence, polled; never blocks). The worker acks a
+   *  frame only then, so a GPU slower than the clock's ticks paces the ticks instead of queueing frame after frame. */
+  afterGPU(cb: () => void): void;
+  readonly q: number;
+  dispose(): void;
 };
-export type IngotRunner = { frame(t: number): void; down(): void; dispose(): void };
 
-/** Build the ingot on `canvas` (throws if WebGL2 is missing). The owner calls `frame(t)` from its own loop. `emit` adds a small ripple to the page liquid. */
+/** Build the bar on `canvas` (throws if WebGL2 is missing). `css` is the canvas' CSS size (the owner keeps it current). */
 export function createIngotRunner(
   canvas: HTMLCanvasElement | OffscreenCanvas,
   kind: IngotKind,
-  env: IngotEnv,
-  opts: { dpr: number; full: boolean; emit: (x: number, docY: number, amp: number, size: number, t: number) => void; onDrawn: () => void; onLost: () => void },
+  css: { w: number; h: number },
+  opts: { dpr: number; full: boolean; onDrawn: () => void; onLost: () => void; onStep?: (q: number) => void },
 ): IngotRunner {
-  const { stage, root, hot } = buildIngot(canvas, kind, { quality: 1, dpr: Math.min(opts.dpr || 1, 2), css: env.css, fidelity: opts.full });
-  // Software GL starts at a low step; slow frames (and the main thread's long-task watchdog) step it down further, never giving up.
-  const adapt = createAdapt(stage, opts.full);
+  const { stage, place } = buildIngot(canvas, kind, { quality: 1, dpr: Math.min(opts.dpr || 1, 2), css, fidelity: opts.full });
   const lost = (e: Event) => { e.preventDefault(); opts.onLost(); };
   canvas.addEventListener('webglcontextlost', lost);
-  let yaw = 0, bob = 0, tx = 0, ty = 0, rx = 0, rz = 0;
-  let nextRipple = clock.t + 1 + Math.random() * 2;
-  let first = true;
-  let drawn = false;
-  let lastDraw = 0;
-  const frame = (t: number) => {
-    const r = env.rect;
-    const vw = env.vw, vh = env.vh;
-    if (r.top + r.height < -vh * 0.2 || r.top > vh * 1.2 || r.left + r.width < -vw * 0.2 || r.left > vw * 1.2) return;
-    if (!adapt.allow(t)) return;
-    const dt = lastDraw ? Math.min(0.5, t - lastDraw) : 1 / 60; // wall-clock: a slow software-GL frame still lands the turn on time
-    lastDraw = t;
-    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    const u = env.across ? (cx - vw / 2) / vw : (cy - vh / 2) / vh;
-    const px = cx + env.scrollX, py = cy + env.scrollY;
-    const s = sample(px, py, t);
-    // Spring everything toward its target (critically damped-ish), so a wave's slope rocks it rather than snapping it.
-    const k = first ? 1 : 1 - Math.exp(-dt * 7);
-    first = false;
-    yaw += (clamp(-u * YAW, -0.95, 0.95) - yaw) * (1 - Math.exp(-dt * 10));
-    bob += (s.h * BOB - bob) * k;
-    rx += (clamp(s.gy * SLOPE_GAIN, -0.05, 0.05) - rx) * k;
-    rz += (clamp(-s.gx * SLOPE_GAIN, -0.05, 0.05) - rz) * k;
-    tx += (clamp(s.gx * DRIFT, -8, 8) - tx) * (1 - Math.exp(-dt * 2.5));
-    ty += (clamp(-s.gy * DRIFT * 0.5, -4, 4) - ty) * (1 - Math.exp(-dt * 2.5));
-    root.position = [tx, bob + ty, 0];
-    root.rotation = [PITCH + rx, yaw, ROLL + rz];
-    if (hot) hot.temp = 0.3 + 0.05 * Math.sin(t * 1.3 + (kind === 'verge' ? 0 : 2));
-    // Its own small ripples, a few seconds apart.
-    if (t > nextRipple) {
-      nextRipple = t + 2.2 + Math.random() * 1.8;
-      opts.emit(px + (Math.random() - 0.5) * r.width * 0.5, py + r.height * 0.3, 0.22, 10, t);
-    }
-    stage.render();
-    if (!drawn) { drawn = true; opts.onDrawn(); }
+
+  // ---- the governor ----
+  const best0 = opts.full ? 0 : stage.soft ? SOFT_START : 0;
+  let q = best0, best = best0;
+  const retried = new Set<number>(); // levels entered again by a step up
+  let slow = 0, calm = 0, cool = 0, last = 0, lastDraw = -1;
+  const set = (n: number) => {
+    q = n;
+    stage.quality = STEPS[q][0];
+    slow = 0; calm = 0; cool = 2;
+    opts.onStep?.(q);
   };
-  return { frame, down: adapt.down, dispose: () => { canvas.removeEventListener('webglcontextlost', lost); stage.dispose(); } };
+  set(q);
+  const stepDown = () => {
+    if (opts.full || q >= STEPS.length - 1) return;
+    if (retried.has(q)) best = q + 1; // slow again after a retry: never back to this level
+    set(q + 1);
+  };
+  const adapt = (dt: number) => {
+    const cap = STEPS[q][1], budget = cap ? 1 / cap : 1 / 60;
+    cool -= dt;
+    if (dt > budget * 1.7) { slow += 1; calm = 0; }
+    else { slow = Math.max(0, slow - 0.5); calm += dt; }
+    if (cool > 0) return;
+    if (slow >= 10) stepDown();
+    else if (calm > 8 && q > best && !retried.has(q - 1)) { retried.add(q - 1); set(q - 1); }
+  };
+
+  let drawn = false;
+  const gl = canvas.getContext('webgl2') as WebGL2RenderingContext | null; // the stage's own context (same canvas, same type)
+  return {
+    get q() { return q; },
+    frame(t, pose, held) {
+      const cap = STEPS[q][1];
+      if (cap && lastDraw >= 0 && t - lastDraw < (1 / cap) * 0.85 && t >= lastDraw) return false;
+      const dt = last && t > last ? t - last : 0;
+      last = t;
+      if (!held && !opts.full && dt > 0 && dt < 0.5) adapt(dt);
+      lastDraw = t;
+      place(pose, FRAME / Math.max(1, css.h), t);
+      stage.render();
+      if (!drawn) { drawn = true; opts.onDrawn(); }
+      return true;
+    },
+    down() { if (cool <= 0) stepDown(); },
+    afterGPU(cb) {
+      const sync = gl && !gl.isContextLost() ? gl.fenceSync(gl.SYNC_GPU_COMMANDS_COMPLETE, 0) : null;
+      if (!gl || !sync) { setTimeout(cb, 0); return; }
+      gl.flush();
+      const t0 = performance.now();
+      const poll = () => {
+        const r = gl.isContextLost() ? gl.WAIT_FAILED : gl.clientWaitSync(sync, 0, 0);
+        // a fence that never signals (lost context, driver trouble) must not hold the clock: give up after 2 s
+        if (r === gl.TIMEOUT_EXPIRED && performance.now() - t0 < 2000) { setTimeout(poll, 1); return; }
+        if (!gl.isContextLost()) gl.deleteSync(sync);
+        cb();
+      };
+      setTimeout(poll, 0);
+    },
+    dispose() { canvas.removeEventListener('webglcontextlost', lost); stage.dispose(); },
+  };
 }

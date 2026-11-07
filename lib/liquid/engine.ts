@@ -1,17 +1,18 @@
-// The liquid's GL engine: compiles the shader, owns the quality steps and the frame-time adaptation. Used by the
-// worker (liquidWorker.ts, the normal path) and by the main-thread fallback (render.ts). Nothing here touches the DOM.
+// The liquid's GL engine (WebGL2): compiles the shader, keeps the grid and mask textures, owns the quality steps. Used by
+// the worker (liquidWorker.ts, the normal path) and by the main-thread fallback (render.ts). Nothing here touches the
+// DOM, and nothing here keeps time: each draw is for the time the main frame says.
 //
-// Software GL (SwiftShader / llvmpipe, i.e. no GPU: CI, PageSpeed, some VMs) starts at a low step (small render scale,
-// capped fps, fewer packets) so the liquid still shows without starving the machine. `?liquid=full` (our own
-// screenshot checks) skips that and pins the top step: no software start, no adaptation.
+// Quality: a step is [render scale (x CSS px), frames per second cap]. A GPU starts at the top (scale = devicePixelRatio,
+// capped at 2). Software GL (SwiftShader / llvmpipe: CI, PageSpeed) starts lower: a smaller canvas, still smooth (the
+// glints are antialiased lines at any scale, never beads). Steps go down only when the renderer has kept the page
+// waiting for a while, and come back up after a few calm seconds. `full` (?liquid=full, screenshots) pins the top step.
 
-import { CALM_MAX, calm, liveCount, MAX_SOURCES, packSources } from './field';
 import { fragment, VERT } from './shader';
+import { swellPhases } from './swell';
 
-type Ctx = WebGLRenderingContext | WebGL2RenderingContext;
-type Step = [scale: number, packets: number, fps: number]; // fps 0 = every frame
+type Step = [scale: number, fps: number];
 
-export function isSoftwareGL(gl: Ctx) {
+export function isSoftwareGL(gl: WebGL2RenderingContext) {
   try {
     const ext = gl.getExtension('WEBGL_debug_renderer_info');
     const name = String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER));
@@ -21,19 +22,19 @@ export function isSoftwareGL(gl: Ctx) {
   }
 }
 
+export type GridMeta = { cols: number; rows: number; x0: number; y0: number; cell: number; on: boolean };
+
 export type Engine = {
   setView(w: number, h: number, dpr: number): void;
-  /** Draw if due (fps caps); returns true if it drew. */
-  draw(t: number, scroll: number): boolean;
-  /** The main-thread watchdog says long tasks keep coming: step quality down. */
-  stepDown(t: number): void;
-  resume(): void;
-  stats: { q: number; live: number; soft: boolean };
+  /** New heights (cols x rows, px) and/or mask, or null to keep the last ones. */
+  upload(meta: GridMeta, heights: Float32Array | null, mask: Uint8Array | null): void;
+  /** Draw the frame for time t (s) at scroll sy (page px). `late` = main frames that had to wait for the previous one;
+   *  `hold` = a harness is stepping time (no adaptation). Returns false if the fps cap skipped it. */
+  draw(t: number, sy: number, late: number, hold?: boolean): boolean;
+  stats: { q: number; soft: boolean; scale: number };
 };
 
-export function createEngine(gl: Ctx, canvas: { width: number; height: number }, o: { full: boolean }): Engine | null {
-  const maxVec = gl.getParameter(gl.MAX_FRAGMENT_UNIFORM_VECTORS) as number;
-  const cap = Math.max(8, Math.min(MAX_SOURCES, Math.floor((maxVec - 10) / 2)));
+export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number; height: number }, o: { full: boolean }): Engine | null {
   const compile = (type: number, src: string) => {
     const s = gl.createShader(type)!;
     gl.shaderSource(s, src);
@@ -42,7 +43,8 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
   };
   const prog = gl.createProgram()!;
   gl.attachShader(prog, compile(gl.VERTEX_SHADER, VERT));
-  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragment(cap)));
+  gl.attachShader(prog, compile(gl.FRAGMENT_SHADER, fragment()));
+  gl.bindAttribLocation(prog, 0, 'a');
   gl.linkProgram(prog);
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) return null;
   gl.useProgram(prog);
@@ -50,22 +52,37 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
   const buf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, buf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-  const loc = gl.getAttribLocation(prog, 'a');
-  gl.enableVertexAttribArray(loc);
-  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 
   const u = (n: string) => gl.getUniformLocation(prog, n);
   const uView = u('uView');
   const uScale = u('uScale');
-  const uScroll = u('uScroll');
-  const uTime = u('uTime');
-  const uN = u('uN');
-  const uA = u('uA');
-  const uB = u('uB');
-  const uCalm = u('uCalm');
-  const C = new Float32Array(CALM_MAX * 4);
-  const A = new Float32Array(cap * 4);
-  const B = new Float32Array(cap * 4);
+  const uOrg = u('uOrg');
+  const uCell = u('uCell');
+  const uSize = u('uSize');
+  const uOn = u('uOn');
+  const uSeed = u('uSeed');
+  const uSwell = u('uSwell');
+  gl.uniform1i(u('uH'), 0);
+  gl.uniform1i(u('uM'), 1);
+
+  const tex = (unit: number) => {
+    const t = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0 + unit);
+    gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    return t;
+  };
+  const tH = tex(0);
+  const tM = tex(1);
+  let tw = 0;
+  let th = 0;
+  const meta: GridMeta = { cols: 0, rows: 0, x0: 0, y0: 0, cell: 8, on: false };
+  const ph = new Float32Array(4);
 
   const soft = !o.full && isSoftwareGL(gl);
   let steps: Step[] = [];
@@ -73,18 +90,19 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
   let qMin = 0;
   const build = (dpr: number) => {
     const all: Step[] = [
-      [dpr, cap, 0],
-      [Math.max(1, dpr * 0.75), cap, 0],
-      [1, Math.min(cap, 32), 0],
-      [0.75, Math.min(cap, 24), 0],
-      [0.55, Math.min(cap, 16), 0],
-      [0.4, Math.min(cap, 12), 24],
-      [0.3, Math.min(cap, 8), 15],
+      [dpr, 0],
+      [Math.max(1, dpr * 0.75), 0],
+      [1, 0],
+      [0.75, 0],
+      [0.6, 0],
+      [0.5, 30],
+      [0.4, 24],
     ];
     const prev = steps[q];
     steps = all.filter(([s], i) => i === 0 || s < all[i - 1][0]);
-    qMin = soft ? steps.length - 1 : 0;
-    q = prev ? Math.min(steps.length - 1, Math.max(qMin, q)) : qMin;
+    // software GL: start where it still keeps up (measured: SwiftShader, 4 cores)
+    qMin = soft ? Math.max(0, steps.findIndex(([s]) => s <= 0.5)) : 0;
+    q = prev ? Math.min(steps.length - 1, Math.max(0, q)) : qMin;
   };
 
   let vw = 1;
@@ -94,32 +112,60 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
   const resize = () => {
     const sc = steps[q][0];
     const pw = Math.max(1, Math.round(vw * sc));
-    const ph = Math.max(1, Math.round(vh * sc));
-    if (pw !== w || ph !== h) {
+    const ph2 = Math.max(1, Math.round(vh * sc));
+    if (pw !== w || ph2 !== h) {
       w = pw;
-      h = ph;
+      h = ph2;
       canvas.width = w;
       canvas.height = h;
       gl.viewport(0, 0, w, h);
     }
   };
 
-  let slow = 0;
-  let fast = 0;
-  let cool = 0;
-  let noUpUntil = 0;
-  let lastDown = -99;
-  let last = 0;
-  const stats = { q: 0, live: 0, soft };
-  const recent: [number, number][] = [];
+  // Adaptation: count main frames that had to wait for us (late) against frames posted. Step down only when the page
+  // has been kept waiting for over a second; step back up after a calm spell. Hysteresis: a step up that has to be
+  // undone within 10 s doubles the calm needed before the next try (4 s, 8 s ... 30 s), so quality never oscillates.
+  // Nothing adapts in the first 2.5 s (start-up work is not the steady state) or while a harness steps time (`hold`).
+  let win: [number, number][] = []; // [t, late]
+  let calmSince = -1;
+  let lastDraw = 0;
+  let upWait = 4;
+  let lastUp = -99;
+  let lastChange = 0;
+  let first = -1;
+  const stats = { q: 0, soft, scale: 1 };
 
-  const down = (t: number) => {
-    q++;
-    slow = 0;
-    cool = 1.5;
-    if (t - lastDown < 8) noUpUntil = t + 40;
-    lastDown = t;
-    resize();
+  const adapt = (t: number, late: number) => {
+    if (o.full) return;
+    if (first < 0) first = t;
+    if (t - first < 2.5) return;
+    win.push([t, late]);
+    while (win.length && win[0][0] < t - 1.5) win.shift();
+    let posted = 0;
+    let lateSum = 0;
+    for (const [, l] of win) {
+      posted++;
+      lateSum += l;
+    }
+    const ratio = lateSum / Math.max(1, posted + lateSum);
+    if (posted >= 12 && ratio > 0.34 && q < steps.length - 1 && t - lastChange > 1.5) {
+      if (t - lastUp < 10) upWait = Math.min(30, upWait * 2); // we just came up from here: wait longer next time
+      q++;
+      lastChange = t;
+      calmSince = -1;
+      win = [];
+      resize();
+      return;
+    }
+    if (late) calmSince = -1;
+    else if (calmSince < 0) calmSince = t;
+    if (q > qMin && calmSince >= 0 && t - calmSince > upWait && t - lastChange > upWait) {
+      q--;
+      lastChange = lastUp = t;
+      calmSince = -1;
+      win = [];
+      resize();
+    }
   };
 
   return {
@@ -130,58 +176,52 @@ export function createEngine(gl: Ctx, canvas: { width: number; height: number },
       build(Math.min(dpr || 1, 2));
       resize();
     },
-    resume() {
-      last = 0;
-    },
-    stepDown(t) {
-      if (o.full || q >= steps.length - 1) return;
-      noUpUntil = t + 40;
-      down(t);
-    },
-    draw(t, scroll) {
-      const tgt = steps[q][2] ? 1 / steps[q][2] : 0;
-      if (last && t - last < tgt * 0.85) return false;
-      const dt = last ? Math.min(0.25, t - last) : 1 / 60;
-      last = t;
-      if (!o.full) {
-        // Adapt: a run of slow frames steps down; a long calm run steps back up (never above the start step).
-        cool -= dt;
-        const slowAt = tgt ? tgt * 1.6 : 0.024;
-        const fastAt = tgt ? tgt * 1.15 : 0.0185;
-        if (dt > slowAt) {
-          slow++;
-          fast = 0;
-        } else {
-          slow = Math.max(0, slow - 0.25);
-          fast = dt < fastAt ? fast + 1 : 0;
-        }
-        if (slow > 24 && q < steps.length - 1 && cool <= 0) down(t);
-        else if (fast > 360 && q > qMin && cool <= 0 && t > noUpUntil) {
-          q--;
-          fast = 0;
-          cool = 3;
-          resize();
-        }
+    upload(m, heights, mask) {
+      const grow = m.cols !== tw || m.rows !== th;
+      Object.assign(meta, m);
+      if (grow) {
+        tw = m.cols;
+        th = m.rows;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, tH);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, tw, th, 0, gl.RED, gl.FLOAT, heights && heights.length >= tw * th ? heights : new Float32Array(tw * th));
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, tM);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, tw, th, 0, gl.RED, gl.UNSIGNED_BYTE, mask && mask.length >= tw * th ? mask : new Uint8Array(tw * th));
+        return;
       }
-      const n = packSources(t, steps[q][1], A, B);
+      if (heights) {
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, tH);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, tw, th, gl.RED, gl.FLOAT, heights);
+      }
+      if (mask) {
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D, tM);
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, tw, th, gl.RED, gl.UNSIGNED_BYTE, mask);
+      }
+    },
+    draw(t, sy, late, hold) {
+      if (!hold) adapt(t, late);
+      const cap = steps[q][1];
+      if (cap && lastDraw && t > lastDraw && t - lastDraw < (1 / cap) * 0.85) return false; // (the same t again = a redraw)
+      lastDraw = t;
       gl.uniform2f(uView, vw, vh);
       gl.uniform1f(uScale, w / vw);
-      gl.uniform1f(uScroll, scroll);
-      gl.uniform1f(uTime, t);
-      gl.uniform1i(uN, n);
-      gl.uniform4fv(uA, A);
-      gl.uniform4fv(uB, B);
-      C.fill(0);
-      C.set(calm);
-      gl.uniform4fv(uCalm, C);
+      gl.uniform2f(uOrg, meta.x0 + meta.cell / 2, meta.y0 + meta.cell / 2 - sy);
+      gl.uniform1f(uCell, meta.cell);
+      gl.uniform2i(uSize, Math.max(1, tw), Math.max(1, th));
+      gl.uniform1f(uOn, meta.on && tw > 0 ? 1 : 0);
+      gl.uniform1f(uSeed, (t * 60) % 97);
+      gl.uniform4fv(uSwell, swellPhases(0, sy, t, ph));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       if (o.full) gl.finish(); // screenshot mode: the frame is really done before it is acknowledged
       stats.q = q;
-      // Reported as the peak of the last 2.5 s: on a slow phone (a few frames a second, input handled late) a bare
-      // instantaneous count flickers to 0 between a burst of waves and the next look at it.
-      recent.push([t, liveCount(t)]); // live wave sources (input samples, taps, floaters), not shader entries
-      while (recent[0][0] < t - 2.5) recent.shift();
-      stats.live = recent.reduce((m, r) => (r[1] > m ? r[1] : m), 0);
+      stats.scale = steps[q][0];
       return true;
     },
   };

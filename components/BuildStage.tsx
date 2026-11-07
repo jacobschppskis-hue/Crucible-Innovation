@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ease, seg, trackScroll } from '@/lib/scroll';
 import { firstUse, richTier } from '@/lib/tier';
-import { HeatField } from './HeatField';
 import { ArrowRight } from './Icons';
 import { LiveSite, type Theme } from './LiveSite';
 import { WordReveal } from './WordReveal';
@@ -209,7 +208,6 @@ export function BuildStage() {
   return (
     <section ref={ref} aria-label="Crucible Sites" className="bs relative" data-theme="cafe">
       <div className="bs-stage relative overflow-hidden">
-        <HeatField origin={[0.76, 0.52]} originMobile={[0.5, 0.78]} />
         <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-ground" />
         <div className="container-x relative grid items-center gap-12 pt-[calc(var(--nav-h)+2.5rem)] pb-16 lg:min-h-[100svh] lg:grid-cols-[1fr_1.08fr] lg:gap-16 lg:pt-[var(--nav-h)] lg:pb-0">
           <div className="bs-copywrap grid">

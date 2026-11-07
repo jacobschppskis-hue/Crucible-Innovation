@@ -8,22 +8,25 @@ const IRON = 1811; // iron melts at 1811 K
 
 /**
  * Scroll heats the section from room temperature (293 K) to iron's melting point (1811 K): a furnace glow rises from
- * the floor (CSS), and on the rich tier WebGL flames rise and climb with the reading until they fill most of the screen.
+ * the floor (CSS), and on the rich tier WebGL flames (lib/gl/molten.ts) come up with it: they rise at one calm pace at
+ * every temperature; only their width, height and brightness grow with the heat.
  */
 export function Thesis() {
   const ref = useRef<HTMLElement>(null);
   const num = useRef<HTMLSpanElement>(null);
   const cap = useRef<HTMLSpanElement>(null);
   const gl = useRef<HTMLCanvasElement>(null);
-  const crest = useRef<HTMLCanvasElement>(null);
-  const heat = useRef(1);
+  const heat = useRef(0);
 
   useEffect(() => {
     if (reducedMotion()) return;
     const el = ref.current!;
     let shown = -1;
     const off = trackScroll(el, 'pin', (p) => {
-      const k = ease.inOut(seg(p, 0.08, 0.78));
+      // Heat climbs at a near-steady rate through most of the pin (half linear, half smoothstep: soft at both ends,
+      // never more than 1.25x the average rate), so the fire comes up evenly rather than rushing through the middle.
+      const s = seg(p, 0.04, 0.84);
+      const k = 0.5 * s + 0.5 * s * s * (3 - 2 * s);
       heat.current = k;
       el.style.setProperty('--k', k.toFixed(4));
       // One line fully leaves before the next arrives.
@@ -48,7 +51,6 @@ export function Thesis() {
         if (dead) return;
         stop = startMolten({
           canvas: gl.current!,
-          crest: crest.current,
           heat: () => heat.current,
           onReady: () => el.setAttribute('data-gl', ''),
           onFail: () => el.removeAttribute('data-gl'),
@@ -67,7 +69,6 @@ export function Thesis() {
     <section ref={ref} aria-label="Thesis" className="thesis pin-tall relative">
       <div className="pin-sticky relative flex items-center overflow-hidden">
         <canvas ref={gl} aria-hidden className="thesis-gl" />
-        <canvas ref={crest} aria-hidden className="thesis-gl thesis-crest" />
         <div aria-hidden className="thesis-furnace" />
         <div aria-hidden className="thesis-glow" />
         <div className="container-x relative flex w-full flex-col gap-12 py-24 lg:flex-row lg:items-end lg:justify-between">

@@ -1,6 +1,6 @@
 export { createStage } from './core';
 export type { Stage, StageOptions, Obj, ObjectInit } from './core';
-export { logoPieces, slab, sphere, extrude, mouldBrick, recentre } from './geometry';
+export { logoPieces, slab, sphere, extrude, goldBar, BAR, recentre } from './geometry';
 export type { Mesh, Piece, Vec3 } from './geometry';
 export { MATERIALS, reliefCanvas } from './materials';
 export type { MaterialName } from './materials';

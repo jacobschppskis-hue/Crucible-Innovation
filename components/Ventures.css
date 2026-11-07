@@ -20,28 +20,27 @@
   justify-content: center;
   aspect-ratio: 4 / 3;
 }
-/* The ingot is a freestanding object on the page's own liquid: no floor, no box, no backdrop. The still (transparent)
-   holds the layout; the live canvas lies exactly over it and takes over once it has drawn (data-live). */
+/* The ingot is a freestanding object on the page's own liquid: no floor, no box, no backdrop. The host keeps the 8:5
+   layout box; the still (transparent) and the live canvas lie over it and overhang it by 14% above and below (5:4), so
+   the bar can turn, bob and tilt without being clipped. The canvas takes over once it has drawn (data-on). */
 .ing {
   position: relative;
   display: block;
   width: 100%;
   aspect-ratio: 8 / 5;
 }
-.ing-still {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 8 / 5;
-}
+.ing-still,
 .ing-canvas {
   position: absolute;
-  inset: 0;
+  left: 0;
+  top: -14%;
   width: 100%;
-  height: 100%;
+  height: 128%;
   display: block;
-  visibility: hidden; /* a worker's canvas keeps compositing while hidden; it shows once it has drawn */
   pointer-events: none;
+}
+.ing-canvas {
+  visibility: hidden; /* a worker's canvas keeps compositing while hidden; it shows once it has drawn */
 }
 .ing[data-on] .ing-canvas {
   visibility: visible;
@@ -76,7 +75,7 @@
   text-decoration-color: var(--ember);
 }
 
-/* The fallback: the mark in its mould. A live venture's has cooled; the rest still glow. */
+/* The fallback (a venture without an ingot still): its mark. A live venture's has cooled; the rest still glow. */
 .vf-mould {
   position: absolute;
   inset: 0;
