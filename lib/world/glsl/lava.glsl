@@ -147,11 +147,9 @@ void lava_footprint(Ray r, Sea s, out vec2 dPx, out vec2 dPy) {
 vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // far out, look's planet (currents, continents, shores); up close, this sea; the same temperature field in both
   float k = look_farMix(s);
-  // look's far field takes m.heat x 400 K; the journey's 'lava.heat' (lava_uTone.x, in K) goes along so a place that
-  // cools the near sea (paypal's night side) cools the planet seen from orbit too
-  SeaMod mf = m;
-  mf.heat += lava_uTone.x / 400.;
-  vec3 far = k > 0.001 ? look_planetFarMod(r, s, mf) : vec3(0.);   // includes heat and m.emit
+  // look's far field at the same temperature offset as the near sea (the journey's 'lava.heat' and SeaMod.heat, both
+  // 850 K per unit), so a place that cools the near sea (paypal's night side) cools the planet from orbit alike
+  vec3 far = k > 0.001 ? look_planetFarT(r, s, lava_uTone.x + 850. * m.heat) + m.emit : vec3(0.);
   if (k >= 0.999) return far;
   vec2 dPx, dPy;
   lava_footprint(r, s, dPx, dPy);
