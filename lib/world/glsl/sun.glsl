@@ -30,3 +30,13 @@ vec3 look_sunDisc(vec3 rd, float pa) {
   return look_uSunE * col * (I / 0.79) / solid * look_uSunBoost * cov;
 }
 
+
+// ---- the moon: the one cold light (Quench). Off (0) except where a place's keys raise channel 'look.moon' (the
+// ventures: a bright moon low behind the camera's shoulder gives the metal cool sheen and edge highlights while their
+// bases glow hot). Small, distant, colourless rock lit by the sun: its light is cold only by contrast with the lava.
+uniform vec3 look_uMoonDir;   // unit, toward the moon
+uniform vec3 look_uMoonE;     // illuminance colour x strength (0 when off)
+
+/** The moon's light at any point (irradiance colour; times N.L). A directional light: no shadow, no falloff. */
+vec3 look_moonLight() { return look_uMoonE; }
+vec3 look_moonDir() { return look_uMoonDir; }

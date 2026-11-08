@@ -74,7 +74,7 @@ float look_seaTemp(vec3 q, float fp, float land) {
   // a soft warm wake around each current (heat diffusing into the dark water) and a dim body glow, so the disc reads
   float near = exp(-abs(f1) * 10.0);
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
-  float T = 1070.0 + 20.0 * broad + 60.0 * near + 230.0 * c1 + 150.0 * c2 + 110.0 * c3;
+  float T = 1060.0 + 15.0 * broad + 30.0 * near + 150.0 * c1 + 95.0 * c2 + 70.0 * c3;
   T += 110.0 * exp(-max(0.0, -land) * 22.0);
   return T + look_uHeat * 520.0;
 }
@@ -126,10 +126,10 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
     vec3 lc = q * (look_uRg / 40.0);
     vec3 ci = floor(lc);
     vec3 hh = look_h33(ci + 7.3);
-    if (hh.x < 0.18) {
+    if (hh.x < 0.07) {
       vec3 cp = (ci + 0.25 + 0.5 * hh) * (40.0 / look_uRg);
       float dkm = length(q - normalize(cp)) * look_uRg;
-      float rad = mix(1.0, 3.0, hh.y);
+      float rad = mix(0.6, 1.8, hh.y);
       float wv2 = max(rad, fp * 0.7);
       float lake = exp(-dkm * dkm / (wv2 * wv2)) * (rad * rad) / (wv2 * wv2);
       emit += look_planck(mix(1250.0, 1420.0, hh.z) + look_uHeat * 300.0) * look_uLavaGain * lake * land * smoothstep(0.05, 0.25, lf);
