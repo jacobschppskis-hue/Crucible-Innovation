@@ -68,7 +68,7 @@ test('home: the world answers the scroll at every position', async ({ page }) =>
     // the world reads the scroll on its next frame (software GL draws a few a second)
     const read = () => page.evaluate(() => (window as unknown as { __world: { state(): { progress: number; scroll: number } } }).__world.state());
     let p = -1;
-    for (let k = 0; k < 40; k++) { const st = await read(); p = st.progress; if (p > last + 1e-4) break; await page.waitForTimeout(100); }
+    for (let k = 0; k < 100; k++) { const st = await read(); p = st.progress; if (p > last + 1e-4) break; await page.waitForTimeout(100); }
     if (last >= 0 && !(p > last)) dead.push(Math.round((y / vh) * 10) / 10);
     last = p;
   }

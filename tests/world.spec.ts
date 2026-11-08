@@ -40,6 +40,7 @@ test('the world starts: one fixed canvas behind the page, on the one clock, no e
 
 test('the loop: scrolling past the bottom with the wheel or keys comes back to the top, and progress runs on', async ({ page, isMobile }) => {
   test.skip(isMobile, 'wheel and keyboard');
+  test.setTimeout(120_000); // software GL handles one wheel tick per drawn frame
   await start(page);
   expect((await state(page)).looping).toBe(true);
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
