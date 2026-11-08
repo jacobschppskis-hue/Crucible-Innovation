@@ -137,7 +137,8 @@ The one defect in it is the blocky lava at the upper left near the limb. Fix tha
 
 ## Milestones (UTC)
 
-- **~22:00 M1:** world's crisp-pass API is in; every owner has pushed a first fix with frames under
+- (Moved: the team's first turns failed on the account's 5-hour limit at 19:55; restarted 23:35 UTC.)
+- **~01:30 M1:** world's crisp-pass API is in; every owner has pushed a first fix with frames under
   `lab/<role>/shots/v2/`. The coordinator builds a "Crucible Final V2" preview from the trunk.
-- **~00:30 M2:** everything above done and QA-checked; the trunk freezes; the coordinator merges it into
+- **~04:00 M2:** everything above done and QA-checked; the trunk freezes; the coordinator merges it into
   `claude/inspiring-allen-sz5kjl` (PR #21) and publishes the final V2 preview.
