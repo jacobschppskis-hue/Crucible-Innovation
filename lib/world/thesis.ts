@@ -33,12 +33,15 @@ const smoother = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 export const thesisState = { k: 0, w: 0, kelvin: ROOM };
 
 /** How far the planet's sea heats at 1811 K, in lava's heat units (850 K each). */
-const HEAT = 0.3;
+const HEAT = 0.24;
 
 const GLSL = /* glsl */ `
 uniform float thesis_uHeat;  // the whole planet's added heat (lava's units), already weighted
 void thesis_sea(Ray r, Sea s, inout SeaMod m){
-  m.heat += thesis_uHeat;
+  // the same heat everywhere, seen through the skin: a hot surface at a grazing angle shows less of its glow, so the
+  // disk darkens toward the limb (tonal depth, not a flat disk); the lava's own rivers and swell ride on top
+  float limb = 0.72 + 0.28 * smoothstep(0.03, 0.4, s.graz);
+  m.heat += thesis_uHeat * limb;
 }
 `;
 
