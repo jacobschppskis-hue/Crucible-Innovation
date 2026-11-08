@@ -8,12 +8,10 @@
 // line, mirrored about the horizon, broken by the waves (the ray already carries the wave normal), blurred with
 // distance (mip LOD from the caller). Nothing sits behind the type; the type simply exists in the world's light.
 //
-// Two halves, so the GL side can live in a worker:
-// - main thread: `typeAtlas()` finds the lines, rasterises the atlas (an OffscreenCanvas/HTMLCanvasElement you can
-//   upload or transfer as an ImageBitmap) and `frame()` returns the per-line uniforms (Float32Array, no allocation);
-// - GL side: `TYPE_GLSL` (declarations + `vec4 typeAt(vec2 px, float lod)` + `vec2 typeProject(...)`), and
-//   `typeUpload(gl, prog, ...)` which binds the atlas and sets the uniforms.
-// Framework-free (no React). Fonts: call `refresh()` after `document.fonts.ready` and on resize.
+// `typeAtlas()` finds the lines, rasterises the atlas and `frame()` returns the per-line uniforms (no allocation); the
+// module `type` (bottom) wires it into the world's `sky` hook. Framework-free (no React).
+
+import type { WorldModule } from './modules';
 
 export const TYPE_MAX = 6;
 
@@ -68,8 +66,8 @@ export function typeAtlas(opts: { root?: ParentNode; scale?: number; maxWidth?: 
   const root = opts.root ?? document;
   const scale = opts.scale ?? 0.5; // atlas px per CSS px: reflections are soft, half resolution is plenty
   const maxW = opts.maxWidth ?? 2048;
-  const canvas: HTMLCanvasElement | OffscreenCanvas =
-    typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(4, 4) : Object.assign(document.createElement('canvas'), { width: 4, height: 4 });
+  // a DOM canvas: it draws with the document's fonts (the self-hosted Archivo), which an OffscreenCanvas may not see
+  const canvas = Object.assign(document.createElement('canvas'), { width: 4, height: 4 });
   let items: Item[] = [];
   let version = 0;
   const out: TypeFrame = {
@@ -109,7 +107,7 @@ export function typeAtlas(opts: { root?: ParentNode; scale?: number; maxWidth?: 
     const H = Math.max(4, y + rowH);
     canvas.width = Math.min(maxW, Math.pow(2, Math.ceil(Math.log2(W))));
     canvas.height = Math.pow(2, Math.ceil(Math.log2(H)));
-    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null;
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#fff'; // coverage only; the line's colour is a uniform
@@ -130,6 +128,7 @@ export function typeAtlas(opts: { root?: ParentNode; scale?: number; maxWidth?: 
       const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
       const range = document.createRange();
       for (let t = walker.nextNode() as Text | null; t; t = walker.nextNode() as Text | null) {
+        if (t.parentElement?.closest('.sr-only')) continue; // screen-reader text is not on screen
         const s = t.data;
         const re = /\S+/g;
         for (let m = re.exec(s); m; m = re.exec(s)) {
@@ -186,67 +185,81 @@ export function typeAtlas(opts: { root?: ParentNode; scale?: number; maxWidth?: 
   return { canvas, refresh, frame, get count() { return items.length; } };
 }
 
-/**
- * GLSL ES 3.00. Declares the uniforms and:
- * - `vec4 typeAt(vec2 px, float lod)`: premultiplied linear colour of display type at viewport CSS px (top-left
- *   origin), blurred by `lod` (atlas mip level; 0 sharp);
- * - `vec2 typeProject(vec3 d, vec3 camR, vec3 camU, vec3 camF, float focalPx, vec2 view)`: the viewport px a world
- *   direction points at (x < -1e4 when behind the camera). For a sea pixel, pass the reflected ray: the reflection of
- *   a line is `typeAt(typeProject(R, ...), lod) * fresnel`.
- */
-export const TYPE_GLSL = /* glsl */ `
-uniform sampler2D uTypeTex;
-uniform vec4 uTypeRect[${TYPE_MAX}];
-uniform vec4 uTypeUV[${TYPE_MAX}];
-uniform vec4 uTypeCol[${TYPE_MAX}];
-uniform int uTypeN;
-vec4 typeAt(vec2 px, float lod){
+// ---- the world module ----------------------------------------------------------------------------------------------
+// Hook `sky`: every reflected ray (depth > 0) that reaches the sky asks where it points on screen; if a display line
+// stands there, the line is composited onto the sky that ray sees (premultiplied). Primary sky rays (depth 0) are left
+// alone: the DOM draws the type itself. The lava's Fresnel, its wave normals and its roughness (Ray.pa) do the rest:
+// the reflection is mirrored about the horizon, broken by the waves and blurred by distance (mip LOD from Ray.pa).
+const GLSL = /* glsl */ `
+uniform sampler2D type_uTex;
+uniform vec4 type_uRect[${TYPE_MAX}];
+uniform vec4 type_uUV[${TYPE_MAX}];
+uniform vec4 type_uCol[${TYPE_MAX}];
+uniform int type_uN;
+uniform float type_uGain;   // radiance of fully lit type (bone) in the sky it hangs in
+uniform float type_uScale;  // atlas px per CSS px
+vec4 type_at(vec2 px, float lod){
   vec4 acc = vec4(0.0);
   for (int i = 0; i < ${TYPE_MAX}; i++){
-    if (i >= uTypeN) break;
-    vec4 r = uTypeRect[i];
+    if (i >= type_uN) break;
+    vec4 r = type_uRect[i];
     vec2 f = (px - r.xy) / r.zw;
     if (any(lessThan(f, vec2(0.0))) || any(greaterThan(f, vec2(1.0)))) continue;
-    vec4 uv = uTypeUV[i];
-    float a = textureLod(uTypeTex, uv.xy + f * uv.zw, lod).a * uTypeCol[i].a;
-    acc += vec4(uTypeCol[i].rgb * a, a) * (1.0 - acc.a);
+    vec4 uv = type_uUV[i];
+    float a = textureLod(type_uTex, uv.xy + f * uv.zw, lod).a * type_uCol[i].a;
+    acc += vec4(type_uCol[i].rgb * a, a) * (1.0 - acc.a);
   }
   return acc;
 }
-vec2 typeProject(vec3 d, vec3 camR, vec3 camU, vec3 camF, float focalPx, vec2 view){
-  float z = dot(d, camF);
-  if (z <= 1e-4) return vec2(-1e5);
-  return view * 0.5 + vec2(dot(d, camR), -dot(d, camU)) / z * focalPx;
+void type_sky(Ray r, inout vec3 col){
+  if (r.depth == 0 || type_uN == 0) return;
+  float z = dot(r.rd, uCam[2]);
+  if (z <= 1e-3) return;
+  float fc = uFocal * uPx; // focal length in CSS px
+  vec2 px = uView * 0.5 + vec2(dot(r.rd, uCam[0]), -dot(r.rd, uCam[1])) / z * fc;
+  float lod = log2(max(r.pa * fc * type_uScale, 1.0));
+  vec4 t = type_at(px, lod);
+  col = col * (1.0 - t.a) + t.rgb * type_uGain;
 }
 `;
 
-/** GL side: upload the atlas when its version changed, bind it to `unit`, set the per-line uniforms. */
-export function typeUpload(
-  gl: WebGL2RenderingContext,
-  prog: WebGLProgram,
-  state: { tex?: WebGLTexture; version?: number },
-  atlas: TexImageSource | null,
-  f: TypeFrame,
-  unit = 7,
-) {
-  gl.activeTexture(gl.TEXTURE0 + unit);
-  if (!state.tex) {
-    state.tex = gl.createTexture()!;
-    gl.bindTexture(gl.TEXTURE_2D, state.tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  } else gl.bindTexture(gl.TEXTURE_2D, state.tex);
-  if (atlas && state.version !== f.version) {
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlas);
-    gl.generateMipmap(gl.TEXTURE_2D);
-    state.version = f.version;
-  }
-  const U = (n: string) => gl.getUniformLocation(prog, n);
-  gl.uniform1i(U('uTypeTex'), unit);
-  gl.uniform1i(U('uTypeN'), f.n);
-  gl.uniform4fv(U('uTypeRect'), f.rect);
-  gl.uniform4fv(U('uTypeUV'), f.uv);
-  gl.uniform4fv(U('uTypeCol'), f.col);
-}
+let atlas: ReturnType<typeof typeAtlas> | null = null;
+let dirty = 0; // a pending re-rasterise (fonts, resize), in frames
+let lastW = 0;
+let lastH = 0;
+const SCALE = 0.5;
+
+export const type: WorldModule = {
+  id: 'type',
+  glsl: GLSL,
+  hooks: ['sky'],
+  async init({ root }) {
+    atlas = typeAtlas({ root, scale: SCALE });
+    try {
+      await document.fonts?.ready;
+    } catch {}
+    atlas.refresh();
+  },
+  update(f, u) {
+    if (!atlas) return;
+    // a resize re-breaks the lines: re-rasterise once the size has held for a few frames
+    if (f.w !== lastW || f.h !== lastH) {
+      lastW = f.w;
+      lastH = f.h;
+      dirty = 12;
+    }
+    if (dirty > 0 && --dirty === 0) atlas.refresh();
+    const fr = atlas.frame();
+    u.tex('type_uTex', atlas.canvas, fr.version, { linear: true, mips: true });
+    u.set('type_uN', fr.n);
+    u.set('type_uRect', fr.rect);
+    u.set('type_uUV', fr.uv);
+    u.set('type_uCol', fr.col);
+    u.set('type_uGain', 0.65);
+    u.set('type_uScale', SCALE);
+  },
+  dispose() {
+    atlas = null;
+    lastW = lastH = 0;
+  },
+};

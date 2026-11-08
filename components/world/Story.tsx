@@ -11,13 +11,20 @@ export function Story({ paypal }: { paypal?: React.ReactNode }) {
   const [jacob, charlie] = stories;
   return (
     <section id="story" aria-labelledby="story-h" className="wstory">
-      <div className="container-x wstory-head" data-place="story">
-        <h2 id="story-h" className="h-section" data-reflect>
-          Why Crucible
-        </h2>
-        <p className="wstory-sub">Jacob Schopp and Charles Rochford, co-founders, each in their own words.</p>
-      </div>
-      <Chapter s={jacob} interlude={paypal} after={1} place={['story', 'story-2']} />
+      <Chapter
+        s={jacob}
+        intro={
+          <div className="wstory-head">
+            <h2 id="story-h" className="h-section" data-reflect>
+              Why Crucible
+            </h2>
+            <p className="wstory-sub">Jacob Schopp and Charles Rochford, co-founders, each in their own words.</p>
+          </div>
+        }
+        interlude={paypal}
+        after={1}
+        place={['story', 'story-2']}
+      />
       <Chapter s={charlie} place={['story-3']} />
     </section>
   );

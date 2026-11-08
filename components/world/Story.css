@@ -4,7 +4,9 @@
    any line, and solid bone keeps AA over it. */
 .wstory {
   position: relative;
-  padding-top: clamp(6rem, 18vh, 12rem);
+}
+.wstory-head {
+  padding-bottom: clamp(4rem, 12vh, 8rem);
 }
 .wstory-sub {
   margin-top: 1.5rem;

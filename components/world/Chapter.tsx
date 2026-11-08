@@ -6,12 +6,12 @@ import './Story.css';
  * One founder's account, word for word (data/story.ts), read while the camera glides low over the night sea. The type
  * sits on the star field (the world frames it there); nothing is put behind it: no scrim, no box, no shadow.
  *
- * `interlude` is a scene rendered in the middle of the account, after paragraph `after` (Jacob's: PayPal, right after
+ * `intro` opens the first part (the section's heading), inside the same place. `interlude` is a scene rendered in the middle of the account, after paragraph `after` (Jacob's: PayPal, right after
  * the paragraph that tells it). The account then picks up where it stopped, so his display break-out lands straight
  * after the six sparks. On wide screens the tube stays pinned beside the paragraphs before the interlude; after it, the
  * name and the reading line do.
  */
-export function Chapter({ s, interlude, after = 1, place }: { s: FounderStory; interlude?: React.ReactNode; after?: number; place: [string, string?] }) {
+export function Chapter({ s, intro, interlude, after = 1, place }: { s: FounderStory; intro?: React.ReactNode; interlude?: React.ReactNode; after?: number; place: [string, string?] }) {
   const id = `founder-${s.name.split(' ')[0].toLowerCase()}`;
   const paras = s.paragraphs.map((text, i) => ({ text, i }));
   // Charlie's closing line is a statement: his exact words, given the room they ask for (the old site did the same).
@@ -23,6 +23,7 @@ export function Chapter({ s, interlude, after = 1, place }: { s: FounderStory; i
   return (
     <article aria-labelledby={id} className="wch">
       <div className="wch-part container-x" data-place={place[0]}>
+        {intro}
         <div className="wch-grid" data-scroll="read">
           <header className="wch-side">
             <div className="wch-tube">

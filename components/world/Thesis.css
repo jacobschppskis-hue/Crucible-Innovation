@@ -8,16 +8,14 @@
   --xb: 1;
   position: relative;
 }
-.js .wthesis {
-  height: 260vh;
+.wthesis {
+  height: calc(var(--world-vh, 100svh) * 3.2);
 }
 .wthesis-pin {
-  min-height: 100svh;
-}
-.js .wthesis-pin {
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: var(--world-vh, 100svh);
+  overflow: clip;
 }
 .wthesis-in {
   display: grid;
@@ -28,7 +26,7 @@
 }
 @media (min-width: 1024px) {
   .wthesis-in {
-    grid-template-columns: minmax(0, 1fr) 15rem;
+    grid-template-columns: minmax(0, 1fr) auto;
     column-gap: 4rem;
     align-items: end;
     padding-top: calc(var(--nav-h) + clamp(4rem, 13svh, 9rem));
@@ -73,6 +71,7 @@
   font-size: clamp(3rem, 13vw, 3.75rem);
   line-height: 1;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   color: color-mix(
     in oklab,
     color-mix(in oklab, var(--quench, #8db6f2) calc((1 - clamp(0, var(--k) / 0.4, 1)) * 100%), var(--bone)) calc((1 - clamp(0, (var(--k) - 0.45) / 0.55, 1)) * 100%),
@@ -85,17 +84,4 @@
 .wthesis-ro .label {
   color: var(--bone);
   opacity: 0.8;
-}
-@media (prefers-reduced-motion: reduce) {
-  .js .wthesis {
-    height: auto;
-  }
-  .js .wthesis-pin {
-    position: relative;
-    height: auto;
-    min-height: 100svh;
-  }
-  .wthesis-a {
-    display: none;
-  }
 }

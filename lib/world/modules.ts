@@ -7,6 +7,8 @@ import type { Channels, Frame } from './frame';
 import type { Uniforms } from './gl';
 import { defaultLook } from './defaults/look';
 import { defaultLava } from './defaults/lava';
+import { type } from './type'; // story
+import { thesis } from './thesis'; // story
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
 export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
@@ -54,7 +56,8 @@ export const MODULES: WorldModule[] = [
   // together: import { together } from './together'; together,
   // paypal:   import { paypal } from './paypal';     paypal,
   // ventures: import { ventures } from './ventures'; ventures,
-  // thesis:   import { thesis } from './thesis';     thesis,
+  type, // story: display type reflected in the sea
+  thesis, // story: the sea heats 293 K -> 1811 K
 ];
 
 /** The registry with stand-ins replaced (a stand-in goes when another module provides its function). */
