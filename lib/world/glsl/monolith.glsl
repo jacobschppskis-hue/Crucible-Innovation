@@ -30,6 +30,7 @@ uniform vec3 ventures_uZen;        // sky radiance at the zenith
 uniform vec3 ventures_uHorW;       // the horizon band toward the sun (sunset)
 uniform vec3 ventures_uHorC;       // the horizon away from the sun (cool, dim)
 uniform vec3 ventures_uSea;        // the far sea's radiance (as seen at grazing, already including its own reflection)
+uniform float ventures_uCool;       // cooling of the near sea at this place (lava heat units)
 uniform float ventures_uOn;         // any monolith is up (skips every ray's trace otherwise)
 uniform vec3 ventures_uPool;       // the molten pool at a foot (radiance at the waterline)
 
@@ -430,4 +431,7 @@ vec3 ventures_env(Ray r, Hit h) {
 void ventures_sea(Ray r, Sea s, inout SeaMod m) {
   if (ventures_uOn < 0.5) return;
   m.heat += 0.3 * min(ventures_seaGlow(s.p), 1.4);
+  // the near sea is cooler here (a skin has set between the currents): the glow gathers at the monoliths' feet and
+  // the foreground, where the words stand, stays dark; a property of the place, not a shape behind the text
+  m.heat -= ventures_uCool * (1.0 - smoothstep(120.0, 520.0, s.t));
 }

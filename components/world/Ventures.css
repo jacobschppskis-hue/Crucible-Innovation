@@ -20,7 +20,7 @@
   max-width: 26rem;
   font-size: 1.0625rem;
   line-height: 1.55;
-  color: var(--bone-dim);
+  color: var(--bone);
 }
 .wv-list {
   margin: 3rem 0 0;
@@ -49,7 +49,7 @@
   align-items: center;
   gap: 0.45rem;
   font-size: 0.8125rem;
-  color: var(--bone-dim);
+  color: var(--bone);
 }
 .wv-status i {
   width: 0.45rem;
@@ -78,7 +78,7 @@
   max-width: 30ch;
   font-size: 0.95rem;
   line-height: 1.45;
-  color: var(--bone-dim);
+  color: var(--bone);
 }
 .wv-go {
   grid-column: 2;

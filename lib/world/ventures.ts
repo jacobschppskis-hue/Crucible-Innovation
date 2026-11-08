@@ -172,6 +172,8 @@ function frameUpdate(f: Frame, u: Uniforms) {
     if (x1 > x0 && y1 > y0) Object.assign(b, { x: x0, y: y0, w: x1 - x0, h: y1 - y0, vis: true });
   }
   u.set('ventures_uOn', any ? 1 : 0);
+  // the near sea cools through the place (fades in and out at the pin's ends, so the neighbours are untouched)
+  u.set('ventures_uCool', 0.16 * Math.min(clamp(p / 0.06), clamp((1 - p) / 0.06)) * (any ? 1 : 0));
   u.set('ventures_uP', U.P);
   u.set('ventures_uM', U.M);
   u.set('ventures_uK', U.K);
