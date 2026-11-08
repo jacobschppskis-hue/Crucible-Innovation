@@ -219,3 +219,15 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
 
 /** The sea in reflections (the mark, the monoliths): look's planet (glow, currents, sun) without the waves. */
 vec3 lava_env(Ray r, Sea s) { return look_planetFar(r, s); }
+
+// ---------- rivers of molten metal, for other modules (mark's confluence) ----------
+/** A river along the segment a -> b on the sea (surface coords, world units): 1 inside a band of half-width `width`
+ *  around it, 0 outside, the edge smoothed over ~1.5 pixel footprints (fw), so it is never blocky at any distance or
+ *  quality step. Round ends; chain segments for a path (take the max). Add heat from it: m.heat += k * band. */
+float lava_riverBand(vec2 w, vec2 a, vec2 b, float width, float fw) {
+  vec2 ab = b - a;
+  float u = clamp(dot(w - a, ab) / max(dot(ab, ab), 1e-9), 0., 1.);
+  float d = length(w - a - ab * u);
+  float e = max(fw * 1.5, width * 0.08);
+  return 1. - smoothstep(width - e, width + e, d);
+}
