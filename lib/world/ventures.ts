@@ -29,6 +29,8 @@ const LAYOUT = {
   narrow: { pos: [[0, 0], [-6, -15], [5.5, -28]] as const, aim: [-0.06, 0.08, -0.1] },
 };
 const KINDS = [0, 1, 1];
+/** The monoliths' own light (heat, the pool, the lava-lit air) in the world's radiance unit. */
+const GAIN = 4;
 /** Forward lean of each monolith (rad, toward the camera). */
 const LEAN = [0.12, 0.085, 0.14]; // Crucible Sites cooled (live), Verge and Trellis still forging
 
@@ -172,6 +174,7 @@ function frameUpdate(f: Frame, u: Uniforms) {
     if (x1 > x0 && y1 > y0) Object.assign(b, { x: x0, y: y0, w: x1 - x0, h: y1 - y0, vis: true });
   }
   u.set('ventures_uOn', any ? 1 : 0);
+  u.set('ventures_uGain', GAIN);
   // the near sea cools through the place (fades in and out at the pin's ends, so the neighbours are untouched)
   u.set('ventures_uCool', 0.16 * Math.min(clamp(p / 0.06), clamp((1 - p) / 0.06)) * (any ? 1 : 0));
   u.set('ventures_uP', U.P);
@@ -186,10 +189,10 @@ function frameUpdate(f: Frame, u: Uniforms) {
   // night over a molten sea: the low air over the horizon is lit from below by the lava (a warm band), the zenith is
   // black; the band is what the metal mirrors as its bright line
   u.set('ventures_uZen', [0.0025, 0.003, 0.0055]);
-  u.set('ventures_uHorW', [0.5, 0.13, 0.035]);
-  u.set('ventures_uHorC', [0.42, 0.11, 0.03]);
-  u.set('ventures_uSea', V.mul(bb(900), 14 * 0.96));
-  u.set('ventures_uPool', V.mul(bb(1320), 14));
+  u.set('ventures_uHorW', V.mul([0.5, 0.13, 0.035], GAIN));
+  u.set('ventures_uHorC', V.mul([0.42, 0.11, 0.03], GAIN));
+  u.set('ventures_uSea', V.mul(bb(900), 14 * 0.96 * GAIN));
+  u.set('ventures_uPool', V.mul(bb(1320), 14 * GAIN));
 }
 
 // ---- the section's DOM ------------------------------------------------------------------------------------------------

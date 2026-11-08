@@ -30,6 +30,7 @@ uniform vec3 ventures_uZen;        // sky radiance at the zenith
 uniform vec3 ventures_uHorW;       // the horizon band toward the sun (sunset)
 uniform vec3 ventures_uHorC;       // the horizon away from the sun (cool, dim)
 uniform vec3 ventures_uSea;        // the far sea's radiance (as seen at grazing, already including its own reflection)
+uniform float ventures_uGain;       // emission scale to the world's radiance unit (look's exposure)
 uniform float ventures_uCool;       // cooling of the near sea at this place (lava heat units)
 uniform float ventures_uOn;         // any monolith is up (skips every ray's trace otherwise)
 uniform vec3 ventures_uPool;       // the molten pool at a foot (radiance at the waterline)
@@ -86,7 +87,7 @@ vec2 ventures_bound(vec3 o, vec3 d) {
   return vec2(max(max(t1.x, t1.y), t1.z), min(min(t2.x, t2.y), t2.z));
 }
 
-bool ventures_trace(vec3 ro, vec3 rd, float tMax, out VenturesHit h) {
+bool ventures_trace(vec3 ro, vec3 rd, float tMax, float pa, int steps, out VenturesHit h) {
   h.id = -1; h.t = tMax; h.lp = vec3(0.0); h.wp = vec3(0.0);
   for (int i = 0; i < VENTURES_N; i++) {
     if (ventures_uP[i].w < 0.5) continue;
@@ -94,12 +95,15 @@ bool ventures_trace(vec3 ro, vec3 rd, float tMax, out VenturesHit h) {
     vec3 o = (ro - ventures_origin(i)) * M, d = rd * M;   // world -> local (M is orthonormal)
     vec2 tb = ventures_bound(o, d);
     if (tb.x > tb.y || tb.y < 0.0 || tb.x > h.t) continue;
+    // the bound is the casting's box: start on it and only refine for the fillets and the draft (a few steps), instead
+    // of marching a thin slab from afar
     float t = max(tb.x, 0.0), tEnd = min(tb.y, h.t);
-    float eps = ventures_uE.x * 2e-4;
-    for (int s = 0; s < 64; s++) {
+    for (int s = 0; s < 24; s++) {
+      if (s >= steps) break;
       float dist = ventures_sdf(o + d * t);
-      if (dist < eps + t * 2e-5) { h.id = i; h.t = t; h.lp = o + d * t; h.wp = ro + rd * t; break; }
-      t += dist * 0.92;
+      float eps = max(ventures_uE.x * 2e-4, t * pa * 0.4);
+      if (dist < eps) { h.id = i; h.t = t; h.lp = o + d * t; h.wp = ro + rd * t; break; }
+      t += max(dist, eps * 0.5);
       if (t > tEnd) break;
     }
   }
@@ -184,7 +188,7 @@ vec3 ventures_skyA(vec3 d, vec3 up, float w) {
 
 // Everything a ray leaving the metal at p (world) in direction d sees, blurred over half-width w: the sea where it
 // points down (hit on the plane through the foot, so the pool glows exactly where it lies), the sky above.
-vec3 ventures_envA(int i, vec3 p, vec3 d, float w) {
+vec3 ventures_envA(int i, vec3 p, vec3 d, float w, bool fullSky) {
   vec3 up = ventures_uM[i][1];
   vec3 foot = ventures_uP[i].xyz;
   float hs = max(dot(p - foot, up), 0.0);
@@ -192,8 +196,9 @@ vec3 ventures_envA(int i, vec3 p, vec3 d, float w) {
   // fraction of the lobe below the horizon (a step blurred by the lobe)
   float below = smoothstep(w + 0.004, -w - 0.004, dy);
   // the sky is look's own (stars filtered by the cone, the air's glow at the horizon), seen from the metal
-  Ray sr; sr.ro = p; sr.rd = d; sr.pa = max(w, 0.002); sr.depth = 1;
-  vec3 sky = look_sky(sr);
+  vec3 sky;
+  if (fullSky) { Ray sr; sr.ro = p; sr.rd = d; sr.pa = max(w, 0.002); sr.depth = 1; sky = look_sky(sr); }
+  else sky = ventures_uZen * smoothstep(-0.05, 0.3, dy);
   // plus the low air over the horizon lit from below by the molten sea: a warm band, blurred by the lobe with its
   // energy kept, which the faces mirror as their bright line (at night look's sky alone is black there)
   float eh = asin(clamp(dy, -1.0, 1.0));
@@ -232,7 +237,7 @@ vec3 ventures_finish(VenturesS s, vec3 e0, vec3 ep, vec3 em) {
   vec3 env = s.an > 0.01 ? 0.5 * e0 + 0.25 * (ep + em) : e0;
   return mix(s.base + s.envW * env, s.core, s.coreIn);
 }
-VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
+VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng, bool cheap) {
   VenturesS o;
   int i = h.id;
   mat3 M = ventures_uM[i];
@@ -245,7 +250,12 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   float hs = lp.y + ventures_uK[i].x;                       // height above the sea surface
   float H = 2.0 * E.y;
 
-  vec3 nl = ventures_normalL(lp, max(px * 0.6, E.x * 1e-3));
+  vec3 nl;
+  if (cheap) {
+    // in reflections: the box's face normal (the fillets are below a reflected pixel anyway)
+    vec3 q = abs(vec3(lp.x, lp.y - E.y, lp.z)) / E;
+    nl = q.x > q.y && q.x > q.z ? vec3(sign(lp.x), 0.0, 0.0) : q.z > q.y ? vec3(0.0, 0.0, sign(lp.z)) : vec3(0.0, sign(lp.y - E.y), 0.0);
+  } else nl = ventures_normalL(lp, max(px * 0.6, E.x * 1e-3));
   float tap = 1.0 - VENTURES_TAPER * ventures_sat(lp.y / H);
   float face = smoothstep(0.85, 0.99, abs(nl.z));      // on the broad faces
   float onTop = step(H - ventures_uE.w * 3.0, lp.y);
@@ -256,7 +266,6 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   // slow, mostly vertical undulation (the face was drawn upward out of the mould); one octave only: a second, finer
   // one showed as mottling in the sun's lobe
   vec3 n1 = ventures_noised(fuv * vec2(0.7, 0.22) + float(i) * 7.31);
-  vec3 n2 = ventures_noised(fuv * vec2(3.1, 1.2) + float(i) * 3.17 + 11.0);
   vec2 g = n1.yz * vec2(0.7, 0.22) * 0.006 * wav * face;
   // a cast face is never optically flat: it crowns slightly (a few hundredths of a radian across the face), so the
   // reflected sky changes across its width and the horizon line bends gently near the edges
@@ -277,7 +286,7 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   // --- the mark, cast into the live monolith's front face ---
   float markIn = 0.0, coreIn = 0.0, coreR = 1.0;
   vec3 nMark = vec3(0.0);
-  if (kind < 0.5 && nl.z > 0.5) {
+  if (!cheap && kind < 0.5 && nl.z > 0.5) {
     float ms = (E.x * tap * 0.62) / 21.3;              // world units per grid unit: the outer ring spans 62% of the face
     vec2 mc = vec2(0.0, H * 0.70);
     vec2 q = (lp.xy - mc) / ms;
@@ -326,8 +335,11 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   float rise = ventures_sat(1.0 + ventures_uK[i].x / H);         // 0 submerged .. 1 fully out
   float fresh = 1.0 - smoothstep(0.45, 1.0, rise);
   float Lf = H * (0.015 + 0.22 * fresh);
-  float st = ventures_noised(vec2(lp.x * foot * 2.2 + float(i) * 5.0, lp.y * foot * 0.12 + rise * 0.8)).x;
-  float st2 = ventures_noised(vec2(lp.x * foot * 4.7 + float(i) * 9.0, lp.y * foot * 0.2 - rise * 1.3)).x;
+  float st = 0.0, st2 = 0.0;
+  if (fresh > 0.0 && !cheap) {
+    st = ventures_noised(vec2(lp.x * foot * 2.2 + float(i) * 5.0, lp.y * foot * 0.12 + rise * 0.8)).x;
+    st2 = ventures_noised(vec2(lp.x * foot * 4.7 + float(i) * 9.0, lp.y * foot * 0.2 - rise * 1.3)).x;
+  }
   float th = exp(-max(hs, 0.0) / (Lf * (1.0 + 0.35 * st + 0.15 * st2))) * smoothstep(0.0, 0.05, fresh + 0.02);
   float film = smoothstep(0.02, 0.5, th) * (1.0 - onTop);
   T = max(T, 600.0 + 950.0 * th);
@@ -372,7 +384,7 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   spec += ventures_uPool * F * poolLit * 0.25 * (1.0 + heat);
 
   // --- emission (Kirchhoff: what it does not reflect it emits) ---
-  vec3 emis = (1.0 - F) * ventures_bB(T) * 14.0;
+  vec3 emis = (1.0 - F) * ventures_bB(T) * 14.0 * ventures_uGain;
   o.base = spec + emis;
 
   // the core: liquid metal still glowing in its pocket, a smooth dielectric skin over Ember heat
@@ -380,8 +392,8 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   if (coreIn > 0.0) {
     // a hotter heart under the skin, cooling toward the pocket's wall; a slow breath
     float Tc = 1080.0 + 190.0 * (1.0 - coreR * coreR) + 120.0 * heat + 40.0 * sin(uTime * 1.3);
-    vec3 cem = ventures_bB(Tc) * 16.0;
-    vec3 csk = ventures_envA(i, h.wp, reflect(rd, M * normalize(nl + nMark * 0.6)), 0.01) * (0.04 + 0.96 * pow(1.0 - NoV, 5.0));
+    vec3 cem = ventures_bB(Tc) * 16.0 * ventures_uGain;
+    vec3 csk = ventures_envA(i, h.wp, reflect(rd, M * normalize(nl + nMark * 0.6)), 0.01, false) * (0.04 + 0.96 * pow(1.0 - NoV, 5.0));
     o.core = cem + csk;
   }
   return o;
@@ -405,7 +417,7 @@ float ventures_seaGlow(vec3 p) {
 void ventures_hit(Ray r, inout Hit h) {
   if (ventures_uOn < 0.5) return;
   VenturesHit vh;
-  if (ventures_trace(r.ro, r.rd, h.t, vh)) {
+  if (ventures_trace(r.ro, r.rd, h.t, max(r.pa, 1e-4), r.depth == 0 ? 24 : 10, vh)) {
     h.t = vh.t; h.id = VENTURES_ID + vh.id; h.p = vh.wp; h.n = ventures_uM[vh.id][1]; h.data = vec4(vh.lp, 0.0);
   }
 }
@@ -414,17 +426,19 @@ VenturesHit ventures_fromHit(Hit h) {
 }
 vec3 ventures_shade(Ray r, Hit h) {
   VenturesHit v = ventures_fromHit(h);
-  VenturesS s = ventures_prep(v, r.rd, r.pa);
-  vec3 e0 = ventures_envA(v.id, v.wp, s.r, s.w);
+  VenturesS s = ventures_prep(v, r.rd, r.pa, false);
+  // look's sky along the centre tap only; the two side taps of the stretched lobe use the analytic sky (at the
+  // place's night the same black plus the lava-lit band), which keeps the shading to one sky lookup per pixel
+  vec3 e0 = ventures_envA(v.id, v.wp, s.r, s.w, true);
   vec3 ep = e0, em = e0;
-  if (s.an > 0.01) { ep = ventures_envA(v.id, v.wp, s.rp, s.w); em = ventures_envA(v.id, v.wp, s.rm, s.w); }
+  if (s.an > 0.01) { ep = ventures_envA(v.id, v.wp, s.rp, s.w, false); em = ventures_envA(v.id, v.wp, s.rm, s.w, false); }
   return ventures_finish(s, e0, ep, em);
 }
 // seen in the sea's mirror: the analytic environment (no world_env from here)
 vec3 ventures_env(Ray r, Hit h) {
   VenturesHit v = ventures_fromHit(h);
-  VenturesS s = ventures_prep(v, r.rd, max(r.pa, 0.002));
-  vec3 e0 = ventures_envA(v.id, v.wp, s.r, s.w);
+  VenturesS s = ventures_prep(v, r.rd, max(r.pa, 0.002), true);
+  vec3 e0 = ventures_envA(v.id, v.wp, s.r, s.w, false);
   return ventures_finish(s, e0, e0, e0);
 }
 // the lava is hotter where the metal stands in it (lava's heat scale is 0..1)
