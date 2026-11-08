@@ -33,7 +33,7 @@
 }
 .wfoot-k {
   color: var(--bone);
-  opacity: 0.8;
+  opacity: 1;
   font-size: 1rem;
 }
 .wfoot-mail {
@@ -111,7 +111,7 @@
 }
 .wfoot-soon {
   color: var(--bone);
-  opacity: 0.8;
+  opacity: 1;
 }
 .wfoot-f {
   margin-top: 1rem;
@@ -120,7 +120,7 @@
 .wfoot-c {
   margin-top: clamp(1.5rem, 5vh, 4rem);
   font-size: 0.875rem;
-  opacity: 0.8;
+  opacity: 1;
 }
 
 /* dawn: 4 screens; the wordmark holds over the day side (pinned) while the camera crosses it and turns back to the
