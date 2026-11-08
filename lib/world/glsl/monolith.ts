@@ -302,7 +302,7 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   float a = rough * rough;
 
   // --- heat: hottest at the waterline, up the shaft through orange, cherry and dull red to bare metal ---
-  float Lh = H * (kind < 0.5 ? 0.035 : 0.10) * (1.0 + heat * 0.9 + press * 0.6);
+  float Lh = H * (kind < 0.5 ? 0.035 * (1.0 + heat * 2.6 + press * 1.2) : 0.10 * (1.0 + heat * 0.9 + press * 0.6));
   float Tw = (kind < 0.5 ? 1280.0 : 1520.0) + heat * 120.0 + press * 120.0;
   float Tfloor = kind < 0.5 ? 0.0 : 700.0;             // forging bars keep a faint body heat (just under visible)
   float T = Tfloor + (Tw - Tfloor) * exp(-max(hs, 0.0) / Lh);
