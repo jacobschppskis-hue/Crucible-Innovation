@@ -23,6 +23,8 @@ import type { Key } from './journey';
 export const SHORE_V = -1200;
 
 const GLSL = /* glsl */ `
+// the lava's glow (look's Planck radiance x the lava gain), as lava.glsl lights its sea
+vec3 lava_planck(float T){ return look_planck(T) * look_uLavaGain; }
 uniform float shore_uOn;   // 0 far away (all work skipped), 1 near the beach
 uniform float shore_uT;    // the surf's clock (s)
 const float SHORE_V = ${SHORE_V.toFixed(1)};
@@ -159,7 +161,7 @@ vec3 shore_sandCol(Ray r, Hit h, out vec3 rdir, out float rw){
   // the sun on black sand: dark, slightly glossy grains (a broad sheen, no sparkle noise)
   vec3 Ls = uSunDir;
   float NoL = max(dot(n, Ls), 0.0);
-  vec3 sunE = lava_uSunL * PI * uSunRad * uSunRad;      // irradiance from the disc
+  vec3 sunE = look_sunLight(h.p);                        // irradiance from the disc (look)
   col += sunE * NoL * 0.035 / PI;
   vec3 hh = normalize(Ls + v);
   col += sunE * 0.02 * pow(max(dot(n, hh), 0.0), 40.0) * NoL;
