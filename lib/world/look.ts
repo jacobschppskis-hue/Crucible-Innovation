@@ -24,22 +24,27 @@ import postGlsl from './glsl/post.glsl';
 /** The air, in air km (the planet is 2000 air km in radius whatever the world's R; look_uK scales). */
 export const AIR = {
   Rg: 2000,
-  Rt: 2040,
+  Rt: 2070,
   // Rayleigh less steep than Earth's: the dusk band reads steel blue (Quench), not saturated blue; dense at the bottom
   // (scale height 2.5 km): a dark zenith with stars at dusk, a deep orange horizon
   rayS: [7e-3, 13e-3, 27e-3],
-  rayH: 2.5,
+  // V2 (Jacob: 'make the atmosphere stronger so there's more of a sky in the hero'): a deeper air, so the dusk band
+  // over the sea is taller and the limb from orbit a wider glow; still dense at the bottom so the zenith keeps its stars
+  rayH: 4.2,
   // aerosol that absorbs blue: the horizon turns orange
   mieS: [4e-3, 3.2e-3, 2.4e-3],
   mieA: [0.6e-3, 4e-3, 14e-3],
-  mieH: 0.8,
+  mieH: 1.3,
   mieG: 0.8,
   ozA: [0.65e-3, 1.881e-3, 0.085e-3],
   ozC: 18,
   ozW: 14,
   groundAlb: [0.03, 0.03, 0.03],
-  glow: [0.004, 0.0012, 0.0003],
-  airglow: [3.5e-5, 6.5e-5, 1.05e-4],
+  // the molten night side lights its own air from below: a warm rim on the limb even with no sun (never black)
+  glow: [0.04, 0.011, 0.0028],
+  // the night limb's airglow is sodium-orange (as Earth's 589 nm layer is): a warm thin line along the limb whenever the
+  // sun is gone, so the planet's edge never disappears; the blue only where sunlight scatters
+  airglow: [3.2e-4, 1.5e-4, 0.35e-4],
   airglowH: 9,
 };
 
@@ -227,7 +232,10 @@ function makeLook(): WorldModule {
       // phase function misses; low down it would put a second sun on the horizon under the core, so it fades in with height
       u.set('look_uFwd', 0.7 * sstep(30, 200, hAir));
       u.set('look_uSteps', Math.round(10 + 14 * f.quality.q));
-      u.set('look_uStarGain', (ch['look.stars'] ?? 1) * UNIT);
+      // stars keep their brightness at a low render scale (an energy-conserving point spread over a magnified render pixel
+      // reads dim once upscaled) and are a little more present on phones (Jacob: 'slightly more prevalent for iPhone')
+      const sc = f.quality.scale || 1;
+      u.set('look_uStarGain', (ch['look.stars'] ?? 1) * UNIT * Math.min(2.5, Math.pow(1.25 / Math.min(sc, 1.25), 0.8)) * (f.narrow ? 1.35 : 1));
       u.set('look_uSunDisc', ch['look.sunDisc'] ?? 1);
       u.set('look_uSunBoost', SUN.boost);
       u.set('look_uSunTemp', SUN.disc);
