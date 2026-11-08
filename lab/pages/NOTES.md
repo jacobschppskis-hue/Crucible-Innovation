@@ -57,6 +57,18 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
    Lighthouse mobile on `/` and `/sites`, `/sites` JS budget, 360 px overflow, AA contrast, focus rings, re-shoot /work
    "This site", rewrite CLAUDE.md and README.md.
 
+## From JACOB.md (read 07:50) for the other pages
+- Q1: /sites, /work, /ventures "Match the new style": same content and layout, the new nav, footer, colours, lava liquid.
+- Liquid: smooth glossy molten, never crust plates/specks/mottling (both concepts' seas are crust: don't copy them).
+  Keep R3 behaviour: slight idle swell, boat-wake V lines at every cursor speed, drag more marked, smooth iPhone touch.
+- Footer: he likes the glowing surf "waves breaking on a shoreline, except glowing" and the dark footer under the giant
+  wordmark: keep the furnace, move it toward the clean lava palette; never the bone footer, never streak-line flames.
+- Nav: opaque, never translucent (team rule after the grey-box bug). Brand mark + wordmark; no "Human × Machine" lockup.
+- Venture pages: Verge/Trellis bars were "caked"/"out of place" (R3), and Q3 wants metal monoliths with no flaking. So the
+  venture pages should show the `ventures` monoliths (live or stills from our renderer) once they exist.
+- Quench was never ratified: keep it rare and strictly cold. Nothing on /sites turns Quench (no UI in Quench).
+- Text floating on the other pages (R1 buoy behaviour) stays as it is: not addressed tonight (open Q12).
+
 ## Decisions
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
   canvas node (React key), never a second transfer of a spent one.
