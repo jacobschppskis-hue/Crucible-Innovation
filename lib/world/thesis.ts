@@ -37,6 +37,7 @@ const GLSL = /* glsl */ `
 uniform float thesis_uK;     // heat 0..1 (293 K .. 1811 K)
 uniform float thesis_uW;     // how much the thesis owns the sea (0 elsewhere)
 uniform float thesis_uCold;  // 0..1: the lava's own glow taken down (cold metal)
+uniform float thesis_uClear; // fraction of the frame height (from the top) the type occupies: the metal pools below it
 vec2 thesis_h2(vec2 p){ p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3))); return -1.0 + 2.0 * fract(sin(p) * 43758.5453); }
 float thesis_noise(vec2 p){
   vec2 i = floor(p), f = fract(p);
@@ -71,7 +72,12 @@ vec3 thesis_planck(float T){
 }
 void thesis_sea(Ray r, Sea s, inout SeaMod m){
   if (thesis_uW <= 0.001) return;
-  m.heat -= thesis_uCold * thesis_uW;
+  // where in the frame this pixel is (0 top .. 1 bottom): the metal pools low, under the type (the Nov 2 build pooled
+  // it in the lower 60%); above that line the sea stays cold, still metal, so the type always has dark behind it
+  float z = max(dot(r.rd, uCam[2]), 1e-3);
+  float sy = 0.5 - dot(r.rd, uCam[1]) / z * uFocal / uRes.y;
+  float low = smoothstep(thesis_uClear, thesis_uClear + 0.22, sy);
+  m.heat -= thesis_uW * mix(1.0, thesis_uCold, low);
   float k = thesis_uK;
   if (k <= 0.001) return;
   // a slow current; the field stretched along it
@@ -96,11 +102,12 @@ void thesis_sea(Ray r, Sea s, inout SeaMod m){
   float kl = k * mix(0.42, 1.0, pool) * (0.5 + 0.78 * n * n * (3.0 - 2.0 * n));
   float T = 293.0 + kl * 1518.0;
   float I = 0.8 * pow(max(T - 720.0, 0.0) / 1091.0, 2.6);
-  m.emit += thesis_planck(max(T, 800.0)) * I * thesis_uW;
+  m.emit += thesis_planck(max(T, 800.0)) * I * thesis_uW * low;
 }
 `;
 
-let els: { root: HTMLElement; num: HTMLElement | null; cap: HTMLElement | null } | null = null;
+let els: { root: HTMLElement; inner: HTMLElement | null; num: HTMLElement | null; cap: HTMLElement | null } | null = null;
+let clear = 0.5;
 let shown = -1;
 let wrote = '';
 
@@ -110,7 +117,7 @@ export const thesis: WorldModule = {
   hooks: ['sea'],
   init({ root }) {
     const el = root.querySelector<HTMLElement>('[data-place="thesis"]');
-    if (el) els = { root: el, num: el.querySelector('[data-thesis-num]'), cap: el.querySelector('[data-thesis-cap]') };
+    if (el) els = { root: el, inner: el.querySelector('.wthesis-in'), num: el.querySelector('[data-thesis-num]'), cap: el.querySelector('[data-thesis-cap]') };
   },
   update(f, u) {
     const p = f.at('thesis');
@@ -130,6 +137,15 @@ export const thesis: WorldModule = {
     u.set('thesis_uK', k);
     u.set('thesis_uW', w);
     u.set('thesis_uCold', cold);
+    // composition: the bottom of the pinned type (headline, line, readout) is where the metal may start; measured
+    // while the thesis is on screen (it is sticky, so it holds still there)
+    if (els?.inner && w > 0 && p > 0 && p < 1) {
+      const r = els.inner.getBoundingClientRect();
+      let bottom = 0;
+      for (const c of Array.from(els.inner.querySelectorAll<HTMLElement>('.wthesis-ro, .wthesis-s'))) bottom = Math.max(bottom, c.getBoundingClientRect().bottom);
+      if (r.height > 0 && bottom > 0) clear = Math.min(0.8, (bottom + 16) / f.h);
+    }
+    u.set('thesis_uClear', clear);
     if (!els) return;
     // the DOM: temperature, the line crossfade (one line fully leaves before the next arrives), the readout
     const xa = inOut(seg(p, 0.3, 0.42));
