@@ -100,6 +100,12 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
   lines). Rest background p99 luminance 0.0084, max 0.0100 (bone-dim text ≥ 5.9:1). Lower than lava's suggested
   1000-1040 K: at 1000 K the page went muddy brown and the nav's ground read as a separate band.
 
+- (14:25) Lighthouse mobile (local out/, cc8b9ea): /sites 96/100/100/100, /work 99/100/100/100, /ventures 98/100/100/100,
+  /ventures/verge 99/100/100/100. `/` 58 (TBT 155 s, the world's frames on the main thread under SwiftShader): world's;
+  a WorldMount diff (software GL starts only on first use) was sent to world 13:55.
+- (14:25) Removed the ingots entirely (5bd4d63); CLAUDE.md and README rewritten for the new architecture (first pass;
+  re-check at 19:00 against what world/look/lava/mark/paypal/ventures/story ship).
+
 ## Decisions
 - (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
