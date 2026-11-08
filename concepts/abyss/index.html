@@ -416,17 +416,20 @@ fill('jacobA', JACOB.slice(0, 2));
 fill('jacobB', JACOB.slice(2));
 fill('charlie', CHARLIE);
 
-// The mark (lib/splitRing.ts geometry): rings r 27 / 15, band 3.6, squares 3.6 (9 and 5), core 4.5.
-const RING = { c: 32, px: 3.6, core: 4.5, rings: [{ r: 27, n: 9 }, { r: 15, n: 5 }] };
+// The mark: Jacob's logo family (lib/splitRing.ts, 48-unit grid carried into the 64 box, U = 4/3): rings r 20 / 12,
+// stroke 2.6, squares 3.2 (7 at 22.5°, 4 at 36°), core 3.6.
+const MU = 4 / 3;
+const RING = { c: 32, px: 3.2 * MU, stroke: 2.6 * MU, core: 3.6 * MU, rings: [{ r: 20 * MU, n: 7 }, { r: 12 * MU, n: 4 }] };
 const CELLS = RING.rings.flatMap(({ r, n }, ring) => Array.from({ length: n }, (_, i) => {
   const a = -Math.PI / 2 + (i + 1) * Math.PI / (n + 1);
   return { x: r * Math.cos(a), y: r * Math.sin(a), ring, a };
 }));
 (function markSvg() {
-  const arc = (r) => { const ro = r + 1.8, ri = r - 1.8; return `<path d="M32 ${32 - ro}A${ro} ${ro} 0 0 0 32 ${32 + ro}V${32 + ri}A${ri} ${ri} 0 0 1 32 ${32 - ri}Z" fill="#e8e4d8"/>`; };
-  document.getElementById('markStill').innerHTML = arc(27) + arc(15) +
-    CELLS.map((c) => `<rect x="${(32 + c.x - 1.8).toFixed(3)}" y="${(32 + c.y - 1.8).toFixed(3)}" width="3.6" height="3.6" fill="#e8e4d8"/>`).join('') +
-    '<circle cx="32" cy="32" r="4.5" fill="#ff5b1f"/>';
+  const hs = RING.stroke / 2, hp = RING.px / 2;
+  const arc = (r) => { const ro = r + hs, ri = r - hs; return `<path d="M32 ${32 - ro}A${ro} ${ro} 0 0 0 32 ${32 + ro}V${32 + ri}A${ri} ${ri} 0 0 1 32 ${32 - ri}Z" fill="#e8e4d8"/>`; };
+  document.getElementById('markStill').innerHTML = arc(RING.rings[0].r) + arc(RING.rings[1].r) +
+    CELLS.map((c) => `<rect x="${(32 + c.x - hp).toFixed(3)}" y="${(32 + c.y - hp).toFixed(3)}" width="${RING.px.toFixed(3)}" height="${RING.px.toFixed(3)}" fill="#e8e4d8"/>`).join('') +
+    `<circle cx="32" cy="32" r="${RING.core.toFixed(3)}" fill="#ff5b1f"/>`;
 })();
 
 // ============================================================================================
@@ -557,21 +560,21 @@ vec3 simAt(vec2 sp) { return texture(uSim, (sp + vec2(0.0, uFrac)) / uCell / uSi
 mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
 float sdBox(vec2 p, vec2 b) { vec2 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0); }
 float arcD(vec2 q, float r) {   // the left (human) half of a ring: a band 3.6 wide ending on x = 0
-  if (q.x <= 0.0) return abs(length(q) - r) - 1.8;
-  return length(vec2(q.x, max(0.0, abs(abs(q.y) - r) - 1.8)));
+  if (q.x <= 0.0) return abs(length(q) - r) - 1.7333;
+  return length(vec2(q.x, max(0.0, abs(abs(q.y) - r) - 1.7333)));
 }
 float pieceD(int i, vec2 q) {
-  if (i == 0) return arcD(q, 27.0);
-  if (i == 1) return arcD(q, 15.0);
-  if (i == 16) return length(q) - 4.5;
-  return sdBox(q, vec2(1.5)) - 0.3;
+  if (i == 0) return arcD(q, 26.6667);
+  if (i == 1) return arcD(q, 16.0000);
+  if (i == 16) return length(q) - 4.8000;
+  return sdBox(q, vec2(1.8333)) - 0.3;
 }
 // The whole mark at rest (for the Crucible Sites stamp), in mark units around its centre.
 float markD(vec2 q) {
-  float d = min(arcD(q, 27.0), arcD(q, 15.0));
-  for (int k = 1; k <= 9; k++) { float a = -1.5708 + float(k) * 0.314159; d = min(d, sdBox(q - 27.0 * vec2(cos(a), sin(a)), vec2(1.5)) - 0.3); }
-  for (int k = 1; k <= 5; k++) { float a = -1.5708 + float(k) * 0.523599; d = min(d, sdBox(q - 15.0 * vec2(cos(a), sin(a)), vec2(1.5)) - 0.3); }
-  return min(d, length(q) - 4.5);
+  float d = min(arcD(q, 26.6667), arcD(q, 16.0000));
+  for (int k = 1; k <= 7; k++) { float a = -1.5708 + float(k) * 0.392699; d = min(d, sdBox(q - 26.6667 * vec2(cos(a), sin(a)), vec2(1.8333)) - 0.3); }
+  for (int k = 1; k <= 4; k++) { float a = -1.5708 + float(k) * 0.628319; d = min(d, sdBox(q - 16.0000 * vec2(cos(a), sin(a)), vec2(1.8333)) - 0.3); }
+  return min(d, length(q) - 4.8000);
 }
 float segP(vec2 p, vec2 a, vec2 b, out float h) { vec2 pa = p - a, ba = b - a; h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
 vec3 tone(vec3 c) {   // linear in the darks, a soft shoulder over 0.55
@@ -695,7 +698,7 @@ void main() {
     col += vec3(1.0, 0.45, 0.15) * exp(-rc / 14.0) * 0.18 * uLogo.z;
     // the pieces
     float best = 1e9; int bi = -1; vec2 bq = vec2(0.0);
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 13; i++) {          // 2 arcs, 11 squares (13..15 unused)
       vec2 q = rot(-uPc[i].z) * (sp - uPc[i].xy) / (u * uPd[i].x);
       float d = pieceD(i, q);
       if (d < best) { best = d; bi = i; bq = q; }
@@ -730,9 +733,9 @@ void main() {
       col = mix(col, mc, inside);
     }
     // the core: white-hot, a soft corona
-    float dc = (length(sp - cc) / u - 4.5 * uPd[16].x) * u;
+    float dc = (length(sp - cc) / u - 4.8000 * uPd[16].x) * u;
     float coreIn = 1.0 - smoothstep(-0.8 * px, 0.8 * px, dc);
-    float rim0 = smoothstep(-4.5 * u, 0.0, dc);
+    float rim0 = smoothstep(-4.8000 * u, 0.0, dc);
     vec3 coreC = mix(vec3(3.2, 2.9, 2.4), vec3(2.4, 1.0, 0.3), rim0 * rim0) * (1.0 + 0.06 * sin(t * 1.7) + 0.5 * uLogo.w);
     col = mix(col, coreC * uLogo.z + col * (1.0 - uLogo.z), coreIn);
     col += vec3(1.0, 0.6, 0.3) * exp(-max(dc, 0.0) / (1.1 * u)) * 0.9 * uLogo.z * (1.0 - coreIn);
@@ -1047,7 +1050,7 @@ document.querySelectorAll('[data-venture]').forEach((a) => {
 // Logo pieces: 0, 1 the arcs (pivot at the ring centre), 2..15 the squares, 16 the core.
 const pieces = [];
 for (let i = 0; i < 17; i++) {
-  const c = i >= 2 && i < 16 ? CELLS[i - 2] : null;
+  const c = i >= 2 && i < 13 ? CELLS[i - 2] : null;
   const ang = c ? Math.atan2(c.y, c.x) : 0;
   pieces.push({ i, rx: c ? c.x : 0, ry: c ? c.y : 0, ox: 0, oy: 0, vx: 0, vy: 0, a: 0, va: 0, sink: 0, scale: 1, lift: 0,
     seed: Math.sin(i * 12.9898) * 43758.5453 % 1, dir: ang, sx: 0, sy: 0, shed: 0 });
@@ -1175,7 +1178,7 @@ function step(dt) {
   // ---- logo: the nucleus breathes ripples ----
   if (logo.active && !RM) {
     logo.ripple -= dt;
-    if (logo.ripple <= 0) { logo.ripple = 1.9; srcs.push({ ax: logo.cx, ay: logo.cy + sy, bx: logo.cx, by: logo.cy + sy, r: 6, push: 1400 * logo.glow, brk: 0, ring: 4.5 * logo.u + 4 }); }
+    if (logo.ripple <= 0) { logo.ripple = 1.9; srcs.push({ ax: logo.cx, ay: logo.cy + sy, bx: logo.cx, by: logo.cy + sy, r: 6, push: 1400 * logo.glow, brk: 0, ring: RING.core * logo.u + 4 }); }
     for (const pc of pieces) if (pc.shed > 0) { const x = logo.cx + pc.rx * logo.u + pc.ox, y = logo.cy + pc.ry * logo.u + pc.oy + sy; srcs.push({ ax: x, ay: y, bx: x, by: y, r: logo.u * 2.2, push: 900 * pc.shed, brk: 0.4 * pc.shed, ring: 0 }); pc.shed = 0; }
   }
   // ---- simulate ----
@@ -1225,8 +1228,9 @@ function updateLogo(dt, t, P) {
   const u = logo.u;
   const pxp = ptr.x, pyp = ptr.y;
   for (const pc of pieces) {
+    if (pc.i >= 13 && pc.i < 16) continue;   // unused slots (the mark has 11 squares)
     let tx = 0, ty = 0, sink = 0;
-    if (pc.i >= 2 && pc.i < 16) {
+    if (pc.i >= 2 && pc.i < 13) {
       const r = 1.8 + 0.9 * ((pc.seed * 7) % 1);
       tx += Math.cos(pc.dir + (pc.seed - 0.5) * 0.8) * r * 14 * u * scatter / 10;
       ty += Math.sin(pc.dir + (pc.seed - 0.5) * 0.8) * r * 14 * u * scatter / 10;
@@ -1252,7 +1256,7 @@ function updateLogo(dt, t, P) {
     const k = pc.i < 2 ? 18 : 30, c = pc.i < 2 ? 7 : 9;
     pc.vx += (k * (tx - pc.ox) - c * pc.vx + fx) * dt; pc.vy += (k * (ty - pc.oy) - c * pc.vy + fy) * dt;
     pc.ox += pc.vx * dt; pc.oy += pc.vy * dt;
-    const ta = (pc.i < 2 ? 0.015 : 0.08) * Math.sin(t * 0.3 + pc.seed * 9) + gx * 0.6 + (pc.i >= 2 && pc.i < 16 ? (pc.seed - 0.5) * 0.9 * scatter : 0);
+    const ta = (pc.i < 2 ? 0.015 : 0.08) * Math.sin(t * 0.3 + pc.seed * 9) + gx * 0.6 + (pc.i >= 2 && pc.i < 13 ? (pc.seed - 0.5) * 0.9 * scatter : 0);
     pc.va += (20 * (ta - pc.a) - 6 * pc.va) * dt; pc.a += pc.va * dt;
     pc.sink = spring(pc.sink, sink, dt, 0.25);
     pc.lift = h;

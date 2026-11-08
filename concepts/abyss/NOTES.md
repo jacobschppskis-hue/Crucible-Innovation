@@ -1,7 +1,7 @@
 # Abyss: notes
 
 ## The idea
-The camera looks straight down at a molten sea, and the whole page is its surface: dark crust plates with glowing
+The mark is Jacob's logo family (rings 20/12, stroke 2.6, 7 + 4 squares of 3.2, core 3.6 on the 48 grid). The camera looks straight down at a molten sea, and the whole page is its surface: dark crust plates with glowing
 seams drift on it, a slow swell runs under them, and your cursor or finger cuts a wake through it like a boat. The
 Split Ring floats in a pool its own nucleus keeps open, with concentric ripples spreading out from the core. Everything
 else on the page also lives on the sea: headlines are cooled metal slugs that surface hot and cool to bone, the ventures
@@ -24,11 +24,11 @@ All of it, in one WebGL2 fragment shader over one fixed full-screen canvas plus 
   so a wake is one smooth line with its V of ridges, never a row of drops; a drag also "breaks" the crust (third channel)
   which opens a glowing keel line that heals over ~2 s;
 - an analytic swell (four long waves, the same sum on the CPU for anything floating);
-- crust (two Voronoi levels, jagged, drifting), the pool around the nucleus with its ripple glints, the logo's 17 pieces
-  (SDFs, bevel-lit by the core, cool fill from above), plates, venture bars (bone cast bar with the mark cut in it, or
+- crust (two Voronoi levels, jagged, drifting), the pool around the nucleus with its ripple glints, the logo's pieces
+  (2 arcs, 11 squares and the core as SDFs, bevel-lit by the core, cool fill from above), plates, venture bars (bone cast bar with the mark cut in it, or
   molten with drifting crust), PayPal's rivers (quadratic paths, a hot front, cooling to seams), the shore (three swash
   trains, a white-hot front line, wet sand, cold glints).
-- CPU: springs for the 17 logo pieces (swell, story beats, pushed by the cursor, shedding ripples only when pushed),
+- CPU: springs for the logo pieces (swell, story beats, pushed by the cursor, shedding ripples only when pushed),
   surfacing/cooling of every plate, bobbing of text with the swell under it.
 - Quality: render scale steps 1.5 to 0.5 by frame time, DPR capped at 2, software GL starts at the lowest step; the
   CRT noise and scene work only run on screen. `?t=`, `?q=`, `?paused`, `window.__step(dt, n)` for exact frames;
