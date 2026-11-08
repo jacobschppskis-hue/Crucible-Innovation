@@ -65,12 +65,13 @@ const bundle = js.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 const htmlCls = (html.match(/<html[^>]*class="([^"]*)"/) || [])[1] || '';
 const carry = `<script>document.documentElement.lang='en';document.documentElement.classList.add(${JSON.stringify(htmlCls.split(/\s+/).filter(Boolean)).slice(1, -1)})</script>`;
 const frameFix = carry + `<style>html,body{background:transparent!important;color:#E8E4D8!important}html{background:#050403!important}body{font:inherit;margin:0}</style>`;
-html = html.replace('</head>', `${frameFix}</head>`).replace('</body>', `<script>${bundle}</script></body>`);
+// (replacer functions: the bundle contains `$'`-like sequences that string replacements would expand)
+html = html.replace('</head>', () => `${frameFix}</head>`).replace('</body>', () => `<script>${bundle}</script></body>`);
 fs.writeFileSync(path.join(DIST, 'crucible.html'), html);
 // the same file wrapped the way the artifact frame serves it, for tests
 const head = fs.readFileSync(path.join(ROOT, 'plan/final/artifact-frame-head.html'), 'utf8');
 const body = html.replace(/^[\s\S]*?<body[^>]*>/, '').replace(/<\/body>[\s\S]*$/, '');
 const headInner = (html.match(/<head>([\s\S]*?)<\/head>/) || [])[1] || '';
-fs.writeFileSync(path.join(DIST, 'crucible-framed.html'), `${head}${headInner}${body}</body></html>`);
+fs.writeFileSync(path.join(DIST, 'crucible-framed.html'), head + headInner + body + '</body></html>');
 const kb = (n) => `${(n / 1024).toFixed(0)} KB`;
 console.log(`world/dist/crucible.html ${kb(Buffer.byteLength(html))} (script ${kb(Buffer.byteLength(bundle))})`);
