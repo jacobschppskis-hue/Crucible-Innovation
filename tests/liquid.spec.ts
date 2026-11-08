@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // The liquid (components/Liquid.tsx, lib/liquid/*), the floating (lib/liquid/float.ts) and the pull on large visuals
-// (components/Magnetic.tsx, lib/liquid/lean.ts).
+// (components/Magnetic.tsx, lib/liquid/lean.ts). It runs on every page but the home page, which paints its own world
+// (lib/world, tests/world.spec.ts), so these tests use /sites.
 
 type Near = { slopeMax: number; slopeRms: number; hRms: number; cells: number };
 const near = (page: Page, x: number, y: number, r = 120) =>
@@ -10,7 +11,7 @@ const near = (page: Page, x: number, y: number, r = 120) =>
 const frames = (page: Page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
 test('the liquid starts after load, is alive on its own, and answers the cursor', async ({ page }) => {
-  await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   const liquid = page.locator('canvas.liquid');
   await expect(liquid).toHaveAttribute('data-on', '', { timeout: 10_000 });
   // One fixed full-viewport canvas behind the page.
@@ -137,7 +138,7 @@ test('dragging with the button held makes a more marked wake than hovering', asy
 });
 
 test('the idle swell rolls across the page with nobody touching it', async ({ page }) => {
-  await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   const at = (t: number) => page.evaluate((t) => (window as unknown as { __liquid: { sample(x: number, y: number, t: number): Grid } }).__liquid.sample(300, 400, t), t);
   const a = await at(10);
@@ -182,7 +183,7 @@ test('at rest the text keeps rocking on the swell, and links and buttons come to
 
 test('a finger dragging the page (a native pan) still makes waves where it touches', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'touch');
-  await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   const cdp = await page.context().newCDPSession(page);
   const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', y?: number) =>
@@ -203,7 +204,7 @@ test('a finger dragging the page (a native pan) still makes waves where it touch
 test('reduced motion: plain dark ground, no liquid', async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await ctx.newPage();
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/sites', { waitUntil: 'networkidle' });
   await page.mouse.move(200, 400);
   await page.mouse.move(700, 300, { steps: 12 });
   await page.waitForTimeout(500);

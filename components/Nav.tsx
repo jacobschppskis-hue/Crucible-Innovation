@@ -66,7 +66,7 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
       <div aria-hidden className="nav-progress" />
       <nav aria-label="Main" className="container-x flex h-[var(--nav-h)] items-center justify-between gap-4">
         {/* The ring and "crucible" always go to the Crucible home page; "sites" goes to the Crucible Sites home. */}
-        <div className="flex items-baseline gap-[0.4em] text-[1.375rem]">
+        <div className="nav-brand flex items-baseline gap-[0.4em] text-[1.375rem]">
           <Link href="/" className="flex items-baseline gap-2.5 rounded-md">
             <SplitRing size={26} title="" className="self-center" />
             <Wordmark />
@@ -93,7 +93,7 @@ export function Nav({ variant = 'home' }: { variant?: Variant }) {
             ))}
           </ul>
           <MobileMenu items={[...c.menu]} cta={c.cta} />
-          <Link href={c.cta.href} className="btn btn-primary btn-sm">
+          <Link href={c.cta.href} className="nav-cta btn btn-primary btn-sm">
             {c.cta.label}
           </Link>
         </div>

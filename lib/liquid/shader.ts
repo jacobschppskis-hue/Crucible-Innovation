@@ -29,7 +29,7 @@ void main() { gl_Position = vec4(a, 0.0, 1.0); }`;
 /** Look constants (tuned on recorded frames at 1440 and 390, Chromium and WebKit; the look lab overrides them). */
 export const LOOK = {
   relief: 3.4, // interaction waves: slope -> normal tilt (shading exaggeration)
-  reliefSwell: 2.0, // the idle swell, for the environment only (a faint broad sheen)
+  reliefSwell: 0.8, // the idle swell, for the environment only (a faint broad sheen)
   key: [-0.2, 0.5, 0.84], // direction to the warm key light (x right, y down the screen, z out of it)
   soft: 48, // Blinn-Phong exponent of the soft lobe (the warm body of lit faces)
   softK: 0.2, // its strength (x Ember)
@@ -39,14 +39,27 @@ export const LOOK = {
   crisp: [0.002, 0.005] as number[], // curvature (|laplacian|, 1/px) over which a glint fades in: off when [0, 0]
   shade: 0.15, // faces tilted away from the key (towards the top of the screen) fall into a light shadow (0..1)
   dip: -0.01, // how much darker than the swell's own sheen a wave may reflect (sky units): never a hole
-  env: [0.15, 0.14, 0.13], // the sky's brightest (dark warm grey), towards the top of the screen
+  env: [0.1, 0.035, 0.02], // the sky's brightest (the night over a molten sea: dark red), towards the top of the screen
   envW: 0.38, // its spread (tilt)
   caustic: 0.025,
   crest: [0.16, 0.003, 0.022] as number[], // interaction crests from any direction catch a soft warm light: strength, over
   // the curvature (-laplacian, 1/px) where it fades in (the key alone only lights crests facing the bottom edge)
-  sheen: [0.085, 0.058, 0.04] as number[], // the swell's warm sheen at its brightest (added to the ground)
-  sheenRelief: 9, // the swell: slope -> normal tilt for its sheen (its slopes are tiny)
-  sheenExp: 9, // the sheen's lobe (broad: a soft light, not a glint)
+  sheen: [0.3, 0.1, 0.034] as number[], // the swell's sheen at its brightest (added to the ground): molten red
+  sheenRelief: 25, // the swell: slope -> normal tilt for its sheen (enough that its steepest faces pass the key)
+  sheenExp: 600, // the sheen's lobe: only swell faces turned right to the key strip, so a few thin warm lines, never bands
+  // The molten body under a thin cooler skin (lava's model, lib/world/glsl/lava.glsl, seen from straight above): it
+  // glows with a true blackbody (Planck at 600/550/460 nm, as look_planck), dimmed by Fresnel (Kirchhoff) and by the
+  // skin's path. At rest it is a deep, dark red (the page must stay dark under its text); the swell's troughs, where
+  // the skin is pulled thin, glow a little hotter, so the long waves read; the visitor's waves stretch it and glow
+  // hotter still, so a wake is a brief line of Ember turning amber. Hotter = brighter AND yellower, never pink.
+  T: 940, // K at rest: near-black deep red (975 read as a brown haze)
+  troughK: 36, // K added at the swell's deepest trough (heights / troughH, clamped to 1)
+  troughH: 4, // px
+  wakeK: [140, 1.6, 0.03] as number[], // K: + a * (1 - exp(-b * stretch / c)), stretch = |laplacian| + slope / 30
+  crestK: [60, 0.01] as number[], // K: + a * clamp(-laplacian / b, -0.6, 1)
+  skin: 30, // K: the skin's cooling along its path (1 - exp(-0.3 / cos))
+  emit: 8, // exposure of the glow (linear; the rest glow is ~0.002 luminance)
+  f0: 0.053, // Fresnel at normal incidence
 };
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
@@ -75,6 +88,16 @@ ${swellGLSL(true)}
 
 const vec3 GROUND = vec3(0.0510, 0.0510, 0.0431);
 const vec3 EMBER = vec3(1.0, 0.357, 0.122);
+// blackbody radiance at T kelvin, sampled at 600/550/460 nm, 1 = green at 1500 K (the same as look_planck)
+vec3 planck(float T) {
+  const vec3 lam = vec3(600e-9, 550e-9, 460e-9);
+  const float c2 = 1.4388e-2;
+  vec3 l5 = lam * lam * lam * lam * lam;
+  vec3 b = 1.0 / (l5 * (exp(c2 / (lam * max(T, 300.0))) - 1.0));
+  float g5 = 550e-9 * 550e-9 * 550e-9 * 550e-9 * 550e-9;
+  vec3 rgb = b * (g5 * (exp(c2 / (550e-9 * 1500.0)) - 1.0));
+  return rgb; // no grey mix on the page (look_planck mixes 12%): it desaturates the glow toward brown
+}
 const vec3 KEY = ${v3(key)};
 const vec3 HK = ${v3(half)};
 
@@ -128,7 +151,10 @@ void main() {
   vec3 ns = normalize(vec3(-sw.yz * ${f(LOOK.sheenRelief)}, 1.0));
   float sl = pow(max(dot(ns, HK), 0.0), ${f(LOOK.sheenExp)});
   float s00 = pow(HK.z, ${f(LOOK.sheenExp)});
-  col += ${v3(LOOK.sheen)} * clamp((sl - s00) / (1.0 - s00), -0.35, 1.0);
+  // each line fades in and out along its length: brightest where the swell's waves stack up (its height is high), so
+  // a crest flashes for a stretch and never runs edge to edge like a scratch
+  float along = smoothstep(-0.5, 3.5, sw.x);
+  col += ${v3(LOOK.sheen)} * clamp((sl - s00) / (1.0 - s00), -0.35, 1.0) * along;
 
   // key: interaction waves only (the swell never reaches it)
   vec3 n = normalize(vec3(-gr * ${f(LOOK.relief)}, 1.0));
@@ -150,6 +176,17 @@ void main() {
   // crests (convex, from any direction) catch a soft warm light, so a wake reads whichever way it runs
   float cr = ${f(LOOK.crest[0])} * smoothstep(${f(LOOK.crest[1])}, ${f(LOOK.crest[2])}, -lap);
   col += EMBER * (${f(LOOK.softK)} * soft + ${f(LOOK.coreK)} * core + ca + cr);
+  // the molten body glowing through its skin (linear light, added to the display colour's linear value)
+  vec3 nn = normalize(vec3(-gr * ${f(LOOK.relief)} - sw.yz * ${f(LOOK.reliefSwell)}, 1.0));
+  float st = abs(lap) + length(gr) / 30.0;
+  float T = ${f(LOOK.T)}
+    + ${f(LOOK.troughK)} * clamp(-sw.x / ${f(LOOK.troughH)}, -1.0, 1.0)
+    + ${f(LOOK.wakeK[0])} * (1.0 - exp(-${f(LOOK.wakeK[1])} * st / ${f(LOOK.wakeK[2])}))
+    + ${f(LOOK.crestK[0])} * clamp(-lap / ${f(LOOK.crestK[1])}, -0.6, 1.0)
+    - ${f(LOOK.skin)} * (1.0 - exp(-0.3 / max(nn.z, 0.2)));
+  float fr = ${f(LOOK.f0)} + (1.0 - ${f(LOOK.f0)}) * pow(1.0 - nn.z, 5.0);
+  vec3 em = planck(T) * ${f(LOOK.emit)} * (1.0 - fr);
+  col = pow(pow(max(col, 0.0), vec3(2.2)) + em, vec3(1.0 / 2.2));
 
   col += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0; // dither: no banding in the dark
   o = vec4(col, 1.0);

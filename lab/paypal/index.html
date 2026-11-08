@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PayPal beat (module)</title>
+<style>
+@font-face { font-family: Archivo; src: url(../../app/fonts/Archivo-latin-wght400-800-wdth100-125.woff2) format('woff2'); font-weight: 400 800; font-stretch: 100% 125%; }
+:root { --bone: #e8e4d8; --bone-dim: #9a978e; --ember: #ff5b1f; }
+html { background: #000; } body { background: transparent; } html, body { margin: 0; color: var(--bone); font-family: Archivo, system-ui, sans-serif; overscroll-behavior-x: none; }
+canvas#gl { position: fixed; inset: 0; width: 100vw; height: 100lvh; z-index: -1; display: block; }
+.scroller { height: 700svh; }
+.stage { position: fixed; inset: 0; pointer-events: none; }
+.cap { position: absolute; left: 20px; right: 20px; top: calc(76px + env(safe-area-inset-top)); max-width: 30rem; font-size: 19px; line-height: 1.32; font-weight: 450; opacity: 0; will-change: opacity, transform; }
+.cap.big { font-size: clamp(34px, 9.4vw, 72px); line-height: 1.02; font-weight: 760; font-stretch: 112%; letter-spacing: -0.01em; max-width: 13ch; }
+.cap .k { color: var(--bone-dim); }
+.tag { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); font-weight: 650; font-size: 15px; letter-spacing: 0.005em; white-space: nowrap; opacity: 0; will-change: transform, opacity; }
+.tag.root { font-size: 17px; font-weight: 720; font-stretch: 108%; }
+@media (min-width: 900px) {
+  .cap { left: 7vw; top: 18vh; font-size: 24px; max-width: 26rem; }
+  .cap.big { font-size: 76px; max-width: 12ch; }
+  .tag { font-size: 18px; } .tag.root { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="scroller"></div>
+<div class="stage" id="stage">
+  <p class="cap big" data-cap="3">So much came out of a single company.</p>
+</div>
+<script type="module">
+import { layout, beatCamera, lookAt, paypalFrame, CAPTIONS, PAYPAL_GLSL, PP_RIBBON_VS, PP_RIBBON_FS } from './paypal.js';
+const Q = new URLSearchParams(location.search);
+const FIXED_P = Q.has('p') ? parseFloat(Q.get('p')) : null;
+const FIXED_T = Q.has('t') ? parseFloat(Q.get('t')) : null;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const PL = { center: [0, 0, 0], radius: 1, up: [0, 1, 0], fwd: [0, 0, 1] };
+// ---------- GL ----------
+const canvas = document.getElementById('gl');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false });
+gl.getExtension('EXT_color_buffer_float');
+gl.getExtension('EXT_color_buffer_half_float');
+const LIN = gl.getExtension('OES_texture_float_linear');
+
+function sh(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(src.split('\n').map((l, i) => (i + 1) + ' ' + l).join('\n')); throw new Error(gl.getShaderInfoLog(s)); }
+  return s;
+}
+function prog(vs, fs) {
+  const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); u[info.name.replace('[0]', '')] = gl.getUniformLocation(p, info.name); }
+  return { p, u };
+}
+
+const FSQ_VS = `#version 300 es
+in vec2 a; out vec2 vUv; void main(){ vUv = a*0.5+0.5; gl_Position = vec4(a,0.,1.); }`;
+
+
+// Shared: blackbody (linear sRGB chroma, unit luminance-ish) from a fit of the Planck locus.
+const BB = `
+vec3 bbChroma(float K){
+  // Tanner Helland style fit, linearised; good from 800 K to 12000 K
+  float t = K/100.;
+  float r = t<=66. ? 1. : clamp(1.292936*pow(t-60., -0.1332047), 0., 1.);
+  float g = t<=66. ? clamp(0.390082*log(t)-0.631841, 0., 1.) : clamp(1.129891*pow(t-60., -0.0755148), 0., 1.);
+  float b = t>=66. ? 1. : (t<=19. ? 0. : clamp(0.543207*log(t-10.)-1.196254, 0., 1.));
+  vec3 c = pow(vec3(r,g,b), vec3(2.2));
+  return c / max(dot(c, vec3(.2126,.7152,.0722)), 1e-4);
+}
+// Radiance relative to 1500 K, compressed so it stays usable (true Stefan T^4 swings 10^4 over the range).
+float bbPower(float K){ return pow(K/1500., 4.5); }
+vec3 bb(float K){ return bbChroma(max(K, 700.)) * bbPower(K); }
+`;
+
+
+const PLANET_FS = `#version 300 es
+precision highp float;
+in vec2 vUv; out vec4 o;
+uniform vec2 uRes; uniform float uT;
+uniform vec3 uCam, uF, uR, uU; uniform float uTan;
+${BB}
+${PAYPAL_GLSL}
+float hash(vec3 p){ p = fract(p*0.3183099+.1); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
+float noise(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z); }
+float fbm(vec3 p){ float a=.5, s=0.; for(int i=0;i<4;i++){ s+=a*noise(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=.5; } return s; }
+
+vec3 stars(vec3 d){
+  vec3 c = vec3(0);
+  for (int l=0;l<2;l++){
+    float sc = l==0 ? 260. : 520.;
+    vec3 p = d*sc; vec3 i = floor(p); vec3 f = fract(p)-.5;
+    float h = hash(i+float(l)*13.);
+    if (h > (l==0 ? .985 : .992)) {
+      vec3 jit = vec3(hash(i+1.7), hash(i+4.1), hash(i+8.3))-.5;
+      float r = length(f - jit*.6);
+      float px = sc*2.*uTan/uRes.y; // cell units per pixel
+      float b = exp(-r*r/(px*px*0.6)) * pow(hash(i+2.9), 3.) * 2.2;
+      vec3 tint = mix(vec3(1.,.86,.72), vec3(.62,.75,1.), hash(i+5.5));
+      c += tint*b;
+    }
+  }
+  return c;
+}
+
+void main(){
+  vec2 ndc = vUv*2.-1.;
+  float asp = uRes.x/uRes.y;
+  vec3 rd = normalize(uF + ndc.x*uTan*asp*uR + ndc.y*uTan*uU);
+  vec3 ro = uCam;
+  float b = dot(ro, rd); float c = dot(ro,ro)-1.; float disc = b*b-c;
+  vec3 col = vec3(0);
+  // closest approach of the ray to the planet centre (for the limb / atmosphere)
+  float tc = max(-b, 0.); float dmin = length(ro + rd*tc);
+  if (disc > 0. && -b - sqrt(disc) > 0.) {
+    float t = -b - sqrt(disc);
+    vec3 P = ro + rd*t; vec3 n = normalize(P);
+    // --- night lava (stand-in for the look/lava modules): smooth, glossy, low glow. No crust, no specks.
+    float fp = t*2.*uTan/uRes.y; // footprint (world units per pixel)
+    float w = fbm(n*5. + vec3(0., 0., uT*0.006));
+    float w2 = fbm(n*17. + w*1.3 + vec3(uT*0.01));
+    float K = 760. + 120.*w + 40.*w2;
+    vec3 emit = bb(K) * 0.03;
+    emit += paypalEmit(n);
+    vec3 V = -rd;
+    // sky reflection (dark, faint starlight) with Fresnel
+    float fr = 0.04 + 0.96*pow(1.-max(dot(n,V),0.), 5.);
+    col += emit*(1.-fr) + fr*vec3(0.004,0.006,0.012);
+  } else {
+    col = stars(rd) * 0.9;
+  }
+  // thin atmosphere at the limb: warm from the lava below, a cool line higher up (stand-in for look)
+  float hgt = dmin - 1.;
+  float limbW = smoothstep(-0.002, 0.0015, hgt);
+  float airW = exp(-max(hgt,0.)/0.012) * limbW;
+  float airC = exp(-max(hgt,0.)/0.035) * limbW;
+  col += vec3(0.85,0.22,0.05)*airW*0.06 + vec3(0.36,0.52,0.85)*airC*0.010;
+  o = vec4(col, 1.);
+}`;
+
+
+// Bloom + tone map
+const DOWN_FS = `#version 300 es
+precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uTex; uniform vec2 uTexel; uniform float uFirst;
+void main(){
+  vec3 c = vec3(0);
+  c += texture(uTex, vUv + uTexel*vec2(-1,-1)).rgb; c += texture(uTex, vUv + uTexel*vec2(1,-1)).rgb;
+  c += texture(uTex, vUv + uTexel*vec2(-1,1)).rgb;  c += texture(uTex, vUv + uTexel*vec2(1,1)).rgb;
+  c *= .25;
+  if (uFirst > .5) { float l = dot(c, vec3(.2126,.7152,.0722)); c *= smoothstep(0.8, 2.5, l); }
+  o = vec4(c, 1.);
+}`;
+const UP_FS = `#version 300 es
+precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uTex; uniform vec2 uTexel;
+void main(){
+  vec3 c = vec3(0);
+  c += texture(uTex, vUv + uTexel*vec2(-1,0)).rgb*2.; c += texture(uTex, vUv + uTexel*vec2(1,0)).rgb*2.;
+  c += texture(uTex, vUv + uTexel*vec2(0,-1)).rgb*2.; c += texture(uTex, vUv + uTexel*vec2(0,1)).rgb*2.;
+  c += texture(uTex, vUv + uTexel*vec2(-1,-1)).rgb; c += texture(uTex, vUv + uTexel*vec2(1,-1)).rgb;
+  c += texture(uTex, vUv + uTexel*vec2(-1,1)).rgb;  c += texture(uTex, vUv + uTexel*vec2(1,1)).rgb;
+  o = vec4(c/12., 1.);
+}`;
+const FINAL_FS = `#version 300 es
+precision highp float; in vec2 vUv; out vec4 o;
+uniform sampler2D uScene, uBloom; uniform float uT; uniform vec2 uRes;
+vec3 aces(vec3 x){ // Hill's fitted ACES (RRT+ODT)
+  const mat3 i = mat3(0.59719,0.07600,0.02840, 0.35458,0.90834,0.13383, 0.04823,0.01566,0.83777);
+  const mat3 oo = mat3(1.60475,-0.10208,-0.00327, -0.53108,1.10813,-0.07276, -0.07367,-0.00605,1.07602);
+  vec3 v = i*x; vec3 a = v*(v+0.0245786)-0.000090537; vec3 b = v*(0.983729*v+0.4329510)+0.238081; return clamp(oo*(a/b),0.,1.);
+}
+float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
+void main(){
+  vec3 c = texture(uScene, vUv).rgb + texture(uBloom, vUv).rgb*0.07;
+  c = aces(c*1.35);
+  c = pow(c, vec3(1./2.2));
+  float g = h(gl_FragCoord.xy + fract(uT*7.)*100.) - .5;
+  c += g*0.018 + (h(gl_FragCoord.xy*1.3+3.)-.5)/255.;
+  o = vec4(c, 1.);
+}`;
+
+
+const P_PLANET = prog(FSQ_VS, PLANET_FS);
+const P_RIB = prog(PP_RIBBON_VS, PP_RIBBON_FS);
+const P_DOWN = prog(FSQ_VS, DOWN_FS);
+const P_UP = prog(FSQ_VS, UP_FS);
+const P_FINAL = prog(FSQ_VS, FINAL_FS);
+const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const vaoQ = gl.createVertexArray(); gl.bindVertexArray(vaoQ); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+const ribBuf = gl.createBuffer();
+const vaoR = gl.createVertexArray(); gl.bindVertexArray(vaoR); gl.bindBuffer(gl.ARRAY_BUFFER, ribBuf);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 24, 0);
+gl.enableVertexAttribArray(1); gl.vertexAttribPointer(1, 4, gl.FLOAT, false, 24, 8);
+function target(w, h) {
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb, w, h };
+}
+let W = 0, H = 0, scene, mips = [];
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (w === W && h === H) return;
+  W = w; H = h; canvas.width = w; canvas.height = h;
+  scene = target(w, h); mips = [];
+  let mw = w, mh = h;
+  for (let i = 0; i < 6; i++) { mw = Math.max(1, mw >> 1); mh = Math.max(1, mh >> 1); mips.push(target(mw, mh)); }
+}
+
+
+const stage = document.getElementById('stage');
+const caps = CAPTIONS.map((c) => { const e = document.createElement('p'); e.className = 'cap' + (c.display ? ' big' : ''); e.textContent = c.text; stage.appendChild(e); return e; });
+let tags = null;
+const t0 = performance.now();
+function progress() {
+  if (FIXED_P !== null) return FIXED_P;
+  const max = document.documentElement.scrollHeight - innerHeight;
+  return clamp(scrollY / Math.max(max, 1));
+}
+function frame() {
+  resize();
+  const t = FIXED_T !== null ? FIXED_T : (performance.now() - t0) / 1000;
+  const p = progress();
+  const asp = W / H, dpr = W / innerWidth;
+  layout(PL, asp);
+  const c = beatCamera(p, asp, PL);
+  const cam = lookAt(c.pos, c.target, c.up, c.fovY, W, H);
+  const fr = paypalFrame(p, t, cam, PL, dpr);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, scene.fb); gl.viewport(0, 0, W, H); gl.disable(gl.BLEND);
+  gl.useProgram(P_PLANET.p); const U = P_PLANET.u;
+  gl.uniform2f(U.uRes, W, H); gl.uniform1f(U.uT, t);
+  gl.uniform3fv(U.uCam, cam.pos); gl.uniform3fv(U.uF, cam.f); gl.uniform3fv(U.uR, cam.r); gl.uniform3fv(U.uU, cam.u);
+  gl.uniform1f(U.uTan, cam.tanHalf);
+  gl.uniform4fv(U.uPPSpot, fr.spots); gl.uniform4fv(U.uPPSpotB, fr.spotsB);
+  gl.bindVertexArray(vaoQ); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  gl.useProgram(P_RIB.p); gl.uniform2f(P_RIB.u.uPPRes, W, H);
+  gl.bindVertexArray(vaoR); gl.bindBuffer(gl.ARRAY_BUFFER, ribBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, fr.ribbon.subarray(0, fr.vertexCount * 6), gl.DYNAMIC_DRAW);
+  if (fr.vertexCount > 0) gl.drawArrays(gl.TRIANGLE_STRIP, 0, fr.vertexCount);
+  gl.disable(gl.BLEND);
+  gl.bindVertexArray(vaoQ);
+  let src = scene; gl.useProgram(P_DOWN.p);
+  mips.forEach((m, i) => {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, m.fb); gl.viewport(0, 0, m.w, m.h);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src.tex);
+    gl.uniform1i(P_DOWN.u.uTex, 0); gl.uniform2f(P_DOWN.u.uTexel, 1 / src.w, 1 / src.h); gl.uniform1f(P_DOWN.u.uFirst, i === 0 ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); src = m;
+  });
+  gl.useProgram(P_UP.p); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  for (let i = mips.length - 1; i > 0; i--) {
+    const s = mips[i], d = mips[i - 1];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, d.fb); gl.viewport(0, 0, d.w, d.h);
+    gl.bindTexture(gl.TEXTURE_2D, s.tex); gl.uniform1i(P_UP.u.uTex, 0); gl.uniform2f(P_UP.u.uTexel, 1 / s.w, 1 / s.h);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  gl.disable(gl.BLEND);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
+  gl.useProgram(P_FINAL.p);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scene.tex); gl.uniform1i(P_FINAL.u.uScene, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, mips[0].tex); gl.uniform1i(P_FINAL.u.uBloom, 1);
+  gl.uniform1f(P_FINAL.u.uT, t); gl.uniform2f(P_FINAL.u.uRes, W, H);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); gl.activeTexture(gl.TEXTURE0);
+  caps.forEach((e, i) => { const o = fr.captions[i]; e.style.opacity = o.toFixed(3); e.style.transform = `translateY(${((1 - o) * 10).toFixed(1)}px)`; });
+  if (!tags) tags = fr.labels.map((l, i) => { const e = document.createElement('span'); e.className = 'tag' + (i ? '' : ' root'); e.textContent = l.name; stage.appendChild(e); return e; });
+  fr.labels.forEach((l, i) => { tags[i].style.transform = `translate(${l.x.toFixed(1)}px, ${(l.y - 12).toFixed(1)}px) translate(-50%, -100%)`; tags[i].style.opacity = l.o.toFixed(3); });
+  window.__pp = { p, t, verts: fr.vertexCount };
+  if (FIXED_P === null) requestAnimationFrame(frame); else window.__drawn = true;
+}
+document.fonts.ready.then(() => requestAnimationFrame(frame));
+</script>
+</body>
+</html>

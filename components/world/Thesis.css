@@ -1,0 +1,99 @@
+/* The Thesis in the world (components/world/Thesis.tsx). --k is temperature (0 = 293 K, 1 = 1811 K); --xa moves the
+   first line out, then --xb brings the second in. The metal is the world's sea (lib/world/thesis.ts), kept low in
+   frame by the camera; the type sits in the sky above it with nothing behind it. Without JS / reduced motion: hot end,
+   second line. */
+.wthesis {
+  --k: 1;
+  --xa: 0;
+  --xb: 1;
+  position: relative;
+}
+/* The pin only where the world drives it (html[data-world], set at mount, and no data-world-fail): without JS or WebGL
+   the section is just its content, the hot end, both lines readable one after the other. */
+.wthesis-pin {
+  padding-block: 6rem;
+}
+html[data-world]:not([data-world-fail]) .wthesis {
+  --xb: 0; /* until the module writes it: the cold line alone */
+  height: calc(var(--world-vh, 100svh) * 3.2);
+}
+html[data-world]:not([data-world-fail]) .wthesis-pin {
+  position: sticky;
+  top: 0;
+  height: var(--world-vh, 100svh);
+  overflow: clip;
+  padding-block: 0;
+}
+.wthesis-in {
+  display: grid;
+  align-content: start;
+  gap: 2.25rem;
+  /* the type stays in the top of the frame: the camera puts the horizon below it (phones ~66%, desktop ~62%) */
+  padding-top: calc(var(--nav-h) + clamp(2.5rem, 9svh, 6rem));
+}
+@media (min-width: 1024px) {
+  .wthesis-in {
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 4rem;
+    align-items: end;
+    padding-top: calc(var(--nav-h) + clamp(4rem, 13svh, 9rem));
+  }
+}
+.wthesis-lines {
+  display: grid;
+}
+/* Without the world (no JS, no WebGL) both lines simply stand one after the other, fully readable. Once the world is
+   mounted (html[data-world]) they share one place and the module crossfades them (--xa, --xb). */
+.wthesis-lines {
+  gap: 2.5rem;
+}
+html[data-world]:not([data-world-fail]) .wthesis-lines > div {
+  grid-area: 1 / 1;
+}
+html[data-world]:not([data-world-fail]) .wthesis-a {
+  opacity: calc(1 - var(--xa));
+  transform: translateY(calc(var(--xa) * -36px));
+}
+html[data-world]:not([data-world-fail]) .wthesis-b {
+  opacity: var(--xb);
+  transform: translateY(calc((1 - var(--xb)) * 36px));
+}
+.wthesis-h {
+  max-width: 13em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 11vw, 5.5rem);
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+.wthesis-s {
+  margin-top: 1.25rem;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--bone);
+  opacity: 0.86;
+}
+/* the readout: real data. Cold it reads Quench, it warms through bone, and it is Ember once iron melts */
+.wthesis-num {
+  margin-top: 0.4rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(3rem, 13vw, 3.75rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--quench, #8db6f2) calc((1 - clamp(0, var(--k) / 0.4, 1)) * 100%), var(--bone)) calc((1 - clamp(0, (var(--k) - 0.45) / 0.55, 1)) * 100%),
+    var(--ember)
+  );
+}
+.wthesis-cap {
+  margin-top: 0.5rem;
+}
+.wthesis-ro .label {
+  color: var(--bone);
+  opacity: 0.8;
+}

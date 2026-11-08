@@ -43,8 +43,6 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: '#0D0D0B', colorScheme: 'dark' };
 
-// Without JS the nav never learns it has scrolled, so give it its solid background up front.
-const noJs = `.nav{background:rgba(13,13,11,.85)}`;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -56,9 +54,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <script defer src="https://cloud.umami.is/script.js" data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID} />
         )}
-        <noscript>
-          <style dangerouslySetInnerHTML={{ __html: noJs }} />
-        </noscript>
       </head>
       <body>
         <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-bone focus:px-4 focus:py-2 focus:text-ground">

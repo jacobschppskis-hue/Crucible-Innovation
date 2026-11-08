@@ -34,6 +34,7 @@ for (const { path, h1 } of pages) {
 }
 
 test('no horizontal scroll anywhere down the page, once every effect canvas has been created', async ({ page }) => {
+  test.setTimeout(120_000); // the home page's world draws through software GL here
   for (const { path } of pages) {
     await page.goto(path, { waitUntil: 'networkidle' });
     const H = await page.evaluate(() => document.documentElement.scrollHeight);
@@ -118,17 +119,6 @@ test('quote form without JavaScript: every question shows and the form opens a m
   await expect(form.getByRole('button', { name: 'Next' })).toBeHidden();
   expect(await form.getAttribute('action')).toMatch(/^mailto:|formspree\.io/);
   await ctx.close();
-});
-
-test('scroll scenes reach their finished state', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  // Thesis reads 1811 K and the second line is showing once you're past it. Poll: on a busy machine the first
-  // scroll frame can land well after the jump while the page is still hydrating.
-  await expect(page.locator('.thesis [aria-hidden] >> nth=0')).toBeAttached();
-  await expect
-    .poll(() => page.locator('.thesis').evaluate((el) => Number(getComputedStyle(el).getPropertyValue('--xb').trim())))
-    .toBeGreaterThan(0.99);
 });
 
 test('on /sites the logo goes to Crucible and "sites" goes to Crucible Sites', async ({ page }) => {

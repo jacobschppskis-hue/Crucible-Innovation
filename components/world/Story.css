@@ -1,0 +1,221 @@
+/* "Why Crucible" in the world (components/world/Story.tsx, Chapter.tsx). The type sits straight on the world: no
+   background, scrim, mask, halo or text-shadow anywhere in this file. Legibility comes from where the camera puts the
+   sea (low in frame, cooled, at night). Body copy is solid (no dimmed reading state): the glowing sea can pass under
+   any line, and solid bone keeps AA over it. */
+.wstory {
+  position: relative;
+}
+.wstory-head {
+  padding-bottom: clamp(4rem, 12vh, 8rem);
+}
+/* wide screens: the heading arrives once the camera has turned from the sunset to the night sky (it stood on the
+   bright afterglow before: 1.67:1) */
+@media (min-width: 1024px) {
+  .wstory-head {
+    padding-top: 38vh;
+  }
+}
+.wstory-sub {
+  margin-top: 1.5rem;
+  max-width: 26rem;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--bone);
+  opacity: 0.86;
+}
+
+/* ---------- a chapter ---------- */
+.wch {
+  position: relative;
+}
+.wch-part {
+  padding-top: clamp(5rem, 14vh, 9rem);
+}
+.wch-grid {
+  display: grid;
+  gap: 2.5rem;
+}
+@media (min-width: 1024px) {
+  .wch-grid {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    gap: 5rem;
+  }
+  .wch-side {
+    position: sticky;
+    top: calc(var(--nav-h) + 3rem);
+    align-self: start;
+  }
+}
+.wch-tube {
+  width: 100%;
+  max-width: 16rem;
+}
+@media (min-width: 1024px) {
+  .wch-tube {
+    max-width: none;
+  }
+}
+.wch-name {
+  margin-top: 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.875rem;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--bone);
+}
+.wch-grid-cont .wch-name {
+  margin-top: 0;
+}
+.wch-role {
+  margin-top: 0.5rem;
+  color: var(--bone-dim);
+}
+/* after the interlude the side column only carries the name and the reading line, on wide screens */
+@media (max-width: 1023px) {
+  .wch-grid-cont .wch-side {
+    display: none;
+  }
+}
+
+/* how far this chapter has been read: Ember while it is being read (--p from data-scroll="read" on the grid), bone once
+   it has been read to the end */
+.wch-read {
+  display: block;
+  position: relative;
+  width: 100%;
+  max-width: 16rem;
+  height: 2px;
+  margin-top: 1.5rem;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.wch-read::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 1));
+  background: color-mix(in oklab, var(--ember) calc((1 - clamp(0, (var(--p, 1) - 0.985) * 70, 1)) * 100%), var(--bone-dim));
+}
+@media (max-width: 1023px) {
+  .wch-read {
+    display: none;
+  }
+}
+
+.wch-text {
+  min-width: 0;
+}
+.wch-text > p,
+.wch-break > .wch-p {
+  max-width: 40rem;
+}
+/* wide screens: reading size, not caption size (20 px body, ~68 characters a line) */
+@media (min-width: 1024px) {
+  .wch-text > p,
+  .wch-break > .wch-p {
+    max-width: 44rem;
+  }
+  .wch-lead {
+    font-size: 1.75rem;
+    line-height: 1.45;
+  }
+  .wch-p {
+    font-size: 1.25rem;
+    line-height: 1.65;
+  }
+  .wstory-sub {
+    font-size: 1.25rem;
+  }
+}
+.wch-lead {
+  font-size: 1.375rem;
+  line-height: 1.5;
+  color: var(--bone);
+}
+@media (min-width: 640px) {
+  .wch-lead {
+    font-size: 1.5rem;
+  }
+}
+.wch-p {
+  margin-top: 2rem;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--bone);
+  opacity: 0.88;
+}
+.wch-grid-cont .wch-text > :first-child > .wch-p:first-child,
+.wch-grid-cont .wch-text > .wch-p:first-child {
+  margin-top: 0;
+}
+
+/* Jacob's sentence, once, in place: the paragraph runs into it and carries on after it. Display size, bone, as wide as
+   the text column allows (the side column keeps the name pinned, so it never reaches over it). */
+.wch-break-line {
+  margin: 2.5rem 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.125rem, 9.2vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+@media (min-width: 1024px) {
+  .wch-break-line {
+    margin: 4rem 0;
+    max-width: 13em;
+    font-size: clamp(3rem, 4.6vw, 4.5rem);
+  }
+}
+
+/* Charlie's closing line, as he wrote it, given the whole width */
+.wch-statement {
+  margin: 0;
+  padding: clamp(4rem, 12vh, 8rem) 0 clamp(6rem, 18vh, 12rem);
+}
+.wch-statement p {
+  max-width: 15em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 5.6vw, 5rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+@media (min-width: 1024px) {
+  .wch-statement p {
+    margin-left: -0.06em;
+  }
+}
+
+/* The CRT placeholder as an object in the world, not a panel on the sky: a dark glass face (no signal: the raster is
+   dim, the phosphor name glows), a curved-glass highlight from the sky above, and the rim of the tube's bezel catching
+   the warm light of the sea below. All on the tube itself, nothing behind it. */
+.wch-tube .crt {
+  border-radius: 7% / 6%;
+}
+.wch-tube .crt-img {
+  filter: brightness(0.62) contrast(1.25);
+}
+.wch-tube .crt::after {
+  content: '';
+  position: absolute;
+  inset: 3.5%;
+  border-radius: 6% / 5%;
+  pointer-events: none;
+  /* the glass bulges: a soft sky reflection across its upper half, falling off toward the edges */
+  background: radial-gradient(120% 70% at 30% 8%, color-mix(in oklab, var(--bone) 9%, transparent), transparent 55%);
+  /* the bezel's rim: cool from the sky on top, warm from the sea underneath */
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--bone) 14%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--ember) 30%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js .wch-tube .crt:not([data-on])::after {
+    opacity: 0.4;
+  }
+}

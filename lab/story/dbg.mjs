@@ -1,0 +1,11 @@
+import { chromium } from 'playwright';
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage();
+p.on('console', (m) => console.log('C', m.type(), m.text().slice(0, 400)));
+p.on('requestfailed', (r) => console.log('RF', r.url()));
+p.on('response', (r) => r.status() >= 400 && console.log('404', r.url()));
+await p.goto(process.argv[2]);
+await p.waitForTimeout(3000);
+console.log(await p.evaluate(() => { const c = document.getElementById('c'); const gl = c.getContext('webgl2'); const px = new Uint8Array(4); gl.readPixels(5, 5, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); return [c.width, c.height, gl.getError(), [...px], document.documentElement.dataset.ready]; }));
+await p.screenshot({ path: process.argv[3] || '/tmp/claude-0/-home-user-Crucible-Innovation/3200974f-c16c-5aef-a3e4-6c6c07fefe52/scratchpad/f/dbg.png' }); console.log(await p.evaluate(() => [...document.querySelectorAll('canvas')].map(c => JSON.stringify(c.getBoundingClientRect())+getComputedStyle(c).zIndex)));
+await b.close();

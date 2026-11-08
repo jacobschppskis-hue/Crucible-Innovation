@@ -1,0 +1,14 @@
+import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);
+const { chromium } = require('/opt/node22/lib/node_modules/playwright');
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+const dir = new URL('../../out', import.meta.url).pathname;
+const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.webp': 'image/webp' };
+const srv = http.createServer((q, r) => { let f = path.join(dir, decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html'); if (!fs.existsSync(f)) { r.writeHead(404).end(); return; } r.writeHead(200, { 'content-type': types[path.extname(f)] || 'application/octet-stream' }); fs.createReadStream(f).pipe(r); });
+await new Promise((ok) => srv.listen(0, ok));
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const page = await b.newPage({ viewport: { width: 1440, height: 900 } }); page.setDefaultTimeout(180000);
+await page.goto(`http://localhost:${srv.address().port}/?t=6&q=4`);
+await page.waitForFunction(() => window.__world);
+await page.evaluate(async () => { const pl = window.__world.engine.frame.places.paypal; window.__world.engine.scroll.to(pl.top + pl.h - innerHeight + 350, true); for (let k = 0; k < 12; k++) await window.__world.step(16); });
+await page.screenshot({ path: process.argv[2] });
+await b.close(); srv.close();

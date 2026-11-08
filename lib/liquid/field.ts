@@ -3,7 +3,7 @@
 // v2: the surface is the wave grid in sim.ts (main thread) plus the analytic idle swell in swell.ts. Everything that
 // floats reads it in CSS px through `samplePx` / `sampleGrid` / `footprint` (see .board/v2/a/API.md): the DOM floaters
 // (float.ts), and the 3D logo pieces and ingots, whose poses are computed on the main thread and posted to their
-// renderers with the clock's tick (lib/gl3d/logoScene.ts, ingotPose.ts). There is no second, interim wave model.
+// renderers with the clock's tick (lib/gl3d/ingotPose.ts). There is no second, interim wave model.
 
 import { clock } from './loop';
 import { swellAt, type HG } from './swell';

@@ -1,0 +1,610 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PayPal beat prototype</title>
+<style>
+@font-face { font-family: Archivo; src: url(../../app/fonts/Archivo-latin-wght400-800-wdth100-125.woff2) format('woff2'); font-weight: 400 800; font-stretch: 100% 125%; }
+:root { --bone: #e8e4d8; --bone-dim: #9a978e; --ember: #ff5b1f; }
+html { background: #000; } body { background: transparent; } html, body { margin: 0; color: var(--bone); font-family: Archivo, system-ui, sans-serif; overscroll-behavior-x: none; }
+canvas#gl { position: fixed; inset: 0; width: 100vw; height: 100lvh; z-index: -1; display: block; }
+.scroller { height: 700svh; }
+.stage { position: fixed; inset: 0; pointer-events: none; }
+.cap { position: absolute; left: 20px; right: 20px; top: calc(76px + env(safe-area-inset-top)); max-width: 30rem; font-size: 19px; line-height: 1.32; font-weight: 450; opacity: 0; will-change: opacity, transform; }
+.cap.big { font-size: clamp(34px, 9.4vw, 72px); line-height: 1.02; font-weight: 760; font-stretch: 112%; letter-spacing: -0.01em; max-width: 13ch; }
+.cap .k { color: var(--bone-dim); }
+.tag { position: absolute; left: 0; top: 0; transform: translate(-50%, -100%); font-weight: 650; font-size: 15px; letter-spacing: 0.005em; white-space: nowrap; opacity: 0; will-change: transform, opacity; }
+.tag.root { font-size: 17px; font-weight: 720; font-stretch: 108%; }
+@media (min-width: 900px) {
+  .cap { left: 7vw; top: 18vh; font-size: 24px; max-width: 26rem; }
+  .cap.big { font-size: 76px; max-width: 12ch; }
+  .tag { font-size: 18px; } .tag.root { font-size: 21px; }
+}
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<div class="scroller"></div>
+<div class="stage" id="stage">
+  <p class="cap" data-cap="0">In 2002, eBay bought PayPal.</p>
+  <p class="cap" data-cap="1">After the sale, its people went on to found YouTube, LinkedIn, Yelp and&nbsp;Palantir.</p>
+  <p class="cap" data-cap="2">Elon used much of his share to fund SpaceX, and later to invest in&nbsp;Tesla.</p>
+  <p class="cap big" data-cap="3">So much came out of a single company.</p>
+  <p class="cap" data-cap="4">Not by luck. They found each other early, and kept backing one another long after PayPal itself was&nbsp;gone.</p>
+  <span class="tag root" data-tag="pp">PayPal</span>
+</div>
+<script type="module">
+/* =============================================================================================
+   PayPal beat, lab prototype. Everything is a pure function of the beat progress p (scroll) plus
+   the clock t for life at rest (flicker, train drift, lava shimmer). Units: planet radius R = 1.
+   ============================================================================================= */
+const Q = new URLSearchParams(location.search);
+const FIXED_P = Q.has('p') ? parseFloat(Q.get('p')) : null;
+const FIXED_T = Q.has('t') ? parseFloat(Q.get('t')) : null;
+
+// ---------- small vector kit ----------
+const V = {
+  add: (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]],
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  mul: (a, s) => [a[0] * s, a[1] * s, a[2] * s],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  len: (a) => Math.hypot(a[0], a[1], a[2]),
+  norm: (a) => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; },
+};
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const mix = (a, b, t) => a + (b - a) * t;
+
+// ---------- the places ----------
+// PayPal sits at the top of the sphere (+Y). Each company is a bearing (deg, 0 = +Z, i.e. away from the camera, toward
+// the limb; positive = to the right) and an angular range (rad) from PayPal, along a great circle.
+let PP = [0, 1, 0];
+// Where each place sits in the frame when the camera has finished rising (p = END_P), per orientation, as
+// [x, y] fractions of the viewport (y from the top). They are cast back onto the sphere, so the composition holds on
+// any screen; the arcs are then computed from PayPal to those points.
+const SITES = [
+  // first salvo: the four companies its people founded (one eruption, a split second apart, unequal throws)
+  { name: 'YouTube',  pt: [0.20, 0.555], ls: [0.38, 0.60], launch: 0.230, loft: 1.0 },
+  { name: 'LinkedIn', pt: [0.60, 0.470], ls: [0.56, 0.47], launch: 0.237, loft: 1.25 },
+  { name: 'Yelp',     pt: [0.84, 0.575], ls: [0.76, 0.55], launch: 0.243, loft: 0.9 },
+  { name: 'Palantir', pt: [0.74, 0.765], ls: [0.79, 0.76], launch: 0.250, loft: 1.1 },
+  // Elon's share: SpaceX first, the highest throw (it leaves the atmosphere); Tesla later and short
+  { name: 'SpaceX',   pt: [0.15, 0.475], ls: [0.90, 0.62], launch: 0.468, loft: 2.6 },
+  { name: 'Tesla',    pt: [0.24, 0.800], ls: [0.30, 0.80], launch: 0.610, loft: 0.9 },
+];
+const PP_PT = { pt: [0.5, 0.66], ls: [0.56, 0.70] };
+const END_P = 0.78;
+// Great-circle point at angle a along bearing b from PayPal.
+function surfaceDir(bearingDeg, a) {
+  const b = bearingDeg * Math.PI / 180;
+  const tdir = [-Math.sin(b), 0, Math.cos(b)]; // +bearing = screen right
+  return V.add(V.mul(PP, Math.cos(a)), V.mul(tdir, Math.sin(a)));
+}
+let layoutAsp = 0;
+function layout(asp) {
+  if (Math.abs(asp - layoutAsp) < 1e-3) return; layoutAsp = asp;
+  const cam = camera(END_P, asp), B = camBasis(cam), tan = Math.tan(cam.fov / 2);
+  const cast = (x, y) => {
+    const rd = V.norm(V.add(B.f, V.add(V.mul(B.r, (x * 2 - 1) * tan * asp), V.mul(B.u, (1 - y * 2) * tan))));
+    const bb = V.dot(cam.pos, rd), c = V.dot(cam.pos, cam.pos) - 1, disc = bb * bb - c;
+    const t = disc > 0 ? -bb - Math.sqrt(disc) : -bb; // a miss lands on the limb
+    return V.norm(V.add(cam.pos, V.mul(rd, t)));
+  };
+  for (const s of SITES) {
+    const k = asp < 1 ? s.pt : s.ls;
+    s.dir = cast(k[0], k[1]);
+    const d = clamp(V.dot(s.dir, PP), -1, 1);
+    s.range = Math.acos(d);
+    const tg = V.sub(s.dir, V.mul(PP, d));
+    s.bearing = Math.atan2(-tg[0], tg[2]) * 180 / Math.PI;
+    // a ballistic throw at a shallow fixed angle: apex ∝ range, flight time ∝ √range
+    s.apex = 0.12 * s.range * s.loft;
+    s.flight = Math.min(0.125 * Math.sqrt(s.range / 0.3) * Math.pow(s.loft, 0.3), 0.17);
+    s.land = s.launch + s.flight;
+  }
+}
+// A point on the throw: great circle in angle (horizontal speed constant), parabola in height (ballistic).
+function arcPos(site, u) {
+  const d = surfaceDir(site.bearing, site.range * u);
+  const h = 4 * site.apex * u * (1 - u);
+  return V.mul(d, 1 + h);
+}
+
+// ---------- the timeline (beat progress p in 0..1) ----------
+const CAPS = [ // [in, out] of each caption
+  [0.02, 0.215],
+  [0.235, 0.455],
+  [0.475, 0.70],
+  [0.715, 0.855],
+  [0.865, 1.01],
+];
+function vent(p) { // PayPal: pressure builds, erupts twice, then cools ("long after PayPal itself was gone")
+  const swell = smooth(0.08, 0.228, p);
+  const flash1 = 0.5 * Math.exp(-Math.pow((p - 0.236) / 0.008, 2));
+  const flash2 = 0.7 * Math.exp(-Math.pow((p - 0.47) / 0.01, 2)) + 0.45 * Math.exp(-Math.pow((p - 0.612) / 0.01, 2));
+  const cool = smooth(0.80, 0.97, p);
+  return { heat: mix(0.55 + 0.45 * swell, 0.12, cool), flash: flash1 + flash2 };
+}
+
+// ---------- camera ----------
+// Keyframes on p: altitude above PayPal, distance behind it (toward -Z), look target angle ahead, fov.
+function camera(p, aspect) {
+  const portrait = aspect < 1;
+  const k = smooth(0.0, 1.0, p);
+  const pull = smooth(0.10, 0.40, p);   // rise as the embers spread: the reveal of scale
+  const alt = mix(portrait ? 0.075 : 0.06, portrait ? 0.62 : 0.46, pull);
+  const back = mix(0.15, portrait ? 0.30 : 0.30, pull);
+  const look = mix(0.30, portrait ? 0.30 : 0.28, pull);
+  const pos = [0, 1 + alt, -back];
+  const tgt = surfaceDir(0, look);
+  const fov = (portrait ? 64 : 42) * Math.PI / 180;
+  const drift = 0.02 * k;
+  pos[0] += drift;
+  return { pos, tgt, fov };
+}
+function camBasis(cam) {
+  const f = V.norm(V.sub(cam.tgt, cam.pos));
+  const r = V.norm(V.cross(f, [0, 1, 0]));
+  const u = V.cross(r, f);
+  return { f, r, u };
+}
+
+// ---------- GL ----------
+const canvas = document.getElementById('gl');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, premultipliedAlpha: false });
+gl.getExtension('EXT_color_buffer_float');
+gl.getExtension('EXT_color_buffer_half_float');
+const LIN = gl.getExtension('OES_texture_float_linear');
+
+function sh(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) { console.error(src.split('\n').map((l, i) => (i + 1) + ' ' + l).join('\n')); throw new Error(gl.getShaderInfoLog(s)); }
+  return s;
+}
+function prog(vs, fs) {
+  const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  const u = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); u[info.name.replace('[0]', '')] = gl.getUniformLocation(p, info.name); }
+  return { p, u };
+}
+
+const FSQ_VS = `#version 300 es
+in vec2 a; out vec2 vUv; void main(){ vUv = a*0.5+0.5; gl_Position = vec4(a,0.,1.); }`;
+
+// Shared: blackbody (linear sRGB chroma, unit luminance-ish) from a fit of the Planck locus.
+const BB = `
+vec3 bbChroma(float K){
+  // Tanner Helland style fit, linearised; good from 800 K to 12000 K
+  float t = K/100.;
+  float r = t<=66. ? 1. : clamp(1.292936*pow(t-60., -0.1332047), 0., 1.);
+  float g = t<=66. ? clamp(0.390082*log(t)-0.631841, 0., 1.) : clamp(1.129891*pow(t-60., -0.0755148), 0., 1.);
+  float b = t>=66. ? 1. : (t<=19. ? 0. : clamp(0.543207*log(t-10.)-1.196254, 0., 1.));
+  vec3 c = pow(vec3(r,g,b), vec3(2.2));
+  return c / max(dot(c, vec3(.2126,.7152,.0722)), 1e-4);
+}
+// Radiance relative to 1500 K, compressed so it stays usable (true Stefan T^4 swings 10^4 over the range).
+float bbPower(float K){ return pow(K/1500., 4.5); }
+vec3 bb(float K){ return bbChroma(max(K, 700.)) * bbPower(K); }
+`;
+
+const PLANET_FS = `#version 300 es
+precision highp float;
+in vec2 vUv; out vec4 o;
+uniform vec2 uRes; uniform float uT;
+uniform vec3 uCam, uF, uR, uU; uniform float uTan;
+uniform vec4 uSpot[7];   // xyz dir, w heat (0..1.2)
+uniform vec4 uSpotB[7];  // x age since landing (p units), y ring age, z flash, w seed
+uniform vec4 uHead[7];   // xyz world position of each flying ember head, w intensity
+${BB}
+float hash(vec3 p){ p = fract(p*0.3183099+.1); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+float hash2(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7)))*43758.5453); }
+float noise(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
+  return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+             mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z); }
+float fbm(vec3 p){ float a=.5, s=0.; for(int i=0;i<4;i++){ s+=a*noise(p); p=p*2.03+vec3(1.7,9.2,3.1); a*=.5; } return s; }
+
+vec3 stars(vec3 d){
+  vec3 c = vec3(0);
+  for (int l=0;l<2;l++){
+    float sc = l==0 ? 260. : 520.;
+    vec3 p = d*sc; vec3 i = floor(p); vec3 f = fract(p)-.5;
+    float h = hash(i+float(l)*13.);
+    if (h > (l==0 ? .985 : .992)) {
+      vec3 jit = vec3(hash(i+1.7), hash(i+4.1), hash(i+8.3))-.5;
+      float r = length(f - jit*.6);
+      float px = sc*2.*uTan/uRes.y; // cell units per pixel
+      float b = exp(-r*r/(px*px*0.6)) * pow(hash(i+2.9), 3.) * 2.2;
+      vec3 tint = mix(vec3(1.,.86,.72), vec3(.62,.75,1.), hash(i+5.5));
+      c += tint*b;
+    }
+  }
+  return c;
+}
+
+void main(){
+  vec2 ndc = vUv*2.-1.;
+  float asp = uRes.x/uRes.y;
+  vec3 rd = normalize(uF + ndc.x*uTan*asp*uR + ndc.y*uTan*uU);
+  vec3 ro = uCam;
+  float b = dot(ro, rd); float c = dot(ro,ro)-1.; float disc = b*b-c;
+  vec3 col = vec3(0);
+  // closest approach of the ray to the planet centre (for the limb / atmosphere)
+  float tc = max(-b, 0.); float dmin = length(ro + rd*tc);
+  if (disc > 0. && -b - sqrt(disc) > 0.) {
+    float t = -b - sqrt(disc);
+    vec3 P = ro + rd*t; vec3 n = normalize(P);
+    // --- night lava (stand-in for the look/lava modules): smooth, glossy, low glow. No crust, no specks.
+    float fp = t*2.*uTan/uRes.y; // footprint (world units per pixel)
+    float w = fbm(n*5. + vec3(0., 0., uT*0.006));
+    float w2 = fbm(n*17. + w*1.3 + vec3(uT*0.01));
+    float K = 760. + 120.*w + 40.*w2;
+    vec3 emit = bb(K) * 0.03;
+    // the places: PayPal (0) and the six companies, a hot core in a soft halo, and branching flows that grow with age
+    float rings = 0.;
+    for (int i=0;i<7;i++){
+      float heat = uSpot[i].w; if (heat <= 0.001 && uSpotB[i].z <= 0.001) continue;
+      vec3 sd = uSpot[i].xyz;
+      float ang = acos(clamp(dot(n, sd), -1., 1.));
+      // local polar angle around the site (for the flows)
+      vec3 tx = normalize(cross(sd, abs(sd.y)<.9 ? vec3(0,1,0) : vec3(1,0,0)));
+      vec3 ty = cross(sd, tx);
+      vec3 q = n - sd*dot(n, sd);
+      float phi = atan(dot(q, ty), dot(q, tx));
+      float age = uSpotB[i].x; float seed = uSpotB[i].w;
+      float grow = 1. - exp(-age*14.);
+      // flows: a few smooth lobes, long and thin, like lava running out from a new vent seen from orbit
+      float lobes = 0.;
+      for (int k=0;k<4;k++){
+        float fk = float(k);
+        float len = (0.03 + 0.05*fract(seed*7.3+fk*.37)) * grow;
+        float along = ang / max(len, 1e-4);
+        // each flow meanders: its heading bends with distance, and its width breathes with low-frequency noise
+        float a0 = seed*6.283 + fk*1.9 + 0.5*sin(seed*31.+fk) + 0.9*(fract(seed*3.1+fk*.71)-.5)*along;
+        float dphi = atan(sin(phi-a0), cos(phi-a0));
+        float wdt = (0.42 - 0.22*clamp(along, 0., 1.)) * (0.8 + 0.4*noise(n*90. + fk*7.));
+        float body = exp(-dphi*dphi/(wdt*wdt)) * smoothstep(1.05, 0.2, along) * smoothstep(0.0, 0.25, along);
+        lobes += body * (0.6 + 0.4*noise(n*160. + fk*3.)) * step(0., len - 1e-4);
+      }
+      float core = exp(-pow(ang/0.005, 2.));
+      float mid = exp(-pow(ang/0.016, 2.));
+      float halo = exp(-ang/0.05);
+      float Ks = mix(900., 1650., core) + 250.*mid;
+      float e = heat*(2.2*core + 0.45*mid + 0.08*halo + 0.30*lobes);
+      emit += bb(Ks) * e;
+      // impact flash: a brief white bloom right at the site
+      emit += vec3(1.,.93,.82) * uSpotB[i].z * 1.5 * exp(-pow(ang/0.005, 2.));
+      // shock ring on the lava: radius grows, thins out, fades; a band of heat, not an outline
+      float ra = uSpotB[i].y;
+      if (ra > 0. && ra < 0.2) {
+        float rr = ra*0.55; float wd = 0.004 + ra*0.05;
+        float ring = exp(-pow((ang-rr)/wd, 2.)) * exp(-ra*60.) * 0.12;
+        rings += ring;
+      }
+    }
+    emit += bb(1250.) * rings * 0.9;
+    // light thrown on the glossy lava by the flying embers: diffuse pool + a soft specular glint
+    vec3 V = -rd;
+    for (int i=0;i<7;i++){
+      float I = uHead[i].w; if (I <= 0.) continue;
+      vec3 L = uHead[i].xyz - P; float d2 = dot(L,L); L *= inversesqrt(d2);
+      float nl = max(dot(n, L), 0.);
+      vec3 H = normalize(L+V);
+      float spec = pow(max(dot(n,H),0.), 220.) * 40.;
+      // (no light pools under the embers: at this scale they read as out-of-focus blobs)
+    }
+    // sky reflection (dark, faint starlight) with Fresnel
+    float fr = 0.04 + 0.96*pow(1.-max(dot(n,V),0.), 5.);
+    col += emit*(1.-fr) + fr*vec3(0.004,0.006,0.012);
+  } else {
+    col = stars(rd) * 0.9;
+  }
+  // thin atmosphere at the limb: warm from the lava below, a cool line higher up (stand-in for look)
+  float hgt = dmin - 1.;
+  float limbW = smoothstep(-0.002, 0.0015, hgt);
+  float airW = exp(-max(hgt,0.)/0.012) * limbW;
+  float airC = exp(-max(hgt,0.)/0.035) * limbW;
+  col += vec3(0.85,0.22,0.05)*airW*0.06 + vec3(0.36,0.52,0.85)*airC*0.010;
+  o = vec4(col, 1.);
+}`;
+
+// Ribbons: the throws (hot head, cooling trail, drifting train) and their reflections, built in screen space on the CPU.
+const RIB_VS = `#version 300 es
+in vec2 aPos; in vec4 aAttr; // x across (-1..1), y temperature K, z intensity, w width px
+uniform vec2 uRes;
+out vec4 vA;
+void main(){ vA = aAttr; gl_Position = vec4(aPos/uRes*2.-1., 0., 1.); }`;
+const RIB_FS = `#version 300 es
+precision highp float;
+in vec4 vA; out vec4 o;
+${BB}
+void main(){
+  float x = vA.x;
+  float prof = exp(-x*x*4.);  // gaussian cross-section: no hard edge, no outline
+  o = vec4(bb(vA.y) * vA.z * prof, 1.);
+}`;
+
+// Bloom + tone map
+const DOWN_FS = `#version 300 es
+precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uTex; uniform vec2 uTexel; uniform float uFirst;
+void main(){
+  vec3 c = vec3(0);
+  c += texture(uTex, vUv + uTexel*vec2(-1,-1)).rgb; c += texture(uTex, vUv + uTexel*vec2(1,-1)).rgb;
+  c += texture(uTex, vUv + uTexel*vec2(-1,1)).rgb;  c += texture(uTex, vUv + uTexel*vec2(1,1)).rgb;
+  c *= .25;
+  if (uFirst > .5) { float l = dot(c, vec3(.2126,.7152,.0722)); c *= smoothstep(0.8, 2.5, l); }
+  o = vec4(c, 1.);
+}`;
+const UP_FS = `#version 300 es
+precision highp float; in vec2 vUv; out vec4 o; uniform sampler2D uTex; uniform vec2 uTexel;
+void main(){
+  vec3 c = vec3(0);
+  c += texture(uTex, vUv + uTexel*vec2(-1,0)).rgb*2.; c += texture(uTex, vUv + uTexel*vec2(1,0)).rgb*2.;
+  c += texture(uTex, vUv + uTexel*vec2(0,-1)).rgb*2.; c += texture(uTex, vUv + uTexel*vec2(0,1)).rgb*2.;
+  c += texture(uTex, vUv + uTexel*vec2(-1,-1)).rgb; c += texture(uTex, vUv + uTexel*vec2(1,-1)).rgb;
+  c += texture(uTex, vUv + uTexel*vec2(-1,1)).rgb;  c += texture(uTex, vUv + uTexel*vec2(1,1)).rgb;
+  o = vec4(c/12., 1.);
+}`;
+const FINAL_FS = `#version 300 es
+precision highp float; in vec2 vUv; out vec4 o;
+uniform sampler2D uScene, uBloom; uniform float uT; uniform vec2 uRes;
+vec3 aces(vec3 x){ // Hill's fitted ACES (RRT+ODT)
+  const mat3 i = mat3(0.59719,0.07600,0.02840, 0.35458,0.90834,0.13383, 0.04823,0.01566,0.83777);
+  const mat3 oo = mat3(1.60475,-0.10208,-0.00327, -0.53108,1.10813,-0.07276, -0.07367,-0.00605,1.07602);
+  vec3 v = i*x; vec3 a = v*(v+0.0245786)-0.000090537; vec3 b = v*(0.983729*v+0.4329510)+0.238081; return clamp(oo*(a/b),0.,1.);
+}
+float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233)))*43758.5453); }
+void main(){
+  vec3 c = texture(uScene, vUv).rgb + texture(uBloom, vUv).rgb*0.07;
+  c = aces(c*1.35);
+  c = pow(c, vec3(1./2.2));
+  float g = h(gl_FragCoord.xy + fract(uT*7.)*100.) - .5;
+  c += g*0.018 + (h(gl_FragCoord.xy*1.3+3.)-.5)/255.;
+  o = vec4(c, 1.);
+}`;
+
+const P_PLANET = prog(FSQ_VS, PLANET_FS);
+const P_RIB = prog(RIB_VS, RIB_FS);
+const P_DOWN = prog(FSQ_VS, DOWN_FS);
+const P_UP = prog(FSQ_VS, UP_FS);
+const P_FINAL = prog(FSQ_VS, FINAL_FS);
+
+const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const vaoQ = gl.createVertexArray(); gl.bindVertexArray(vaoQ); gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+gl.bindAttribLocation(P_PLANET.p, 0, 'a');
+
+const ribBuf = gl.createBuffer();
+const vaoR = gl.createVertexArray(); gl.bindVertexArray(vaoR); gl.bindBuffer(gl.ARRAY_BUFFER, ribBuf);
+const locP = gl.getAttribLocation(P_RIB.p, 'aPos'), locA = gl.getAttribLocation(P_RIB.p, 'aAttr');
+gl.enableVertexAttribArray(locP); gl.vertexAttribPointer(locP, 2, gl.FLOAT, false, 24, 0);
+gl.enableVertexAttribArray(locA); gl.vertexAttribPointer(locA, 4, gl.FLOAT, false, 24, 8);
+
+function target(w, h) {
+  const tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const fb = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, fb); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  return { tex, fb, w, h };
+}
+let W = 0, H = 0, scene, mips = [];
+function resize() {
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  const w = Math.round(innerWidth * dpr), h = Math.round(innerHeight * dpr);
+  if (w === W && h === H) return;
+  W = w; H = h; canvas.width = w; canvas.height = h;
+  scene = target(w, h); mips = [];
+  let mw = w, mh = h;
+  for (let i = 0; i < 6; i++) { mw = Math.max(1, mw >> 1); mh = Math.max(1, mh >> 1); mips.push(target(mw, mh)); }
+}
+
+// ---------- per-frame state of the beat ----------
+function project(P, cam, B, asp) { // world -> pixel (y up), plus depth
+  const d = V.sub(P, cam.pos); const z = V.dot(d, B.f);
+  const tan = Math.tan(cam.fov / 2);
+  const x = V.dot(d, B.r) / (z * tan * asp), y = V.dot(d, B.u) / (z * tan);
+  return [(x * 0.5 + 0.5) * W, (y * 0.5 + 0.5) * H, z];
+}
+function occluded(P, cam) { // is the planet between the camera and P?
+  const d = V.sub(P, cam.pos); const L = V.len(d); const rd = V.mul(d, 1 / L);
+  const b = V.dot(cam.pos, rd), c = V.dot(cam.pos, cam.pos) - 1, disc = b * b - c;
+  if (disc <= 0) return 0;
+  const t0 = -b - Math.sqrt(disc);
+  return t0 > 0 && t0 < L - 1e-4 ? 1 : 0;
+}
+
+// ember temperature along its trail by age (in p units): the head is white-hot, the trail cools through yellow
+// and orange to a deep red persistent train that drifts and fades (meteor trains, lava-bomb long exposures).
+const TAU_HOT = 0.022, TAU_TRAIN = 0.05;
+function trailSample(site, p, ageP, t) {
+  const pAt = p - ageP; // when the head was here
+  const u = (pAt - site.launch) / site.flight;
+  if (u < 0 || u > 1) return null;
+  let P = arcPos(site, u);
+  // the train drifts: a slow lateral wander that grows with age (upper-atmosphere wind on a meteor train)
+  const wob = Math.min(ageP / 0.06, 1.5) * 0.004;
+  const n = V.norm(P);
+  const side = V.norm(V.cross(n, surfaceDir(site.bearing, site.range * u + 0.01)));
+  const ph = u * 9 + site.bearing * 0.1 + t * 0.25;
+  P = V.add(P, V.add(V.mul(side, wob * Math.sin(ph)), V.mul(n, wob * 0.5 * Math.cos(ph * 1.3))));
+  const hot = Math.exp(-ageP / TAU_HOT);
+  const K = 950 + 4600 * hot + 250 * Math.exp(-ageP / 0.03);
+  return { P, K, hot, ageP };
+}
+
+const ribData = new Float32Array(200000);
+function buildRibbons(p, t, cam, B, asp, dpr) {
+  let n = 0;
+  const heads = [];
+  const pushStrip = (pts) => { // pts: [{x,y,K,I,w}] -> triangle strip appended with degenerate joins
+    if (pts.length < 2) return;
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[Math.max(0, i - 1)], b = pts[Math.min(pts.length - 1, i + 1)];
+      let tx = b.x - a.x, ty = b.y - a.y; const l = Math.hypot(tx, ty) || 1; tx /= l; ty /= l;
+      const nx = -ty, ny = tx; const q = pts[i];
+      const vtx = (s) => { ribData[n++] = q.x + nx * q.w * s; ribData[n++] = q.y + ny * q.w * s; ribData[n++] = s; ribData[n++] = q.K; ribData[n++] = q.I; ribData[n++] = q.w; };
+      if (i === 0 && n > 0) { vtx(-1); } // degenerate join
+      vtx(-1); vtx(1);
+      if (i === pts.length - 1) vtx(1);
+    }
+  };
+  for (const site of SITES) {
+    const uHead = (p - site.launch) / site.flight;
+    // the throw is visible from launch until its train has faded (a few TAU_TRAIN after landing): nothing left sitting
+    if (uHead < 0 || p > site.land + 3 * TAU_TRAIN) { heads.push(null); continue; }
+    const pts = [], ref = [];
+    const maxAge = Math.min(3 * TAU_TRAIN, p - site.launch);
+    const N = 90;
+    for (let i = 0; i <= N; i++) {
+      // sample densely near the head, sparser in the old train
+      const a = maxAge * Math.pow(i / N, 1.7);
+      const ageP = a + Math.max(0, p - site.land); // after landing, the head is gone: everything ages on
+      const s = trailSample(site, Math.min(p, site.land), a, t);
+      if (!s) continue;
+      const age = ageP;
+      const hot = Math.exp(-age / TAU_HOT);
+      const K = 900 + 1350 * hot + 200 * Math.exp(-age / 0.03);
+      const fade = Math.exp(-age / TAU_TRAIN) * (1 - smooth(2 * TAU_TRAIN, 3 * TAU_TRAIN, age)) * smooth(0, 0.004, a + 0.0005);
+      const pr = project(s.P, cam, B, asp);
+      if (pr[2] <= 0.01) continue;
+      const vis = 1 - occluded(s.P, cam);
+      // world width: thin hot core, a broader train as it diffuses; at least ~1.3 px, energy kept when widened
+      const worldW = 0.0007 + 0.006 * (1 - Math.exp(-age / 0.04));
+      const pxW = worldW / (pr[2] * Math.tan(cam.fov / 2)) * H * 0.5;
+      const wpx = Math.max(pxW, 1.3 * dpr);
+      const I = (1.2 + 4.0 * hot) * fade * vis * (pxW / wpx) * (age > 0.0 ? 1 : 1);
+      pts.push({ x: pr[0], y: pr[1], K, I: I * 1.0, w: wpx * 1.6 });
+      // the reflection in the glossy lava: mirror through the surface below, dimmer, a little wider
+      const nrm = V.norm(s.P); const hgt = V.len(s.P) - 1;
+      const M = V.sub(s.P, V.mul(nrm, 2 * hgt));
+      const pm = project(M, cam, B, asp);
+      if (pm[2] > 0.01) ref.push({ x: pm[0], y: pm[1], K, I: I * 0.03 * Math.exp(-hgt / 0.03), w: wpx * 2.2 });
+    }
+    pushStrip(pts); if (Q.has('refl')) pushStrip(ref);
+    if (uHead <= 1) {
+      const P = arcPos(site, uHead);
+      const flick = 0.85 + 0.15 * Math.sin(t * 37 + site.bearing) * Math.sin(t * 23.1 + site.range * 50);
+      heads.push({ P, I: (1 - occluded(P, cam)) * flick, u: uHead });
+    } else heads.push(null);
+  }
+  // the heads: a tight white-hot point (bloom carries the glare)
+  for (const h of heads) {
+    if (!h) continue;
+    const pr = project(h.P, cam, B, asp); if (pr[2] <= 0.01) continue;
+    const w = 1.3 * dpr; const I = 2.0 * h.I;
+    const pts = [{ x: pr[0] - 0.01, y: pr[1], K: 2500, I, w }, { x: pr[0] + 0.01, y: pr[1], K: 2500, I, w }];
+    // draw as a tiny round dot using a 2-point strip of width w: approximated by a short segment along x
+    pts[0].x -= w * 0.5; pts[1].x += w * 0.5;
+    pushStrip(pts);
+  }
+  return { count: n / 6, heads };
+}
+
+// ---------- DOM: captions and labels ----------
+const caps = [...document.querySelectorAll('[data-cap]')];
+const stage = document.getElementById('stage');
+const tags = SITES.map((s) => { const e = document.createElement('span'); e.className = 'tag'; e.textContent = s.name; stage.appendChild(e); return e; });
+const ppTag = document.querySelector('[data-tag="pp"]');
+
+function capOpacity(i, p) {
+  const [a, b] = CAPS[i];
+  return smooth(a, a + 0.03, p) * (1 - smooth(b - 0.03, b, p));
+}
+
+// ---------- frame ----------
+const t0 = performance.now();
+function progress() {
+  if (FIXED_P !== null) return FIXED_P;
+  const max = document.documentElement.scrollHeight - innerHeight;
+  return clamp(scrollY / Math.max(max, 1));
+}
+function frame() {
+  resize();
+  const t = FIXED_T !== null ? FIXED_T : (performance.now() - t0) / 1000;
+  const p = progress();
+  const asp = W / H;
+  const dpr = W / innerWidth;
+  layout(asp);
+  const cam = camera(p, asp);
+  const B = camBasis(cam);
+
+  // spots
+  const spot = new Float32Array(28), spotB = new Float32Array(28), head = new Float32Array(28);
+  const v = vent(p);
+  spot.set([...PP, v.heat], 0);
+  spotB.set([1, p - 0.236, v.flash, 0.42], 0);
+  SITES.forEach((s, i) => {
+    const age = p - s.land;
+    const lit = smooth(0, 0.012, age);
+    spot.set([...s.dir, lit], (i + 1) * 4);
+    spotB.set([Math.max(age, 0), age, age > 0 ? Math.exp(-age / 0.008) : 0, (i * 0.618 + 0.13) % 1], (i + 1) * 4);
+  });
+
+  const rib = buildRibbons(p, t, cam, B, asp, dpr);
+  rib.heads.forEach((h, i) => { if (h) head.set([...h.P, h.I], (i + 1) * 4); });
+
+  // planet pass
+  gl.bindFramebuffer(gl.FRAMEBUFFER, scene.fb); gl.viewport(0, 0, W, H);
+  gl.disable(gl.BLEND);
+  gl.useProgram(P_PLANET.p); const U = P_PLANET.u;
+  gl.uniform2f(U.uRes, W, H); gl.uniform1f(U.uT, t);
+  gl.uniform3fv(U.uCam, cam.pos); gl.uniform3fv(U.uF, B.f); gl.uniform3fv(U.uR, B.r); gl.uniform3fv(U.uU, B.u);
+  gl.uniform1f(U.uTan, Math.tan(cam.fov / 2));
+  gl.uniform4fv(U.uSpot, spot); gl.uniform4fv(U.uSpotB, spotB); gl.uniform4fv(U.uHead, head);
+  gl.bindVertexArray(vaoQ); gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+  // ribbons, additive
+  gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  gl.useProgram(P_RIB.p); gl.uniform2f(P_RIB.u.uRes, W, H);
+  gl.bindVertexArray(vaoR); gl.bindBuffer(gl.ARRAY_BUFFER, ribBuf);
+  gl.bufferData(gl.ARRAY_BUFFER, ribData.subarray(0, rib.count * 6), gl.DYNAMIC_DRAW);
+  if (rib.count > 0) gl.drawArrays(gl.TRIANGLE_STRIP, 0, rib.count);
+  gl.disable(gl.BLEND);
+
+  // bloom
+  gl.bindVertexArray(vaoQ);
+  let src = scene;
+  gl.useProgram(P_DOWN.p);
+  mips.forEach((m, i) => {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, m.fb); gl.viewport(0, 0, m.w, m.h);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, src.tex);
+    gl.uniform1i(P_DOWN.u.uTex, 0); gl.uniform2f(P_DOWN.u.uTexel, 1 / src.w, 1 / src.h); gl.uniform1f(P_DOWN.u.uFirst, i === 0 ? 1 : 0);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4); src = m;
+  });
+  gl.useProgram(P_UP.p); gl.enable(gl.BLEND); gl.blendFunc(gl.ONE, gl.ONE);
+  for (let i = mips.length - 1; i > 0; i--) {
+    const s = mips[i], d = mips[i - 1];
+    gl.bindFramebuffer(gl.FRAMEBUFFER, d.fb); gl.viewport(0, 0, d.w, d.h);
+    gl.bindTexture(gl.TEXTURE_2D, s.tex); gl.uniform1i(P_UP.u.uTex, 0); gl.uniform2f(P_UP.u.uTexel, 1 / s.w, 1 / s.h);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  }
+  gl.disable(gl.BLEND);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, W, H);
+  gl.useProgram(P_FINAL.p);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scene.tex); gl.uniform1i(P_FINAL.u.uScene, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, mips[0].tex); gl.uniform1i(P_FINAL.u.uBloom, 1);
+  gl.uniform1f(P_FINAL.u.uT, t); gl.uniform2f(P_FINAL.u.uRes, W, H);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  gl.activeTexture(gl.TEXTURE0);
+
+  // DOM
+  caps.forEach((c, i) => { const o = capOpacity(i, p); c.style.opacity = o.toFixed(3); c.style.transform = `translateY(${((1 - o) * 10).toFixed(1)}px)`; });
+  const place = (el, P, o) => {
+    const pr = project(V.mul(V.norm(P), 1.0), cam, B, asp);
+    const x = pr[0] / dpr, y = innerHeight - pr[1] / dpr;
+    el.style.transform = `translate(${x.toFixed(1)}px, ${(y - 12).toFixed(1)}px) translate(-50%, -100%)`;
+    el.style.opacity = (o * (pr[2] > 0 ? 1 : 0)).toFixed(3);
+  };
+  place(ppTag, PP, smooth(0.03, 0.08, p) * (1 - 0.85 * smooth(0.2, 0.232, p) * (1 - smooth(0.30, 0.34, p))) * (1 - 0.55 * smooth(0.82, 0.97, p)));
+  SITES.forEach((s, i) => place(tags[i], s.dir, smooth(s.land + 0.004, s.land + 0.03, p)));
+  window.__pp = { p, t, cam, heads: rib.heads.filter(Boolean).length };
+  if (FIXED_P === null || !window.__once) { window.__once = true; requestAnimationFrame(frame); }
+  else window.__drawn = true;
+}
+document.fonts.ready.then(() => requestAnimationFrame(frame));
+</script>
+</body>
+</html>
