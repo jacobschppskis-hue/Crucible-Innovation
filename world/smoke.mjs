@@ -40,6 +40,9 @@ async function run(device) {
   if (kind.startsWith('fail')) fail(device, `the world failed to start: ${kind.slice(6).slice(0, 300)} (html[data-world-fail]; a module that does not compile?)`);
   const wf = await page.evaluate(() => document.documentElement.dataset.worldFail).catch(() => undefined);
   if (wf !== undefined && !kind.startsWith('fail')) fail(device, `html[data-world-fail] is set: ${String(wf).slice(0, 300)}`);
+  // a module whose shader fails is dropped (the world runs without it): that is a broken push, not a pass
+  const dropped = await page.evaluate(() => document.documentElement.dataset.worldDropped).catch(() => undefined);
+  if (dropped !== undefined) fail(device, `a world module was dropped (html[data-world-dropped]): ${String(dropped).slice(0, 300)}`);
   if (kind === 'none' && !A['allow-no-world'] && !['airless', 'continuum'].includes(A.target)) fail(device, 'the world never started (no window.__world within 15 s of load + first use)');
   // body must set its own background/colour (the artifact frame sets white/black)
   const body = await page.evaluate(() => { const cs = getComputedStyle(document.body); return { bg: cs.backgroundColor, color: cs.color }; });
