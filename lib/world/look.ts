@@ -44,8 +44,10 @@ export const AIR = {
   glow: [0.04, 0.011, 0.0028],
   // the night limb's airglow is sodium-orange (as Earth's 589 nm layer is): a warm thin line along the limb whenever the
   // sun is gone, so the planet's edge never disappears; the blue only where sunlight scatters
-  airglow: [3.2e-4, 1.5e-4, 0.35e-4],
+  airglow: [5e-4, 2.3e-4, 0.5e-4],
   airglowH: 9,
+  airglow2: [1.0e-4, 1.45e-4, 2.7e-4],
+  airglowH2: 30,
 };
 
 /** look's radiance unit: the sun's illuminance above the air, in the scene's linear units (the post is neutral, so every
@@ -125,6 +127,8 @@ function airUniforms(set: (n: string, v: number | number[]) => void, K: number) 
   set('look_uGroundGlow', AIR.glow.map((x) => x * UNIT));
   set('look_uAirglow', AIR.airglow.map((x) => x * UNIT));
   set('look_uAirglowH', AIR.airglowH);
+  set('look_uAirglow2', AIR.airglow2.map((x) => x * UNIT));
+  set('look_uAirglowH2', AIR.airglowH2);
   set('look_uSunE', bbColor(SUN.light).map((x) => x * UNIT));
 }
 

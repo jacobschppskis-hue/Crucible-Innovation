@@ -23,6 +23,8 @@ uniform vec3 look_uGroundAlb;
 uniform vec3 look_uGroundGlow;   // mean radiance the night sea sends up (it lights its own air from below)
 uniform vec3 look_uAirglow;      // emission of the thin night-limb layer (per air km)
 uniform float look_uAirglowH;
+uniform vec3 look_uAirglow2;     // a broad, higher, cool layer: the blue glow above the limb (seen edge-on) that also tints
+uniform float look_uAirglowH2;   // the disk faintly violet seen from above, as in the reference frame
 uniform vec3 look_uSun;          // direction to the sun (world = air frame: same orientation)
 uniform float look_uSunR;        // the sun's angular radius (rad)
 uniform vec3 look_uSunE;         // sun illuminance colour above the air
@@ -154,6 +156,8 @@ void look_march(vec3 ro, vec3 rd, float tMax, int steps, float jitter, out vec3 
     vec3 S = look_uSunE * (Ts * (scR * pR + scM * pM) + look_msL(r, muS) * sc) + glow * sc;
     float ag = (r - look_uRg - look_uAirglowH) / (look_uAirglowH * 0.18);
     S += look_uAirglow * exp(-ag * ag);
+    float ag2 = (r - look_uRg - look_uAirglowH2) / (look_uAirglowH2 * 0.5);
+    S += look_uAirglow2 * exp(-ag2 * ag2);
     vec3 Tst = exp(-ext * dt);
     L += T * (S - S * Tst) / max(ext, vec3(1e-7));
     T *= Tst;
