@@ -1,0 +1,77 @@
+/* The CRT portraits (components/Builders.tsx Portrait, scripts/crt-portraits.py). The still is the settled picture:
+   bone phosphor on dark glass. Live, the tube powers on when a third of it is in view (data-on, PortraitImg.tsx): a
+   bright line across the middle, the raster opening out from it, the glow settling; afterwards a slow band rolls down
+   the face and the picture flickers very faintly. Reduced motion and no JS: the settled still. */
+.crt-scan {
+  position: absolute;
+  inset: 3.5% 3.5%;
+  border-radius: 6% / 5%;
+  overflow: hidden;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js .crt:not([data-on]) .crt-img {
+    opacity: 0;
+  }
+  .crt[data-on] .crt-img {
+    transform-origin: 50% 50%;
+    animation:
+      crt-on 1.15s cubic-bezier(0.3, 0.7, 0.2, 1) both,
+      crt-flicker 7.3s steps(1, end) 1.2s infinite;
+  }
+  .crt[data-on] .crt-scan::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 22%;
+    background: linear-gradient(to bottom, transparent, color-mix(in oklab, var(--bone) 7%, transparent) 55%, transparent);
+    mix-blend-mode: screen;
+    transform: translateY(-100%);
+    animation: crt-roll 8s linear 1.4s infinite;
+  }
+}
+@keyframes crt-on {
+  0% {
+    opacity: 1;
+    clip-path: inset(49.7% 46% 49.7% 46%);
+    filter: brightness(5);
+  }
+  16% {
+    clip-path: inset(49.7% 0 49.7% 0);
+    filter: brightness(4);
+  }
+  42% {
+    clip-path: inset(0 0 0 0);
+    filter: brightness(1.9);
+  }
+  100% {
+    opacity: 1;
+    clip-path: inset(0 0 0 0);
+    filter: brightness(1);
+  }
+}
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  31% {
+    opacity: 0.955;
+  }
+  32% {
+    opacity: 1;
+  }
+  74% {
+    opacity: 0.97;
+  }
+  75% {
+    opacity: 1;
+  }
+}
+@keyframes crt-roll {
+  to {
+    transform: translateY(560%);
+  }
+}

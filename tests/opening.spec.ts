@@ -150,16 +150,16 @@ test('every page ends on a dark footer, and no page has a bone one', async ({ pa
   }
 });
 
-test('no alloy beat and bone portraits on / and /sites', async ({ page }) => {
+test('no alloy beat and CRT portraits on / and /sites', async ({ page }) => {
   for (const path of ['/', '/sites']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('.alloy, [class*="AlloyBeat"], [data-alloy]')).toHaveCount(0);
-    const portraits = page.locator('img[alt^="ASCII portrait"]');
+    const portraits = page.locator('img[alt^="CRT "]');
     const n = await portraits.count();
     if (path === '/') expect(n).toBeGreaterThan(0);
-    for (let i = 0; i < n; i++) expect(await portraits.nth(i).getAttribute('src')).toMatch(/bone/);
+    for (let i = 0; i < n; i++) expect(await portraits.nth(i).getAttribute('src')).toMatch(/-crt\.webp/);
     // Straight on the page, not on a bone card.
-    await expect(page.locator('img[alt^="ASCII portrait"]').locator('xpath=ancestor::*[contains(@class,"bg-bone")]')).toHaveCount(0);
+    await expect(page.locator('img[alt^="CRT "]').locator('xpath=ancestor::*[contains(@class,"bg-bone")]')).toHaveCount(0);
   }
 });
 
@@ -380,4 +380,18 @@ test.describe('rich tier', () => {
     await expect(page.locator('.ig-svg')).toHaveCSS('opacity', '1');
     expect(errors).toEqual([]);
   });
+});
+
+test('the story: the "comes together earlier" sentence is on the page once, and the PayPal beat has a finished still', async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  const text = await page.locator('#story').innerText();
+  expect(text.split('I want to know what happens when a group like it comes together earlier.').length - 1).toBe(1);
+  // the still: the cooled tree under six bone names, no canvas drawing
+  await expect(page.locator('.beat-split .sp-tree')).toBeVisible();
+  await expect(page.locator('.beat-split .sp-w')).toHaveCount(7);
+  const set = await page.locator('.beat-split .sp-set').first().evaluate((el) => getComputedStyle(el).color);
+  expect(set).toBe('rgb(232, 228, 216)');
+  await ctx.close();
 });
