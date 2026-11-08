@@ -185,7 +185,12 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // what the skin mirrors: the sky, the mark, the monoliths (their cheap env shading), the sea itself. The reflected
   // cone is the pixel's own widened by the skin's roughness (sqrt(a2) ~ the lobe's half-angle), so point lights (stars)
   // are averaged over it, never glinting as specks
-  vec3 rd = reflect(r.rd, n);
+  // the mirrored image uses a gentler normal (about half the swell's slope): at grazing angles the full slope breaks a
+  // tall reflection into flat slabs with black gaps (front faces mirror it, back faces the sky), which at the scene's
+  // render scale read as pixel bands under the crisp monoliths; half the slope keeps one rippled streak. The glint and
+  // the glow keep the full normal.
+  vec3 nr = normalize(s.up - 0.45 * (L.g.x * s.eU + L.g.y * s.eV));
+  vec3 rd = reflect(r.rd, nr);
   float up = dot(rd, s.up);
   if (up < 0.002) rd = normalize(rd + s.up * (0.002 - up));
   Ray rr; rr.ro = s.p + s.up * 0.02; rr.rd = rd; rr.pa = r.pa / s.graz + sqrt(a2); rr.depth = 1;
