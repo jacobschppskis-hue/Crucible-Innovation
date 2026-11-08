@@ -33,6 +33,20 @@ for (const { path, h1 } of pages) {
   });
 }
 
+test('no horizontal scroll anywhere down the page, once every effect canvas has been created', async ({ page }) => {
+  for (const { path } of pages) {
+    await page.goto(path, { waitUntil: 'networkidle' });
+    const H = await page.evaluate(() => document.documentElement.scrollHeight);
+    for (let y = 0; y < H; y += 700) {
+      await page.evaluate((y) => scrollTo(0, y), y);
+      await page.waitForTimeout(150);
+    }
+    await page.waitForTimeout(600);
+    const overflow = await page.evaluate(() => Math.max(document.documentElement.scrollWidth, innerWidth) - document.documentElement.clientWidth);
+    expect(overflow, `${path} horizontal scroll after scrolling through`).toBeLessThanOrEqual(0);
+  }
+});
+
 test('no "LLC" anywhere and no payment details', async ({ page }) => {
   for (const { path } of pages) {
     await page.goto(path);

@@ -57,6 +57,12 @@
     @apply font-sans;
     overflow-x: clip;
   }
+  /* Effect canvases overhang their boxes on purpose (the ingots' light on the liquid, the PayPal pour's glow), so the
+     page clips sideways at main too: body's clip alone doesn't stop a phone widening its layout viewport to fit them.
+     clip (not hidden) keeps position: sticky working. */
+  main {
+    overflow-x: clip;
+  }
   ::selection {
     background: var(--ember-tint);
   }
