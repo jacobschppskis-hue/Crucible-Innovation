@@ -242,6 +242,9 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   vec3 n1 = monoNoised(fuv * vec2(1.3, 0.55) + float(i) * 7.31);
   vec3 n2 = monoNoised(fuv * vec2(3.1, 1.2) + float(i) * 3.17 + 11.0);
   vec2 g = (n1.yz * vec2(1.3, 0.55) * 0.005 + n2.yz * vec2(3.1, 1.2) * 0.0012) * wav * face;
+  // a cast face is never optically flat: it crowns slightly (a few hundredths of a radian across the face), so the
+  // reflected sky changes across its width and the horizon line bends gently near the edges
+  g += vec2(fuv.x * 0.035, (fuv.y * E.x / E.y - 1.0) * 0.012) * face;
   vec3 nlp = normalize(nl + vec3(g.x, g.y, 0.0) * sign(nl.z) * vec3(1.0, 1.0, 0.0));
 
   // --- materials (measured F0, linear) ---
@@ -257,7 +260,7 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   float draw = face * (1.0 - smoothstep(0.002, 0.02, px * foot));
 
   // --- the mark, cast into the live monolith's front face ---
-  float markIn = 0.0, coreIn = 0.0;
+  float markIn = 0.0, coreIn = 0.0, coreR = 1.0;
   vec3 nMark = vec3(0.0);
   if (kind < 0.5 && nl.z > 0.5) {
     float ms = (E.x * tap * 0.62) / 21.3;              // world units per grid unit: the outer ring spans 62% of the face
@@ -277,6 +280,7 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
       nMark = vec3(gd * wall * 0.9, 0.0);
       markIn = smoothstep(fw, -fw, d0.x);
       coreIn = smoothstep(fw, -fw, d0.y + 0.15);
+      coreR = length(q) / 3.6;
       float coreWall = 1.0 - abs(clamp((d0.y + 0.6) / max(0.6, fw), -1.0, 1.0));
       nMark += vec3(normalize(q + 1e-4) * coreWall * 0.8, 0.0) * step(d0.y, 1.0);
     }
@@ -351,7 +355,8 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
 
   // the core: liquid metal still glowing in its pocket, a smooth dielectric skin over Ember heat
   if (coreIn > 0.0) {
-    float Tc = 1150.0 + 120.0 * heat + 60.0 * sin(uMonoT * 1.3);
+    // a hotter heart under the skin, cooling toward the pocket's wall; a slow breath
+    float Tc = 1080.0 + 190.0 * (1.0 - coreR * coreR) + 120.0 * heat + 40.0 * sin(uMonoT * 1.3);
     vec3 cem = monoBB(Tc) * 16.0;
     vec3 csk = monoEnv(i, h.wp, reflect(rd, M * normalize(nl + nMark * 0.6)), 0.01) * (0.04 + 0.96 * pow(1.0 - NoV, 5.0));
     col = mix(col, cem + csk, coreIn);
