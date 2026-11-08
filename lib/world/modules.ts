@@ -9,9 +9,10 @@ import type { Key } from './journey';
 import { defaultLook } from './defaults/look';
 import { lava } from './lava';
 import { defaultLava } from './defaults/lava';
+import { markModule } from './markModule';
 import { thesis } from './thesis'; // story
 import { look } from './look';
-import { paypal } from './paypal'; // paypal
+import { paypal, paypalKeys } from './paypal'; // paypal
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
 export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
@@ -58,9 +59,9 @@ export const MODULES: WorldModule[] = [
   ...defaultLava, // world: stand-ins for lava_shade, lava_env
   look,
   lava, // lava: the molten sea, its swell and the visitor's wakes
-  // mark:     import { mark } from './mark';         mark,
+  markModule, // mark: the Split Ring around the sun and the stronger-together beat (integrated by world)
   // together: import { together } from './together'; together,
-  paypal, // paypal: PayPal -> six companies
+  { ...paypal, keys: paypalKeys }, // paypal: PayPal -> six companies, with its own camera
   // ventures: import { ventures } from './ventures'; ventures,
   // type (story, lib/world/type.ts): display type reflected in the sea; off: it read as glyph noise, not a reflection
   thesis, // story: the sea heats 293 K -> 1811 K

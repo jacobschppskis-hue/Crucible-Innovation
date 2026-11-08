@@ -10,8 +10,8 @@ export const hero = {
 
 /** The "stronger together" moment (replaces "Not the person / Not the model / Neither, alone"). Draft lines: `mark` owns. */
 export const together = {
-  // placeholder lines until `mark` writes them
-  lines: ['A person, a machine', 'Stronger together'],
+  // the captions of mark's "closing the ring" beat (lib/world/together.ts LINES)
+  lines: ['The human half', 'The machine half', 'Stronger together'],
 };
 
 export const storyIntro = {
