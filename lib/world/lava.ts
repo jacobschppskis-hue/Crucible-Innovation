@@ -2,7 +2,7 @@
 // its swell spectrum, the visitor's hand (input.ts -> wake.ts), the uniforms, and the same surface on the CPU for
 // anything that sits on the sea (`lavaSample`, `window.__lava`).
 //
-// Channels (journey extras): 'lava.heat' 0..1 (950..1800 K; 1 ~ the thesis' 1811 K), 'lava.swell' (gain), 'lava.calm'
+// Channels (journey extras): 'lava.heat' (added to look's sea temperature, +850 K per unit), 'lava.swell' (gain), 'lava.calm'
 // (0..1 stills it), 'lava.interact' (the visitor's waves: -1 = automatic from altitude, else 0..1).
 
 import type { Frame } from './frame';
@@ -22,23 +22,14 @@ export const LAVA = {
   lamMax: 320,
   steepLong: 0.034,
   steepShort: 0.045,
-  /** the glow: emission scale, brightness compression (of Planck's ln range), skin cooling (K), skin depth */
-  emit: 0.3,
-  compress: 0.42,
-  skin: 220,
+  /** the glow: the skin's cooling (K) and depth (the eye sees through ~depth / cos of it) */
+  skin: 30,
   skinDepth: 0.3,
-  /** currents: amplitude (K), base scale (units), drift (units/s), planet-scale amplitude (K) */
-  curK: 85,
-  curScale: 420,
-  curDrift: 1.6,
-  curPlanet: 60,
   /** look: base roughness (alpha^2), F0 (molten silicate, n ~ 1.6), sun glint gain, reflection gain */
   rough: 0.0045,
   F0: 0.053,
   glint: 1,
   env: 1,
-  /** the sun disc's radiance for its glint (look's sun; linear) */
-  sunL: [60, 30, 12] as [number, number, number],
   /** the visitor's waves read from this low (full) to this high (none), in units of altitude */
   nearH: 14,
   /** the swell fades out between these altitudes (orbit shows the planet's currents, not its waves) */
@@ -113,7 +104,7 @@ export const lava: WorldModule = {
   id: 'lava',
   glsl: LAVA_GLSL,
   provides: ['lava_shade', 'lava_env'],
-  channels: { 'lava.heat': 0.22, 'lava.swell': 1, 'lava.calm': 0, 'lava.interact': -1 },
+  channels: { 'lava.heat': 0, 'lava.swell': 1, 'lava.calm': 0, 'lava.interact': -1 },
   init() {
     waves = spectrum(R);
     if (typeof window !== 'undefined') {
@@ -174,11 +165,9 @@ export const lava: WorldModule = {
       SW[i * 4 + 3] = wrap(w.ph - Math.sqrt(LAVA.g * k) * t);
     }
     u.set('lava_uSw', SW);
-    u.set('lava_uA', [swellGain, f.ch['lava.heat'] ?? 0.22, interact, t % 3600]);
-    u.set('lava_uTone', [LAVA.emit, LAVA.compress, LAVA.skin, LAVA.skinDepth]);
-    u.set('lava_uCur', [LAVA.curK, LAVA.curScale, LAVA.curDrift, LAVA.curPlanet]);
+    u.set('lava_uA', [swellGain, 0, interact, t % 3600]);
+    u.set('lava_uTone', [850 * (f.ch['lava.heat'] ?? 0), 0, LAVA.skin, LAVA.skinDepth]);
     u.set('lava_uLook', [LAVA.rough, LAVA.F0, LAVA.glint, LAVA.env]);
-    u.set('lava_uSunL', LAVA.sunL);
     const W = wake.U;
     u.tex('lava_uWake', { w: 128 * 3, h: 1, data: W.tex, format: 'rgba32f' }, W.ver, { linear: false });
     u.set('lava_uWN', W.n);
