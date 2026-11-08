@@ -53,7 +53,7 @@ function keepDragsForWaves() {
 export function Liquid() {
   const ref = useRef<HTMLCanvasElement>(null);
   const pathname = usePathname();
-  // A page that paints its own world (the home page: lib/world, mounted under an element with data-world) gets no
+  // A page that paints its own world (the home page: lib/world, whose root carries data-world-root; html[data-world] while it runs) gets no
   // page liquid: two full-screen canvases would double the GPU work and paint over each other. Checked on every route
   // change, since this layout component survives client-side navigation.
   // A canvas handed to the worker is spent: every (re)start renders a fresh node (key), never a second transfer.
@@ -72,22 +72,8 @@ export function Liquid() {
     let idleId = 0;
     let timer = 0;
     const touched = firstUse();
-    // The home page's world (lib/world) paints its own ground: wait until it is gone (a client navigation away).
-    const worldGone = () =>
-      new Promise<void>((res) => {
-        if (!document.querySelector('[data-world-root]')) return res();
-        const on = (e: Event) => {
-          if (!(e as CustomEvent<{ on: boolean }>).detail.on) {
-            removeEventListener('crucible:world', on);
-            res();
-          }
-        };
-        addEventListener('crucible:world', on);
-      });
     richTier().then(async (ok) => {
       if (!ok || dead) return;
-      await worldGone();
-      if (dead) return;
       await Promise.race([touched, new Promise<void>((r) => (timer = window.setTimeout(r, UNTOUCHED * 1000)))]);
       clearTimeout(timer);
       if (dead) return;
