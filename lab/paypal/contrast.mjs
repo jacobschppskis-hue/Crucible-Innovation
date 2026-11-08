@@ -10,7 +10,7 @@ const dev = process.argv[2] || 'phone';
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const ctx = await b.newContext(dev === 'phone' ? { ...devices['iPhone 15'], deviceScaleFactor: 1 } : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 const page = await ctx.newPage(); page.setDefaultTimeout(180000);
-await page.goto(`http://localhost:${srv.address().port}/?t=6&q=4`);
+await page.goto(`http://localhost:${srv.address().port}/?t=6&q=${process.env.Q || 4}`);
 await page.waitForFunction(() => window.__world, null, { timeout: 90000 });
 const mids = (process.argv[3] || "0.12,0.35,0.59,0.79,0.93").split(",").map(Number);
 for (const [i, f] of mids.entries()) {

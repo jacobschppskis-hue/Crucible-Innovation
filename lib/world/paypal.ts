@@ -293,7 +293,7 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
       pts.push({ P, K, I, w });
     }
     if (pts.length < 2) return;
-    const flick = after > 0 ? 0 : (0.85 + 0.15 * Math.sin(t * 37 + s.seed * 9) * Math.sin(t * 23.1 + s.seed * 50)) * 2 * s.gain;
+    const flick = after > 0 ? 0 : (0.92 + 0.08 * Math.sin(t * 9 + s.seed * 9) * Math.sin(t * 5.3 + s.seed * 50)) * 2 * s.gain;
     // chunks of CH_PTS points sharing their end points
     for (let c0 = 0; c0 < pts.length - 1 && row < ROWS; c0 += CH_PTS - 1) {
       const c1 = Math.min(c0 + CH_PTS, pts.length);
