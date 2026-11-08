@@ -38,7 +38,7 @@
   - A press is drained from `ventureRipples` into a ring.
 
 ## Open (not done by the deadline)
-- The wake: fresh heat raised to +110 K; it reads as a smooth V of warm ridges at ventures (`shots/engine-ventures-stroke1200.webp`). On the hero it is still subtle at low quality steps.
+- The wake reads at the lowest quality step: the stirred skin glows at least ~1150 K and its crests ~1320 K whatever the place's own cooling (the night/foreground sea at ventures is too dark for +K offsets to show). Frames: `shots/engine-ventures-stroke-q8.webp`, `shots/engine-hero-touch-iphone-q8.webp`.
 - There is no dedicated `lava.night` channel. `lava.heat < 0` does the same.
 - The `lib/liquid/shader.ts` port (the other pages' liquid) was not started.
 - Real-GPU timing was not measured. The wake loop is bounded (<= 128 samples, box test); the swell is 24 sin/cos per pixel.
