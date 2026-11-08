@@ -7,9 +7,29 @@
 .wfoot :focus-visible {
   outline-color: var(--ember);
 }
+/* shore: 2.4 screens; the contact sits pinned in the middle of the shot while the sun comes up over the limb */
+.wfoot-shore {
+  height: calc(var(--world-vh, 100svh) * 2.4);
+}
 .wfoot-top {
-  padding-top: clamp(7rem, 20vh, 12rem);
-  padding-bottom: 2.5rem;
+  position: sticky;
+  top: 0;
+  height: var(--world-vh, 100svh);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: var(--nav-h);
+  padding-bottom: 1.5rem;
+}
+.wfoot-call {
+  margin-bottom: 2rem;
+  max-width: 11em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 8.6vw, 5.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
 }
 .wfoot-k {
   color: var(--bone);
@@ -37,19 +57,27 @@
 }
 .wfoot-cols {
   display: grid;
-  gap: 3rem;
-  margin-top: 5rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2rem 1.5rem;
+  margin-top: clamp(2rem, 6vh, 4.5rem);
   font-size: 0.9375rem;
+}
+.wfoot-cols > :last-child {
+  grid-column: 1 / -1;
 }
 @media (min-width: 640px) {
   .wfoot-cols {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 3rem;
+  }
+  .wfoot-cols > :last-child {
+    grid-column: auto;
   }
 }
 .wfoot-cols ul {
-  margin-top: 1rem;
+  margin-top: 0.75rem;
   display: grid;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 .wfoot-v {
   display: flex;
@@ -60,6 +88,16 @@
 @media (min-width: 640px) {
   .wfoot-v {
     justify-content: flex-start;
+  }
+}
+@media (max-width: 639px) {
+  .wfoot-v {
+    flex-direction: column;
+    gap: 0;
+  }
+  .wfoot-soon,
+  .wfoot-live {
+    font-size: 0.8125rem;
   }
 }
 .wfoot-link {
@@ -80,25 +118,23 @@
   line-height: 1.6;
 }
 .wfoot-c {
-  margin-top: 4rem;
+  margin-top: clamp(1.5rem, 5vh, 4rem);
   font-size: 0.875rem;
   opacity: 0.8;
 }
 
-/* the giant wordmark over the horizon at first light: one screen, the word centred a little above the horizon line the
-   camera sets (phones ~58%, desktop ~60% down) */
-.wfoot-giant {
-  position: relative;
-  display: grid;
-  height: 100svh;
-  align-items: end;
-  justify-items: center;
-  padding-bottom: 44svh;
+/* dawn: 2 screens; the wordmark holds over the day side (pinned) while the camera crosses it and turns back to the
+   setting sun, then lifts away as the hero comes up from below */
+.wfoot-dawn {
+  height: calc(var(--world-vh, 100svh) * 2);
 }
-@media (min-width: 1024px) {
-  .wfoot-giant {
-    padding-bottom: 42svh;
-  }
+.wfoot-giant {
+  position: sticky;
+  top: 0;
+  height: var(--world-vh, 100svh);
+  display: grid;
+  place-items: center;
+  padding-bottom: 8svh;
 }
 .wfoot-word {
   font-size: 24vw;

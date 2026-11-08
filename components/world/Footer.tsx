@@ -12,15 +12,18 @@ const pages = [
 ];
 
 /**
- * The home page's end: the shore. Contact and links read over the dark sky while the camera climbs toward the planet's
- * limb; the giant wordmark stands over the horizon as the first dawn light comes up behind it (its reflection lies in
- * the sea); then it lifts away and the sun and the mark rise into the exact frame the page opened on, where the journey
- * loops (lib/world, the `world` lead's loop). Nothing behind any of it: the world is the background.
+ * The home page's end, two places long. `shore`: the sun rises over the limb from orbit while the contact and links sit
+ * still in the shot (pinned), under one line that turns Jacob's goal (finding the people who already build) into an
+ * invitation. `dawn`: the giant wordmark holds over the day side as the camera crosses it and turns back to the setting
+ * sun; then it lifts away and the hero comes up from below, the exact frame the page opened on, where the journey loops
+ * (lib/world/loop.ts). Nothing behind any of it: the world is the background.
  */
 export function Footer() {
   return (
-    <footer className="wfoot" data-place="shore">
+    <footer className="wfoot">
+      <div className="wfoot-shore" data-place="shore">
       <div className="wfoot-top container-x">
+        <p className="wfoot-call wide">Already building something?</p>
         <p className="wfoot-k">Write to us</p>
         <a href={`mailto:${site.email}`} className="wfoot-mail wide">
           {site.email}
@@ -59,11 +62,14 @@ export function Footer() {
         </div>
         <p className="wfoot-c">© {new Date().getFullYear()} Crucible</p>
       </div>
+      </div>
 
-      {/* the wordmark over the horizon at first light; the world reflects it in the sea (data-reflect) */}
-      <div className="wfoot-giant" data-place="dawn" aria-hidden>
-        <div className="wfoot-word" data-reflect>
-          <Wordmark />
+      {/* the wordmark over the day side; low over the sea the world reflects it (data-reflect) */}
+      <div className="wfoot-dawn" data-place="dawn" aria-hidden>
+        <div className="wfoot-giant">
+          <div className="wfoot-word" data-reflect>
+            <Wordmark />
+          </div>
         </div>
       </div>
     </footer>
