@@ -98,16 +98,16 @@ export function keys(): Key[] {
   // the sun: near = the mark's core hanging over the sea in front of the hero camera; far = a fixed star over
   // longitude 280 deg (so from the hero at theta 0 it stands ~10 deg over the western horizon, right where the near core
   // hangs; the morning terminator is at theta 190, the day side runs 190..370)
-  const NEAR = { sunU: 0, sunV: -150, sunY: 30, sunR: 4.2 };
+  const NEAR = { sunU: 0, sunV: -170, sunY: 34, sunR: 4.0 };
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
   const FAR2 = { ...FAR, sunV: deg(280) }; // the same place, written one lap on, for the run home
   return [
     // hero: low over the molten sea at sunset, the mark floating over its reflection, its core the sun; stars above
-    { at: ['hero', 0], s: 0, h: 1.6, yaw: 180, pitch: 4, fov: 46, ...NEAR, ph: { fov: 62, pitch: 6 } },
-    { at: ['hero', 1], s: 4, h: 1.8, yaw: 180, pitch: 4.4, fov: 46, ...NEAR, ph: { fov: 62, pitch: 6.4 } },
+    { at: ['hero', 0], s: 0, h: 1.6, yaw: 180, pitch: -1, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7 } },
+    { at: ['hero', 1], s: 4, h: 1.8, yaw: 180, pitch: -0.8, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4 } },
     // stronger together: still on the sunset, a slow rise so the mark has the sky
-    { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: 4.8, fov: 46, ...NEAR, ph: { fov: 62, pitch: 7 } },
-    { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 6, fov: 46, ...NEAR, ph: { fov: 62, pitch: 8 } },
+    { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2 } },
+    { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 1, fov: 46, ...NEAR, ph: { fov: 62, pitch: 0 } },
     // story: the core recedes into the sky and sets as the camera turns to the night and climbs
     { at: ['story', 0], s: 90, h: 24, yaw: 70, pitch: 2, fov: 50, ...FAR, ph: { fov: 64 } },
     { at: ['story', 1], s: deg(12), h: 420, yaw: 15, pitch: -8, fov: 50, ...FAR, ph: { fov: 64 } },
@@ -123,18 +123,19 @@ export function keys(): Key[] {
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
     { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
-    // thesis: climb; the sea heats from 293 K to 1811 K below
+    // thesis: climb; the sea heats from 293 K to 1811 K below (the sun still well under the limb ahead)
     { at: ['thesis', 0], s: deg(151.5), h: 30, yaw: 0, pitch: -10, fov: 50, ...FAR, ph: { fov: 64 } },
-    { at: ['thesis', 1], s: deg(157), h: 900, yaw: 0, pitch: -20, fov: 46, ...FAR, ph: { fov: 60 } },
-    // shore: the sunrise over the limb from orbit
-    { at: ['shore', 0], s: deg(161), h: 2600, yaw: 0, pitch: -12, fov: 46, ...FAR, ph: { fov: 60 } },
+    { at: ['thesis', 1], s: deg(156), h: 480, yaw: 0, pitch: -18, fov: 46, ...FAR, ph: { fov: 60 } },
+    // shore: the sunrise over the limb, made by the climb (the horizon drops away under the sun ahead)
+    { at: ['shore', 0], s: deg(158), h: 700, yaw: 0, pitch: -24, fov: 46, ...FAR, ph: { fov: 60, pitch: -22 } },
+    { at: ['shore', 1], s: deg(160.5), h: 1300, yaw: 0, pitch: -27, fov: 46, ...FAR, ph: { fov: 60, pitch: -25 } },
     // dawn: across the day side high and fast, then the turn back to the setting sun; the last stretch is the hero's
     // own move (pulling back from the sun, low over the sea), so the seam is inside one continuous motion, and the core
     // comes in from the far sky along its own line of sight to hang over the sea again
-    { at: ['dawn', 0], s: deg(250), h: 5000, yaw: 30, pitch: -35, fov: 46, ...FAR2, ph: { fov: 60 } },
-    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 180, pitch: 3, fov: 46, ...FAR2, ph: { fov: 62, pitch: 5 } },
+    { at: ['dawn', 0], s: deg(235), h: 4600, yaw: 25, pitch: -38, fov: 46, ...FAR2, ph: { fov: 60 } },
+    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 180, pitch: -1.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -3 } },
     // loop: exactly the hero's first key, one lap on
-    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 180, pitch: 4, fov: 46, ...NEAR, sunV: LAP - 150, ph: { fov: 62, pitch: 6 } },
+    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 180, pitch: -1, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7 } },
   ];
 }
 
