@@ -9,6 +9,7 @@ import { defaultLook } from './defaults/look';
 import { defaultLava } from './defaults/lava';
 import { type } from './type'; // story
 import { thesis } from './thesis'; // story
+import { look } from './look';
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
 export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
@@ -50,7 +51,7 @@ export type WorldModule = {
 export const MODULES: WorldModule[] = [
   ...defaultLook, // world: stand-ins for look_sky, look_atmo, look_post
   ...defaultLava, // world: stand-ins for lava_shade, lava_env
-  // look:     import { look } from './look';         look,
+  look,
   // lava:     import { lava } from './lava';         lava,
   // mark:     import { mark } from './mark';         mark,
   // together: import { together } from './together'; together,
