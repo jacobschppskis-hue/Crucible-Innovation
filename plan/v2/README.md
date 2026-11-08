@@ -102,6 +102,11 @@ The one defect in it is the blocky lava at the upper left near the limb. Fix tha
 9. **Stars:** a little more visible on iPhone (they mustn't vanish at low render scale).
 10. **Transitions:** every change between places is smooth: damped, no snaps, no pops, no flashes.
 11. The loop, the copy rules, the no-mask rule and every other rule in `CLAUDE.md` still hold.
+12. **A stronger atmosphere** (Jacob, a few minutes later, verbatim): "Make the atmosphere stronger so there's more of
+    a sky in the hero page, and it'll just make it fade better and have easier transitions." The hero gets a real
+    sky: a deeper, brighter band of dusk atmosphere over the sea, fading up into the stars, which every later place
+    shares (the limb glow seen from orbit is the same atmosphere), so the moves between sea level and orbit fade
+    through it. `look` owns it; `world` uses it for the transitions.
 
 ## Roles (same owners and files as `plan/final/TEAM.md`)
 
