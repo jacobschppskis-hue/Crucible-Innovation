@@ -6,6 +6,7 @@
 import type { Channels, Frame } from './frame';
 import type { Uniforms } from './gl';
 import { defaultLook } from './defaults/look';
+import { lava } from './lava';
 import { defaultLava } from './defaults/lava';
 import { type } from './type'; // story
 import { thesis } from './thesis'; // story
@@ -53,7 +54,7 @@ export const MODULES: WorldModule[] = [
   ...defaultLook, // world: stand-ins for look_sky, look_atmo, look_post
   ...defaultLava, // world: stand-ins for lava_shade, lava_env
   look,
-  // lava:     import { lava } from './lava';         lava,
+  lava, // lava: the molten sea, its swell and the visitor's wakes
   // mark:     import { mark } from './mark';         mark,
   // together: import { together } from './together'; together,
   paypal, // paypal: PayPal -> six companies
