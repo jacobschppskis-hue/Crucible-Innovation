@@ -115,7 +115,7 @@ export function vent(p: number) {
 
 // ---------------------------------------------------------------- the planet frame
 /** Where PayPal is: round the journey's great circle (degrees), on its line (u = 0). */
-export const PP_DEG = 40;
+export const PP_DEG = 34; // the camera starts 18-21 deg behind it: just past where story leaves off (deg 12)
 export type Planet = { R: number; up: V3; fwd: V3; right: V3 };
 export function planet(R: number): Planet {
   const th = PP_DEG * D2R;
@@ -135,16 +135,21 @@ export function arcPos(R: number, th: Throw, u: number): V3 {
   return mul(d, R * (1 + 4 * th.apex * u * (1 - u)));
 }
 
-/** The camera this beat wants: it starts low and grazing by the vent and rises as the embers spread (the reveal of
- * scale), aimed so PayPal holds its height in the frame all the way up. */
+/** The camera this beat wants. It opens low by the vent (the classic Stromboli viewpoint: the dome swells, the eruption
+ * towers into the stars), then rises to orbit as the embers arc over the curve, which is the scale reveal; aimed so
+ * PayPal holds its place in the frame all the way up. */
 export function beatCamera(p: number, narrow: boolean, pl: Planet) {
-  const pull = smooth(0.1, 0.4, p);
-  const alt = mix(narrow ? 0.075 : 0.06, narrow ? 0.62 : 0.34, pull);
-  const back = mix(0.15, narrow ? 0.3 : 0.36, pull);
+  const approach = smooth(0, 0.22, p);
+  const rise = smooth(0.245, 0.37, p);
+  const lo = 0.026 + 0 * approach; // one altitude while low (its s must not drift backwards)
+  const hi = narrow ? 0.62 : 0.34;
+  const alt = Math.exp(mix(Math.log(lo), Math.log(hi), rise)); // even in log space, like the journey's h
+  // a fixed distance behind the vent (the journey's s must never run backwards): it only climbs
+  const back = mix(narrow ? 0.31 : 0.37, narrow ? 0.3 : 0.36, rise);
   const R = pl.R;
   const pos = add(mul(pl.up, R * (1 + alt)), mul(pl.fwd, -back * R));
   const fov = narrow ? 64 : 48;
-  const vy = narrow ? -0.34 : -0.42; // PayPal's height in the frame (NDC, below the centre)
+  const vy = mix(narrow ? -0.26 : -0.32, narrow ? -0.34 : -0.42, rise); // PayPal's height in the frame (NDC)
   const dv = norm(sub(mul(pl.up, R), pos));
   const camUp = norm(pos);
   const perp = norm(sub(camUp, mul(dv, dot(camUp, dv))));
@@ -162,9 +167,14 @@ export function beatChannels(p: number, narrow: boolean, R: number) {
 /** Journey keys for the `paypal` place (desktop values, phones in `ph`), sampled from beatCamera. */
 export function paypalKeys(R: number): Key[] {
   const out: Key[] = [];
-  for (const f of [0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.65, 0.8, 1]) {
+  for (const f of [0, 0.06, 0.12, 0.18, 0.22, 0.245, 0.26, 0.275, 0.29, 0.305, 0.32, 0.335, 0.35, 0.37, 0.6, 0.8, 1]) {
     const d = beatChannels(f, false, R), m = beatChannels(f, true, R);
-    const k: Key = { at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov, ph: { s: m.s, h: m.h, pitch: m.pitch, fov: m.fov } };
+    // the night side's sea runs cooler than the sunset's, so the throws and the places carry the light
+    const heat = mix(0.16, 0.07, smooth(0.245, 0.37, f));
+    const k: Key = {
+      at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov, 'lava.heat': heat,
+      ph: { s: m.s, h: m.h, pitch: m.pitch, fov: m.fov },
+    };
     if (f > 0) k.ease = 'linear';
     out.push(k);
   }
@@ -278,8 +288,8 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
       const fade = Math.exp(-age / TT) * (1 - smooth(2 * TT, 3 * TT, age)) * smooth(0, 0.004 * s.tau, a + 0.0005);
       // tumble: a lava bomb has a hot side, so its trail breathes a little (slow and shallow: never beads)
       const tumble = 1 + 0.07 * Math.sin((s.launch + u * s.flight) * 280 + s.seed * 20);
-      const I = (1.2 + 4 * hot) * s.gain * fade * tumble;
-      const w = (0.0007 + 0.006 * (1 - Math.exp(-age / 0.04))) * R * s.size * 1.6; // half-width (world)
+      const I = (0.9 + 3 * hot) * s.gain * fade * tumble;
+      const w = (0.0003 + 0.0012 * (1 - Math.exp(-age / 0.04))) * R * s.size * 1.6; // half-width (world): ~2 m bombs, trains that spread
       pts.push({ P, K, I, w });
     }
     if (pts.length < 2) return;
@@ -330,6 +340,8 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
 export const PAYPAL_GLSL = /* glsl */ `
 uniform vec4 paypal_uSpot[7];   // xyz unit direction of the place (0 = PayPal), w heat 0..1
 uniform vec4 paypal_uSpotB[7];  // x age since landing (p), y ripple age (p), z flash, w seed
+uniform vec4 paypal_uDome;      // x dome height, y dome radius, z wave radius, w wave height (world units)
+uniform vec2 paypal_uVentW;     // PayPal's surface coords (u across, v along)
 uniform float paypal_uRows;     // rows used in the trails texture
 uniform float paypal_uMinPx;    // thinnest line (render px)
 uniform highp sampler2D paypal_uTrail;
@@ -395,6 +407,21 @@ vec3 paypal_places(vec3 q){
 
 void paypal_sea(Ray r, Sea s, inout SeaMod m){
   m.emit += paypal_places(s.q);
+  // before the eruption the lava over the vent swells into a smooth dome; after it, one wave runs out on the sea
+  vec2 d = s.w - paypal_uVentW;
+  float r2 = dot(d, d);
+  if (r2 < 4e6 && (paypal_uDome.x > 0.001 || paypal_uDome.w > 0.001)){
+    float rr = sqrt(r2) + 1e-3;
+    float sg = paypal_uDome.y;
+    float h = paypal_uDome.x * exp(-r2/(sg*sg));
+    float dh = -2.*rr/(sg*sg) * h; // dh/dr
+    float rw = paypal_uDome.z, ww = 6. + 0.06*rw;
+    float x = (rr - rw)/ww;
+    float hw = paypal_uDome.w * (exp(-x*x) - 0.45*exp(-pow(x + 1.6, 2.))); // a crest with a shallow trough behind
+    dh += paypal_uDome.w * (-2.*x/ww*exp(-x*x) + 0.45*2.*(x + 1.6)/ww*exp(-pow(x + 1.6, 2.)));
+    m.g += vec3(h + hw, dh * d / rr);
+    m.heat += 0.06 * h; // the dome warms a little; the wave is shape only (no glowing ring)
+  }
 }
 
 // The throws in the air: per pixel, the nearest point of each throw's sampled path (ray-segment closest approach),
@@ -470,6 +497,7 @@ export const paypal: WorldModule = {
   id: 'paypal',
   glsl: PAYPAL_GLSL,
   hooks: ['sea', 'over'],
+  keys: paypalKeys,
   init({ root }) {
     S.section = root.querySelector<HTMLElement>('[data-place="paypal"]');
     S.caps = S.section ? [...S.section.querySelectorAll<HTMLElement>('[data-pp-step]')] : [];
@@ -493,6 +521,13 @@ export const paypal: WorldModule = {
       spotB.set([Math.max(age, 0), age, age > 0 ? Math.exp(-age / 0.008) : 0, s.seed], (i + 1) * 4);
     });
     u.set('paypal_uSpot', spot);
+    // the dome over the vent (grows with the pressure, gone in the burst) and the one wave the burst sends out
+    const age = p - ERUPT_P;
+    const domeH = 5 * smooth(0.06, 0.228, p) * (1 - smooth(-0.004, 0.004, age));
+    const waveR = age > 0 ? 9000 * age : 0;
+    const waveH = age > 0 ? 1.2 * Math.exp(-age / 0.04) * smooth(0, 0.004, age) : 0;
+    u.set('paypal_uDome', [domeH, 40, waveR, waveH]);
+    u.set('paypal_uVentW', [0, R * PP_DEG * D2R]);
     u.set('paypal_uSpotB', spotB);
     // the throws (uploaded only while some are in the air, and once more to clear)
     const cam: Cam = { pos: f.cam.pos, project: (q) => f.project(q), w: f.w, h: f.h, focal: f.cam.focal };

@@ -13,6 +13,7 @@ const keys = () => {
 };
 (window as unknown as { __pp: unknown }).__pp = paypalDebug;
 const ready = document.fonts ? document.fonts.ready : Promise.resolve();
-ready.then(() => startWorld(document.getElementById('root')!, { modules: [...MODULES.filter((m) => m.id !== 'paypal'), paypal], keys }));
+ready.then(() => startWorld(document.getElementById('root')!, { modules: [...MODULES.filter((m) => m.id !== 'paypal'), paypal] }));
+void keys;
 import { beatChannels } from '../../lib/world/paypal';
 (window as unknown as { __ppExpect: unknown }).__ppExpect = (f: number, narrow: boolean) => beatChannels(f, narrow, R);

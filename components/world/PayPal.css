@@ -46,13 +46,13 @@
   top: 0;
   transform: translate(-50%, -100%);
   font-weight: 650;
-  font-size: 0.9375rem;
+  font-size: 1rem;
   white-space: nowrap;
   color: var(--bone);
   opacity: 0;
 }
 .w-pp-names .w-pp-root {
-  font-size: 1.0625rem;
+  font-size: 1.125rem;
   font-weight: 720;
 }
 @media (min-width: 1024px) {
