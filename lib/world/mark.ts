@@ -10,7 +10,7 @@ import type { Frame, V3 } from './frame';
 import type { Uniforms } from './gl';
 import type { WorldModule } from './modules';
 import markGlsl from './glsl/mark.glsl';
-import { coreFlare, heatAmount, heatColor, LINES, lineOpacity, seaRing, weldFlash } from './together';
+import { BEAT, coreFlare, heatAmount, heatColor, LINES, lineOpacity, seaRing, weldFlash } from './together';
 
 const CORE_R = 4.8; // mark units (lib/splitRing.ts RING.core 3.6 on the 48 grid, x4/3)
 const CORE_L: V3 = [9.0, 4.6, 1.9];
@@ -37,6 +37,19 @@ export function beatOf(f: Frame) {
   return b < 0 ? 0 : b > 1 ? 1 : b;
 }
 
+/** The beat as shown: it follows the scroll (forward and back) but never faster than a pour can be read, and slowest
+ *  around the weld, so a fast thumb flick still sees the runs meet, the flash and the blaze. With a fixed clock (?t=,
+ *  dt 0) or a long gap it snaps to the scroll, so test frames stay a pure function of scroll. */
+let shown = -1;
+function follow(target: number, dt: number) {
+  if (shown < 0 || dt <= 0 || dt > 0.25) return (shown = target);
+  const near = Math.abs(shown - BEAT.meet) < 0.1 || (shown - BEAT.meet) * (target - BEAT.meet) < 0;
+  const rate = near ? 0.3 : 1.6; // beat units per second
+  const d = target - shown, m = rate * dt;
+  shown += d > m ? m : d < -m ? -m : d;
+  return shown;
+}
+
 let lines: HTMLElement[] = [];
 let stage: HTMLElement | null = null;
 let box = '';
@@ -49,10 +62,11 @@ export const mark: WorldModule = {
   channels: { 'mark.vis': 1, 'mark.size': 1, 'mark.light': 1, 'mark.fill': 1 },
   init({ root }) {
     lines = Array.from(root.querySelectorAll<HTMLElement>('[data-together-line]'));
+    (window as unknown as { __mark?: typeof markState }).__mark = markState; // test hook
     stage = root.querySelector<HTMLElement>('[data-place="together"]');
   },
   update(f: Frame, u: Uniforms) {
-    const b = f.still ? 0.97 : beatOf(f);
+    const b = f.still ? 0.97 : follow(beatOf(f), f.dt);
     const vis = f.ch['mark.vis'] ?? 1;
     const size = f.ch['mark.size'] ?? 1;
     const k = f.ch['mark.light'] ?? 1;
@@ -92,7 +106,7 @@ export const mark: WorldModule = {
   },
   after(f: Frame) {
     // the captions: each arrives with the run it names; the payoff when the ring closes
-    const b = f.still ? 0.97 : beatOf(f);
+    const b = f.still ? 0.97 : shown < 0 ? beatOf(f) : shown;
     if (stage && markBox.ok) {
       const s = `${markBox.x.toFixed(1)},${markBox.y.toFixed(1)},${markBox.r.toFixed(1)}`;
       if (s !== box) {
@@ -113,6 +127,7 @@ export const mark: WorldModule = {
     }
   },
   dispose() {
+    shown = -1;
     lines = [];
     stage = null;
     box = '';
