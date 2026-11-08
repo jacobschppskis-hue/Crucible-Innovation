@@ -67,7 +67,7 @@ float shore_age(float ph, float x, float L){
 void shore_sea(Ray r, Sea s, inout SeaMod m){
   if (shore_uOn <= 0.0) return;
   float d = s.w.y - shore_line(s.w.x); // seaward distance from the waterline
-  if (d < -2.0 || d > 140.0) return;
+  if (d < -2.0 || d > 420.0) return;
   float ph = shore_phase(s.w.x);
   float lam = SHORE_C * SHORE_PER;     // crest spacing
   float cph = fract(ph + max(d, 0.0) / lam);
@@ -87,14 +87,14 @@ void shore_sea(Ray r, Sea s, inout SeaMod m){
   float brk = smoothstep(45.0, 12.0, d) * smoothstep(-1.0, 3.0, d);
   // the surf zone reads like the old footer furnace: dark molten troughs between the incoming crests, the crests' faces
   // warm, the breaking lips white-hot; the zone fades into the open sea's own glow seaward
-  float zone = smoothstep(150.0, 60.0, d);
+  float zone = smoothstep(420.0, 60.0, d);
   float ridge = back * 0.35 + face;                     // 0 in the trough .. 1 at the crest
   float glowD = 0.55 * lip * brk + 0.45 * ridge * shoal;
   // The surf glows in its own right, at absolute temperatures (whatever the open sea around it is doing): the zone a
   // dull molten red, the crests' faces orange, the breaking lips white-hot, the water's edge bright (the swash sheet).
   // (look_planck is a true Planck curve: a few hundred kelvin is the whole range from ember to white.)
   float F = 0.05;
-  vec3 e = shore_planck(1120.0) * zone * 0.55
+  vec3 e = shore_planck(1100.0 + 40.0 * zone) * zone * 0.6
          + shore_planck(1260.0) * ridge * shoal * 0.8
          + shore_planck(1550.0 + 150.0 * brk) * lip * brk * 0.9
          + shore_planck(1300.0) * smoothstep(8.0, 0.0, d) * 0.8;
@@ -223,8 +223,8 @@ export function shoreKeys(R: number): Key[] {
     { at: ['dawn', 0.4], s: beach + 900, h: 160, yaw: 150, pitch: -10, fov: 46, ...FAR2, ph: { fov: 60, pitch: -11 } },
     // off the beach over the surf, facing the land with the setting sun off to the right: the sky and the dark dunes
     // carry the wordmark, the surf breaks across the lower half
-    { at: ['dawn', 0.72], s: beach + 75, h: 22, yaw: 156, pitch: -8, fov: 46, ...FAR2, ph: { fov: 62, pitch: -9 } },
-    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 160, pitch: -7.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
+    { at: ['dawn', 0.72], s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, ...FAR2, ph: { fov: 62, pitch: -9 } },
+    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 146, pitch: -7.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
   ];
 }
 
