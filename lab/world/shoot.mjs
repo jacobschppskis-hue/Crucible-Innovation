@@ -29,7 +29,7 @@ const exe = process.env.PW_CHROMIUM_PATH || '/opt/pw-browsers/chromium-1243/chro
 const browser = await chromium.launch({ executablePath: fs.existsSync(exe) ? exe : undefined, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const s = args.url ? null : await serve('out');
 const base = args.url || s.url;
-const q = new URLSearchParams({ t: args.t || '6', q: args.q || '4' });
+const q = new URLSearchParams({ t: args.t || '6', q: args.q || '4', ...(args.extra ? Object.fromEntries(new URLSearchParams(args.extra)) : {}) });
 const places = (args.places || 'hero,together,story,paypal,jacob,charlie,ventures,thesis,foot,loop').split(',');
 const fr = (args.f || '0.5').split(',').map(Number);
 const profiles = { phone: devices['iPhone 15'], desk: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
