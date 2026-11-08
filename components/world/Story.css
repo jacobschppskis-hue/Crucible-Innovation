@@ -184,3 +184,31 @@
     margin-left: -0.06em;
   }
 }
+
+/* The CRT placeholder as an object in the world, not a panel on the sky: a dark glass face (no signal: the raster is
+   dim, the phosphor name glows), a curved-glass highlight from the sky above, and the rim of the tube's bezel catching
+   the warm light of the sea below. All on the tube itself, nothing behind it. */
+.wch-tube .crt {
+  border-radius: 7% / 6%;
+}
+.wch-tube .crt-img {
+  filter: brightness(0.62) contrast(1.25);
+}
+.wch-tube .crt::after {
+  content: '';
+  position: absolute;
+  inset: 3.5%;
+  border-radius: 6% / 5%;
+  pointer-events: none;
+  /* the glass bulges: a soft sky reflection across its upper half, falling off toward the edges */
+  background: radial-gradient(120% 70% at 30% 8%, color-mix(in oklab, var(--bone) 9%, transparent), transparent 55%);
+  /* the bezel's rim: cool from the sky on top, warm from the sea underneath */
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--bone) 14%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--ember) 30%, transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .js .wch-tube .crt:not([data-on])::after {
+    opacity: 0.4;
+  }
+}

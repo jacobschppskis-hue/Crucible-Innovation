@@ -215,16 +215,20 @@ export function shoreKeys(R: number): Key[] {
   const FAR2 = { ...FAR, sunV: deg(280) };
   const beach = LAP + SHORE_V; // the waterline, one lap on (the run home)
   return [
-    // shore: the sunrise over the limb, made by the climb (world's keys, kept)
-    { at: ['shore', 0], s: deg(158), h: 700, yaw: 0, pitch: -24, fov: 46, ...FAR, ph: { fov: 60, pitch: -22 } },
-    { at: ['shore', 1], s: deg(160.5), h: 1300, yaw: 0, pitch: -27, fov: 46, ...FAR, ph: { fov: 60, pitch: -25 } },
+    // shore: the sunrise over the limb, made by the climb: the sun is a far star ahead; as the camera climbs and moves
+    // on, it comes up over the limb (just under it at the start, its core cresting it by the end; the mark around it stays low, in the corner). Phones: the limb low (~90%), the
+    // sun coming up in the free corner under the pinned contact; desktop: the limb in the lower
+    // third (look's thin orange-to-steel arc lies along it); turned a little left so the sun comes up at the right edge,
+    // clear of the pinned contact
+    { at: ['shore', 0], s: deg(157.5), h: 900, yaw: -30, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -12, pitch: -6 } },
+    { at: ['shore', 1], s: deg(159.5), h: 1100, yaw: -29, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -11, pitch: -6.5 } },
     // dawn: high over the day side, then down out of the sky over the sea to the beach, turning to face it
     { at: ['dawn', 0], s: deg(235), h: 4600, yaw: 25, pitch: -38, fov: 46, ...FAR2, ph: { fov: 60 } },
     { at: ['dawn', 0.4], s: beach + 900, h: 160, yaw: 150, pitch: -10, fov: 46, ...FAR2, ph: { fov: 60, pitch: -11 } },
     // off the beach over the surf, facing the land with the setting sun off to the right: the sky and the dark dunes
     // carry the wordmark, the surf breaks across the lower half
-    { at: ['dawn', 0.72], s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, ...FAR2, ph: { fov: 62, pitch: -9 } },
-    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 146, pitch: -7.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
+    { at: ['dawn', 0.72], s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, 'lava.heat': 0.1, ...FAR2, ph: { fov: 62, pitch: -9 } },
+    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 146, pitch: -7.5, fov: 46, 'lava.heat': 0.1, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
   ];
 }
 
