@@ -166,11 +166,24 @@ html[data-loop] [data-place='loop'] {
 /* the stronger-together captions share one spot; the beat fades them in and out (markModule.ts) */
 .w-together .w-sticky {
   display: grid;
-  place-items: end center;
-  padding-bottom: 14vh;
+  place-items: center;
+  align-content: end;
+  row-gap: 0.25em;
+  padding-bottom: 16vh;
 }
 .w-together [data-together-line] {
-  grid-area: 1 / 1;
+  grid-column: 1;
+}
+/* the two halves arrive together, one above the other; the payoff takes their place */
+.w-together [data-together-line]:nth-child(1) {
+  grid-row: 1;
+}
+.w-together [data-together-line]:nth-child(2) {
+  grid-row: 2;
+}
+.w-together [data-together-line]:nth-child(3) {
+  grid-row: 1 / span 2;
+  align-self: center;
 }
 html[data-world-on] .w-together [data-together-line] {
   opacity: 0;
