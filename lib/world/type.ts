@@ -40,10 +40,10 @@ function parseColor(s: string): [number, number, number] {
   return [srgbToLinear(m[0] / 255), srgbToLinear(m[1] / 255), srgbToLinear(m[2] / 255)];
 }
 // 'wdth' from font-variation-settings / font-stretch → the canvas fontStretch keyword
-function stretchKeyword(cs: CSSStyleDeclaration): string {
+function stretchKeyword(cs: CSSStyleDeclaration): CanvasFontStretch {
   const m = cs.fontVariationSettings?.match(/['"]wdth['"]\s+([\d.]+)/);
   const pct = m ? +m[1] : parseFloat(cs.fontStretch) || 100;
-  const k: [number, string][] = [
+  const k: [number, CanvasFontStretch][] = [
     [100, 'normal'],
     [112.5, 'semi-expanded'],
     [125, 'expanded'],
@@ -118,7 +118,7 @@ export function typeAtlas(opts: { root?: ParentNode; scale?: number; maxWidth?: 
       const el = p.el;
       const cs = getComputedStyle(el);
       const er = el.getBoundingClientRect();
-      const c2 = ctx as CanvasRenderingContext2D & { fontStretch?: string; letterSpacing?: string };
+      const c2 = ctx as CanvasRenderingContext2D;
       c2.font = `${cs.fontStyle} ${cs.fontWeight} ${parseFloat(cs.fontSize) * scale}px ${cs.fontFamily}`;
       if ('fontStretch' in c2) c2.fontStretch = stretchKeyword(cs);
       if ('letterSpacing' in c2) c2.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : `${parseFloat(cs.letterSpacing) * scale}px`;
