@@ -57,22 +57,23 @@ html[data-world-on] .tg-payoff {
     font-size: clamp(1.9rem, 9.6vw, 3rem);
     max-width: none;
   }
+  /* above the mark, but never under the nav (76 px): if the mark sits high, the lines keep clear of the nav and sit
+     just over the ring's top */
   html[data-world-on] .tg-human {
     left: 16px;
     right: auto;
     text-align: left;
-    top: auto;
-    bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.2 + 1.15em);
+    top: max(84px, calc(var(--my, 40vh) - var(--mr, 20vw) * 1.15 - 2.3em));
   }
   html[data-world-on] .tg-machine {
     right: 16px;
     left: auto;
     text-align: right;
-    top: auto;
-    bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.2);
+    top: max(calc(84px + 1.15em), calc(var(--my, 40vh) - var(--mr, 20vw) * 1.15 - 1.15em));
   }
   html[data-world-on] .tg-payoff {
     font-size: clamp(2.3rem, 11.5vw, 3.6rem);
-    bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.2);
+    bottom: auto;
+    top: max(84px, calc(var(--my, 40vh) - var(--mr, 20vw) * 1.15 - 2.1em));
   }
 }
