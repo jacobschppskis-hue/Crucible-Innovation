@@ -186,7 +186,7 @@ vec3 mark_corePos() { return mark_uC.xyz; }
 vec3 mark_toWorld(vec3 v) { return mark_uB * v; }
 
 vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
-  vec3 n = mark_normal(p, max(px * 0.5, 0.01));
+  vec3 n = mark_normal(p, clamp(px * 1.1, 0.01, 0.45));
   vec3 v = -rd;
   vec2 H = mark_heat(p, id, px);
   float T = H.x, wet = H.y;
@@ -285,14 +285,33 @@ vec2 mark_coreHit(vec3 ro, vec3 rd, float pa) {
   float dc = sqrt(max(dot(ro, ro) - b * b, 0.));
   float pw = -b * pa;
   if (dc > MARK_RC + pw) return vec2(-1.);
+  pw = max(pw, 1e-6);
   float m = min(dc, MARK_RC);
   float t = -b - sqrt(max(MARK_RC * MARK_RC - m * m, 0.));
-  return vec2(t, clamp((MARK_RC - dc) / max(pw, 1e-6) + 0.5, 0., 1.));
+  return vec2(t, clamp((MARK_RC - dc) / max(1.6 * pw, 1e-6) + 0.5, 0., 1.));
 }
 
 // March the pieces. Returns the hit (local point, piece id, local t) or the closest approach for the silhouette's
 // anti-aliasing: x = local t, y = piece id, z = 1 hit / 0 miss, w = coverage (1 on a hit).
-vec4 mark_march(vec3 ro, vec3 rd, float pa, int steps, out vec3 pL) {
+// The silhouette's coverage for a ray: the outline of the extruded pieces is their 2D shape on the planes just inside
+// the bevels (front and back), so the signed 2D distance where the ray crosses those planes, over a footprint of `aa`
+// render px, gives a coverage that is smooth on BOTH sides of every edge (a hit near an edge is partly covered too),
+// footprint-aware: crisp at full quality, never a staircase at the low steps.
+float mark_silCov(vec3 ro, vec3 rd, float pa, float aa) {
+  float zp = MARK_HD - MARK_BEV * 0.5;
+  float rz = abs(rd.z) < 1e-4 ? 1e-4 : rd.z;
+  float tf = (zp - ro.z) / rz, tb = (-zp - ro.z) / rz;
+  float d = 1e9, tw = 1e9;
+  if (tf > 0.) { d = min(d, mark_sd2((ro + rd * tf).xy).x); tw = tf; }
+  if (tb > 0.) { d = min(d, mark_sd2((ro + rd * tb).xy).x); tw = min(tw, tb); }
+  if (tw > 1e8) return 0.;
+  return clamp(0.5 - d / max(aa * tw * pa, 1e-5), 0., 1.);
+}
+
+// March the pieces. Returns x = local t, y = piece id, z = 1 hit / 0 miss, w = coverage. With aa > 0 (camera rays) the
+// coverage is the silhouette's (mark_silCov) and a near miss still returns the closest point to shade; with aa 0
+// (reflections) it is a plain hit.
+vec4 mark_march(vec3 ro, vec3 rd, float pa, int steps, out vec3 pL, float aa) {
   pL = vec3(0.);
   float t0, t1;
   if (!mark_boxHit(ro, rd, vec3(31.5, 31.5, MARK_HD + 0.01), t0, t1)) return vec4(-1.);
@@ -303,12 +322,15 @@ vec4 mark_march(vec3 ro, vec3 rd, float pa, int steps, out vec3 pL) {
     vec2 d = mark_sdf(p);
     float pw = t * pa;
     if (d.x < best) { best = d.x; bestT = t; }
-    if (d.x < pw * 0.25) { pL = p; return vec4(t, d.y, 1., 1.); }
+    if (d.x < pw * 0.25) {
+      pL = p;
+      return vec4(t, d.y, 1., aa > 0. ? max(mark_silCov(ro, rd, pa, aa), 0.5) : 1.);
+    }
     t += d.x;
     if (t > t1) break;
   }
-  float pw = bestT * pa;
-  float cov = clamp(0.5 - best / max(pw, 1e-5), 0., 1.);
+  if (aa <= 0.) return vec4(-1.);
+  float cov = min(mark_silCov(ro, rd, pa, aa), clamp(0.5 - best / max(aa * bestT * pa, 1e-5), 0., 1.) * 2.);
   if (cov <= 0.) return vec4(-1.);
   pL = ro + rd * bestT;
   return vec4(bestT, mark_sdf(pL).y, 0., cov);
@@ -327,7 +349,7 @@ void mark_hit(Ray r, inout Hit h) {
   // a reflected ray's cone (pa) is widened by the sea's roughness; never let that grow the hit test, or every ray inside
   // the mark's box counts as a hit and the reflection shows the box. A fixed, small footprint: the sea's own normals
   // and the roughness break the reflection up.
-  vec4 m = mark_march(ro, rd, min(r.pa, 0.002), 32, pL);
+  vec4 m = mark_march(ro, rd, min(r.pa, 0.002), 32, pL, 0.);
   if (c.x > 0. && (m.z < 0.5 || c.x < m.x)) {
     float t = c.x * mark_uC.w;
     if (t < h.t) { h.t = t; h.id = MARK_ID + 1; h.p = r.ro + r.rd * t; h.n = vec3(0.); h.data = vec4(ro + rd * c.x, -1.); }
@@ -351,7 +373,7 @@ void mark_over(Ray r, Hit h, inout vec3 col) {
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, r.pa);
   if (c.y > 0. && c.x * mark_uC.w < h.t) col = mix(col, mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd), c.y * mark_uLook.x);
-  vec4 m = mark_march(ro, rd, r.pa, 24 + int(24. * uQ), pL);
+  vec4 m = mark_march(ro, rd, r.pa, 24 + int(24. * uQ), pL, 1.9);
   if (m.w <= 0.) return;
   if (m.x * mark_uC.w >= h.t) return;
   if (c.y >= 1. && c.x < m.x) return;
