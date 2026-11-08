@@ -65,3 +65,16 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
 - Full suite at f644d8a, 4 workers on this container: 120 passed, 5 skipped, 3 failed (desktop `liquid.spec` cursor
   wake / boat V / rest: timing under SwiftShader load). With 2 workers `liquid.spec` + `smoke.spec`: 37 passed, 5
   skipped (also with the per-route Liquid change). Run the GL-heavy specs with `--workers=2` here.
+
+## Lighthouse baseline (lighthouse 12, mobile default, local serve of out/, f644d8a + per-route Liquid)
+- `/`: perf 99, a11y 100, BP 100, SEO 100 (LCP 2.1 s, TBT 72 ms, CLS 0).
+- `/sites`: perf 96, a11y 100, BP 100, SEO 100 (LCP 2.7 s, TBT 80 ms, CLS 0).
+- Script: scratch `lh.sh <url> <name>` (lighthouse CLI + the Playwright Chromium).
+
+## Dead code once the new home lands (import graph from every other route)
+Reached only from the old `app/page.tsx`: `components/{HeatText,Ignition,SplitPour,Story,Thesis}.tsx`,
+`components/Story.css`, `lib/gl/{molten,splitPour,splitTime}.ts`, `lib/gl3d/{adapt,logoRunner,logoScene,pour,pourGeo,
+sceneWorker}.ts` (keep `data/story.ts`: the founders' text). Delete only those the new home doesn't import (re-run the
+graph then), plus their CSS blocks in `globals.css` (`.ig*`, the scroll story, `.thesis*`) and the `data-pour`/`data-go`
+part of `TIER_SCRIPT`. Already unreferenced today: `lib/imageLoader.ts` is the `next.config` loader (keep),
+`lib/liquid/patch.ts` (worker-side sampler, keep).

@@ -17,6 +17,8 @@
   --ink-dim: #5e5b52; /* 5.3:1 on bone */
   --ember-deep: #a8380c; /* Ember text on bone (the same heat, dark enough for AA: 5.1:1) */
   --ember-tint: rgb(255 91 31 / 0.3); /* selected text: a light heat over the text, which keeps its own colour */
+  /* Quench: the one cold colour, only for cold things (stars, the cool sky band, a cold readout), ~5% of a screen. */
+  --quench: #8db6f2;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-spring: cubic-bezier(0.22, 1, 0.36, 1);
   --nav-h: 4rem;
@@ -33,6 +35,7 @@
   --color-bone-dim: var(--bone-dim);
   --color-ember: var(--ember);
   --color-ember-hot: var(--ember-hot);
+  --color-quench: var(--quench);
   --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
   --color-cool: var(--cool);
