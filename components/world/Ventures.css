@@ -1,0 +1,194 @@
+/* The ventures in the world (components/world/Ventures.tsx). The type sits straight on the world: no background,
+   scrim, mask, halo or text-shadow anywhere in this file. The monoliths are drawn by the world; each link carries a
+   transparent hit area (.wv-hit) the world lays over its monolith, so monolith + words are one link.
+   Static (no JS, reduced motion, no WebGL): a plain list, everything visible. */
+.wv {
+  position: relative;
+}
+.wv-pin {
+  position: relative;
+}
+.wv-stage {
+  position: relative;
+  padding: calc(var(--nav-h) + 3rem) 0 4rem;
+}
+.wv-title {
+  max-width: 12ch;
+}
+.wv-lede {
+  margin-top: 1.25rem;
+  max-width: 26rem;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--bone-dim);
+}
+.wv-list {
+  margin: 3rem 0 0;
+  padding: 0 var(--gutter, 1.25rem);
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}
+.wv-link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 1rem;
+  align-items: center;
+  padding: 0.75rem 0;
+  text-decoration: none;
+  color: var(--bone);
+  -webkit-tap-highlight-color: transparent;
+  outline-offset: 6px;
+}
+.wv-hit {
+  display: none;
+}
+.wv-status {
+  grid-column: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8125rem;
+  color: var(--bone-dim);
+}
+.wv-status i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--bone-dim);
+}
+.wv-item[data-kind='live'] .wv-status {
+  color: var(--ember);
+}
+.wv-item[data-kind='live'] .wv-status i {
+  background: var(--ember);
+}
+.wv-name {
+  grid-column: 1;
+  display: block;
+  margin: 0.3rem 0 0.35rem;
+  font-weight: 800;
+  font-size: clamp(1.75rem, 3.2vw, 3.1rem);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+}
+.wv-line {
+  grid-column: 1;
+  display: block;
+  max-width: 30ch;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  color: var(--bone-dim);
+}
+.wv-go {
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.wv-go span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.wv-go b {
+  display: inline-grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--bone-dim);
+  font-weight: 500;
+  transition: background-color 0.25s, box-shadow 0.25s, color 0.25s;
+}
+.wv-link:hover .wv-go b,
+.wv-link:focus-visible .wv-go b,
+.wv-link[data-hot] .wv-go b {
+  background: var(--ember);
+  color: #160803;
+  box-shadow: none;
+}
+
+/* ---------- with the world: the section pins while the monoliths rise ---------- */
+.wv[data-armed] {
+  height: 300svh;
+}
+.wv[data-armed] .wv-pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+.wv[data-armed] .wv-stage {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+}
+.wv[data-armed] .wv-head {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--nav-h) + 1.5rem);
+}
+.wv[data-armed] .wv-hit {
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: pointer;
+}
+/* each venture's words arrive as its monolith clears the sea; hidden ones take no clicks */
+.wv[data-armed] .wv-item {
+  opacity: clamp(0, calc((var(--r, 0) - 0.45) * 3), 1);
+}
+/* phones: the list stands at the foot of the screen, under the monoliths */
+.wv[data-armed] .wv-list {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  margin: 0;
+  gap: 0;
+}
+@media (min-width: 1024px) {
+  .wv-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 2.5rem;
+  }
+  .wv-go span {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+  }
+  .wv-link {
+    display: block;
+  }
+  .wv-go {
+    margin-top: 1rem;
+  }
+  /* desktop: the words stand under their monolith, centred on it */
+  .wv[data-armed] .wv-list {
+    display: block;
+    height: 12rem;
+    bottom: clamp(1rem, 5vh, 3rem);
+  }
+  .wv[data-armed] .wv-item {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: min(22rem, 28vw);
+    transform: translateX(calc(var(--cx, 50vw) - 50%));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wv-go b {
+    transition: none;
+  }
+}

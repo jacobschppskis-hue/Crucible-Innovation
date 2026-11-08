@@ -184,7 +184,7 @@ vec3 monoSky(vec3 d, vec3 up, float w) {
   return c;
 }
 
-// Everything a ray leaving the metal at `p` (world) in direction d sees, blurred over half-width w: the sea where it
+// Everything a ray leaving the metal at p (world) in direction d sees, blurred over half-width w: the sea where it
 // points down (hit on the plane through the foot, so the pool glows exactly where it lies), the sky above.
 vec3 monoEnv(int i, vec3 p, vec3 d, float w) {
   vec3 up = uMonoM[i][1];
@@ -250,7 +250,7 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   // --- materials (measured F0, linear) ---
   // live: a warm nickel-silver (bone, in metal); forging: iron/steel. Polish varies slowly: high points and edges are
   // smoother (as on any metal object that is handled or dressed); never patchy.
-  vec3 F0 = kind < 0.5 ? vec3(0.74, 0.70, 0.62) : vec3(0.56, 0.57, 0.58);
+  vec3 F0 = kind < 0.5 ? vec3(0.80, 0.76, 0.68) : vec3(0.56, 0.57, 0.58);
   vec3 tint = kind < 0.5 ? vec3(0.95, 0.93, 0.88) : vec3(0.92, 0.93, 0.95);
   float rough = kind < 0.5 ? 0.34 : 0.2;
   float edgeL = smoothstep(0.92, 0.6, max(abs(nl.x), max(abs(nl.y), abs(nl.z))));
