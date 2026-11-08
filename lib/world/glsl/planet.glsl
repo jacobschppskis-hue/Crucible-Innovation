@@ -37,22 +37,45 @@ vec3 look_eddy(vec3 p, vec3 n, float fpq) {
   return p;
 }
 
+// A crisp line of heat along the zero set of a field f: a band |f| < w (field units) with derivative anti-aliasing,
+// capped at a true half-width wTrue where the field goes flat (no blobs). fpu: the pixel footprint in field units.
+// When the line is thinner than the pixel its energy is spread over it (a far thread stays a faint thread).
+float look_line(float f, float w, float fpu, float wTrue) {
+  float af = abs(f), fw = fwidth(f);
+  // a band of the field, anti-aliased by its screen derivative: clean edges
+  float e = max(max(fw * 1.2, fpu * 0.5), 1e-5);
+  float we = max(w, e);
+  float band = (1.0 - smoothstep(we - e, we + e, af)) * (w / we);
+  // capped at a true width (distance to the zero set ~ |f| / |grad f|) where the field goes flat, so no blobs; filtered
+  // wide, since |grad f| from fwidth is constant per 2x2 quad
+  float d = af / max(fw / max(fpu, 1e-6), 1e-6);
+  float cap = 1.0 - smoothstep(wTrue, wTrue * 2.5 + fpu * 3.0, d);
+  return band * cap;
+}
+
 // The sea's surface temperature (K) at unit point q; land: look_land's value there (hotter surf along shores).
+// Seen from space a molten sea should read like a fluid photographed from orbit (Jupiter's bands, Io's flows from
+// Juno): mostly dark, slow metal; currents with crisp banks; finer filaments branching off them; the finest threads
+// thin and bright. Each scale is the zero set of a field of the eddied position, so all of them follow the same flow.
 float look_seaTemp(vec3 q, float fp, float land) {
   float t = uTime * 0.003 * (1.0 - uStill);
   vec3 p = q * (look_uRg / 700.0);
   float fpq = fp / 700.0;
   vec3 pw = look_eddy(p + vec3(t, 0.0, -t), q, fpq);
-  // currents: rivers of heat with anti-aliased banks along the zero set of a field of the eddied position; between
-  // them darker, slower metal (still liquid)
-  float f = look_fbm(pw * 0.8 + 2.0, 7, fpq * 0.8, 0.55);
-  float aa = max(fpq * 1.2, 0.004);
-  float cur = 1.0 - smoothstep(0.07 - aa, 0.13 + aa, abs(f));
-  // fine flow lines riding the currents; they resolve as the camera comes down
-  float fl = look_fbm(pw * 6.0, 9, fpq * 6.0, 0.62);
+  // currents: a few hundred km of field = ~0.25 field units; half-width ~6 km
+  float f1 = look_fbm(pw * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
+  float c1 = look_line(f1, 0.022, fpq, 0.010);
+  // filaments, clustered along the currents
+  float f2 = look_fbm(pw * 2.6 + 5.0, 7, fpq * 2.6, 0.5);
+  float c2 = look_line(f2, 0.016, fpq, 0.005) * exp(-abs(f1) * 7.0);
+  // threads
+  float f3 = look_fbm(pw * 8.0 + 9.0, 6, fpq * 8.0, 0.5);
+  float c3 = look_line(f3, 0.012, fpq, 0.0025) * exp(-abs(f1) * 12.0);
+  // a soft warm wake around each current (heat diffusing into the dark water) and a dim body glow, so the disc reads
+  float near = exp(-abs(f1) * 10.0);
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
-  float T = 1035.0 + 30.0 * broad + 250.0 * cur * (0.82 + 0.5 * fl) + 40.0 * fl;
-  T += 120.0 * exp(-max(0.0, -land) * 22.0);
+  float T = 1070.0 + 20.0 * broad + 60.0 * near + 230.0 * c1 + 150.0 * c2 + 110.0 * c3;
+  T += 110.0 * exp(-max(0.0, -land) * 22.0);
   return T + look_uHeat * 520.0;
 }
 
