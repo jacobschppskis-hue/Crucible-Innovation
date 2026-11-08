@@ -19,7 +19,7 @@ float landField(vec3 n, float fp) {
   vec3 q = n * (R / 520.0);
   float fpq = fp / 520.0;
   // continents: low-frequency shapes with a fractal coastline (the octaves fade with the footprint)
-  float c = fbmF(q + vec3(3.1, 1.7, 0.4), 7, fpq);
+  float c = fbmF(q + vec3(3.1, 1.7, 0.4), 10, fpq);
   c += 0.22 * fbmF(q * 0.43 - 2.0, 3, fpq * 0.43);
   return c - mix(0.55, 0.12, uLandAmt);
 }
@@ -31,16 +31,31 @@ float landField(vec3 n, float fp) {
 // Ocean-current eddies: the position is advected a few times along a rotational (tangent, curl-like) field, which
 // winds the temperature into swirls and filaments the way sea-surface-temperature maps of the Gulf Stream look.
 vec3 eddyWarp(vec3 p, vec3 n, float fpq) {
-  float amp = 0.42;
-  for (int i = 0; i < 4; i++) {
-    float fade = clamp(1.6 - fpq * float(1 << i) * 1.2, 0.0, 1.0);
-    vec3 g = vec3(vnoise(p), vnoise(p + 17.3), vnoise(p + 31.7));
+  float amp = 0.45, fr = 1.0;
+  for (int i = 0; i < 6; i++) {
+    float fade = clamp(1.6 - fpq * fr * 3.0, 0.0, 1.0);
+    if (fade <= 0.0) break;
+    vec3 g = vec3(vnoise(p * fr), vnoise(p * fr + 17.3), vnoise(p * fr + 31.7));
     p += cross(g, n) * amp * fade;
-    p = p * 1.0;
-    amp *= 0.62;
-    p += n * 0.0;
+    amp *= 0.5;
+    fr *= 2.1;
   }
   return p;
+}
+
+// fbm with a slower amplitude falloff (gain), so fine scales keep visible contrast
+float fbmG(vec3 p, int oct, float fp, float gain) {
+  float s = 0.0, a = 0.5, w = 1.0;
+  for (int i = 0; i < 10; i++) {
+    if (i >= oct) break;
+    float fade = clamp(1.5 - fp * w * 1.5, 0.0, 1.0);
+    if (fade <= 0.0) break;
+    s += a * vnoise(p) * fade;
+    p = ROT3 * p * 2.03;
+    a *= gain;
+    w *= 2.03;
+  }
+  return s;
 }
 
 float seaTemp(vec3 n, float fp, float land) {
@@ -48,13 +63,18 @@ float seaTemp(vec3 n, float fp, float land) {
   float t = uTime * 0.003;
   vec3 q = n * (R / 700.0);
   float fpq = fp / 700.0;
-  vec3 pw = eddyWarp(q * 1.0 + vec3(t, 0.0, -t), n, fpq);
-  float g = fbmF(pw * 1.1, 6, fpq * 1.1);
-  float broad = fbmF(q * 0.35 + 9.0, 3, fpq * 0.35);
-  // dark, slow water between glowing currents: wide in temperature, smooth in space
-  float T = 1030.0 + 190.0 * smoothstep(-0.35, 0.55, g + 0.25 * broad);
-  // the sea runs hotter where it washes against land (stirred surf)
-  T += 70.0 * exp(-max(0.0, -land) * 18.0);
+  vec3 pw = eddyWarp(q + vec3(t, 0.0, -t), n, fpq);
+  // currents: rivers of heat with defined (anti-aliased) banks along the zero set of a field of the eddied position;
+  // between them the sea is darker, slower metal (still liquid: no crust, no cells)
+  float f = fbmG(pw * 0.8 + 2.0, 7, fpq * 0.8, 0.55);
+  float aa = max(fpq * 0.8 * 1.5, 0.004);
+  float cw = 0.13;
+  float cur = 1.0 - smoothstep(cw - 0.06 - aa, cw + aa, abs(f));
+  // fine flow lines along the currents (contrast kept at fine scales), resolving as the camera comes down
+  float fl = fbmG(pw * 6.0, 9, fpq * 6.0, 0.62);
+  float broad = fbmF(q * 0.3 + 9.0, 3, fpq * 0.3);
+  float T = 1005.0 + 45.0 * broad + 250.0 * cur * (0.82 + 0.5 * fl) + 40.0 * fl;
+  T += 120.0 * exp(-max(0.0, -land) * 22.0);
   T += uHeat * 520.0;
   return T;
 }

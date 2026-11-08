@@ -58,6 +58,7 @@ float fbmF(vec3 p, int oct, float fp) {
   for (int i = 0; i < 8; i++) {
     if (i >= oct) break;
     float fade = clamp(1.5 - fp * w * 1.5, 0.0, 1.0); // fp * w = pixel size relative to this octave's wavelength
+    if (fade <= 0.0) break;
     s += a * vnoise(p) * fade;
     p = ROT3 * p * 2.03;
     a *= 0.5;
