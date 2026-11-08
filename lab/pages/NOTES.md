@@ -69,7 +69,19 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
 - Quench was never ratified: keep it rare and strictly cold. Nothing on /sites turns Quench (no UI in Quench).
 - Text floating on the other pages (R1 buoy behaviour) stays as it is: not addressed tonight (open Q12).
 
+## Log
+- 0c34e33/b0b2ea4: Liquid and SmoothScroll step aside on world pages (`[data-world], [data-world-root]`); verified the
+  client-side handover / → /sites → Back → Forward on iPhone 15 + 1440 (fresh liquid each time, no errors).
+- 6dc38fc: removed the old home's dead components and ~500 lines of CSS (globals.css 1443 → 941 lines).
+- eee1874: `scripts/shoot-own.mjs` shoots the world's hero (`?world=full&motion`, `goPlace('hero')`, clock held).
+  Verified it runs; re-shoot /work's images at the end when the hero is final.
+- 9135946: Nav fits 360-375 px (the /sites CTA ran 9 px off a 360 px screen, also on the live site).
+- Lighthouse on the world's first home (270b248): perf 69, TBT 11.6 s (world frames on the main thread under
+  SwiftShader + 4x CPU). Sent the fix list to world (start on first use, worker, software-GL low start).
+- Lava constraints for the pages' liquid sent (bg luminance ≤ 0.03 where text sits, CPU model in sync, cheap).
+
 ## Decisions
+- (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
   canvas node (React key), never a second transfer of a spent one.
 
