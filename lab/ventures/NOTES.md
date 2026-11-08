@@ -55,3 +55,13 @@ for its reflected rays (the monoliths' reflections) and add `monoSeaGlow`.
 ## Lab
 `lab/ventures/index.html` (stand-in sky and sea), `node lab/ventures/shoot.mjs <out> "<query>|<name>|<WxH>|<dpr>"`.
 Query: `view=desk|phone|close|low`, `sun=back|side|front`, `rise`, `rise0..2`, `hov=<i>&heat=`, `press=`, `t=`.
+
+## In the engine (13:40-14:05 UTC)
+- Ported as the `ventures` world module (hooks hit / shade / env / sea; `keys` own the camera through the place: the
+  lead's path with the horizon lower, phones pitch +5 so the monoliths stand between the heading and the list).
+- 110 m monoliths ~420 m ahead of the place's first key (read from journey.ts), leaning 5-8 deg toward the viewer so
+  the faces mirror the glowing sea, not the black night sky. Reflections: look_sky (cone-filtered), an analytic sea +
+  pool, and a warm band of lava-lit air over the horizon (the faces' bright line). Sun: look_sunLight (out at night).
+- Not done: monolith stills for /ventures pages and the reduced-motion home (asked by pages; missed the 12:00 slot
+  because this session's worker was down); WebKit; a real-GPU frame-time check.
+- Frames: shots/engine-*.webp.

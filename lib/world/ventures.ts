@@ -11,7 +11,7 @@ import { V, clamp } from './frame';
 import type { Uniforms } from './gl';
 import { haptic } from '@/lib/haptic';
 import monolithGlsl from './glsl/monolith.glsl';
-import { keys } from './journey';
+import { keys, type Key } from './journey';
 
 export type Vec3 = V3;
 
@@ -229,8 +229,20 @@ function bindDom(root: HTMLElement) {
   });
 }
 
+/** The camera through the ventures place: the lead's path (same s, h, sun) with the horizon lower in frame, so the
+ * monoliths stand in the middle of the screen between the heading and the list (phones look up a little). */
+export function venturesKeys(R: number): Key[] {
+  const deg = (a: number) => (a * Math.PI * R) / 180;
+  const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
+  return [
+    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ph: { fov: 64, pitch: 5 } },
+    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ph: { fov: 64, pitch: 5 } },
+  ];
+}
+
 export const ventures: WorldModule = {
   id: 'ventures',
+  keys: venturesKeys,
   glsl: monolithGlsl,
   hooks: ['hit', 'shade', 'env', 'sea'],
   init({ root }) {

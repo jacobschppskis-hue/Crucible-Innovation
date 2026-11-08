@@ -193,6 +193,11 @@ vec3 ventures_envA(int i, vec3 p, vec3 d, float w) {
   // the sky is look's own (stars filtered by the cone, the air's glow at the horizon), seen from the metal
   Ray sr; sr.ro = p; sr.rd = d; sr.pa = max(w, 0.002); sr.depth = 1;
   vec3 sky = look_sky(sr);
+  // plus the low air over the horizon lit from below by the molten sea: a warm band, blurred by the lobe with its
+  // energy kept, which the faces mirror as their bright line (at night look's sky alone is black there)
+  float eh = asin(clamp(dy, -1.0, 1.0));
+  float bw = 0.05 + w;
+  sky += mix(ventures_uHorC, ventures_uHorW, 0.5) * exp(-max(eh, 0.0) / bw) * (0.05 / bw) * smoothstep(-w - 0.01, w + 0.01, eh);
   vec3 sea = ventures_uSea;
   if (below > 0.0) {
     float sd = max(-dy, 0.0) + w * 0.5;
