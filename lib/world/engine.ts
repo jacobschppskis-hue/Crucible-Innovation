@@ -8,7 +8,7 @@ import { cameraFrom, hitSea, project, rayAt, sunFrom, surf, surfOf } from './cam
 import { BLOOM_DOWN, BLOOM_UP, compose, type Composed } from './compose';
 import { clamp, type Channels, type Frame, type PlaceInfo, type V3 } from './frame';
 import { FULLSCREEN_VS, program, target, Uniforms, type Target } from './gl';
-import { evaluate, keys as defaultKeys, LAP, R, resolve, type Anchor, type Key } from './journey';
+import { evaluate, keys as defaultKeys, LAP, lastSeg, R, resolve, type Anchor, type Key } from './journey';
 import { createScroll, type ScrollCtl } from './loop';
 import { activeModules, MODULES, type WorldModule } from './modules';
 import { createQuality, isSoftware, type QualityCtl } from './quality';
@@ -202,7 +202,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     ch: chv,
     cam: cameraFrom(R, { s: 0, h: 2 }, W, H),
     R,
-    sun: { dir: [0, 0, -1], rad: 0.02 },
+    sun: { pos: [0, 0, 0], dir: [0, 0, -1], dist: 1, R: 1, rad: 0.02 },
     quality,
     pointer,
     rayAt: (x, y) => rayAt(f.cam, f.w, f.h, x, y),
@@ -231,12 +231,14 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     f.laps = L > 0 ? Math.floor(f.scroll / L) : 0;
     f.y = L > 0 ? f.scroll - f.laps * L : f.scroll;
     f.progress = L > 0 ? f.y / L : clamp(f.y / Math.max(document.documentElement.scrollHeight - H, 1));
-    // the place under the viewport's middle
+    // the place under the viewport's middle (or the last one passed, between places)
     let pl = 'hero',
-      pf = 0;
+      pf = 0,
+      best = -Infinity;
     const mid = f.y + H * 0.5;
     for (const p of Object.values(places))
-      if (mid >= p.top && mid < p.top + p.h) {
+      if (mid >= p.top && p.top > best) {
+        best = p.top;
         pl = p.name;
         pf = clamp((f.y - p.top) / Math.max(p.h - H, 1));
       }
@@ -245,9 +247,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     evaluate(anchors, f.y, chv);
     chv.s += f.laps * LAP;
     cameraFrom(R, chv, W, H, f.cam);
-    const sun = sunFrom(R, chv);
-    f.sun.dir = sun.dir;
-    f.sun.rad = sun.rad;
+    Object.assign(f.sun, sunFrom(R, lastSeg.a, lastSeg.b, lastSeg.e, f.cam, f.laps * LAP));
   }
 
   function engineUniforms() {
@@ -266,6 +266,8 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     u.set('uCamUp', c.up);
     u.set('uSunDir', f.sun.dir);
     u.set('uSunRad', f.sun.rad);
+    u.set('uSunPos', f.sun.pos);
+    u.set('uSunR', f.sun.R);
     u.set('uExposure', chv.exposure ?? 0);
     u.set('uProgress', f.progress);
     u.set('uQ', quality.q);

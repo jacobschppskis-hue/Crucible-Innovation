@@ -39,12 +39,23 @@ chain (5 half-size levels, 13-tap down, tent up, additive) and the post pass (lo
 - Everything must be periodic in laps: `frame.laps` (and the unwrapped `frame.scroll`) can jump by whole laps (a
   programmatic scroll in Lenis' infinite mode re-bases it). The camera only depends on `theta`, so a jump is invisible.
 
-## The sun
+## The sun (= the mark's glowing core)
 
-`uSunDir` (unit, world), `uSunRad` (angular radius). Fixed in the world by default (`sunLon = -87 deg`, `sunLat = 4`),
-so a real day passes in one lap: the hero sits on the evening terminator (sunset, looking back west: `yaw 180`), the
-night side, the sunrise from orbit, the day side fast and high, back down to the sunset = the hero. The glowing core of
-the mark IS the sun (`mark` draws the mark around it; `look` draws the disc, corona and light).
+The sun is a world point, not just a direction: `frame.sun = {pos, dir, dist, R, rad}`, GLSL `uSunPos` (world),
+`uSunDir` (unit, from the camera), `uSunRad` (angular radius from the camera), `uSunR` (physical radius). Journey
+channels place it: `sunU, sunV, sunY` (surface coords + height; `sunV` absolute like `s`), `sunR`.
+- **Near** (hero, together, the last stretch before the seam): the core hangs over the sea ~150 units in front of the
+  camera, 30 up, radius 4.2 (1.6 deg): the mark floats over its own reflection with real parallax. Lighting at a point P
+  should use `normalize(uSunPos - P)` (a point light; the sea under it gets ripples, glitter and falloff).
+- **Far** (everywhere else): a fixed star 1e6 up over longitude 280 deg, radius 1.2e4 (0.69 deg). From the hero it
+  stands ~10 deg over the western horizon, exactly where the near core hangs, so near <-> far is seamless; the night
+  side runs theta 10..190, the morning terminator is at 190 (the sunrise over the limb from orbit is in `shore`), the
+  day side 190..370.
+- Between keys the sun's direction from the camera slerps and its distance and radius interpolate in log space, so the
+  core recedes into the sky (and comes back) along its own line of sight.
+- `mark` hangs the whole mark around the sun at every distance (scale = `sun.R / 4.8` mark units: the core is the
+  sun); `look` draws its light (corona, glare, the atmosphere's response) and should NOT draw a second disc where the
+  mark draws the core.
 
 ## The journey (places table)
 

@@ -26,8 +26,10 @@ uniform float uFocal;     // focal length in render px
 uniform float uR;         // planet radius
 uniform float uCamH;      // camera altitude above the sea (exact, from the CPU)
 uniform vec3 uCamUp;      // the planet normal under the camera
-uniform vec3 uSunDir;     // unit vector to the sun
-uniform float uSunRad;    // the sun's angular radius (rad)
+uniform vec3 uSunDir;     // unit vector from the camera to the sun (the mark's core)
+uniform float uSunRad;    // the sun's angular radius as seen from the camera (rad)
+uniform vec3 uSunPos;     // the sun's world position (near in the hero: it hangs over the sea; far elsewhere)
+uniform float uSunR;      // the sun's physical radius (world units)
 uniform float uExposure;  // stops
 uniform float uProgress;  // journey progress in this lap (0..1)
 uniform float uQ;         // quality 0..1 (1 = best)

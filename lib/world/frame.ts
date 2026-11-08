@@ -120,8 +120,9 @@ export type Frame = {
   cam: Camera;
   /** Planet radius (world units). */
   R: number;
-  /** Unit vector to the sun (world), its angular radius (rad). */
-  sun: { dir: V3; rad: number };
+  /** The sun = the mark's glowing core: its world position, the unit vector to it from the camera, its distance, its
+   * physical radius (world units) and angular radius (rad). Near in the hero (hanging over the sea), far elsewhere. */
+  sun: { pos: V3; dir: V3; dist: number; R: number; rad: number };
   quality: Quality;
   /** Pointer (CSS px, viewport). `active` false when no pointer is over the page; `touch` for a finger. */
   pointer: { x: number; y: number; active: boolean; down: boolean; touch: boolean; lastMove: number };

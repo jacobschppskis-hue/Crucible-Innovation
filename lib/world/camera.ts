@@ -88,11 +88,32 @@ export function project(cam: Camera, w: number, h: number, p: V3): [number, numb
   return [w / 2 + (V.dot(c, cam.r) / z) * cam.focal, h / 2 - (V.dot(c, cam.u) / z) * cam.focal, z];
 }
 
-export function sunFrom(R: number, ch: Channels): { dir: V3; rad: number } {
-  void R;
-  const lon = (ch.sunLon ?? -87) * D2R,
-    lat = (ch.sunLat ?? 0) * D2R;
-  // a direction like a surface point at (lat, lon)
-  const dir: V3 = V.norm([-Math.sin(lat), Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon)]);
-  return { dir, rad: 0.5 * (ch.sunSize ?? 3.2) * D2R };
+export type Sun = { pos: V3; dir: V3; dist: number; R: number; rad: number };
+
+function sunAt(R: number, ch: Channels, cam: Camera) {
+  const pos = surf(R, ch.sunU ?? 0, ch.sunV ?? -150, ch.sunY ?? 30);
+  const d = V.sub(pos, cam.pos);
+  const dist = V.len(d);
+  return { dir: V.mul(d, 1 / dist), dist, r: ch.sunR ?? 4.2 };
+}
+
+/**
+ * The sun (the mark's core) between two keys `a` and `b` at eased fraction `e`, as seen from the camera: its direction
+ * slerps, its distance and radius interpolate in log space. Each key's sun is a world point (sunU, sunV, sunY), so a
+ * held key gives real parallax. `lap` (in world units) is added to sunV, like to s.
+ */
+export function sunFrom(R: number, a: Channels, b: Channels, e: number, cam: Camera, lap = 0): Sun {
+  const A = sunAt(R, { ...a, sunV: (a.sunV ?? -150) + lap }, cam);
+  const B = e > 0 ? sunAt(R, { ...b, sunV: (b.sunV ?? -150) + lap }, cam) : A;
+  const c = Math.max(-1, Math.min(1, V.dot(A.dir, B.dir)));
+  const om = Math.acos(c);
+  let dir: V3;
+  if (om < 1e-5) dir = A.dir;
+  else {
+    const so = Math.sin(om);
+    dir = V.norm(V.add(V.mul(A.dir, Math.sin((1 - e) * om) / so), V.mul(B.dir, Math.sin(e * om) / so)));
+  }
+  const dist = Math.exp(Math.log(A.dist) + (Math.log(B.dist) - Math.log(A.dist)) * e);
+  const r = Math.exp(Math.log(A.r) + (Math.log(B.r) - Math.log(A.r)) * e);
+  return { pos: V.madd(cam.pos, dir, dist), dir, dist, R: r, rad: Math.asin(Math.min(1, r / dist)) };
 }
