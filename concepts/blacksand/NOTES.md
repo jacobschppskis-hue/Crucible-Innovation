@@ -41,8 +41,12 @@ atlas and a 1-D coast profile):
 - **The coast through the page**: a thin, quiet fringe (5% of the width, 4% on phones) beside reading sections, coves
   between sections, and one bay at the ventures (`data-cove`). The profile is 32-bit, interpolated in the shader, and
   the text envelope is rounded with a parabolic dilation so the shoreline never kinks; the run-up varies per row.
+- **The sand is never a void**: fine grain, ripple marks parallel to the shore lit from the surf's side (band-limited),
+  a warm wash falling off a few hundred px from the fringe, and a very rare cold (Quench) sparkle.
 - **Type in the sand**: a canvas atlas of the wordmark and venture names (Archivo), blurred for the mould's walls.
-  Lit from the sea's side, it's filled with metal: the wordmark by the surf, Crucible Sites cast and cooled to bone (it's
+  Lit from the sea's side (crisp sand walls, the face toward the surf lit warm), it's filled with metal: the wordmark, in
+  its true proportions with only a slight perspective slant, by the surf (a smooth glow that grows a soft skin as it
+  cools, hottest where it came in), Crucible Sites cast and cooled to bone (it's
   live), Verge and Trellis still molten (one seamless glow: still forging), each fed by a thin channel curving to the bay.
   Hover/focus/tap heats a venture's cast and its "Open" control turns Ember.
 - **PayPal delta**: centred under "PayPal" (eBay buys it, 2002). Desktop: the river fans into six channels ending in
