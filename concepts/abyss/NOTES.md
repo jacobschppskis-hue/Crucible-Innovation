@@ -83,3 +83,5 @@ Known: faint 1-cell column stripes can show in the pool at 2x under strong rippl
 - Verge and Trellis are one seamless glow (no crust), still rising out of the lava.
 - PayPal: one river leaves PayPal and branches, meandering, into six; each ends in a small pool beside its name; no boxes.
 - The ring's pieces read as smooth cast bone metal; the pool and ripples are unchanged.
+- Verge and Trellis are crisp cast bars at heat: chamfered walls lit like metal, a bright fillet, the name cut into the
+  top. The Thesis follows the ventures directly; its words surface as they arrive and the sea starts warming before the pin.
