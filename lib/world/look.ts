@@ -8,7 +8,7 @@
 // small programs into textures the engine's Uniforms own (so they bind with every other module texture).
 //
 // Journey channels (keys may set them): look.sunDisc (0..1, the sky's own sun disc; the mark's core may replace it),
-// look.gain (linear, the base exposure on top of the journey's `exposure` stops), look.stars, look.lava (the sea's
+// look.gain (linear, extra exposure in the post, 1 = neutral), look.stars, look.lava (the sea's
 // emitted radiance scale), look.heat (0..1, the planet heats: the thesis), look.land (0..1 how much land).
 
 import type { WorldModule } from './modules';
@@ -42,6 +42,10 @@ export const AIR = {
   airglow: [1.5e-5, 2.8e-5, 4.5e-5],
   airglowH: 9,
 };
+
+/** look's radiance unit: the sun's illuminance above the air, in the scene's linear units (the post is neutral, so every
+ *  module's radiance means the same thing; the sky, the far planet and look_sunLight are all in this unit). */
+export const UNIT = 3;
 
 export const SUN = { light: 5200, disc: 5200, limb: 2300, boost: 0.02 };
 
@@ -104,10 +108,10 @@ function airUniforms(set: (n: string, v: number | number[]) => void, K: number) 
   set('look_uOzC', AIR.ozC);
   set('look_uOzW', AIR.ozW);
   set('look_uGroundAlb', AIR.groundAlb);
-  set('look_uGroundGlow', AIR.glow);
-  set('look_uAirglow', AIR.airglow);
+  set('look_uGroundGlow', AIR.glow.map((x) => x * UNIT));
+  set('look_uAirglow', AIR.airglow.map((x) => x * UNIT));
   set('look_uAirglowH', AIR.airglowH);
-  set('look_uSunE', bbColor(SUN.light));
+  set('look_uSunE', bbColor(SUN.light).map((x) => x * UNIT));
 }
 
 function makeLook(): WorldModule {
@@ -183,7 +187,7 @@ function makeLook(): WorldModule {
     provides: ['look_sky', 'look_atmo', 'look_post'],
     glsl: [atmoGlsl, sunGlsl, skyGlsl, planetGlsl].join('\n'),
     post: postGlsl,
-    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 3, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0.6 },
+    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 1, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0.6 },
     init({ gl: g, u }) {
       gl = g;
       ldr = !(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
@@ -211,17 +215,17 @@ function makeLook(): WorldModule {
       u.set('look_uCam', cam);
       u.set('look_uHighW', w);
       u.set('look_uSteps', Math.round(10 + 14 * f.quality.q));
-      u.set('look_uStarGain', ch['look.stars'] ?? 1);
+      u.set('look_uStarGain', (ch['look.stars'] ?? 1) * UNIT);
       u.set('look_uSunDisc', ch['look.sunDisc'] ?? 1);
       u.set('look_uSunBoost', SUN.boost);
       u.set('look_uSunTemp', SUN.disc);
       u.set('look_uSunLimbT', SUN.limb);
-      u.set('look_uLavaGain', ch['look.lava'] ?? 1);
+      u.set('look_uLavaGain', (ch['look.lava'] ?? 1) * UNIT);
       u.set('look_uHeat', ch['look.heat'] ?? 0);
       u.set('look_uLandAmt', ch['look.land'] ?? 0.6);
       u.set('look_uLimb', 0);
       // post
-      u.set('look_uGain', ch['look.gain'] ?? 3);
+      u.set('look_uGain', ch['look.gain'] ?? 1);
       u.set('look_uBloomAmt', 0.05);
       u.set('look_uPunch', 1);
       u.set('look_uGrain', f.quality.software ? 0.012 : 0.02);
@@ -246,33 +250,3 @@ function makeLook(): WorldModule {
 }
 
 export const look: WorldModule = makeLook();
-
-// ?lookfar: look's own stand-in for the sea (lava_shade/lava_env), to judge the planet's far field and the near/far
-// hand-off in the real engine before lava lands. Never on by default.
-const LOOKFAR = /* glsl */ `
-vec3 lava_env(Ray r, Sea s) { return look_planetFar(r, s); }
-vec3 lava_shade(Ray r, Sea s, SeaMod m) {
-  vec3 far = look_planetFarMod(r, s, m);
-  float k = look_farMix(s);
-  if (k >= 1.0) return far;
-  // near: a smooth glossy molten skin at the same temperature, a few long swells, the sky in it
-  vec2 w = s.w; vec3 g = m.g;
-  for (int i = 0; i < 5; i++) {
-    float fi = float(i), kk = 0.3 * pow(1.6, fi), a = 0.12 / pow(1.8, fi);
-    vec2 d = vec2(cos(fi * 1.9 + 0.3), sin(fi * 1.9 + 0.3));
-    float att = 1.0 - smoothstep(0.3, 1.0, kk * s.fw);
-    float x = dot(w, d) * kk - uTime * sqrt(9.8 * kk) * 0.3 + fi;
-    g += vec3(a * sin(x), a * kk * cos(x) * d) * att;
-  }
-  vec3 n = normalize(s.up - g.y * s.eU - g.z * s.eV);
-  float T = look_seaTemp(s.q, s.fw * sqrt(s.graz) / look_uK, 1.0) + m.heat * 400.0;
-  float F = 0.04 + 0.96 * pow(1.0 - max(dot(-r.rd, n), 0.0), 5.0);
-  vec3 rd = reflect(r.rd, n); if (dot(rd, s.up) < 0.0) rd = reflect(rd, s.up);
-  Ray rr; rr.ro = s.p + s.up * 0.01; rr.rd = rd; rr.pa = r.pa * 2.0 + 0.02; rr.depth = 1;
-  vec3 near = look_planck(T) * look_uLavaGain * (1.0 - F) + world_env(rr) * F + m.emit;
-  return mix(near, far, k);
-}`;
-if (typeof location !== 'undefined' && /[?&]lookfar/.test(location.search)) {
-  look.provides = [...(look.provides ?? []), 'lava_shade', 'lava_env'];
-  look.glsl += LOOKFAR;
-}
