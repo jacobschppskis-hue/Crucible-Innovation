@@ -8,7 +8,9 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "unslop": "playwright test tests/unslop.spec.ts"
+    "unslop": "playwright test tests/unslop.spec.ts",
+    "world:smoke": "node world/smoke.mjs",
+    "qa:deep": "node lab/qa/deep.mjs"
   },
   "dependencies": {
     "lenis": "^1.3.26",
