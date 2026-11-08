@@ -85,3 +85,17 @@ Wide screens now read at 20 px body / 28 px lead / 44rem measure (the coordinato
 - Story opening now sits on dark sky with the world's latest journey (9e8fce4); the CRT tube powers on in view.
 - Open: the glowing surf under the footer wordmark (Jacob's footer like) is unassigned; not started this late without
   world's OK.
+
+## The shore (14:45 UTC): Jacob's glowing surf, as world module `shore`
+- Where: a black-sand beach across the travel line, 1200 units before the hero (land on the far side). From the hero
+  (h 1.6, horizon ~140 units) anything lower than ~90 units at that range is below the horizon, so the hero is untouched.
+- Camera (my keys for `shore` and `dawn`, via `module.keys`): high over the day side at dawn 0, down out of the sky by
+  0.4, hanging ~75 units off the waterline at 22 m facing the land with the setting sun off to the right by 0.72-1.
+  world's loop keys then pull back over open sea into the hero: verified frame by frame (`lab/story/glide.mjs`), the
+  beach sinks away and the seam frame equals the hero.
+- Surf (sea hook): crests run in (long back, steep face, shoaling), white-hot rolling lips only where they break, warm
+  dark-red troughs, same lava material (heat + emit, `lava_planck`). Sand (hit/shade/env): a gentle beach to low dunes,
+  black with a broad sheen, the surf's warm light on it; the swash runs up fast and drains slowly with a bright lip; the
+  sand it leaves glows and cools; wet sand mirrors the sky. One wave clock for crests and swash.
+- The wordmark sits in the upper third over dark sky (the dunes' skyline at ~43%, the surf under it).
+- Frames: `shots/surf-phone-v1.webp` (one wave cycle on iPhone).
