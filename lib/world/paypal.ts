@@ -169,10 +169,8 @@ export function paypalKeys(R: number): Key[] {
   const out: Key[] = [];
   for (const f of [0, 0.06, 0.12, 0.18, 0.22, 0.245, 0.26, 0.275, 0.29, 0.305, 0.32, 0.335, 0.35, 0.37, 0.6, 0.8, 1]) {
     const d = beatChannels(f, false, R), m = beatChannels(f, true, R);
-    // the night side's sea runs cooler than the sunset's, so the throws and the places carry the light
-    const heat = mix(0.16, 0.07, smooth(0.245, 0.37, f));
     const k: Key = {
-      at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov, 'lava.heat': heat,
+      at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov,
       ph: { s: m.s, h: m.h, pitch: m.pitch, fov: m.fov },
     };
     if (f > 0) k.ease = 'linear';
