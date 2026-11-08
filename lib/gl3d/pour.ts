@@ -27,7 +27,7 @@ const CRU_Z = 5.5; // the crucible and the stream stand in front of the mark's p
 const STREAM_Z = 4.2;
 const D = 130; // heat falls from white at the metal's surface to bone this many units below it
 const CORE_R = RING.core;
-const TUBE = 0.42; // trickle radius (the band is RING.stroke = 3.6 wide)
+const TUBE = 0.42; // trickle radius (the band is RING.stroke ≈ 3.47 wide)
 
 const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x);
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);

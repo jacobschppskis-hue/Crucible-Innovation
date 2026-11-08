@@ -43,13 +43,14 @@ return t<.2?mix(a,b,t*5.):t<.35?mix(b,c,(t-.2)/.15):t<.5?mix(c,d,(t-.35)/.15):t<
 // upper left (the bevels' highlights) and a faint sheen band that slides over the faces as they tilt. w = roughness².
 const vec3 KEY=vec3(-.4924,.5819,.6446);
 vec3 fenv(vec3 r,float w){
-vec3 c=mix(vec3(.035,.026,.02),vec3(.085,.088,.096),smoothstep(-.45,.55,r.y));
-c+=vec3(1.,.45,.16)*.55*smoothstep(-.12,-.7,r.y)*smoothstep(-.6,.3,r.z);
+vec3 c=mix(vec3(.02,.016,.013),vec3(.07,.074,.084),smoothstep(-.45,.55,r.y));
+c+=vec3(1.,.5,.2)*.32*smoothstep(-.12,-.7,r.y)*smoothstep(-.6,.3,r.z);
 c+=vec3(.5,.62,.85)*.42*smoothstep(.3,.95,r.y);
-c+=vec3(.93,.89,.82)*.46*smoothstep(-.05,.9,r.z)*(.9+1.6*dot(r.xy,vec2(-.6,.45)));
+float wt=smoothstep(-.2,.2,dot(r.xy,vec2(-.6,.45)));
+c+=mix(vec3(.6,.64,.7),vec3(1.,.93,.82),wt)*.42*smoothstep(-.05,.9,r.z)*(.75+1.5*dot(r.xy,vec2(-.6,.45)));
 vec2 bx=abs(r.xy-vec2(-.17,.17))-vec2(.15,.12);float sb=1.-smoothstep(-.02-.12*w,.1+.12*w,length(max(bx,0.))+min(max(bx.x,bx.y),0.));
 c+=vec3(1.,.95,.86)*.7*sb*smoothstep(.3,.9,r.z);
-c+=vec3(1.,.95,.86)*.3*exp(-pow((r.y-.03+.6*r.x*r.x)/(.06+.12*w),2.))*smoothstep(.3,.9,r.z);
+c+=vec3(1.,.96,.88)*.9*exp(-pow((dot(r.xy,vec2(.62,.78))-.035)/(.035+.08*w),2.))*smoothstep(.3,.9,r.z);
 c+=vec3(1.,.9,.74)*pow(max(dot(r,KEY),0.),mix(110.,7.,w))*mix(6.,1.1,w);
 return c;}
 // Sand-cast bone metal (the logo's arcs and cells; dark steel toward tone 1): a fine sand grain and a cast skin's slow
@@ -61,27 +62,36 @@ vec3 boneLit(vec3 p,vec3 nO,vec3 v,float tone,float sd0){
 float fw=length(fwidth(p));vec3 sg=vec3(0.);float sd=sd0;
 #ifndef SOFT
 const mat3 RO=mat3(.788,-.39,.476,.564,.75,-.346,-.222,.534,.816);mat3 M=mat3(1.);
-for(int i=0;i<3;i++){float f=i==0?.55:i==1?2.2:6.;float a=(i==0?.35:i==1?.2:.3)*(1.-smoothstep(.3,.75,fw*f));
+for(int i=0;i<3;i++){float f=i==0?.7:i==1?3.:8.;float a=(i==0?.22:i==1?.18:.3)*(1.-smoothstep(.3,.75,fw*f));
 M=RO*M;vec3 q=M*p*f+uSeed*(3.+float(i));float q0=vn(q);sd+=(q0-.5)*a*.6;
-sg+=a*f*(transpose(M)*vec3(vn(q+vec3(.08,0,0))-q0,vn(q+vec3(0,.08,0))-q0,vn(q+vec3(0,0,.08))-q0))/.08;}
+sg+=a*f*(transpose(M)*vec3(vn(q+vec3(.06,0,0))-q0,vn(q+vec3(0,.06,0))-q0,vn(q+vec3(0,0,.06))-q0))/.06;}
 sg-=dot(sg,nO)*nO;
 #endif
-vec3 pc=p*1.35+uSeed*7.,ci=floor(pc),po=fract(pc)-.5-(vec3(h3(ci+1.7),h3(ci+3.1),h3(ci+5.3))-.5)*.5;float pr=.07+.08*h3(ci+8.9);
-float pit=step(.8,h3(ci))*smoothstep(pr,pr*.2,length(po))*(1.-smoothstep(.06,.16,fw));
-vec3 n=normalize(uNM*normalize(nO-sg*.06+po*pit*.8));
+// The high points are polished: smoother and glossier where the grain stands proud.
+float hi=smoothstep(.0,.08,sd);
+vec3 pc=p*1.6+uSeed*7.,ci=floor(pc),po=fract(pc)-.5-(vec3(h3(ci+1.7),h3(ci+3.1),h3(ci+5.3))-.5)*.5;float pr=.05+.06*h3(ci+8.9);
+float pit=step(.85,h3(ci))*smoothstep(pr,pr*.2,length(po))*(1.-smoothstep(.06,.16,fw));
+vec3 n=normalize(uNM*normalize(nO-sg*.045*(1.-.6*hi)+po*pit*.6));
 float pv=h3(vec3(uSeed*1.37,2.1,5.3)),mv=vn(p*.16+uSeed);
-float ro=clamp(.3+.35*sd+.08*pv+.25*pit+.12*smoothstep(.3,.75,fw*6.),.12,.8),w=ro*ro;
-vec3 alb=vec3(.8,.765,.69)*(1.+.08*(pv-.5)+.1*(mv-.5)+.12*sd)*mix(vec3(1.),vec3(1.012,.995,.97),mv)*(1.-.35*pit);
+float ro=clamp(.26+.3*sd-.14*hi+.08*pv+.2*pit+.1*smoothstep(.3,.75,fw*8.),.1,.75),w=ro*ro;
+vec3 alb=vec3(.82,.79,.72)*(1.+.1*(pv-.5)+.1*(mv-.5)+.08*sd)*mix(vec3(.985,.995,1.015),vec3(1.015,.995,.965),pv)*(1.-.3*pit);
 alb=mix(alb,vec3(.16,.15,.145),tone);
-float nv=max(dot(n,v),1e-3),side=1.-abs(nO.z),ao=mix(1.,.55,smoothstep(.15,.95,side))*(1.-.3*pit);
-vec3 F=alb+(1.-alb)*pow(1.-nv,5.)*.6;
+// Depth: side walls well below the faces, and a thin crease of contact shade where the bevel meets the face.
+float side=1.-abs(nO.z),crease=smoothstep(.78,.93,abs(nO.z))*(1.-smoothstep(.95,.995,abs(nO.z)));
+float ao=mix(1.,.38,smoothstep(.15,.95,side))*(1.-.28*crease)*(1.-.3*pit);
+float nv=max(dot(n,v),1e-3);
+vec3 F=alb+(1.-alb)*pow(1.-nv,5.)*.7;
 vec3 rr=reflect(-v,n);
-vec3 sp=F*(.55*fenv(rr,w)+.45*fenv(rr,min(1.,w*3.+.25)));
-vec3 df=alb*.36*fenv(n,1.);
-vec3 col=(sp*.72+df)*ao;
+vec3 sp=F*(.6*fenv(rr,w)+.4*fenv(rr,min(1.,w*3.+.2)));
+vec3 df=alb*.24*fenv(n,1.);
+vec3 col=(sp*.85+df)*ao;
+// The core: its light on the faces turned to it, and a warm-white lift on faces near it (they still carry its heat).
 vec3 lc=uCore.xyz+vec3(0.,0.,2.6)-vW;float ld=length(lc);lc/=max(ld,1e-3);
 float cl=uCore.w*1.7/(1.+ld*ld/150.),nl=max(dot(n,lc),0.);
-col+=vec3(1.,.38,.1)*cl*(alb*nl*.6+F*pow(max(dot(n,normalize(lc+v)),0.),mix(60.,10.,w))*.6)*mix(1.,.8,side);
+col+=vec3(1.,.42,.12)*cl*(alb*nl*.5+F*pow(max(dot(n,normalize(lc+v)),0.),mix(60.,10.,w))*.5)*mix(1.,.7,side);
+col+=vec3(1.,.86,.66)*(.02+.05*uCore.w*exp(-ld/16.))*(1.-.6*side)*(1.-tone);
+// ...and its glow falls across the faces: warm-white near it, so every face shades from its core side to its far side.
+col+=alb*vec3(1.,.84,.64)*.55*uCore.w*exp(-ld/11.)*smoothstep(-.2,.8,n.z)*(1.-tone);
 return col;}
 void main(){
 if(dot(vW,uClip.xyz)>uClip.w)discard;
@@ -110,16 +120,20 @@ col=boneLit(p,nO,v,uTone,0.);
 // The glowing core: a smooth hot sphere, brightest where it faces you, deeper orange-red toward the limb, a slow faint
 // convection shimmer, a clean key highlight and a soft warm rim. No crust, no spots.
 vec3 sn=normalize(p),nw=normalize(uNM*sn);float nv=max(dot(nw,v),0.);
-vec3 q=sn*1.8+vec3(uTime*.045,-uTime*.03,uTime*.038);
-float cv=.6*vn(q+uSeed)+.4*vn(q*2.3+uSeed+4.);
-float T=pow(nv,.85)*(1.+.12*(cv-.5)*smoothstep(.1,.5,nv));
-vec3 em=mix(vec3(.5,.03,.005),vec3(1.6,.13,.015),smoothstep(0.,.6,T));
-em=mix(em,vec3(2.6,.3,.05),smoothstep(.6,1.,T))*(.92+.08*uGlow);
+vec3 q=sn*1.6+vec3(uTime*.06,-uTime*.04,uTime*.05);
+float cv=.55*vn(q+uSeed)+.3*vn(q*2.4+uSeed+4.)+.15*vn(q*5.+uSeed+9.);
+// Glowing from within: a yellow-white heart seen through the skin, an orange body, a deep red-orange limb; the slow
+// convection moves the heat a little, mostly in the body.
+float T=pow(nv,1.5)+.16*(cv-.5)*smoothstep(.05,.6,nv);
+vec3 em=mix(vec3(.55,.035,.004),vec3(1.7,.15,.017),smoothstep(0.,.5,T));
+em=mix(em,vec3(2.4,.34,.06),smoothstep(.45,.85,T));
+em=mix(em,vec3(3.,.82,.14),smoothstep(.78,1.,T)*.65)*(.92+.08*uGlow);
 // The pour fills it white-hot (uTemp 1) and it cools to its own orange by uTemp .5: white at its heart, yellow to orange
 // toward the limb.
 float hb=smoothstep(.5,1.,uTemp);em=mix(em,ramp(mix(.7,1.,hb)*(.7+.3*pow(nv,.7)))*1.15,smoothstep(0.,.3,hb));
+// A wet molten skin: a soft, broad sheen of the key softbox, no pin-point glint; a thin bright halo at the limb.
 vec3 h=normalize(KEY+v);float nh=max(dot(nw,h),0.);
-col=em+vec3(1.,.86,.66)*(pow(nh,220.)*.95+pow(nh,40.)*.05)+vec3(1.,.2,.03)*pow(1.-nv,3.)*.35;
+col=em+vec3(1.,.82,.58)*(pow(nh,24.)*.22+pow(nh,70.)*.18)*(1.-.5*hb)+vec3(1.,.36,.06)*pow(1.-nv,4.)*.55;
 }else if(uMat==2){
 // Hot metal (the pour): incandescent liquid with a mirror skin; as it cools, a fine, feathered set front sweeps
 // through it (bottom first, along the heat field) and leaves the bone metal.
