@@ -170,14 +170,14 @@ test('reduced motion shows the static SVG logo and the ingot stills, with no can
   await page.waitForTimeout(1000);
   await expect(page.locator('section.ig')).not.toHaveAttribute('data-3d', '');
   await expect(page.locator('section.ig .ig-svg')).toBeVisible();
-  // The ring's 14 squares stay upright in the rendered logo: no transforms, and each one's on-screen box is exactly one
+  // The ring's 11 squares stay upright in the rendered logo: no transforms, and each one's on-screen box is exactly one
   // square (RING.px of the 64 units; a rotated square's box is larger).
   const cells = page.locator('.ig-svg rect');
-  await expect(cells).toHaveCount(14);
+  await expect(cells).toHaveCount(11);
   expect(await page.locator('.ig-svg [transform]').count()).toBe(0);
   const unit = ((await page.locator('.ig-svg').boundingBox())?.width ?? 0) / 64;
   expect(unit).toBeGreaterThan(0);
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < 11; i++) {
     const b = (await cells.nth(i).boundingBox())!;
     expect(Math.abs(b.width - RING.px * unit), `cell ${i} width`).toBeLessThan(0.5);
     expect(Math.abs(b.height - RING.px * unit), `cell ${i} height`).toBeLessThan(0.5);
@@ -308,6 +308,46 @@ test.describe('rich tier', () => {
     await page.locator('section.thesis').scrollIntoViewIfNeeded();
     await page.evaluate(() => scrollBy(0, 200));
     await expect(page.locator('section.thesis')).toHaveAttribute('data-gl', '', { timeout: 15000 });
+  });
+
+  test('forced rich: the Thesis iron is dark when cold, molten at the floor at 1811 K, and the type stays clear', async ({ page }) => {
+    await page.goto('/?tier=rich&liquid=full', { waitUntil: 'networkidle' });
+    const scene = page.locator('section.thesis');
+    const box = await scene.evaluate((el) => ({ top: el.getBoundingClientRect().top + scrollY, h: (el as HTMLElement).offsetHeight }));
+    const vh = page.viewportSize()!.height;
+    // the canvas covers the whole pinned scene (the metal pools low inside it)
+    const at = async (p: number) => {
+      await page.evaluate((y) => scrollTo(0, y), box.top + p * (box.h - vh));
+      await expect(scene).toHaveAttribute('data-gl', '', { timeout: 15000 });
+      await expect.poll(() => scene.locator('.thesis-gl').evaluate((el) => Number(getComputedStyle(el).getPropertyValue('--gl')))).toBeGreaterThan(0.99);
+      await page.waitForTimeout(1500);
+      const png = (await page.screenshot()).toString('base64');
+      // mean red of the bottom tenth and of the band at 25-40% height (where the type sits)
+      return page.evaluate(async (src) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${src}`;
+        await img.decode();
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        const g = c.getContext('2d')!;
+        g.drawImage(img, 0, 0);
+        const red = (y0: number, y1: number) => {
+          const d = g.getImageData(0, Math.round(y0 * c.height), c.width, Math.round((y1 - y0) * c.height)).data;
+          let s = 0;
+          for (let i = 0; i < d.length; i += 4) s += d[i];
+          return s / (d.length / 4);
+        };
+        return { floor: red(0.9, 1), high: red(0.25, 0.4) };
+      }, png);
+    };
+    const gl = await scene.locator('.thesis-gl').evaluate((c) => [c.clientHeight, c.parentElement!.clientHeight]);
+    expect(gl[0]).toBe(gl[1]);
+    const cold = await at(0);
+    expect(cold.floor, 'cold: no glow at the floor').toBeLessThan(30);
+    const hot = await at(0.95);
+    expect(hot.floor, '1811 K: molten metal at the floor').toBeGreaterThan(150);
+    expect(hot.high, '1811 K: the type band stays dark').toBeLessThan(80);
   });
 
   test('light tier: the Thesis shows the static version and no film frames are downloaded', async ({ page }) => {

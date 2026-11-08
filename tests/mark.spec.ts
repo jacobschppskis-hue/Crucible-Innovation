@@ -1,21 +1,24 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RING, arcOutline, cells, splitRingSvg, step } from '../lib/splitRing';
+import { RING, arcOutline, cells, faviconSvg, splitRingSvg, step } from '../lib/splitRing';
 import { arcOutline3d, logoPieces } from '../lib/gl3d/geometry';
 
-// The Split Ring (lib/splitRing.ts): two filled half-bands on the circles r 27 and 15 that end exactly on the core's
-// centre line (x = c), and the machine half drawn as upright squares centred ON the same circles, evenly spaced in angle,
-// with one empty step between each band's end and its first square. It is upright, mirror-symmetric and centred on the
+// The Split Ring (lib/splitRing.ts, Jacob's logo family): two filled half-bands on the circles r 20 and 12 (of a 48 grid,
+// carried into the 64 box) that end exactly on the core's centre line (x = c), and the machine half drawn as upright
+// squares centred ON the same circles, evenly spaced in angle (7 and 4), with one empty step between each band's end
+// and its first square. It is upright, mirror-symmetric and centred on the
 // core, and no square touches an arc, the core or another square. The SVG, the favicon, the brand pages and the 3D logo
 // are all this one geometry.
 
 const { c, px } = RING;
 const free = cells();
 
-test('squares are as big as the band is wide, centred on their circles, evenly spaced, 14 of them', () => {
-  expect(RING.px).toBe(RING.stroke);
-  expect(free).toHaveLength(14);
+test('the logo family proportions: 11 squares a little bigger than the band, centred on their circles, evenly spaced', () => {
+  const U = 4 / 3; // the family's 48-unit grid in the 64-unit box
+  for (const [v, want] of [[RING.stroke, 2.6], [RING.px, 3.2], [RING.core, 3.6], [RING.rings[0].r, 20], [RING.rings[1].r, 12]]) expect(v / U).toBeCloseTo(want, 9);
+  expect(RING.rings.map((q) => q.n)).toEqual([7, 4]);
+  expect(free).toHaveLength(11);
   RING.rings.forEach(({ r, n }, ring) => {
     const mine = free.filter((q) => q.ring === ring);
     expect(mine).toHaveLength(n);
@@ -24,8 +27,9 @@ test('squares are as big as the band is wide, centred on their circles, evenly s
       expect(q.x).toBeGreaterThan(c); // the right half only
       expect(q.a).toBeCloseTo(-Math.PI / 2 + (i + 1) * step(n), 9); // evenly spaced, the band's end standing in for k = 0
     });
-    // No column of squares: neighbours never share an x (the old lattice stacked three at the far right).
-    for (let i = 1; i < mine.length; i++) expect(Math.abs(mine[i].x - mine[i - 1].x)).toBeGreaterThan(0.5);
+    // No column of squares (the old lattice stacked three at the far right): only a square and its mirror image may share
+    // an x, never three.
+    for (const q of mine) expect(mine.filter((o) => Math.abs(o.x - q.x) < 0.5).length).toBeLessThanOrEqual(2);
   });
 });
 
@@ -52,7 +56,7 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
   await page.setContent(`<!doctype html><body style="margin:0">${splitRingSvg()}</body>`);
   const out = await page.evaluate(
     ({ ring, outlines }) => {
-      const { c, px, core, rings } = ring;
+      const { c, px, stroke, core, rings } = ring;
       const svg = document.querySelector('svg')!;
       const arcs = [...svg.querySelectorAll('path')];
       const rects = [...svg.querySelectorAll('rect')];
@@ -74,7 +78,7 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
         // The band stops on x = c: nothing of it lies right of the centre line, and it is solid right up to it.
         for (const sgn of [-1, 1]) {
           const yc = c + sgn * r;
-          for (const y of [yc - px / 2 + 0.05, yc, yc + px / 2 - 0.05]) {
+          for (const y of [yc - stroke / 2 + 0.05, yc, yc + stroke / 2 - 0.05]) {
             if (!inArc(c - 0.05, y)) bad.push(`band ends short of the centre line at y ${y}`);
             if (inArc(c + 0.05, y)) bad.push(`band runs past the centre line at y ${y}`);
           }
@@ -86,7 +90,7 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
         // A true circle: the band's edges are on r ± px/2 all round the left half.
         for (let deg = 91; deg <= 269; deg += 1) {
           const a = (deg * Math.PI) / 180, X = (R: number) => c + R * Math.cos(a), Y = (R: number) => c - R * Math.sin(a);
-          for (const [R, want] of [[r + px / 2 - 0.05, true], [r + px / 2 + 0.05, false], [r - px / 2 + 0.05, true], [r - px / 2 - 0.05, false]] as const) {
+          for (const [R, want] of [[r + stroke / 2 - 0.05, true], [r + stroke / 2 + 0.05, false], [r - stroke / 2 + 0.05, true], [r - stroke / 2 - 0.05, false]] as const) {
             if (inArc(X(R), Y(R)) !== want) bad.push(`ring ${r} edge off the circle at ${deg} deg`);
           }
         }
@@ -132,16 +136,18 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
     { ring: RING, outlines: RING.rings.map(({ r }) => arcOutline3d(r)) },
   );
   expect(out.bad, `${out.n} problems`).toEqual([]);
-  expect(out.rects).toBe(14);
+  expect(out.rects).toBe(11);
   expect(out.transforms).toBe(0);
   const [x0, y0, x1, y1] = out.bbox;
-  expect((x0 + x1) / 2).toBeCloseTo(c, 4);
+  // Centred on the core: top and bottom are the outer band's edge; left is the band's edge, right the outer ring's middle
+  // square (the squares are a little wider than the band, so the mark reaches 0.4 units further right than left).
   expect((y0 + y1) / 2).toBeCloseTo(c, 4);
-  const ext = RING.rings[0].r + px / 2; // the outer band's edge left, top and bottom; the outer ring's middle square right
-  for (const [v, want] of [[x0, c - ext], [y0, c - ext], [x1, c + ext], [y1, c + ext]]) expect(v).toBeCloseTo(want, 3);
+  const ext = RING.rings[0].r + RING.stroke / 2;
+  const right = RING.rings[0].r + px / 2;
+  for (const [v, want] of [[x0, c - ext], [y0, c - ext], [x1, c + right], [y1, c + ext]]) expect(v).toBeCloseTo(want, 3);
 });
 
-test('the 3D logo is built from the same mark: 2 arcs, 14 squares on their circles, the core', () => {
+test('the 3D logo is built from the same mark: 2 arcs, 11 squares on their circles, the core', () => {
   const pieces = logoPieces();
   expect(pieces.filter((p) => p.kind === 'core')).toHaveLength(1);
   const sq = pieces.filter((p) => p.kind === 'square');
@@ -155,14 +161,15 @@ test('the 3D logo is built from the same mark: 2 arcs, 14 squares on their circl
       hi[a] = Math.max(hi[a], arc.mesh.p[i + a] + arc.center[a]);
     }
     // From the band's far left edge to its flat ends on the centre line, top to bottom: the SVG's box exactly.
-    for (const [v, want] of [[lo[0], -r - px / 2], [hi[0], 0], [lo[1], -r - px / 2], [hi[1], r + px / 2]]) expect(v).toBeCloseTo(want, 4);
+    const h = RING.stroke / 2;
+    for (const [v, want] of [[lo[0], -r - h], [hi[0], 0], [lo[1], -r - h], [hi[1], r + h]]) expect(v).toBeCloseTo(want, 4);
   });
-  expect(pieces).toHaveLength(2 + 14 + 1);
+  expect(pieces).toHaveLength(2 + 11 + 1);
 });
 
 test('the favicon and the brand pages carry the current mark', () => {
   const root = join(__dirname, '..');
-  expect(readFileSync(join(root, 'public/favicon.svg'), 'utf8').trim()).toBe(splitRingSvg({ bg: '#0D0D0B' }));
+  expect(readFileSync(join(root, 'public/favicon.svg'), 'utf8').trim()).toBe(faviconSvg());
   for (const f of ['brand/og.html', 'brand/business-card.html']) {
     const marks = readFileSync(join(root, f), 'utf8').match(/<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 64 64">[\s\S]*?<\/svg>/g) ?? [];
     expect(marks.length, f).toBeGreaterThan(0);

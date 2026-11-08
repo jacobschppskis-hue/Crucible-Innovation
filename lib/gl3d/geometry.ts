@@ -180,7 +180,7 @@ export function recentre(m: Mesh): Vec3 {
 export type Piece = { id: string; kind: 'arc' | 'square' | 'core'; mesh: Mesh; center: Vec3; ring?: 0 | 1 };
 
 /**
- * The mark as separate pieces: 2 arcs, 14 upright squares, the core. Units are mark units (64 across), origin at the
+ * The mark as separate pieces: 2 arcs, 11 upright squares, the core. Units are mark units (64 across), origin at the
  * ring centre, y up, front toward +z. Each mesh is centred on its own bounding box; `center` is that rest position.
  * Squares sit on their circles (lib/splitRing.ts `cells()`), ring 0 then 1, top → bottom.
  */
