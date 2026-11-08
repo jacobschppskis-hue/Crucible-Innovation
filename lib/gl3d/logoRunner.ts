@@ -154,6 +154,11 @@ export function createLogoRunner(
       const cy = rect.top + rect.height / 2;
       for (const r of tick.ripples) opts.emit(cx + r.x * px, cy - r.y * px + env.scrollY, r.amp, r.size, t);
     }
+    // The core lights the bone metal around it (wherever the story or the floating has taken it); its skin drifts slowly.
+    const core = bodies[bodies.length - 1].obj;
+    const cs = typeof core.scale === 'number' ? core.scale : core.scale[0];
+    stage.light = [core.position[0], core.position[1], core.position[2], core.visible ? cs : 0];
+    for (const b of bodies) b.obj.time = t;
     stage.render();
     if (!shown) {
       shown = true;

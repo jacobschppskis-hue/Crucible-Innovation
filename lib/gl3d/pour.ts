@@ -27,7 +27,7 @@ const CRU_Z = 5.5; // the crucible and the stream stand in front of the mark's p
 const STREAM_Z = 4.2;
 const D = 130; // heat falls from white at the metal's surface to bone this many units below it
 const CORE_R = RING.core;
-const TUBE = 0.36; // trickle radius (the band is 3 wide)
+const TUBE = 0.42; // trickle radius (the band is RING.stroke = 3.6 wide)
 
 const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b : x);
 const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
@@ -144,11 +144,11 @@ export function createPour(stage: Stage, pieces: PourPiece[], headroom = 40): Po
       obj.temp = 1 - L / D - c;
       obj.tgrad = 1 / D;
       obj.grain = 0.4;
-      obj.edge = 0.3;
+      obj.edge = 0.5;
     }
     {
       const o = corePiece.obj;
-      o.material = 'hot';
+      o.material = 'core'; // the core's own smooth sphere, heated by temp (white-hot at 1, its own orange from .5)
       o.clip = [0, 1, 0, lerp(-CORE_R - 0.4, CORE_R + 0.4, eo(sm(1.82, 2.5, tau)))];
       // It cools only to the glowing orange of the core material it becomes at the release, its rim no cooler than its heart.
       o.temp = 1 - 0.5 * c;

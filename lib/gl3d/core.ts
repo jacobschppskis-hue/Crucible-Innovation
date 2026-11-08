@@ -55,6 +55,8 @@ export type Stage = {
   /** Render scale 0.3..1 (× devicePixelRatio): lower it on slow frames. */
   quality: number;
   exposure: number;
+  /** A point light in world units [x, y, z, strength] (the logo's glowing core lighting the bone metal); strength 0 = none. */
+  light?: [number, number, number, number];
   add(o: ObjectInit): Obj;
   remove(o: Obj): void;
   /** Re-read the canvas' CSS size (call on resize; also done lazily in render). */
@@ -119,7 +121,7 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
   gl.useProgram(prog);
   const U: Record<string, WebGLUniformLocation | null> = {};
-  for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uTime', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy', 'uEdge']) U[n] = gl.getUniformLocation(prog, n);
+  for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uTime', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy', 'uEdge', 'uCore']) U[n] = gl.getUniformLocation(prog, n);
 
   const meshes = new WeakMap<Mesh, { vao: WebGLVertexArrayObject; bufs: WebGLBuffer[]; n: number; type: number }>();
   const texes = new WeakMap<object, WebGLTexture>();
@@ -236,6 +238,7 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
       gl.uniformMatrix4fv(U.uVP, false, mul(P, V));
       gl.uniform3f(U.uEye, eye[0], eye[1], eye[2]);
       gl.uniform1f(U.uExp, st.exposure);
+      gl.uniform4f(U.uCore, ...(st.light ?? [0, 0, 0, 0]));
       gl.uniform1i(U.uRelT, 0);
       for (const o of objs) {
         if (!o.mesh || !o.visible) continue;
