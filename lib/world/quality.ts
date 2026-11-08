@@ -19,7 +19,7 @@ export type QualityCtl = Quality & {
   size(w: number, h: number): [number, number];
 };
 
-export function createQuality(opts: { dpr: number; software: boolean; pinned?: number | null; full?: boolean; w?: number; h?: number }): QualityCtl {
+export function createQuality(opts: { dpr: number; software: boolean; pinned?: number | null; full?: boolean; w?: number; h?: number; phone?: boolean }): QualityCtl {
   const cap = Math.min(opts.dpr, MAX_SCALE);
   // the best step this device can use (nothing above its own pixel ratio)
   const top = Math.max(0, SCALES.findIndex((s) => s <= cap + 1e-3));
@@ -35,6 +35,9 @@ export function createQuality(opts: { dpr: number; software: boolean; pinned?: n
     climbs = 0,
     ema = 1 / 60;
   const fixed = opts.full || opts.pinned != null;
+  // phones (a real GPU) never drop below 0.75 render px per CSS px: the cost is cut elsewhere (uQ), not in focus; the
+  // small sharp things are drawn by the crisp pass at the screen's own resolution anyway
+  const floor = opts.phone && !opts.software ? SCALES.indexOf(0.75) : SCALES.length - 1;
   const q: QualityCtl = {
     step: start,
     scale: SCALES[start],
@@ -54,7 +57,7 @@ export function createQuality(opts: { dpr: number; software: boolean; pinned?: n
         slow = Math.max(0, slow - dt);
         fast = Math.max(0, fast - dt * 0.5);
       }
-      if (slow > 0.8 && q.step < SCALES.length - 1) {
+      if (slow > 0.8 && q.step < floor) {
         set(q.step + 1);
         slow = 0;
         return true;

@@ -17,7 +17,7 @@ import { ventures } from './ventures'; // ventures
 import { mark } from './mark';
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
-export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
+export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over' | 'crisp';
 /** Single-provider functions (one module defines each; defaults otherwise). */
 export type Provide = 'look_sky' | 'look_atmo' | 'look_post' | 'lava_shade' | 'lava_env';
 
@@ -48,6 +48,9 @@ export type WorldModule = {
   init?(ctx: InitCtx): void | Promise<void>;
   /** Every frame, before drawing: write uniforms (`u.set('<id>_uName', v)`), and DOM if the module owns some. */
   update?(f: Frame, u: Uniforms): void;
+  /** The crisp pass: where on screen (viewport CSS px, [x0, y0, x1, y1], top-left origin) this module's `crisp` hook
+   * draws this frame, or null when it draws nothing. The pass runs only over the union of these boxes. */
+  crispBox?(f: Frame): [number, number, number, number] | null;
   /** After the frame is drawn (DOM writes that must follow the frame's layout reads). */
   after?(f: Frame): void;
   dispose?(): void;

@@ -184,6 +184,42 @@ Bloom threshold: set `look_uBloomThresh` (default 1.0, linear) from look's `upda
 
 Output of the scene pass: linear HDR radiance (exposure applied by the engine: channel `exposure`, stops).
 
+## The crisp pass (V2): small sharp things at the screen's own resolution
+
+The scene renders at the quality step's scale (soft is fine for sea and sky); small sharp things (the mark, the
+monolith edges and logo, the PayPal lines, stars if look wants) draw in a second full-screen pass at the CANVAS's
+resolution: CSS px x min(dpr, 3) on phones (an iPhone: 3 render px per CSS px), x min(dpr, 2) elsewhere. The pass runs
+only inside the union of the boxes modules report, then composites (premultiplied, linear HDR) over the upscaled scene
+before tone mapping (`world_crisp()` in the post pass; look_post calls it).
+
+- Hook: `vec4 <id>_crisp(Ray r, float tScene)` returns PREMULTIPLIED linear radiance in rgb and coverage in a. Use
+  analytic anti-aliasing from `r.pa` (radians per canvas px), e.g. `cov = clamp(0.5 - signedDistPx, 0., 1.)`. `tScene`
+  is the scene's hit distance at that pixel (1e30 for sky; from the scene target, so it is the scene's resolution:
+  for crisp edges against the sea or the planet, intersect them yourself with `world_seaT(r)`). Modules composite in
+  registry order, each over the ones before it. `#define WORLD_CRISP 1` is set in that program.
+- `crispBox(f)` on the module: `[x0, y0, x1, y1]` viewport CSS px (top-left origin) where it draws this frame, or null
+  (no pass at all when every box is null). Keep it tight: the pass costs per pixel of the union.
+- In the scene pass `uCrispOn` is 1 when the crisp pass runs this frame: skip your primary view there (keep `hit`/`env`
+  for the sea's reflections, which stay at scene scale). If the crisp program fails to compile, `uCrispOn` stays 0 and
+  everything draws in the scene pass as before (html[data-world-crisp-fail]).
+- Phones never drop below 0.75 render px per CSS px for the scene (the floor); cut cost with `uQ` instead.
+
+Example (a 1.5 px line ring round the sun):
+```ts
+export const ring: WorldModule = {
+  id: 'ring',
+  hooks: ['crisp'],
+  glsl: `vec4 ring_crisp(Ray r, float tS){
+    float a = acos(clamp(dot(r.rd, uSunDir), -1., 1.));
+    float d = abs(a - uSunRad * 9.) / r.pa;          // distance to the line in canvas px
+    float cov = clamp(0.75 - d, 0., 1.);
+    return vec4(vec3(2., 1.2, .5) * cov, cov);
+  }`,
+  crispBox: (f) => { const p = f.project(f.sun.pos); if (!p) return null;
+    const rr = f.sun.rad * 9.5 * f.cam.focal; return [p[0] - rr, p[1] - rr, p[0] + rr, p[1] + rr]; },
+};
+```
+
 ## Quality
 
 `SCALES` (render px per CSS px) `[2, 1.6, 1.33, 1.1, 0.9, 0.75, 0.62, 0.5, 0.4]`, never above the device's DPR (cap 2).

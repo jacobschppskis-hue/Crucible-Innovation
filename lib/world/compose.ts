@@ -36,6 +36,8 @@ uniform float uQ;         // quality 0..1 (1 = best)
 uniform int uStep;        // quality step (0 = best)
 uniform float uStill;     // 1 under reduced motion
 uniform vec4 uPtr;        // pointer: CSS px x, y; active (0/1); down (0/1)
+uniform float uCrispOn;   // 1 when this frame has a crisp pass (scene pass: skip what your crisp hook draws instead;
+                          // crisp pass: always 1). 0: draw everything in the scene pass as before
 
 const float PI = 3.14159265359;
 const float TAU = 6.28318530718;
@@ -62,6 +64,7 @@ const SIG: Record<Hook, (id: string) => string> = {
   env: (id) => `vec3 ${id}_env(Ray r, Hit h);`,
   sea: (id) => `void ${id}_sea(Ray r, Sea s, inout SeaMod m);`,
   over: (id) => `void ${id}_over(Ray r, Hit h, inout vec3 col);`,
+  crisp: (id) => `vec4 ${id}_crisp(Ray r, float tScene);`,
 };
 
 const PROTOS = `
@@ -77,7 +80,7 @@ SeaMod world_seaMod();
 Ray world_ray(vec2 fc);
 `;
 
-export type Composed = { scene: Source; post: Source; ids: Record<string, number> };
+export type Composed = { scene: Source; post: Source; crisp: Source | null; ids: Record<string, number> };
 
 export function compose(mods: WorldModule[], opts: { defines?: Record<string, string | number> } = {}): Composed {
   const lines: string[] = [];
@@ -94,7 +97,8 @@ export function compose(mods: WorldModule[], opts: { defines?: Record<string, st
   const defs = Object.entries(opts.defines ?? {})
     .map(([n, v]) => `#define ${n} ${v}`)
     .join('\n');
-  push('prelude', `#version 300 es\n${defs}\n${PRELUDE}`);
+  // the second line marks the pass: the crisp program swaps it for `#define WORLD_CRISP 1` (same line count)
+  push('prelude', `#version 300 es\n// scene pass\n${defs}\n${PRELUDE}`);
   push(
     'ids',
     `const int ID_SKY = ${ID_SKY};\nconst int ID_SEA = ${ID_SEA};\n` +
@@ -188,18 +192,54 @@ ${each('over', (id) => `${id}_over(r, h, col);`)}
 #ifdef WORLD_LDR
   col = col / (1.0 + col); // no float targets: the post pass undoes this in world_scene()
 #endif
+  // alpha carries the hit distance (capped), for the crisp pass's depth test
+#ifdef WORLD_LDR
   fragColor = vec4(col, 1.0);
+#else
+  fragColor = vec4(col, min(h.t, 60000.0));
+#endif
 }
 `,
   );
 
   const post = composePost(mods.find((m) => m.provides?.includes('look_post'))?.post ?? '', defs);
-  return { scene: { text: lines.join('\n'), map }, post, ids };
+  const scene = lines.join('\n');
+  // the crisp pass: the same functions, a main that composites every module's crisp hook over transparent
+  const crispMods = mods.filter((m) => has(m, 'crisp'));
+  let crisp: Source | null = null;
+  if (crispMods.length) {
+    const body = scene.slice(0, scene.lastIndexOf('out vec4 fragColor;')).replace('// scene pass', '#define WORLD_CRISP 1');
+    crisp = {
+      text:
+        body +
+        `out vec4 fragColor;
+uniform sampler2D uSceneT;
+void main(){
+  Ray r = world_ray(gl_FragCoord.xy);
+#ifdef WORLD_LDR
+  float tS = 1e30;
+#else
+  float tS = texture(uSceneT, gl_FragCoord.xy / uRes).a;
+  tS = tS >= 59999.0 ? 1e30 : tS;
+#endif
+  vec4 acc = vec4(0.0), c;
+${crispMods.map((m) => `  c = ${m.id}_crisp(r, tS); acc = acc * (1.0 - c.a) + c;`).join('\n')}
+  acc.rgb = max(acc.rgb, vec3(0.0)) * exp2(uExposure);
+#ifdef WORLD_LDR
+  acc.rgb = acc.rgb / (1.0 + acc.rgb);
+#endif
+  fragColor = acc;
+}
+`,
+      map,
+    };
+  }
+  return { scene: { text: scene, map }, post, crisp, ids };
 }
 
 /** The post pass: the module providing look_post samples uScene (linear HDR) and uBloom (its blurred bright part). */
 function composePost(chunk: string, defs: string): Source {
-  const head = `#version 300 es\n${defs}\nprecision highp float;\nuniform sampler2D uScene;\nuniform sampler2D uBloom;\nuniform vec2 uRes;\nuniform vec2 uCanvas;\nuniform float uTime;\nuniform float uBloomOn;\nuniform float uQ;\nuniform float uStill;\nvec3 world_scene(vec2 uv){ vec3 c = texture(uScene, uv).rgb;\n#ifdef WORLD_LDR\n  c = c / (1.0 - min(c, vec3(0.996)));\n#endif\n  return c; }\n`;
+  const head = `#version 300 es\n${defs}\nprecision highp float;\nuniform sampler2D uScene;\nuniform sampler2D uBloom;\nuniform vec2 uRes;\nuniform vec2 uCanvas;\nuniform float uTime;\nuniform float uBloomOn;\nuniform float uQ;\nuniform float uStill;\nuniform sampler2D uCrisp;\nuniform float uCrispOn;\nvec3 world_ldr(vec3 c){\n#ifdef WORLD_LDR\n  c = c / (1.0 - min(c, vec3(0.996)));\n#endif\n  return c; }\n// the scene (render scale, linear HDR)\nvec3 world_scene(vec2 uv){ return world_ldr(texture(uScene, uv).rgb); }\n// the crisp pass (canvas resolution, premultiplied, linear HDR) over an upscaled scene colour: call it after any\n// upscale filter, before tone mapping\nvec3 world_crisp(vec3 c, vec2 uv){ if (uCrispOn < 0.5) return c; vec4 k = texelFetch(uCrisp, ivec2(gl_FragCoord.xy), 0); return c * (1.0 - k.a) + world_ldr(k.rgb); }\n`;
   const tail = `\nout vec4 fragColor;\nvoid main(){ vec2 uv = gl_FragCoord.xy / uCanvas; fragColor = vec4(look_post(uv, gl_FragCoord.xy), 1.0); }\n`;
   const nHead = head.split('\n').length;
   return { text: head + chunk + tail, map: [[1, 'post-head'], [nHead, 'post']] };

@@ -61,7 +61,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
   gl.getExtension('OES_texture_float_linear');
   const software = isSoftware(gl);
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const quality: QualityCtl = createQuality({ dpr, software, pinned: opts.q ?? null, full: opts.full, w: window.innerWidth, h: window.innerHeight });
+  const quality: QualityCtl = createQuality({ dpr, software, pinned: opts.q ?? null, full: opts.full, w: window.innerWidth, h: window.innerHeight, phone: Math.min(window.innerWidth, window.innerHeight) < 600 });
 
   const defines: Record<string, string | number> = { WORLD_R: R.toFixed(1) };
   if (!floatOk) defines.WORLD_LDR = 1;
@@ -111,6 +111,17 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
       document.documentElement.setAttribute('data-world-dropped', [...dropped].join(' '));
       mods = activeModules(registry.filter((m) => !dropped.has(m.id)));
       if (attempt > 8) return fail(`shader: ${msg}`);
+    }
+  }
+  // the crisp pass (small sharp things at the canvas's full resolution); if it can't compile, modules draw in the scene
+  // pass as before (they see uCrispOn = 0 there)
+  let crispP: WebGLProgram | null = null;
+  if (composed.crisp) {
+    try {
+      crispP = program(gl, FULLSCREEN_VS, composed.crisp);
+    } catch (e) {
+      console.error('[world] crisp pass off: its shader does not compile\n' + (e as Error).message);
+      document.documentElement.setAttribute('data-world-crisp-fail', '');
     }
   }
   try {
@@ -176,11 +187,13 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
 
   // ---- render targets ----
   let sceneT: Target | null = null;
+  let crispT: Target | null = null;
   let bloom: Target[] = [];
   let cw = 0,
     ch = 0;
   function resizeCanvas() {
-    const s = Math.min(dpr, 2);
+    // the canvas holds the crisp pass, so it goes to the screen's real resolution: phones up to dpr 3, others 2
+    const s = Math.min(dpr, narrow ? 3 : 2);
     const w = Math.max(2, Math.round(W * s)),
       h = Math.max(2, Math.round(H * s));
     if (canvas.width !== w || canvas.height !== h) {
@@ -189,6 +202,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     }
     cw = w;
     ch = h;
+    if (crispP) crispT = target(gl!, w, h, floatOk, crispT ?? undefined);
     resizeTargets();
   }
   function resizeTargets() {
@@ -329,11 +343,64 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     u.set('uPtr', [pointer.x, pointer.y, pointer.active ? 1 : 0, pointer.down ? 1 : 0]);
   }
 
+  const crispMods = mods.filter((m) => m.hooks?.includes('crisp'));
+  function crispBox(): [number, number, number, number] | null {
+    if (!crispP || !crispT) return null;
+    let b: [number, number, number, number] | null = null;
+    for (const m of crispMods) {
+      let r: [number, number, number, number] | null = null;
+      try {
+        r = m.crispBox ? m.crispBox(f) : [0, 0, W, H];
+      } catch (e) {
+        console.warn(`[world] ${m.id}.crispBox`, e);
+      }
+      if (!r || r[2] <= r[0] || r[3] <= r[1]) continue;
+      b = b ? [Math.min(b[0], r[0]), Math.min(b[1], r[1]), Math.max(b[2], r[2]), Math.max(b[3], r[3])] : [...r];
+    }
+    if (!b) return null;
+    b = [Math.max(0, b[0]), Math.max(0, b[1]), Math.min(W, b[2]), Math.min(H, b[3])];
+    return b[2] > b[0] && b[3] > b[1] ? b : null;
+  }
+  function drawCrisp() {
+    const g = gl!;
+    const b = crispBox();
+    if (!b || !crispP || !crispT) return false;
+    const k = cw / W;
+    const x0 = Math.floor(b[0] * k),
+      x1 = Math.ceil(b[2] * k),
+      y0 = Math.floor((H - b[3]) * k),
+      y1 = Math.ceil((H - b[1]) * k);
+    g.bindFramebuffer(g.FRAMEBUFFER, crispT.fb);
+    g.viewport(0, 0, cw, ch);
+    g.clearColor(0, 0, 0, 0);
+    g.clear(g.COLOR_BUFFER_BIT);
+    g.enable(g.SCISSOR_TEST);
+    g.scissor(x0, y0, x1 - x0, y1 - y0);
+    g.useProgram(crispP);
+    u.bindAll();
+    u.bindTex('uSceneT', sceneT!.tex, 3);
+    // the camera at the canvas's resolution
+    const sc = sceneT!;
+    u.set('uRes', [cw, ch]);
+    u.set('uPx', W / cw);
+    u.set('uFocal', f.cam.focal * (ch / H));
+    u.set('uCrispOn', 1);
+    u.apply(crispP);
+    g.drawArrays(g.TRIANGLES, 0, 3);
+    g.disable(g.SCISSOR_TEST);
+    // back to the scene's for everything after
+    u.set('uRes', [sc.w, sc.h]);
+    u.set('uPx', W / sc.w);
+    u.set('uFocal', f.cam.focal * (sc.h / H));
+    return true;
+  }
+
   function draw() {
     const g = gl!;
     g.bindVertexArray(vao);
     g.disable(g.BLEND);
-    // scene
+    // scene (modules that also draw crisp skip their primary view here when uCrispOn is 1)
+    u.set('uCrispOn', crispBox() ? 1 : 0);
     g.bindFramebuffer(g.FRAMEBUFFER, sceneT!.fb);
     g.viewport(0, 0, sceneT!.w, sceneT!.h);
     g.useProgram(sceneP);
@@ -371,6 +438,8 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
       }
       g.disable(g.BLEND);
     }
+    // the crisp pass: over the union of the modules' boxes, at the canvas's resolution
+    const crispOn = drawCrisp();
     // post into the canvas
     g.bindFramebuffer(g.FRAMEBUFFER, null);
     g.viewport(0, 0, cw, ch);
@@ -380,6 +449,8 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     u.bindTex('uBloom', (bloom[0] ?? sceneT!).tex, 1);
     u.set('uCanvas', [cw, ch]);
     u.set('uBloomOn', bloom.length ? 1 : 0);
+    if (crispOn) u.bindTex('uCrisp', crispT!.tex, 2);
+    u.set('uCrispOn', crispOn ? 1 : 0);
     u.apply(postP);
     g.drawArrays(g.TRIANGLES, 0, 3);
   }

@@ -57,7 +57,7 @@ vec3 look_sceneCR(vec2 uv) {
 }
 
 vec3 look_post(vec2 uv, vec2 fc) {
-  vec3 c = look_sceneCR(uv);
+  vec3 c = world_crisp(look_sceneCR(uv), uv); // the crisp pass (world) over the upscaled scene
   if (uBloomOn > 0.5) c = mix(c, texture(uBloom, uv).rgb * 0.2, look_uBloomAmt); // 5 levels summed -> mean
   vec2 d = (uv - 0.5) * vec2(uCanvas.x / uCanvas.y, 1.0);
   float r2 = dot(d, d) / (0.25 * (uCanvas.x * uCanvas.x / (uCanvas.y * uCanvas.y) + 1.0));
