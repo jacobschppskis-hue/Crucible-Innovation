@@ -532,7 +532,10 @@ html.lenis body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  background: radial-gradient(
+  /* A tight bloom round the core (its own radius is ~6% of this box's half width), then the wide warm halo. */
+  background:
+    radial-gradient(circle closest-side, rgba(255, 112, 36, 0.5) 5%, rgba(255, 91, 31, 0.26) 9%, rgba(255, 91, 31, 0.1) 15%, rgba(255, 91, 31, 0) 26%),
+    radial-gradient(
     circle,
     rgba(255, 91, 31, 0.46) 0%,
     rgba(255, 179, 71, 0.13) 15%,
