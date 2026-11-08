@@ -15,7 +15,7 @@ const ctx = await browser.newContext(dev === 'phone' ? { ...devices['iPhone 15']
 for (const p of ps) {
   const page = await ctx.newPage(); page.on('console', (m) => { if (m.type() === 'error') console.log('ERR', m.text().slice(0, 2000)); });
   page.on('pageerror', (e) => console.log('PAGEERR', e.message));
-  await page.goto(`http://localhost:${port}/lab/paypal/proto.html?p=${p}&t=3`);
+  await page.goto(`http://localhost:${port}/lab/paypal/${process.env.PAGE || "index"}.html?p=${p}&t=3`);
   await page.waitForFunction(() => window.__drawn, null, { timeout: 60000 });
   await page.screenshot({ path: path.join(out, `${dev}-p${p}.png`) });
   await page.close();
