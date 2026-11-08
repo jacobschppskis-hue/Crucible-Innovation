@@ -110,7 +110,9 @@ html:not(.gl) .nogl-sky::after {
 }
 
 /* ---------- story ---------- */
-.story { position: relative; padding: 18svh 0 0; }
+.story { position: relative; padding: 4svh 0 0; }
+.why { position: absolute; left: var(--gut); right: var(--gut); top: calc(var(--nav-h) + 9svh); font-size: clamp(44px, 7vw, 116px); opacity: 0; }
+html:not(.js) .why { position: relative; opacity: 1; top: 0; }
 .wrap { padding: 0 var(--gut); max-width: 1440px; margin: 0 auto; }
 .story-h { font-size: clamp(44px, 7vw, 116px); margin-bottom: 14svh; }
 .ch { display: grid; grid-template-columns: minmax(260px, 0.8fr) 1.2fr; gap: clamp(32px, 6vw, 110px); align-items: start; }
@@ -121,7 +123,7 @@ html:not(.gl) .nogl-sky::after {
 .ch-text p { margin: 0 0 1.15em; color: var(--bone-dim); max-width: 62ch; }
 .ch-text p.read { color: var(--bone); }
 .ch-cont { padding-top: 6svh; }
-.quote { font-size: clamp(32px, 4.4vw, 70px); margin: 9svh 0 10svh; max-width: 18ch; }
+.quote { font-size: clamp(30px, 4.2vw, 66px); margin: 5svh 0 5svh; max-width: 18ch; }
 .gap-ch { height: 24svh; }
 @media (max-width: 860px) {
   .ch, .ch.flip { grid-template-columns: 1fr; }
@@ -251,6 +253,7 @@ html:not(.js) .th-b { opacity: 1 !important; }
           </div>
         </div>
       </div>
+      <h2 class="disp why" id="story-h" data-heat><span class="ln">Why Crucible</span></h2>
       <div class="beats" aria-hidden="true">
         <p class="disp beat" data-heat id="b1"><span class="ln">Not the person</span></p>
         <p class="disp beat" data-heat id="b2"><span class="ln">Not the model</span></p>
@@ -262,7 +265,6 @@ html:not(.js) .th-b { opacity: 1 !important; }
   <!-- 2. The founders, each in their own words, on the dark liquid the sea became. -->
   <section class="story" id="story" aria-labelledby="story-h">
     <div class="wrap">
-      <h2 class="disp story-h fl" id="story-h" data-heat><span class="ln">Why Crucible</span></h2>
 
       <article class="ch" aria-labelledby="jacob-h">
         <div class="ch-side">
@@ -290,8 +292,9 @@ html:not(.js) .th-b { opacity: 1 !important; }
       <div class="ch ch-cont">
         <div aria-hidden="true"></div>
         <div class="ch-text" id="jacob-b">
-          <p class="fl">That group came together mostly in their twenties. I want to know what happens when a group like it comes together earlier. Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
-          <blockquote class="disp quote fl" data-heat>I want to know what happens when a group like it comes together earlier.</blockquote>
+          <p class="fl">That group came together mostly in their twenties.</p>
+          <p class="disp quote fl" data-heat>I want to know what happens when a group like it comes together earlier.</p>
+          <p class="fl">Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
           <p class="fl">The name comes from what a crucible actually is, a vessel built to hold metal as it melts, in which separate metals can be combined into an alloy. Steel, being mostly iron with a small amount of carbon added, is far stronger than the iron it is made from. That is the idea behind the name, and it applies to the way people work with one another as much as it does to the way people work with AI. The logo is two rings, half drawn as continuous lines and half as pixels, meeting at an orange core. The human half and the machine half. I believe that people who learn to work alongside AI now, while they are young, will be able to build things that only a few years ago would have required a far larger and more experienced team.</p>
           <p class="fl">For now, Crucible has one venture, Crucible Sites, which designs and builds websites for local businesses. Charlie and I build the sites together, and our first ones are already lined up. It is small compared to what I want Crucible to become, and I know that. However it is real work, and it is where we are learning to ship.</p>
           <p class="fl">Some people hear all of this and find it unrealistic for someone my age, perhaps even egotistical. I can understand why they react that way. But if I commit myself fully to this and have even a .1% chance of building something that changes the world, would that not be worth it? I intend to find out, and maybe, years from now, the people who build it with me will have a name too.</p>
@@ -592,6 +595,26 @@ vec3 blackbody(float t) {
   return mix(c, vec3(2.6, 1.85, 1.1), smoothstep(0.75, 1.0, t));
 }
 
+// the Nov 2 molten iron (production lib/gl/molten.ts): a domain-warped field; cold, thin bright veins; melting, the whole
+// surface takes over. Its own palette (display values; squared toward linear here)
+vec3 ironBody(float t) {
+  vec3 c = mix(vec3(0.035, 0.03, 0.025), vec3(0.4, 0.04, 0.0), smoothstep(0.0, 0.35, t));
+  c = mix(c, vec3(1.0, 0.357, 0.122), smoothstep(0.3, 0.62, t));
+  c = mix(c, vec3(1.0, 0.702, 0.278), smoothstep(0.6, 0.85, t));
+  c = mix(c, vec3(1.0, 0.95, 0.86), smoothstep(0.88, 1.0, t));
+  return pow(c, vec3(2.2));
+}
+float ironField(vec2 P, float k, float fp) {
+  vec2 p = P / 300.;
+  float fpN = fp / 300.;
+  float t = uT * (0.015 + k * 0.07);
+  vec2 q = vec2(fbmAA(p + vec2(0., t), fpN, 5), fbmAA(p + vec2(5.2, 1.3) - t, fpN, 5));
+  vec2 r = vec2(fbmAA(p + 3.2 * q + vec2(1.7, 9.2) + t * 1.4, fpN, 5), fbmAA(p + 3.2 * q + vec2(8.3, 2.8), fpN, 5));
+  float n = fbmAA(p + 2.8 * r, fpN, 5);
+  float veins = pow(1. - abs(n * 2. - 1.), 7.);
+  return mix(veins * 0.85, n * 1.15, smoothstep(0.35, 1., k));
+}
+
 // ---------- the sky: afterglow, a cool band of dusk light, stars, a thin deck of cloud ----------
 vec3 sky(vec3 ro, vec3 d, bool full) {
   float h = max(d.y, 0.);
@@ -692,7 +715,7 @@ vec4 markShade(vec2 m, float px) {
 
 // ---------- the ventures: castings that rise out of the liquid ----------
 // Returns rgb + a flag (1 = the slab is what this pixel sees). `P` is the liquid hit; heights add a meniscus.
-vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
+vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float glow) {
   for (int i = 0; i < 3; i++) {
     if (i >= uSlabN) break;
     vec4 S = uSlab[i], SP = uSlabP[i];
@@ -706,11 +729,11 @@ vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
       if (bt < 0.) {
         vec2 uv = lt / (S.zw * 2.) + 0.5;
         vec2 auv = vec2(uv.x, (SP.y + 1. - uv.y) / 3.);
-        float tx = 1. / 1024.;
+        float tx = 1. / 2048.;
         vec4 T0 = texture(uRelief, auv);
         float hx = texture(uRelief, auv + vec2(tx, 0.)).g - texture(uRelief, auv - vec2(tx, 0.)).g;
         float hz = texture(uRelief, auv - vec2(0., tx / 3. * 2.)).g - texture(uRelief, auv + vec2(0., tx / 3. * 2.)).g;
-        float wpt = S.z * 2. / 1024.; // world px per texel
+        float wpt = S.z * 2. / 2048.; // world px per texel
         float depth = 9.;
         vec2 gr = -vec2(hx, hz) / (2. * wpt) * depth;          // letters are cut into the top
         float edge = smoothstep(-14., 0., bt);
@@ -737,14 +760,18 @@ vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
           col += vec3(1.6, 0.5, 0.15) * pow(edge, 6.) * (0.10 + 0.9 * hover) * 0.6;      // hot edge when you touch it
           col = mix(col, vec3(1.1, 0.24, 0.05) * (0.9 + 0.15 * sin(uT * 2.)), T0.b);              // the mark's core stays orange
         } else {
-          // still forging: a drifting dark crust with glowing cracks; the name is cut through to the hot metal
-          float n1 = fbmAA(lt * 0.016 + vec2(uT * 0.015, -uT * 0.01), 0.016 / uQ, 5);
-          float crk = smoothstep(0.95, 0.997, 1. - abs(2. * n1 - 1.));
-          vec3 crust = vec3(0.022, 0.010, 0.006) * (0.7 + 0.6 * grain) * (0.6 + 0.8 * max(dot(n, normalize(vec3(-0.2, 0.9, 0.4))), 0.));
-          col = mix(crust, blackbody(0.42 + 0.2 * crk + 0.1 * hover), crk * 0.7);
-          col = mix(col, blackbody(0.62 + 0.06 * sin(uT * 1.7 + lt.x * 0.02) + 0.08 * hover + 0.1 * T0.g), T0.r);
-          col += blackbody(0.35) * smoothstep(0.0, 0.7, T0.g) * (1. - T0.r) * 0.5;   // the heat bleeding out of the cuts
-          col += vec3(1.8, 0.7, 0.2) * pow(edge, 6.) * hover * 0.6;
+          // still forging: one seamless blackbody field, slow convection and a shimmer, no crust and no outlines;
+          // a hot rim where the metal is thin, a clean highlight from the key, the name cut deeper and cooler
+          vec2 cp = lt * 0.006;
+          vec2 w = vec2(fbmAA(cp + vec2(uT * 0.03, 0.), 0.006 / uQ, 4), fbmAA(cp + vec2(3.1, -uT * 0.025), 0.006 / uQ, 4));
+          float conv = fbmAA(cp * 1.4 + 1.6 * w + vec2(0., uT * 0.02), 0.0084 / uQ, 5);
+          float shimmer = 0.5 + 0.5 * sin(uT * 2.3 + conv * 9.);
+          float tC = 0.5 + 0.3 * (conv - 0.5) + 0.03 * shimmer + 0.16 * pow(edge, 3.) + 0.08 * hover - 0.2 * T0.r;
+          col = blackbody(clamp(tC, 0., 0.95));
+          col *= 1. - 0.5 * T0.r * smoothstep(0.85, 0.99, 1. - abs(dot(n, normalize(vec3(-0.5, 0.6, 0.6))) - 0.6));
+          col *= 0.75 + 0.25 * clamp(dot(n, normalize(vec3(-0.3, 0.8, 0.5))) * 1.3, 0., 1.);   // the cut's walls in shade
+          vec3 Lk = normalize(vec3(-0.25, 0.85, 0.48));
+          col += vec3(1.0, 0.85, 0.65) * pow(max(dot(n, normalize(Lk + v)), 0.), 90.) * 0.6 * (1. - T0.g);
         }
         return vec4(col, 1.);
       }
@@ -753,8 +780,7 @@ vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
       if (bg < 0.) {
         // the casting's wall, seen past its edge
         float y = clamp(-bg / max(rise, 1.), 0., 1.);
-        vec3 col = SP.w < 0.5 ? vec3(0.05, 0.045, 0.04) * (0.6 + 0.6 * (1. - y)) : blackbody(0.35 + 0.2 * (1. - y));
-        col += vec3(0.5, 0.16, 0.05) * exp(-(1. - y) * 6.) * 0.3;   // the liquid's glow where it meets the wall
+        vec3 col = SP.w < 0.5 ? vec3(0.05, 0.045, 0.04) * (0.6 + 0.6 * (1. - y)) : blackbody(0.5) * (0.35 + 0.4 * (1. - y));   // the liquid's glow where it meets the wall
         return vec4(col, 1.);
       }
       // the meniscus: the liquid climbs the wall a little
@@ -762,12 +788,12 @@ vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
       float ex = sdRBox(lg + vec2(1., 0.), S.zw, rad) - sdRBox(lg - vec2(1., 0.), S.zw, rad);
       float ez = sdRBox(lg + vec2(0., 1.), S.zw, rad) - sdRBox(lg - vec2(0., 1.), S.zw, rad);
       hgt += vec3(m, -m / 16. * vec2(ex, ez) * 0.5);
-      if (SP.w > 0.5) E = max(E, 0.38 * exp(-bg / 40.) * clamp(rise / 30., 0., 1.));
+      if (SP.w > 0.5) glow = max(glow, 0.5 * exp(-bg / 30.) * clamp(rise / 30., 0., 1.));
     } else {
       // still under: a casting seen through the liquid as a glow (forging) or a shadow (cooled)
       float bg = sdRBox(P - S.xy, S.zw, rad);
       float under = smoothstep(18., -8., bg) * clamp(1. + rise / 40., 0., 1.);
-      if (SP.w > 0.5) E = max(E, 0.62 * under);
+      if (SP.w > 0.5) glow = max(glow, 0.7 * under);
     }
   }
   return vec4(0.);
@@ -806,20 +832,23 @@ void main() {
     float ds = length(P.xz - uSun.xz);
     float D = uSunX.x;
     float E = uMark.z * (0.24 + 0.58 * exp(-ds / (0.20 * D)) + 0.16 * exp(-ds / (0.8 * D)));
+    // the thesis reheats the page from below: molten iron pooled low under the type; spots glow smoothly
     float zt = uHeat.y;
     float zb = zt - uView.y;
-    float band = (1. - smoothstep(zb, zb + uView.y * (0.14 + 0.36 * uHeat.x), P.z)) * smoothstep(zb - uView.y * 0.12, zb, P.z);
-    E = max(E, uHeat.x * 0.9 * band);
+    float Mk = uHeat.x;
+    float M = step(0.005, Mk) * (1. - smoothstep(zb, zb + uView.y * (0.12 + 0.30 * Mk), P.z)) * smoothstep(zb - uView.y * 0.04, zb, P.z);
+    float pool = M;
+    float glow = 0.;
     for (int i = 0; i < 8; i++) {
       if (i >= uSpotN) break;
       vec4 s = uSpot[i];
       vec2 q = (P.xz - s.xy) / s.z;
-      E = max(E, s.w * exp(-dot(q, q)));
+      glow = max(glow, s.w * exp(-dot(q, q)));
     }
-    vec4 slab = slabShade(ro, d, P.xz, hh, E);
+    vec4 slab = slabShade(ro, d, P.xz, hh, glow);
 
     // the shore: the molten swash runs up black sand and drains back
-    float sand = 0., lip = 0., wet = 0., sandLight = 0.;
+    float sand = 0., lip = 0., wet = 0., sandLight = 0., brkT = 0., surf = 0.;
     if (uHeat.w > 0.5) {
       float zs = uHeat.z;
       // the swash: each wave runs up the sand quickly and drains back slowly; the line stays roughly parallel
@@ -834,14 +863,22 @@ void main() {
       lip = exp(-s * s / 22.) * (0.45 + 0.55 * adv);
       if (s < 0.) {
         sand = 1.;
-        wet = 1. - smoothstep(zs - run * 1.05 - 10., zs - run * 1.05 + 30., zs - (P.z - zs) - zs + zs) * 0.;
         wet = smoothstep(zs - run * 1.1, zs - run * 0.4, P.z);
         sandLight = exp(s / 55.);
       } else {
-        // the swash itself is a thin sheet of metal, brightest at its edge; behind it, the molten surf
-        E = max(E, 0.92 * (1. - smoothstep(0., uView.y * 0.42, s)));
-        float crest = smoothstep(0.35, 1.0, hs.x / (2.2 * uSwell.x + 0.01));
-        E = max(E, min(1., E + crest * 0.3 * (1. - smoothstep(0., uView.y * 0.4, s))));
+        // the surf: a low band of molten metal behind the swash, brightest at its edge, with breaking crests running
+        // in toward the sand; nothing rises above it
+        float bandH = uView.y * 0.14 + 10. * sin(P.x * 0.006 + uT * 0.4);
+        float band = 1. - smoothstep(bandH - 4., bandH + 2., s);
+        float bp = s + 42. * uT + 26. * (fbmAA(vec2(P.x * 0.004, uT * 0.03), fp * 0.004, 3) - 0.5);
+        float brk = pow(0.5 + 0.5 * cos(6.2832 * bp / 64.), 28.) * smoothstep(1.2, 3., 64. / max(fp, 0.5)) + 0.8 * exp(-pow((s - bandH + 3.) / 3., 2.));
+        Mk = max(Mk, 1.);
+        M = max(M, band);
+        if (s < bandH + 6.) {
+          brkT = 0.36 * brk;
+          surf = 1.;
+          pool = max(pool, 1. - 0.55 * s / max(bandH, 1.));
+        }
       }
     }
 
@@ -886,8 +923,7 @@ void main() {
     // crests (a thin line along each), faces turned away catch a little cold sky
     float sz = -hh.z, sxs = -hh.y;
     float lit = sz * 9. + sxs * 2.5;
-    vec3 keyc = (vec3(0.85, 0.74, 0.62) * pow(max(lit, 0.), 1.6) * 0.006 + vec3(0.30, 0.45, 0.85) * max(-lit, 0.) * 0.0012) * page;
-    keyc += vec3(1.0, 0.70, 0.48) * exp(-pow((sz + 0.3 * sxs - 0.04) / 0.009, 2.)) * 0.022 * page;
+    vec3 keyc = vec3(1.0, 0.62, 0.34) * exp(-pow((sz + 0.3 * sxs - 0.035) / 0.0045, 2.)) * 0.016 * page;
     // glints only where the visitor made waves: crisp, hot, on the faces that turn to the key
     float iz = -hi.z, ix = -hi.y;
     float slopeI = length(hi.yz);
@@ -916,6 +952,14 @@ void main() {
 
     vec3 base = vec3(0.0015, 0.0015, 0.0013);
     col = base + emit * (1. - 0.6 * F) + refl * F + spec + keyc + glint;
+    col += blackbody(0.45) * glow * 0.5;
+    if (M > 0.002) {
+      float field = ironField(surf > 0.5 ? P.xz * vec2(0.4, 1.8) : P.xz, Mk, fp);
+      float temp = clamp(field * (0.05 + Mk * 0.95) * (0.3 + pool * 0.85) + 0.25 * clamp(gCrest * 2., 0., 1.) + brkT, 0., 0.9);
+      float a = min(M, 1.) * (0.45 + 0.55 * smoothstep(0., 0.25, temp));
+      float wv = smoothstep(0.02, 0.3, temp);
+      col = mix(col, ironBody(temp), a * wv);
+    }
 
     if (sand > 0.5) {
       // black sand: dark grains, a few that catch the glow, wet sand that mirrors it
@@ -1338,7 +1382,7 @@ const rnd = (() => { let s = 7; return () => ((s = Math.imul(s ^ (s >>> 15), 224
 const cellR = CELLS.map(() => [rnd() - 0.5, rnd(), rnd() - 0.5, rnd() * 6.28]);
 const arcU = new Float32Array(8), cellU = new Float32Array(56); // 14 slots, unused ones stay at alpha 0
 let heroP = 0, heroPs = 0, fuseT = -99, fuseArmed = true, lastFootRing = -1, tiltS = 0;
-const heroCopy = $('#hero-copy'), beats = [$('#b1'), $('#b2'), $('#b3')];
+const heroCopy = $('#hero-copy'), beats = [$('#b1'), $('#b2'), $('#b3')], whyH = $('#story-h');
 function tiltCurve(s, m1) {
   // hermite: 0 -> 1 with zero start slope and end slope m1 (so the hand-off to the page flows at scroll speed)
   return (3 * s * s - 2 * s * s * s) + (s * s * s - s * s) * m1;
@@ -1379,6 +1423,12 @@ function updHero(dt) {
   heroCopy.style.visibility = out > 0.999 ? 'hidden' : '';
   const bo = [bell(p, 0.14, 0.185, 0.27, 0.315), bell(p, 0.325, 0.365, 0.43, 0.47), bell(p, 0.485, 0.525, 0.64, 0.7)];
   beats.forEach((b, i) => { b.style.opacity = bo[i].toFixed(3); b.style.translate = `0 ${((1 - bo[i]) * 26 * (p > [0.23, 0.4, 0.59][i] ? -1 : 1)).toFixed(1)}px`; });
+  // "Why Crucible" surfaces while the camera pitches down: it rises out of the liquid hot and cools as it settles
+  const wr = sstep(0.6, 0.86, p);
+  whyH.style.opacity = sstep(0.6, 0.67, p).toFixed(3);
+  whyH.style.translate = `0 ${((1 - wr) * 0.42 * CH).toFixed(1)}px`;
+  whyH.style.filter = wr < 0.6 ? `blur(${((1 - wr / 0.6) * 5).toFixed(2)}px)` : '';
+  heat.set(whyH, p < 0.64 ? 0 : 1 - sstep(0.7, 0.95, p));
   // the tilt
   const m1 = (0.4 * P.len) / cam.f;
   tiltS = seg(p, 0.6, 1.0);
@@ -1493,8 +1543,8 @@ function updThesis() {
   const p = clamp((scrollY - P.top) / P.len, 0, 1);
   const s = seg(p, 0.04, 0.84);
   thK = 0.5 * s + 0.5 * s * s * (3 - 2 * s);
-  thA.style.opacity = (1 - sstep(0.32, 0.44, p)).toFixed(3);
-  thB.style.opacity = sstep(0.5, 0.62, p).toFixed(3);
+  thA.style.opacity = (1 - sstep(0.32, 0.42, p)).toFixed(3);
+  thB.style.opacity = sstep(0.41, 0.52, p).toFixed(3);
   const st = $('.stick', thesis).getBoundingClientRect();
   thZ = cam.z + (CH / 2 - st.top);
   const T = Math.round(293 + thK * (1811 - 293));
@@ -1661,47 +1711,46 @@ function drawCRT(c) {
 // ---------- the relief: the ventures' names and the mark, cut into their castings ----------
 async function buildRelief() {
   try { await Promise.all([document.fonts.load("800 120px Archivo"), document.fonts.load("600 60px Archivo")]); } catch (e) {}
-  const W = 1024, H = 512, cv = document.createElement('canvas');
+  const W = 2048, H = 1024, cv = document.createElement('canvas');
   cv.width = W; cv.height = H * 3;
   const x = cv.getContext('2d');
   x.fillStyle = '#000'; x.fillRect(0, 0, W, H * 3);
   x.fillStyle = '#fff';
   try { x.fontStretch = 'expanded'; } catch (e) {}
-  const fit = (txt, size, maxW, weight = 800) => { let s = size; do { x.font = `${weight} ${s}px Archivo, sans-serif`; s -= 4; } while (x.measureText(txt).width > maxW && s > 20); };
+  const fit = (txt, size, maxW, weight = 800) => { let s = size; do { x.font = `${weight} ${s}px Archivo, sans-serif`; s -= 6; } while (x.measureText(txt).width > maxW && s > 40); return s; };
   // Crucible Sites: the mark and the name
   {
-    const oy = 0, sc = 3.6, mx = 70, my = oy + H / 2 - 32 * sc;
+    const sc = 7.2, mx = 140, my = H / 2 - 32 * sc;
     x.save(); x.translate(mx, my); x.scale(sc, sc);
     for (const { r } of RING.rings) x.fill(new Path2D(arcOutline(r)));
     for (const c of CELLS) x.fillRect(32 + c.x - RING.px / 2, 32 + c.y - RING.px / 2, RING.px, RING.px);
     x.restore();
     x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-    fit('Crucible', 150, 560);
-    x.fillText('Crucible', 340, oy + 248);
-    fit('Sites', 150, 560);
-    x.fillText('Sites', 340, oy + 392);
+    fit('Crucible', 300, 1120);
+    x.fillText('Crucible', 680, 496);
+    fit('Sites', 300, 1120);
+    x.fillText('Sites', 680, 784);
   }
-  for (const [i, name, tag] of [[1, 'Verge', 'Find your verge'], [2, 'Trellis', 'A day that actually fits']]) {
+  // the forging ventures carry their name alone (their taglines sit beside them in the page)
+  for (const [i, name] of [[1, 'Verge'], [2, 'Trellis']]) {
     const oy = i * H;
     x.textAlign = 'center'; x.textBaseline = 'alphabetic';
-    fit(name, 250, 860);
-    x.fillText(name, W / 2, oy + 300);
-    fit(tag, 52, 760, 600);
-    x.fillText(tag, W / 2, oy + 400);
+    const s = fit(name, 520, 1700);
+    x.fillText(name, W / 2, oy + H / 2 + s * 0.36);
   }
   const sharp = x.getImageData(0, 0, W, H * 3);
   const cv2 = document.createElement('canvas'); cv2.width = W; cv2.height = H * 3;
   const y = cv2.getContext('2d');
-  y.filter = 'blur(3px)';
+  y.filter = 'blur(6px)';
   y.drawImage(cv, 0, 0);
   const soft = y.getImageData(0, 0, W, H * 3);
   const out = new Uint8Array(W * H * 3 * 4);
-  const coreR = RING.core * 3.6, ccx = 70 + 32 * 3.6, ccy = H / 2;
+  const coreR = RING.core * 7.2, ccx = 140 + 32 * 7.2, ccy = H / 2;
   for (let j = 0; j < H * 3; j++) for (let i = 0; i < W; i++) {
     const k = (j * W + i) * 4;
     out[k] = sharp.data[k]; out[k + 1] = soft.data[k];
     const dd = Math.hypot(i - ccx, j - ccy);
-    out[k + 2] = j < H ? Math.round(255 * clamp((coreR - dd) / 1.5 + 0.5, 0, 1)) : 0;
+    out[k + 2] = j < H ? Math.round(255 * clamp((coreR - dd) / 2 + 0.5, 0, 1)) : 0;
     out[k + 3] = 255;
   }
   gl.bindTexture(gl.TEXTURE_2D, reliefTex);
@@ -1849,6 +1898,7 @@ window.__step = (dt = 1 / 60) => { held = true; frame(dt); return now; };
 window.__hold = () => { held = true; };
 window.__resume = () => { held = false; rafLast = 0; };
 window.__state = () => ({ now, pitch: cam.pitch, camZ: cam.z, heroP, tiltS, q: Qs, softGL, glOK, trails: trails.map((t) => t.up.length), rings: ringU.length, slabN, thK, shoreOn, spots: spots.length, cw: canvas.width, ch: canvas.height });
+window.__calm = () => { trails.forEach((t) => { t.pts = []; t.head = null; t.up = []; t.pend = []; t.fx = null; }); rings.length = 0; ptr.on = false; };
 window.__sample = (sx, sy) => { const w = toWorld2(sx, sy); return w ? { w, s: swellAt(w.x, w.z, now), i: interactAt(w.x, w.z) } : null; };
 
 // ---------- start ----------

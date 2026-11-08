@@ -42,10 +42,12 @@ canvas and uploaded as a height map):
   heat type. Taps, the core's breathing ripples, PayPal's ring and the castings breaking the surface are analytic rings.
 - the castings (ventures): a heightfield slab per venture, ray-intersected at its top height so it has real parallax and
   walls, rising out of the liquid as it scrolls in, with a meniscus and a ring when it breaks the surface; the live one
-  is cast bone with the mark (its core still orange), the forging ones are dark crust with glowing cracks and the name
-  cut through to the hot metal. Hover/focus/press lifts, heats the edge and turns the arrow Ember.
-- the shore: the swash runs up the sand and drains back on its own clock, a bright lip at its edge, black sand with a
-  few grains catching the glow, wet sand mirroring it.
+  is cast bone with the mark (its core still orange), the forging ones are one seamless blackbody field (slow
+  convection, a shimmer, a hot rim, a clean highlight, no crust or outlines) with the name cut deeper and cooler. Hover/focus/press lifts, heats the edge and turns the arrow Ember.
+- the thesis: the Nov 2 molten iron (production `molten.ts`: domain-warped field, thin veins when cold, the whole surface
+  when melting, its blackbody ramp) pooled low under the type, rising with the readout.
+- the shore: a low band of the same metal stretched along the shore, crisp breaking crests running in, a bright lip
+  where the swash runs up black sand and drains back; nothing rises above it. A few grains catch the glow, wet sand mirrors it.
 - DOM: text blocks ride the liquid (translate/rotate from the same swell + wake slopes), display words heat with the
   wake and with reading (variable `wdth` and `wght`, bone -> Ember -> white-hot, then they settle), the CRT
   placeholders draw a no-signal test card at 24 fps only while on screen.
@@ -59,6 +61,13 @@ nav and links work, the ground is the dark with a still horizon glow.
 Test hooks: `?t=<seconds>` fixes the clock, `?q=<scale>` fixes the render scale, `?still` = reduced motion;
 `window.__step(dt)` advances and renders exactly one frame, `__hold()` / `__resume()`, `__state()`, `__sample(x, y)`
 (the CPU wave field under a screen point).
+
+## Changes after review (coordinator, Nov 8)
+- Jacob's logo family; the pull quote set once as the paragraph's display break-out; the forging castings made seamless,
+  without their taglines (they sit beside them), at a 2048 px relief atlas; the thesis and shore fire replaced as above;
+  "Why Crucible" now surfaces out of the sea during the tilt and the thesis lines overlap their crossfade, so no stretch
+  of the page is empty for more than 0.3 viewport (scanned every 100 px at 1440x900 and iPhone 15); the page swell is
+  now only a thin warm line of key light along its crests (no diffuse haze).
 
 ## How it was tested (Playwright Chromium, SwiftShader, clock held and stepped frame by frame)
 - Hero idle: 9 frames over 6 s; the whole scroll walked at 1440x900 and on `devices['iPhone 15']` (17 positions each:
