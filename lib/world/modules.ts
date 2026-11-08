@@ -66,7 +66,7 @@ export const MODULES: WorldModule[] = [
   { ...paypal, keys: paypalKeys }, // paypal: PayPal -> six companies, with its own camera
   ventures, // ventures: the metal monoliths
   // type (story, lib/world/type.ts): display type reflected in the sea; off: it read as glyph noise, not a reflection
-  thesis, // story: the sea heats 293 K -> 1811 K
+  thesis, // story: the whole planet heats 293 K -> 1811 K, with its own camera
   shore, // story: the molten surf on a black-sand beach under the footer wordmark, with the footer's camera
 ];
 

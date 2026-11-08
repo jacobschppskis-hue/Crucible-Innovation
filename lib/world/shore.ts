@@ -246,8 +246,8 @@ export function shoreKeys(R: number): Key[] {
     // sun coming up in the free corner under the pinned contact; desktop: the limb in the lower
     // third (look's thin orange-to-steel arc lies along it); turned a little left so the sun comes up at the right edge,
     // clear of the pinned contact
-    { at: ['shore', 0], s: deg(157.5), h: 900, yaw: -30, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -26, pitch: -6 } },
-    { at: ['shore', 1], s: deg(159.5), h: 1100, yaw: -29, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -25, pitch: -6.5 } },
+    { at: ['shore', 0], s: deg(157.5), h: 900, yaw: -30, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -26, pitch: -10 } },
+    { at: ['shore', 1], s: deg(159.5), h: 1100, yaw: -29, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -25, pitch: -8.5 } },
     // dawn (4 screens): the run home. From the end of the shore to the beach the camera orbits ~190 deg and turns
     // ~160 deg; both are shared out at ONE constant rate of view rotation (~20 deg per 100 px of scroll): it eases out
     // of the shore's still ('in'), runs linear through the middle keys (their values lie on the same line, so the speed

@@ -99,3 +99,27 @@ Wide screens now read at 20 px body / 28 px lead / 44rem measure (the coordinato
   sand it leaves glows and cools; wet sand mirrors the sky. One wave clock for crests and swash.
 - The wordmark sits in the upper third over dark sky (the dunes' skyline at ~43%, the surf under it).
 - Frames: `shots/surf-phone-v1.webp` (one wave cycle on iPhone).
+
+## V2: the Thesis rebuilt (Nov 8, 23:30 UTC)
+Jacob: "after it gets black, when the temperature is rising from 293 to 1,811, there's the base part, and then only at
+the front part of the planet, there's a bunch of stuff moving around, it just doesn't look good"; "Always make it so
+that you can see the planet".
+
+Options considered:
+1. **The whole planet heats evenly (chosen).** One temperature offset for the whole sea through the lava's own
+   material (SeaMod.heat): at 293 K the planet is the reference look, and as the readout climbs the dark sea between the
+   rivers comes up toward the rivers' glow until the disk is one orange molten surface (the metals become one material).
+   Nothing local, no pattern of our own, no screen-space pooling, never darker than the reference. It cannot look
+   "translated" or patchy because it adds no structure; it is the simplest thing that is right, which is V2's brief.
+2. Two kinds of metal (two river colours) mixing into one: reads as the "alloy", but too close to mark's new together
+   beat (two rivers joining into one hotter river). Rejected.
+3. Crystal grains / a cooling front: needs new structure on the planet (the "stuff moving around" he disliked) and a
+   look the reference doesn't have. Rejected.
+4. Keep the domain-warped Nov 2 metal but spread evenly: still a pattern of ours on top of the lava's rivers, two
+   materials at once. Rejected.
+
+Details: `lib/world/thesis.ts` (+0.3 lava heat units = +255 K at 1811 K, a warm floor of 22% from the moment the thesis
+owns the sea so the night sea after ventures never reads black; in over the last 15% of ventures, out over shore
+0-0.45); its own camera keys (from the sea at h 30 into an orbit view like the reference, the limb at ~73% on phones,
+the type above it in the sky); the two lines cross-fade over a longer, eased window (0.26-0.6 of the pin). Shore's
+phone pitch follows on (-10/-8.5) so the planet stays in frame. Frames: `shots/v2/` (iPhone, q 4).
