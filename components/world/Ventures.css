@@ -207,6 +207,11 @@
   .wv[data-armed] .wv-lede {
     font-size: 0.95rem;
     max-width: 21rem;
+    margin-top: 0.75rem;
+  }
+  /* the heading a step smaller on phones while the monoliths stand: they get the middle of the screen */
+  .wv[data-armed] .wv-title {
+    font-size: clamp(2rem, 9vw, 2.4rem);
   }
 }
 @media (min-width: 1024px) {

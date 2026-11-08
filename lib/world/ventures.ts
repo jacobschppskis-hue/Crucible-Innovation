@@ -26,7 +26,7 @@ const LAYOUT = {
   // desktop: right of the heading, at about 42%, 62% and 82% of the width, the two still forging a little further back
   wide: { pos: [[-3.4, 0], [5.6, -3], [14.6, -1]] as const, aim: [-0.075, 0.075, -0.11] },
   // phones: the live one in front, centred; the two forging ones behind it to either side
-  narrow: { pos: [[0, 0], [-6, -15], [5.5, -28]] as const, aim: [-0.06, 0.08, -0.1] },
+  narrow: { pos: [[0.4, 7], [-5.2, -5], [5.2, -17]] as const, aim: [-0.06, 0.08, -0.1] },
 };
 const KINDS = [0, 1, 1];
 /** The monoliths' own light (heat, the pool, the lava-lit air) in the world's radiance unit. */
@@ -264,8 +264,8 @@ export function venturesKeys(R: number): Key[] {
   // look's cold moon, low behind the camera's shoulder (fades in from story-3 and out into the thesis)
   const MOON = { 'look.moon': 1.2, 'look.moonAz': 150, 'look.moonEl': 12 };
   return [
-    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 8 } },
-    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 8 } },
+    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5 } },
+    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5 } },
   ];
 }
 
