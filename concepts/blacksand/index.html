@@ -676,12 +676,21 @@ void main(){
     float gr = noise(G*.62)*.6 + noise(G*1.7)*.4;
     gr = mix(.5, gr, 1. - smoothstep(1., 3., foot));
     vec3 sand = vec3(.05, .047, .042)*(.62 + .8*gr);
-    // ripple marks the tide left, parallel to the shore, their faces lit from the surf's side (band-limited)
-    float rw = 17. + 5.*noise(G*.006 + 11.);
-    float rph = (L + 5.*noise(G*.008) + 2.*noise(G*.03))*6.2832/rw;
-    float rAmp = (.45 + .55*noise(G*.004 + 5.))*(1. - smoothstep(.12, .25, foot/rw))*(1. - exp(-max(L, 0.)/40.));
-    float face = sin(rph) + .35*sin(2.*rph);
-    sand *= 1. + .2*face*rAmp;
+    // ripple marks: roughly parallel ridges along the shore, slightly sinuous, fading and breaking up in patches. The
+    // phase is a near-straight direction plus a small warp (its slope stays well under 1), so a ridge never closes into
+    // a loop, whatever the coast does.
+    // two fixed directions, cross-faded by amplitude (never by rotating the phase): along the hero's shore, then along
+    // the shore that runs down the page
+    float rw = 16.;
+    float patchy = smoothstep(.42, .72, noise(G*vec2(.0035, .009) + 4.)) * smoothstep(.3, .6, noise(G*vec2(.012, .03) + 9.));
+    float rAmp = patchy*(1. - smoothstep(.12, .25, foot/rw))*(1. - exp(-max(L, 0.)/40.));
+    vec2 dH = normalize(vec2(.12, 1.)), dV = normalize(vec2(1., .16));
+    float uH = dot(G, dH) + 7.*sin(dot(G, vec2(dH.y, -dH.x))*.006 + 1.7) + 3.*noise(G*.003);
+    float uV = dot(G, dV) + 7.*sin(dot(G, vec2(dV.y, -dV.x))*.006 + .4) + 3.*noise(G*.003 + 2.);
+    float kV = smoothstep(uHB - 200., uHB + 300., G.y);
+    float fH = sin(uH*6.2832/rw) + .35*sin(2.*uH*6.2832/rw), fV = sin(uV*6.2832/rw) + .35*sin(2.*uV*6.2832/rw);
+    float face = mix(fH, fV, kV);
+    sand *= 1. + .14*face*rAmp;
     // light from the surf on the sand: the near glow and a soft warm wash a few hundred px across it
     float glow = exp(-max(L - max(E, 0.), 0.)/110.)*.55 + exp(-L/320.)*.3 + exp(-L/900.)*.08;
     glow *= heatK;
@@ -1198,7 +1207,7 @@ function simInit() {
     const t = tex(SIM.gw, SIM.gh, gl.RGBA16F, gl.RGBA, gl.HALF_FLOAT, gl.LINEAR);
     const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
-    gl.clearColor(0, 0, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);   // all four channels start empty (the track is .a)
     SIM.tex.push(t); SIM.fb.push(f);
   }
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);

@@ -41,7 +41,8 @@ atlas and a 1-D coast profile):
 - **The coast through the page**: a thin, quiet fringe (5% of the width, 4% on phones) beside reading sections, coves
   between sections, and one bay at the ventures (`data-cove`). The profile is 32-bit, interpolated in the shader, and
   the text envelope is rounded with a parabolic dilation so the shoreline never kinks; the run-up varies per row.
-- **The sand is never a void**: fine grain, ripple marks parallel to the shore lit from the surf's side (band-limited),
+- **The sand is never a void**: fine grain, faint ripple ridges running with the shore (two fixed directions cross-faded,
+  so they never loop; patchy; band-limited),
   a warm wash falling off a few hundred px from the fringe, and a very rare cold (Quench) sparkle.
 - **Type in the sand**: a canvas atlas of the wordmark and venture names (Archivo), blurred for the mould's walls.
   Lit from the sea's side (crisp sand walls, the face toward the surf lit warm), it's filled with metal: the wordmark, in
