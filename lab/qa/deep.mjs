@@ -198,7 +198,8 @@ async function loop(device) {
   // 3) keyboard: PageDown / Space through the bottom
   if (device === 'desktop') {
     await page.evaluate((y) => scrollTo(0, y), maxY - 2 * H); await sleep(500);
-    await page.locator('body').click({ position: { x: 5, y: H / 2 } }).catch(() => {});
+    // no click (it can land on a link and jump); keys go to the body when nothing is focused
+    await page.evaluate(() => document.activeElement?.blur?.());
     const tp = trace(page, 6000);
     for (let k = 0; k < 4; k++) { await page.keyboard.press(k % 2 ? 'Space' : 'PageDown'); await sleep(900); }
     const tr = await tp; const a = analyse(tr, 1);
