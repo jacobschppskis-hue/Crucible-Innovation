@@ -77,6 +77,10 @@ viewport; their content is `position: sticky`). `frame.at(name)` = a place's pin
 | `dawn` | story | auto | the footer's giant wordmark: coming down to the evening terminator |
 | `loop` | world | 1 (exactly the viewport) | the hero's first key, one lap on: the seam |
 
+A module may own the camera through its place: `keys: (R) => Key[]` on the module replaces the lead's keys for every
+place its keys name (sorted into the journey by scroll position; channels it does not set carry over from the key
+before). Its first and last keys must meet the neighbouring places.
+
 Channel list: `s x h yaw pitch roll fov sunLon sunLat sunSize exposure` (see `journey.ts`; `h` interpolates in log
 space, segments ease with smootherstep unless the key says `ease: 'linear' | 'in' | 'out'`), plus module extras
 `'<id>.<name>'` declared in the module's `channels` (defaults) and set per key. Phones: a key's `ph: {...}` overrides.
@@ -121,6 +125,7 @@ export const mark: WorldModule = {
   provides: [],                     // look: look_sky/look_atmo/look_post; lava: lava_shade/lava_env
   post: undefined,                  // look only: the post-pass chunk that defines look_post
   channels: { 'mark.size': 1 },     // journey extras with defaults
+  keys: (R) => [...],               // optional: the camera through the module's own place(s)
   init({ gl, u, root, software }) {},   // once (may be async)
   update(f, u) {},                  // every frame before drawing: uniforms, own DOM
   after(f) {},                      // after drawing (DOM writes)

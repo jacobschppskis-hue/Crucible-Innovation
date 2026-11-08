@@ -152,22 +152,37 @@ export function resolve(
   extras: Channels,
 ): Anchor[] {
   const base = { ...CAMERA_DEFAULTS, ...extras };
+  // place every key, then sort by scroll position (module keys interleave with the lead's), then carry channels over
+  const placed: { y: number; k: Key; i: number }[] = [];
+  list.forEach((k, i) => {
+    const y0 = pinY(k.at[0], k.at[1]);
+    if (y0 != null) placed.push({ y: y0 + ((k.dy as number | undefined) ?? 0) * vh, k, i });
+  });
+  placed.sort((a, b) => a.y - b.y || a.i - b.i);
   const out: Anchor[] = [];
   let prev: Channels = base;
-  for (const k of list) {
-    const y0 = pinY(k.at[0], k.at[1]);
-    if (y0 == null) continue;
-    const y = y0 + (k.dy ?? 0) * vh;
+  for (const { y, k } of placed) {
     const ch: Channels = { ...prev };
     for (const [n, v] of Object.entries(k)) if (typeof v === 'number' && n !== 'dy') ch[n] = v;
     if (narrow && k.ph) Object.assign(ch, k.ph as Channels);
-    // channels carry over from the previous key unless set (except camera channels, which every key should set)
     prev = ch;
     out.push({ y, key: k, ch });
   }
-  // keep anchors in scroll order (equal y is a cut: avoid it, keys should be at least a few px apart)
+  // keys at the same position: keep them a pixel apart (no cuts)
   for (let i = 1; i < out.length; i++) if (out[i].y <= out[i - 1].y) out[i].y = out[i - 1].y + 1;
   return out;
+}
+
+/** The lead's keys with each module's own keys swapped in for the places the module claims. */
+export function mergeKeys(lead: Key[], mods: { keys?: (R: number) => Key[] }[]): Key[] {
+  let list = lead;
+  for (const m of mods) {
+    if (!m.keys) continue;
+    const mk = m.keys(R);
+    const claimed = new Set(mk.map((k) => k.at[0]));
+    list = list.filter((k) => !claimed.has(k.at[0])).concat(mk);
+  }
+  return list;
 }
 
 const EASE = {

@@ -8,7 +8,7 @@ import { cameraFrom, hitSea, project, rayAt, sunFrom, surf, surfOf } from './cam
 import { BLOOM_DOWN, BLOOM_UP, compose, type Composed } from './compose';
 import { clamp, type Channels, type Frame, type PlaceInfo, type V3 } from './frame';
 import { FULLSCREEN_VS, program, target, Uniforms, type Target } from './gl';
-import { evaluate, keys as defaultKeys, LAP, lastSeg, R, resolve, type Anchor, type Key } from './journey';
+import { evaluate, keys as defaultKeys, LAP, lastSeg, mergeKeys, R, resolve, type Anchor, type Key } from './journey';
 import { createScroll, type ScrollCtl } from './loop';
 import { activeModules, MODULES, type WorldModule } from './modules';
 import { createQuality, isSoftware, type QualityCtl } from './quality';
@@ -117,7 +117,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
       const r = el.getBoundingClientRect();
       places[el.dataset.place!] = { name: el.dataset.place!, top: r.top + sy, h: r.height, el };
     }
-    anchors = resolve((opts.keys ?? defaultKeys)(), pinY, H, narrow, extras);
+    anchors = resolve(mergeKeys((opts.keys ?? defaultKeys)(), mods), pinY, H, narrow, extras);
     resizeCanvas();
   }
 

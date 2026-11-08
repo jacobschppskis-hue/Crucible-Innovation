@@ -5,6 +5,7 @@
 
 import type { Channels, Frame } from './frame';
 import type { Uniforms } from './gl';
+import type { Key } from './journey';
 import { defaultLook } from './defaults/look';
 import { lava } from './lava';
 import { defaultLava } from './defaults/lava';
@@ -38,6 +39,9 @@ export type WorldModule = {
   post?: string;
   /** Journey channels this module reads, with defaults (`'<id>.<name>': value`). Keys may set them. */
   channels?: Channels;
+  /** Journey keys for the module's own place(s): they replace the lead's keys for every place they name (at [place, f],
+   * f 0..1). Keep the first and last equal to what the neighbouring places expect (ask the lead), and set phones in `ph`. */
+  keys?: (R: number) => Key[];
   /** Once, after the GL context exists (textures, atlases). May be async (fonts). */
   init?(ctx: InitCtx): void | Promise<void>;
   /** Every frame, before drawing: write uniforms (`u.set('<id>_uName', v)`), and DOM if the module owns some. */
