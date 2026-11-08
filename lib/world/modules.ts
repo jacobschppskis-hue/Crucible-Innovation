@@ -10,6 +10,7 @@ import { defaultLava } from './defaults/lava';
 import { type } from './type'; // story
 import { thesis } from './thesis'; // story
 import { look } from './look';
+import { paypal } from './paypal'; // paypal
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
 export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
@@ -55,7 +56,7 @@ export const MODULES: WorldModule[] = [
   // lava:     import { lava } from './lava';         lava,
   // mark:     import { mark } from './mark';         mark,
   // together: import { together } from './together'; together,
-  // paypal:   import { paypal } from './paypal';     paypal,
+  paypal, // paypal: PayPal -> six companies
   // ventures: import { ventures } from './ventures'; ventures,
   type, // story: display type reflected in the sea
   thesis, // story: the sea heats 293 K -> 1811 K

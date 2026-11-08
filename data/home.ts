@@ -19,15 +19,18 @@ export const storyIntro = {
   lede: 'Jacob Schopp and Charles Rochford, co-founders, each in their own words.',
 };
 
-/** PayPal, step by step: every caption is a fact from Jacob's paragraph 2 (data/story.ts). `paypal` owns. */
+/** PayPal, step by step: every caption is a fact from Jacob's paragraph 2 (data/story.ts), shortened. `paypal` owns.
+ * The captions show one at a time as the scene plays (lib/world/paypal.ts `CAPTION_AT`); `heading` is the 4th step,
+ * set at display size. Company order = the scene's landing order. */
 export const paypal = {
   heading: 'So much came out of a single company',
   steps: [
-    'eBay bought PayPal in 2002.',
-    'Its people went on to found YouTube, LinkedIn, Yelp and Palantir.',
+    'In 2002, eBay bought PayPal.',
+    'After the sale, its people went on to found YouTube, LinkedIn, Yelp and Palantir.',
     'Elon used much of his share to fund SpaceX, and later to invest in Tesla.',
-    'So much came out of a single company.',
-  ],
+    null, // the heading
+    'Not by luck. They found each other early, and kept backing one another long after PayPal itself was gone.',
+  ] as (string | null)[],
   companies: ['YouTube', 'LinkedIn', 'Yelp', 'Palantir', 'SpaceX', 'Tesla'],
 };
 

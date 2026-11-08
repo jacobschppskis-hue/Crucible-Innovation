@@ -1,0 +1,75 @@
+/* PayPal -> six companies (components/world/PayPal.tsx; the scene is lib/world/paypal.ts). The world draws the planet,
+   the throws and the places; this is only the words: one caption at a time in the sky above the limb (the camera keeps
+   the planet in the lower part of the frame), the names on their places. Nothing behind any text. Without the world
+   (`data-live` unset): every step in order as plain text, no names. */
+.w-pp-caps {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  padding-top: calc(var(--nav-h) + 1.75rem);
+}
+.w-pp-step {
+  max-width: 30rem;
+  font-size: 1.1875rem;
+  line-height: 1.32;
+  color: var(--bone);
+  text-wrap: pretty;
+}
+.w-pp-big {
+  font-size: clamp(2.125rem, 9.4vw, 4.75rem);
+  line-height: 1.02;
+  max-width: 12ch;
+  text-wrap: balance;
+}
+.w-pp-names {
+  display: none;
+}
+
+/* the world runs: every caption in the same cell (one shows at a time, the layout never moves), names on the planet */
+.w-paypal[data-live] .w-pp-step {
+  grid-area: 1 / 1;
+  opacity: 0;
+  visibility: hidden;
+}
+.w-paypal[data-live] .w-pp-names {
+  display: block;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.w-pp-names li {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform: translate(-50%, -100%);
+  font-weight: 650;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  color: var(--bone);
+  opacity: 0;
+}
+.w-pp-names .w-pp-root {
+  font-size: 1.0625rem;
+  font-weight: 720;
+}
+@media (min-width: 1024px) {
+  .w-pp-caps {
+    padding-top: calc(var(--nav-h) + 14svh);
+  }
+  .w-pp-step {
+    font-size: 1.5rem;
+    max-width: 26rem;
+  }
+  .w-pp-big {
+    font-size: 4.75rem;
+  }
+  .w-pp-names li {
+    font-size: 1.125rem;
+  }
+  .w-pp-names .w-pp-root {
+    font-size: 1.3125rem;
+  }
+}
