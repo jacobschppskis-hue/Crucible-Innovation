@@ -1,106 +1,142 @@
-// The hero's mark in the world (role: mark). Framework-free. The world calls `markFrame()` once per clock tick with
-// where the mark hangs (the journey decides: in the hero the core is the sun over the sunset sea) and the beat's
-// progress; it gets back the uniforms for lib/world/glsl/mark.glsl and what the rest of the world needs from the mark
-// (the core as a light, the heat for the sea's glitter, a ring request when the weld flashes).
-import { coreFlare, heatAmount, heatColor, seaRing, weldFlash } from './together';
-import { MARK_GLSL } from './glsl/mark';
+// The hero's mark in the world (role: mark). Framework-free. Jacob's Split Ring hangs round the sun as one huge cast
+// structure: the core IS the sun (look draws its disc), so the mark is placed along the sun's direction, far out
+// (celestial: no parallax, no near haze), and scaled so its core is exactly the sun's disc. Its "stronger together"
+// beat (lib/world/together.ts) plays on the `together` place's pin progress, with the captions in that section.
+//
+// GLSL: lib/world/glsl/mark.glsl (hooks hit/env for the sea's reflections, over for camera rays, sky for the flare).
+import type { Frame, V3 } from './frame';
+import type { Uniforms } from './gl';
+import type { WorldModule } from './modules';
+import markGlsl from './glsl/mark.glsl';
+import { coreFlare, heatAmount, heatColor, LINES, lineOpacity, seaRing, weldFlash } from './together';
 
-export { MARK_GLSL };
-export type Vec3 = [number, number, number];
+const CORE_R = 4.8; // mark units (lib/splitRing.ts RING.core 3.6 on the 48 grid, x4/3)
+/** How far out the mark hangs (world units; the planet's radius is 6000): far enough that moving round the hero shows
+ *  no parallax against the sun, near enough for float precision. */
+const DIST = 1e5;
+const CORE_L: V3 = [9.0, 4.6, 1.9];
 
-export type MarkPlace = {
-  /** the core's centre (world) */
-  centre: Vec3;
-  /** world units per mark unit (the outer ring's radius is 26.67 mark units; the whole mark spans 57.6) */
-  scale: number;
-  /** the mark's axes in world space: right, up, toward the viewer (orthonormal). Usually facing the camera. */
-  right: Vec3;
-  up: Vec3;
-  out: Vec3;
-  /** 0..1: fades the whole mark and core (e.g. as the journey leaves the hero) */
-  visible?: number;
+/** What the rest of the world may read from the mark each frame (lava: the glitter's tint and the weld's ring). */
+export const markState = {
+  /** linear colour of the hot metal now (0 when cold) */
+  heat: [0, 0, 0] as V3,
+  /** 0..1: how much of the mark glows */
+  heatAmount: 0,
+  /** the beat's progress 0..1 */
+  beat: 0,
+  /** set to 1 on the frame the weld flashes (consume and zero it): one ring across the sea under the sun */
+  ring: 0,
+  /** the core (the sun) as a light: world position (far out along the sun), radius, radiance */
+  core: { pos: [0, 0, 0] as V3, radius: 0, radiance: [0, 0, 0] as V3 },
 };
 
-export type MarkInput = {
-  place: MarkPlace;
-  /** the stronger-together beat's progress, 0..1 (scroll; 0 before it starts, 1 after it ends) */
-  beat: number;
-  /** the one clock, seconds */
-  t: number;
-  /** fill light: the sky above the mark and the sea below it, linear radiance (from look/lava; defaults are a dusk
-   *  sky over a glowing sea) */
-  skyFill?: Vec3;
-  seaFill?: Vec3;
-  /** quality step 0 (lowest) .. 1: the soft shadows toward the core cost the most and go first */
-  quality?: number;
-};
-
-export type MarkUniforms = {
-  uMarkC: [number, number, number, number];
-  uMarkB: number[]; // mat3, column-major
-  uMarkBeat: [number, number, number, number];
-  uMarkLook: [number, number, number, number];
-  uMarkSky: Vec3;
-  uMarkSea: Vec3;
-};
-
-export type MarkFrame = {
-  uniforms: MarkUniforms;
-  /** the core as a light for the rest of the world */
-  core: { pos: Vec3; radius: number; radiance: Vec3 };
-  /** linear colour of the hot metal now (0 when cold): the sea's glitter under the mark takes this tint */
-  heat: Vec3;
-  /** 0..1: how much of the mark glows (for bloom strength) */
-  heatAmount: number;
-  /** > 0 on the frame the weld flashes: the world sends one ring across the sea under the core */
-  ring: number;
-};
-
-const CORE_R = 4.8; // mark units (lib/splitRing.ts: RING.core 3.6 on the 48 grid, ×4/3)
-const CORE_L: Vec3 = [9.0, 4.6, 1.9];
-
-export function markFrame(i: MarkInput): MarkFrame {
-  const b = i.beat < 0 ? 0 : i.beat > 1 ? 1 : i.beat;
-  const { centre, scale, right, up, out } = i.place;
-  const vis = i.place.visible ?? 1;
-  const flare = coreFlare(b);
-  const q = i.quality ?? 1;
-  const k = (1 + flare) * 1;
-  return {
-    uniforms: {
-      uMarkC: [centre[0], centre[1], centre[2], scale],
-      uMarkB: [...right, ...up, ...out],
-      uMarkBeat: [b, weldFlash(b), flare, i.t],
-      uMarkLook: [vis, 1, q >= 0.5 ? 1 : q > 0.2 ? 0.6 : 0, 0],
-      uMarkSky: i.skyFill ?? [0.2, 0.22, 0.27],
-      uMarkSea: i.seaFill ?? [0.95, 0.66, 0.44],
-    },
-    core: { pos: centre, radius: CORE_R * scale, radiance: [CORE_L[0] * k, CORE_L[1] * k, CORE_L[2] * k] },
-    heat: heatColor(b),
-    heatAmount: heatAmount(b),
-    ring: seaRing(b),
-  };
+/** The beat's progress from the `together` place's pin: a little lead-in and run-out so it starts and lands while the
+ *  section is fully on screen. */
+export function beatOf(f: Frame) {
+  const a = f.at('together');
+  const b = (a - 0.04) / 0.9;
+  return b < 0 ? 0 : b > 1 ? 1 : b;
 }
 
-/** A mark place facing a camera: the mark's plane square to the line of sight, upright (its up is the world's up made
- *  square to the line of sight), and reading left-to-right on screen whatever the world's handedness: `screenRight` is
- *  the camera's right vector. */
-export function facing(centre: Vec3, scale: number, camera: Vec3, screenRight: Vec3, worldUp: Vec3 = [0, 1, 0]): MarkPlace {
+let lines: HTMLElement[] = [];
+let stage: HTMLElement | null = null;
+let box = '';
+const markBox = { x: 0, y: 0, r: 0, ok: false };
+
+export const mark: WorldModule = {
+  id: 'mark',
+  glsl: markGlsl,
+  hooks: ['hit', 'shade', 'env', 'over', 'sky'],
+  channels: { 'mark.vis': 1, 'mark.size': 1, 'mark.light': 1, 'mark.fill': 1 },
+  init({ root }) {
+    lines = Array.from(root.querySelectorAll<HTMLElement>('[data-together-line]'));
+    stage = root.querySelector<HTMLElement>('[data-place="together"]');
+  },
+  update(f: Frame, u: Uniforms) {
+    const b = f.still ? 0.97 : beatOf(f);
+    const vis = f.ch['mark.vis'] ?? 1;
+    const size = f.ch['mark.size'] ?? 1;
+    const k = f.ch['mark.light'] ?? 1;
+    const fill = f.ch['mark.fill'] ?? 1;
+    const { pos, r, up: camUp } = f.cam;
+    const sd = f.sun.dir;
+    const centre: V3 = [pos[0] + sd[0] * DIST, pos[1] + sd[1] * DIST, pos[2] + sd[2] * DIST];
+    const scale = (DIST * Math.tan(f.sun.rad) * size) / CORE_R;
+    const B = facing(centre, pos, r, camUp);
+    const flare = coreFlare(b);
+    u.set('mark_uC', [centre[0], centre[1], centre[2], scale]);
+    u.set('mark_uB', [...B.right, ...B.up, ...B.out]);
+    u.set('mark_uBeat', [b, weldFlash(b), flare, f.t]);
+    u.set('mark_uLook', [vis, 0, f.quality.q >= 0.45 ? 1 : f.quality.q > 0.2 ? 0.6 : 0, 0]);
+    u.set('mark_uSky', [0.2 * fill, 0.22 * fill, 0.27 * fill]);
+    u.set('mark_uSea', [0.95 * fill, 0.66 * fill, 0.44 * fill]);
+    u.set('mark_uCoreL', [CORE_L[0] * k, CORE_L[1] * k, CORE_L[2] * k]);
+
+    // the mark's screen box (centre, outer radius incl. the squares) for the captions
+    const c = f.project(centre);
+    if (c) {
+      const edge = f.project(add(centre, mul(B.up, scale * 30.4)));
+      markBox.x = c[0];
+      markBox.y = c[1];
+      markBox.r = edge ? Math.hypot(edge[0] - c[0], edge[1] - c[1]) : 0;
+      markBox.ok = true;
+    } else markBox.ok = false;
+
+    markState.beat = b;
+    markState.heat = heatColor(b);
+    markState.heatAmount = heatAmount(b);
+    if (seaRing(b)) markState.ring = 1;
+    markState.core.pos = centre;
+    markState.core.radius = CORE_R * scale;
+    markState.core.radiance = [CORE_L[0] * k * (1 + flare), CORE_L[1] * k * (1 + flare), CORE_L[2] * k * (1 + flare)];
+  },
+  after(f: Frame) {
+    // the captions: each arrives with the run it names; the payoff when the ring closes
+    const b = f.still ? 0.97 : beatOf(f);
+    if (stage && markBox.ok) {
+      const s = `${markBox.x.toFixed(1)},${markBox.y.toFixed(1)},${markBox.r.toFixed(1)}`;
+      if (s !== box) {
+        box = s;
+        stage.style.setProperty('--mx', `${markBox.x.toFixed(1)}px`);
+        stage.style.setProperty('--my', `${markBox.y.toFixed(1)}px`);
+        stage.style.setProperty('--mr', `${markBox.r.toFixed(1)}px`);
+      }
+    }
+    for (let i = 0; i < lines.length && i < LINES.length; i++) {
+      const o = lineOpacity(i, b);
+      const el = lines[i];
+      const s = o.toFixed(3);
+      if (el.style.opacity !== s) {
+        el.style.opacity = s;
+        el.style.translate = `0 ${((1 - o) * 0.35).toFixed(3)}em`;
+      }
+    }
+  },
+  dispose() {
+    lines = [];
+    stage = null;
+    box = '';
+  },
+};
+
+/** The mark's frame facing the camera: square to the line of sight, upright (its up is the planet's up under the
+ *  camera, made square to the line of sight), reading left to right on screen (`screenRight` = the camera's right). */
+export function facing(centre: V3, camera: V3, screenRight: V3, worldUp: V3) {
   const o = norm(sub(camera, centre));
   const u0 = sub(worldUp, mul(o, dot(worldUp, o)));
-  const u = len(u0) < 1e-6 ? norm(sub(screenRight, mul(o, dot(screenRight, o)))) : norm(u0);
-  let r = sub(screenRight, add(mul(o, dot(screenRight, o)), mul(u, dot(screenRight, u))));
-  if (len(r) < 1e-6) r = cross(u, o);
-  return { centre, scale, right: norm(r), up: u, out: o };
+  const up = len(u0) < 1e-6 ? norm(cross(o, screenRight)) : norm(u0);
+  const r0 = sub(screenRight, add(mul(o, dot(screenRight, o)), mul(up, dot(screenRight, up))));
+  const right = len(r0) < 1e-6 ? norm(cross(up, o)) : norm(r0);
+  return { right, up, out: o };
 }
 
-const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const mul = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
-const sub = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const len = (a: Vec3) => Math.hypot(a[0], a[1], a[2]);
-const norm = (a: Vec3): Vec3 => {
+const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
+const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const mul = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k];
+const len = (a: V3) => Math.hypot(a[0], a[1], a[2]);
+const norm = (a: V3): V3 => {
   const l = len(a) || 1;
   return [a[0] / l, a[1] / l, a[2] / l];
 };
-const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];

@@ -1,0 +1,20 @@
+diff --git a/lib/world/journey.ts b/lib/world/journey.ts
+index 11f773c..a61b261 100644
+--- a/lib/world/journey.ts
++++ b/lib/world/journey.ts
+@@ -93,11 +93,11 @@ const deg = (a: number) => a * D2R * R;
+ export function keys(): Key[] {
+   return [
+     // hero: low over the molten sea at sunset, the sun (the mark's core) on the horizon, stars above it
+-    { at: ['hero', 0], s: 0, h: 1.6, yaw: 180, pitch: 4, fov: 46, ph: { fov: 62, pitch: 6 } },
+-    { at: ['hero', 1], s: 6, h: 1.9, yaw: 180, pitch: 4.5, fov: 46, ph: { fov: 62, pitch: 6.5 } },
++    { at: ['hero', 0], s: 0, h: 1.6, yaw: 180, pitch: 7, fov: 46, sunLon: -77, sunSize: 2.5, ph: { fov: 62, pitch: 10, sunSize: 3.4 } },
++    { at: ['hero', 1], s: 6, h: 1.9, yaw: 180, pitch: 7.5, fov: 46, sunLon: -77, sunSize: 2.5, ph: { fov: 62, pitch: 10.5, sunSize: 3.4 } },
+     // stronger together: still on the sunset, a slow rise so the mark has the sky
+-    { at: ['together', 0], s: 10, h: 2.4, yaw: 180, pitch: 5, fov: 46, ph: { fov: 62, pitch: 7 } },
+-    { at: ['together', 1], s: 40, h: 6, yaw: 176, pitch: 6, fov: 46, ph: { fov: 62, pitch: 8 } },
++    { at: ['together', 0], s: 10, h: 2.4, yaw: 180, pitch: 9, fov: 46, sunLon: -77, sunSize: 2.5, ph: { fov: 62, pitch: 11, sunSize: 3.4 } },
++    { at: ['together', 1], s: 40, h: 6, yaw: 177, pitch: 10, fov: 46, sunLon: -77, sunSize: 2.5, ph: { fov: 62, pitch: 12, sunSize: 3.4 } },
+     // story: turn away from the sun to the night sea, the type has the stars
+     { at: ['story', 0], s: 120, h: 14, yaw: 40, pitch: 8, fov: 50, ph: { fov: 64 } },
+     { at: ['story', 1], s: 900, h: 160, yaw: 10, pitch: -4, fov: 50, ph: { fov: 64 } },

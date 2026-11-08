@@ -9,11 +9,11 @@ import type { Key } from './journey';
 import { defaultLook } from './defaults/look';
 import { lava } from './lava';
 import { defaultLava } from './defaults/lava';
-import { markModule } from './markModule';
 import { thesis } from './thesis'; // story
 import { look } from './look';
 import { paypal, paypalKeys } from './paypal'; // paypal
 import { ventures } from './ventures'; // ventures
+import { mark } from './mark';
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
 export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
@@ -60,7 +60,7 @@ export const MODULES: WorldModule[] = [
   ...defaultLava, // world: stand-ins for lava_shade, lava_env
   look,
   lava, // lava: the molten sea, its swell and the visitor's wakes
-  markModule, // mark: the Split Ring around the sun and the stronger-together beat (integrated by world)
+  mark, // mark: the hero's mark round the sun and the stronger-together beat (lib/world/mark.ts)
   // together: import { together } from './together'; together,
   { ...paypal, keys: paypalKeys }, // paypal: PayPal -> six companies, with its own camera
   ventures, // ventures: the metal monoliths

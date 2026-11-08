@@ -1,0 +1,78 @@
+/* "Stronger together" (role: mark). The lines sit where the sky is dark, beside or above the mark, never over it, and
+   never on a box, scrim or glow: legibility comes from the night sky behind them. */
+.tg-stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6em;
+  text-align: center;
+  padding-inline: 16px;
+}
+.tg-line {
+  margin: 0;
+  font-size: clamp(2rem, 7.4vw, 4.25rem);
+  line-height: 1;
+  color: var(--bone, #e8e4d8);
+  text-wrap: balance;
+}
+.tg-payoff {
+  font-size: clamp(2.5rem, 10vw, 5.5rem);
+}
+
+/* With the world: placed from the mark's screen box, faded by the beat (lib/world/mark.ts). */
+html[data-world-on] .tg-stage {
+  display: block;
+}
+html[data-world-on] .tg-line {
+  position: absolute;
+  opacity: 0;
+  will-change: opacity, translate;
+}
+/* Wide: each half's name beside its half, level with the core; the payoff above the mark. */
+html[data-world-on] .tg-human {
+  right: calc(100% - var(--mx, 50vw) + var(--mr, 20vw) * 1.18);
+  top: calc(var(--my, 40vh) - 0.5em);
+  text-align: right;
+  max-width: calc(var(--mx, 50vw) - var(--mr, 20vw) * 1.18 - 16px);
+}
+html[data-world-on] .tg-machine {
+  left: calc(var(--mx, 50vw) + var(--mr, 20vw) * 1.18);
+  top: calc(var(--my, 40vh) - 0.5em);
+  text-align: left;
+  max-width: calc(100% - var(--mx, 50vw) - var(--mr, 20vw) * 1.18 - 16px);
+}
+html[data-world-on] .tg-payoff {
+  left: 0;
+  right: 0;
+  bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.22);
+  text-align: center;
+}
+/* Phones: no room beside the mark; the two names stack above it, the human half on the left, the machine half on the
+   right (each on the side of its half), and the payoff takes their place. */
+@media (max-width: 760px), (orientation: portrait) and (max-width: 900px) {
+  html[data-world-on] .tg-line {
+    font-size: clamp(1.9rem, 9.6vw, 3rem);
+    max-width: none;
+  }
+  html[data-world-on] .tg-human {
+    left: 16px;
+    right: auto;
+    text-align: left;
+    top: auto;
+    bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.2 + 1.15em);
+  }
+  html[data-world-on] .tg-machine {
+    right: 16px;
+    left: auto;
+    text-align: right;
+    top: auto;
+    bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.2);
+  }
+  html[data-world-on] .tg-payoff {
+    font-size: clamp(2.3rem, 11.5vw, 3.6rem);
+    bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.2);
+  }
+}
