@@ -12,3 +12,6 @@ test-results
 overnight/capture/
 __pycache__/
 .claude/worktrees/
+
+# source photos for scripts/crt-portraits.py (never committed)
+public/team/src/
