@@ -31,8 +31,11 @@ const LAYOUT = {
 const KINDS = [0, 1, 1];
 /** The monoliths' own light (heat, the pool, the lava-lit air) in the world's radiance unit. */
 const GAIN = 4;
+/** What the faces mirror of the lava (the sea, the pool at the foot, the lava-lit air), kept low so above the foot the
+ * metal reads as bare metal under the moon, not as a glowing slab. */
+const ENVK = 1.4;
 /** Forward lean of each monolith (rad, toward the camera). */
-const LEAN = [0.12, 0.085, 0.14]; // Crucible Sites cooled (live), Verge and Trellis still forging
+const LEAN = [0.05, 0.035, 0.06]; // Crucible Sites cooled (live), Verge and Trellis still forging
 
 // ---- state fed by the DOM -------------------------------------------------------------------------------------------
 const S = {
@@ -110,8 +113,9 @@ function moonDir(f: Frame): V3 {
 
 function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
-  // they sink back into the sea as the camera climbs away into the thesis (continuous, reversible)
-  const th = clamp(f.at('thesis') / 0.22);
+  // they sink back into the sea over the end of their own pin, so the thesis opens on an empty sea (continuous,
+  // reversible; the words leave with them)
+  const th = clamp((p - 0.84) / 0.16);
   const sinkK = 1 - th * th * (3 - 2 * th);
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;
@@ -207,10 +211,10 @@ function frameUpdate(f: Frame, u: Uniforms) {
   // night over a molten sea: the low air over the horizon is lit from below by the lava (a warm band), the zenith is
   // black; the band is what the metal mirrors as its bright line
   u.set('ventures_uZen', [0.0025, 0.003, 0.0055]);
-  u.set('ventures_uHorW', V.mul([0.5, 0.13, 0.035], GAIN));
-  u.set('ventures_uHorC', V.mul([0.42, 0.11, 0.03], GAIN));
-  u.set('ventures_uSea', V.mul(bb(900), 14 * 0.96 * GAIN));
-  u.set('ventures_uPool', V.mul(bb(1320), 14 * GAIN));
+  u.set('ventures_uHorW', V.mul([0.5, 0.13, 0.035], ENVK));
+  u.set('ventures_uHorC', V.mul([0.42, 0.11, 0.03], ENVK));
+  u.set('ventures_uSea', V.mul(bb(900), 14 * 0.96 * ENVK));
+  u.set('ventures_uPool', V.mul(bb(1320), 14 * ENVK));
 }
 
 // ---- the section's DOM ------------------------------------------------------------------------------------------------
