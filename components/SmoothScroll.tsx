@@ -10,7 +10,7 @@ export function SmoothScroll() {
   const pathname = usePathname();
   useEffect(() => {
     if (matchMedia('(hover: none), (pointer: coarse), (prefers-reduced-motion: reduce)').matches) return;
-    if (document.querySelector('[data-world]')) return;
+    if (document.querySelector('[data-world], [data-world-root]')) return;
     let lenis: { destroy(): void } | undefined;
     let cancelled = false;
     // The home page's world (lib/world/loop.ts) runs its own Lenis (the loop): this one steps aside while it is on.

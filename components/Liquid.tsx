@@ -59,7 +59,7 @@ export function Liquid() {
   // A canvas handed to the worker is spent: every (re)start renders a fresh node (key), never a second transfer.
   const [{ off, run }, setState] = useState({ off: false, run: 0 });
   useEffect(() => {
-    const world = !!document.querySelector('[data-world]');
+    const world = !!document.querySelector('[data-world], [data-world-root]');
     setState((s) => (s.off === world ? s : { off: world, run: world ? s.run : s.run + 1 }));
   }, [pathname]);
 
