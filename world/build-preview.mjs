@@ -46,7 +46,8 @@ html = html.replace(/<img\b[^>]*>/g, (tag) => {
   });
 });
 // internal links point at the live site (the preview is one page)
-html = html.replace(/href="\/(?!\/)([^"#]*)"/g, (m, p) => (p === '' ? 'href="#top"' : `href="https://crucibleinnovation.com/${p}"`));
+html = html.replace(/href="\/#([^"]*)"/g, 'href="#$1"'); // the home page's own sections stay in the preview
+html = html.replace(/href="\/(?!\/)([^"]*)"/g, (m, p) => (p === '' ? 'href="#top"' : `href="https://crucibleinnovation.com/${p}"`));
 
 const js = await build({
   entryPoints: [path.join(ROOT, 'world/preview-entry.ts')],

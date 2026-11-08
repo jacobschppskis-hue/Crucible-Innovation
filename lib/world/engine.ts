@@ -63,25 +63,64 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
   const quality: QualityCtl = createQuality({ dpr, software, pinned: opts.q ?? null, full: opts.full });
 
-  const mods = activeModules(opts.modules ?? MODULES);
-  const extras: Channels = {};
-  for (const m of mods) Object.assign(extras, m.channels ?? {});
-
   const defines: Record<string, string | number> = { WORLD_R: R.toFixed(1) };
   if (!floatOk) defines.WORLD_LDR = 1;
   if (software) defines.WORLD_SOFTWARE = 1;
   if (opts.full) defines.WORLD_FULL = 1;
-  let composed: Composed;
-  let sceneP: WebGLProgram, postP: WebGLProgram, downP: WebGLProgram, upP: WebGLProgram;
-  try {
+  let composed!: Composed;
+  let sceneP!: WebGLProgram, postP!: WebGLProgram, downP: WebGLProgram, upP: WebGLProgram;
+
+  // One module must never take the world down: if the composed shaders fail, drop the module(s) the errors point at
+  // (their stand-ins come back), or, if the log names none, try without each module in turn; log what was dropped.
+  const registry = opts.modules ?? MODULES;
+  const dropped = new Set<string>();
+  let mods = activeModules(registry);
+  const build = () => {
     composed = compose(mods, { defines });
     sceneP = program(gl, FULLSCREEN_VS, composed.scene);
     postP = program(gl, FULLSCREEN_VS, composed.post);
+  };
+  for (let attempt = 0; ; attempt++) {
+    try {
+      build();
+      break;
+    } catch (e) {
+      const msg = (e as Error).message;
+      const ids = new Set(mods.map((m) => m.id));
+      const blamed = [...new Set([...msg.matchAll(/^([a-z][\w-]*):\d+:/gm)].map((m) => m[1]).filter((id) => ids.has(id)))];
+      let next: string[] = blamed.filter((id) => !mods.find((m) => m.id === id)?.isDefault);
+      if (!next.length) {
+        // nothing attributable (a link error): find the one module whose removal fixes it
+        const cands = mods.filter((m) => !m.isDefault).map((m) => m.id);
+        const fix = cands.find((id) => {
+          try {
+            const trial = activeModules(registry.filter((m) => !dropped.has(m.id) && m.id !== id));
+            const c = compose(trial, { defines });
+            program(gl, FULLSCREEN_VS, c.scene);
+            program(gl, FULLSCREEN_VS, c.post);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+        if (!fix) return fail(`shader: ${msg}`);
+        next = [fix];
+      }
+      console.error(`[world] dropping module(s) ${next.join(', ')}: their shader does not compile\n${msg}`);
+      for (const id of next) dropped.add(id);
+      document.documentElement.setAttribute('data-world-dropped', [...dropped].join(' '));
+      mods = activeModules(registry.filter((m) => !dropped.has(m.id)));
+      if (attempt > 8) return fail(`shader: ${msg}`);
+    }
+  }
+  try {
     downP = program(gl, FULLSCREEN_VS, BLOOM_DOWN);
     upP = program(gl, FULLSCREEN_VS, BLOOM_UP);
   } catch (e) {
     return fail(`shader: ${(e as Error).message}`);
   }
+  const extras: Channels = {};
+  for (const m of mods) Object.assign(extras, m.channels ?? {});
   const vao = gl.createVertexArray();
   const u = new Uniforms(gl);
 

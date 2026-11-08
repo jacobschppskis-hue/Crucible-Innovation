@@ -5,6 +5,7 @@
 // ?still reduced motion, ?loop=0 no loop. Test hooks on window.__world (see ARCHITECTURE.md).
 
 import { createEngine, type Engine, type EngineOpts } from './engine';
+import { MODULES } from './modules';
 
 export type WorldOpts = EngineOpts & { canvas?: HTMLCanvasElement };
 
@@ -46,6 +47,9 @@ export async function startWorld(root: HTMLElement, opts: WorldOpts = {}): Promi
     still: qs.has('still') || (reduce && !qs.has('motion')) || opts.still,
     ...opts,
   };
+  // ?off=mark,paypal: run without those modules (their stand-ins come back): bisecting cost or a fault
+  const off = (qs.get('off') ?? '').split(',').filter(Boolean);
+  if (off.length) o.modules = (opts.modules ?? MODULES).filter((m) => !off.includes(m.id));
   const de = document.documentElement;
   const canvas = opts.canvas ?? Object.assign(document.createElement('canvas'), { className: 'world' });
   canvas.setAttribute('aria-hidden', 'true');
