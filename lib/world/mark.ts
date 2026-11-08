@@ -1,7 +1,9 @@
 // The hero's mark in the world (role: mark). Framework-free. Jacob's Split Ring hangs round the sun as one huge cast
-// structure: the core IS the sun (look draws its disc), so the mark is placed along the sun's direction, far out
-// (celestial: no parallax, no near haze), and scaled so its core is exactly the sun's disc. Its "stronger together"
-// beat (lib/world/together.ts) plays on the `together` place's pin progress, with the captions in that section.
+// structure: the core IS the sun, a world point the journey places (frame.sun: near over the sea in the hero, with real
+// parallax and its reflection under it; a far star elsewhere), so the mark is centred on it and scaled so its core is
+// exactly the sun's sphere (scale = sun.R / 4.8 mark units). This module draws the core (look's own disc is turned off
+// with look.sunDisc 0 wherever the mark shows). Its "stronger together" beat (lib/world/together.ts) plays on the
+// `together` place's pin progress, with the captions in that section.
 //
 // GLSL: lib/world/glsl/mark.glsl (hooks hit/env for the sea's reflections, over for camera rays, sky for the flare).
 import type { Frame, V3 } from './frame';
@@ -11,9 +13,6 @@ import markGlsl from './glsl/mark.glsl';
 import { coreFlare, heatAmount, heatColor, LINES, lineOpacity, seaRing, weldFlash } from './together';
 
 const CORE_R = 4.8; // mark units (lib/splitRing.ts RING.core 3.6 on the 48 grid, x4/3)
-/** How far out the mark hangs (world units; the planet's radius is 6000): far enough that moving round the hero shows
- *  no parallax against the sun, near enough for float precision. */
-const DIST = 1e5;
 const CORE_L: V3 = [9.0, 4.6, 1.9];
 
 /** What the rest of the world may read from the mark each frame (lava: the glitter's tint and the weld's ring). */
@@ -59,15 +58,16 @@ export const mark: WorldModule = {
     const k = f.ch['mark.light'] ?? 1;
     const fill = f.ch['mark.fill'] ?? 1;
     const { pos, r, up: camUp } = f.cam;
-    const sd = f.sun.dir;
-    const centre: V3 = [pos[0] + sd[0] * DIST, pos[1] + sd[1] * DIST, pos[2] + sd[2] * DIST];
-    const scale = (DIST * Math.tan(f.sun.rad) * size) / CORE_R;
-    const B = facing(centre, pos, r, camUp);
+    void camUp;
+    const centre: V3 = f.sun.pos;
+    const scale = (f.sun.R * size) / CORE_R;
+    // square to the line of sight, upright to the planet under the sun (so it reads as the logo, never a tilted plate)
+    const B = facing(centre, pos, r, norm(centre));
     const flare = coreFlare(b);
     u.set('mark_uC', [centre[0], centre[1], centre[2], scale]);
     u.set('mark_uB', [...B.right, ...B.up, ...B.out]);
     u.set('mark_uBeat', [b, weldFlash(b), flare, f.t]);
-    u.set('mark_uLook', [vis, 0, f.quality.q >= 0.45 ? 1 : f.quality.q > 0.2 ? 0.6 : 0, 0]);
+    u.set('mark_uLook', [vis, size, f.quality.q >= 0.45 ? 1 : f.quality.q > 0.2 ? 0.6 : 0, 0]);
     u.set('mark_uSky', [0.2 * fill, 0.22 * fill, 0.27 * fill]);
     u.set('mark_uSea', [0.95 * fill, 0.66 * fill, 0.44 * fill]);
     u.set('mark_uCoreL', [CORE_L[0] * k, CORE_L[1] * k, CORE_L[2] * k]);

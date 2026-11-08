@@ -9,10 +9,11 @@
 // 4.8; each arc a half circle ending on the core's centre line. Extruded 2.4 deep with a rounded 0.5 bevel (lib/gl3d
 // logoPieces), ray-marched inside its slab box only (two squares per ring evaluated, by angle).
 //
-// The mark hangs round the sun at a great distance (lib/world/mark.ts places it along uSunDir, scaled so the core is
-// exactly the sun's disc): it is celestial, so it does not take the near haze. The core itself is look's sun disc;
-// this file lights the pieces with it (a sphere light: GGX with the representative point, soft shadows of the pieces
-// toward it with a penumbra from its size) and brightens the disc during the beat's flare (sky hook).
+// The mark hangs round the sun, which is a world point (lib/world/mark.ts centres it on frame.sun.pos, scaled so the
+// core is exactly the sun's sphere): near over the sea in the hero (real parallax, its reflection on the sea), a far
+// star elsewhere. This file draws the core (look's disc is off where the mark shows) and lights the pieces with it (a
+// sphere light: GGX with the representative point, soft shadows of the pieces toward it with a penumbra from its
+// size); the beat's flare brightens the core and its glow in the sky (sky hook).
 //
 // Physically based, linear HDR radiance: cold, bone cast metal (a broad diffuse part, a bone-tinted sheen) filled by
 // the sky above and the glowing sea below (stronger on the lower pieces) and a thin starlit line on the top bevels; no
@@ -27,7 +28,7 @@
 uniform vec4 mark_uC;     // xyz: the core's centre (world); w: world units per mark unit
 uniform mat3 mark_uB;     // mark -> world (columns: right, up, toward the viewer)
 uniform vec4 mark_uBeat;  // x: beat 0..1 (scroll), y: weld flash 0..1, z: core flare 0..1, w: clock (s)
-uniform vec4 mark_uLook;  // x: visibility 0..1, y: unused, z: shadow quality 0..1, w: unused
+uniform vec4 mark_uLook;  // x: visibility 0..1, y: size (1 = the core is the sun), z: shadow quality 0..1, w: unused
 uniform vec3 mark_uSky;   // fill radiance from the sky above (cool)
 uniform vec3 mark_uSea;   // fill radiance from the glowing sea below (warm)
 uniform vec3 mark_uCoreL; // the core's radiance as a light on the pieces
@@ -189,12 +190,25 @@ vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
   vec3 v = -rd;
   vec2 H = mark_heat(p, id, px);
   float T = H.x, wet = H.y;
+  // in the liquid: hotter along the middle of a stroke or square (thicker, it holds its heat), cooler at its edges; and
+  // faint streamlines drawn out along the flow (smooth, stretched along the run: never specks)
+  if (wet > 0.01) {
+    float edge;
+    if (id < 1.5) edge = abs(length(p.xy) - (id < 0.5 ? MARK_RO : MARK_RI)) / MARK_HS;
+    else { float thc, R; vec2 c = mark_cellOf(id, thc, R); vec2 q = abs(p.xy - c) / MARK_HP; edge = max(q.x, q.y); }
+    float th = PI - abs(atan(p.x, -p.y));
+    float along = th * length(p.xy);
+    float across = id < 1.5 ? (length(p.xy) - (id < 0.5 ? MARK_RO : MARK_RI)) : p.x;
+    float stream = mark_noise(vec3(along * 0.22 - mark_uBeat.w * 0.9, across * 2.4, mark_uBeat.w * 0.15)) - 0.5;
+    T *= 1. - 0.16 * edge * edge;
+    T = clamp(T + stream * 0.07 * wet * smoothstep(0.15, 0.4, T), 0., 1.);
+  }
   // cold: bone cast metal; hot: a glossy liquid skin, nearly black but for its own light
   float rough = mix(0.30 + 0.10 * (1. - abs(n.z)), 0.06, wet);
   float a = rough * rough;
   vec3 bone = vec3(0.80, 0.77, 0.69) * (0.97 + 0.06 * mark_hash12(vec2(id, 3.1)));
   float liq = smoothstep(0.0, 0.3, wet);
-  vec3 F0 = mix(bone * 0.62, vec3(0.05), liq);
+  vec3 F0 = mix(bone * 0.62, vec3(0.32, 0.30, 0.28), liq);   // liquid metal is a mirror too
   vec3 alb = bone * 0.55 * (1. - liq) * (1. - smoothstep(0.05, 0.35, T));
   float nv = max(dot(n, v), 1e-3);
   vec3 col = vec3(0.);
@@ -213,23 +227,26 @@ vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
   col += mark_coreL() * PI * sa2 * (spec + alb / PI * nlS) * sh;
   // fill: the sky above, the glowing sea below, the afterglow ahead; mirrored and diffuse
   vec3 nW = mark_toWorld(n);
-  float up = 0.5 + 0.5 * dot(nW, uCamUp);
+  float up = 0.5 + 0.5 * dot(nW, mark_uB[1]);
   // the sea's light is stronger on the lower pieces (nearer it) and the sky's on the upper ones: a slow gradient down
   // the whole structure, warm at its foot, which is what makes it read as big and lit from below
   float hgt = clamp(p.y / 31. * 0.5 + 0.5, 0., 1.);
-  vec3 irr = PI * (mark_uSky * up * up * mix(0.8, 1.2, hgt) + mark_uSea * (1. - up) * (1. - up) * 1.4 * mix(1.35, 0.6, hgt));
+  vec3 irr = 0.75 * PI * (mark_uSky * up * up * mix(0.8, 1.2, hgt) + mark_uSea * (1. - up) * (1. - up) * 1.4 * mix(1.35, 0.6, hgt));
   col += alb / PI * irr;
+  // the core's glow falls across the front faces: warm near it, so every face shades from its core side to its far
+  // side and the inner ring is lit more than the outer (a near light's falloff, which reads as size)
+  col += alb * vec3(1.0, 0.80, 0.58) * 0.55 * exp(-dl / 13.) * smoothstep(-0.2, 0.8, n.z) * (1. + mark_uBeat.z);
   vec3 rW = mark_toWorld(r);
-  float ru = dot(rW, uCamUp);
+  float ru = dot(rW, mark_uB[1]);
   // what it mirrors: the real sky (sharp on the liquid, blurred toward the fills on the rough cast skin)
   vec3 blur = mix(mark_uSea * 0.5, mark_uSky * 0.7, smoothstep(-0.3, 0.3, ru));
   vec3 e1 = cheap ? blur : mark_envDir(rW);
   vec3 Fe = F0 + (1. - F0) * pow(1. - nv, 5.) * 0.8;
   col += Fe * mix(e1, blur, smoothstep(0.08, 0.4, a));
   // starlight: a thin cool line where a bevel turns up to the night
-  col += vec3(0.10, 0.13, 0.20) * pow(max(dot(nW, uCamUp), 0.), 6.) * (1. - abs(n.z)) * 0.6 * (1. - wet);
+  col += vec3(0.10, 0.13, 0.20) * pow(max(dot(nW, mark_uB[1]), 0.), 6.) * (1. - abs(n.z)) * 0.6 * (1. - wet);
   // heat: emission dominates while hot; emissivity falls at grazing angles, so the glowing pieces keep their form
-  col *= 1. - 0.85 * smoothstep(0.05, 0.45, T);
+  col *= 1. - 0.55 * smoothstep(0.05, 0.45, T);
   col += mark_glow(T) * (0.62 + 0.38 * sqrt(nv));
   return col;
 }
@@ -248,6 +265,29 @@ bool mark_boxHit(vec3 ro, vec3 rd, vec3 b, out float t0, out float t1) {
   vec3 mn = min(a, c), mx = max(a, c);
   t0 = max(max(mn.x, mn.y), mn.z); t1 = min(min(mx.x, mx.y), mx.z);
   return t1 > max(t0, 0.);
+}
+
+// The core: a sphere emitter (a yellow-white heart under an orange skin, a deep limb, a slow boil of large cells; no
+// small-scale noise), flaring with the beat. Radiance in the mark's own HDR scale (its light on the pieces matches).
+vec3 mark_coreShade(vec3 p, vec3 rd) {
+  vec3 n = normalize(p);
+  float mu = max(dot(n, -rd), 0.);
+  float t = mark_uBeat.w;
+  float boil = mark_noise(n * 3.0 + vec3(0., 0., t * 0.05)) * 0.6 + mark_noise(n * 7.0 - vec3(t * 0.08)) * 0.4;
+  vec3 c = mix(vec3(1.1, 0.17, 0.025), vec3(3.4, 0.95, 0.20), smoothstep(0.0, 0.45, mu));
+  c = mix(c, vec3(6.5, 3.9, 1.8), smoothstep(0.72, 1.0, mu) * (0.8 + 0.4 * boil));
+  return c * (0.9 + 0.2 * boil) * (1. + 1.3 * mark_uBeat.z);
+}
+// The core along a local ray: t of the hit (or of the closest approach within a pixel), and its coverage.
+vec2 mark_coreHit(vec3 ro, vec3 rd, float pa) {
+  float b = dot(ro, rd);
+  if (b > 0.) return vec2(-1.);
+  float dc = sqrt(max(dot(ro, ro) - b * b, 0.));
+  float pw = -b * pa;
+  if (dc > MARK_RC + pw) return vec2(-1.);
+  float m = min(dc, MARK_RC);
+  float t = -b - sqrt(max(MARK_RC * MARK_RC - m * m, 0.));
+  return vec2(t, clamp((MARK_RC - dc) / max(pw, 1e-6) + 0.5, 0., 1.));
 }
 
 // March the pieces. Returns the hit (local point, piece id, local t) or the closest approach for the silhouette's
@@ -283,7 +323,13 @@ void mark_local(Ray r, out vec3 ro, out vec3 rd) {
 void mark_hit(Ray r, inout Hit h) {
   if (r.depth == 0 || mark_uLook.x <= 0.002) return;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
+  vec2 c = mark_coreHit(ro, rd, 0.);
   vec4 m = mark_march(ro, rd, r.pa * 4., 24, pL);
+  if (c.x > 0. && (m.z < 0.5 || c.x < m.x)) {
+    float t = c.x * mark_uC.w;
+    if (t < h.t) { h.t = t; h.id = MARK_ID + 1; h.p = r.ro + r.rd * t; h.n = vec3(0.); h.data = vec4(ro + rd * c.x, -1.); }
+    return;
+  }
   if (m.z < 0.5) return;
   float t = m.x * mark_uC.w;
   if (t >= h.t) return;
@@ -292,6 +338,7 @@ void mark_hit(Ray r, inout Hit h) {
 vec3 mark_shade(Ray r, Hit h) { return vec3(0.); } // never: camera rays are composited in mark_over
 vec3 mark_env(Ray r, Hit h) {
   vec3 ro, rd; mark_local(r, ro, rd);
+  if (h.id == MARK_ID + 1) return mark_coreShade(h.data.xyz, rd) * mark_uLook.x;
   return mark_shadeL(h.data.xyz, rd, h.data.w, 0.05, true) * mark_uLook.x;
 }
 
@@ -299,11 +346,14 @@ vec3 mark_env(Ray r, Hit h) {
 void mark_over(Ray r, Hit h, inout vec3 col) {
   if (mark_uLook.x <= 0.002) return;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
+  vec2 c = mark_coreHit(ro, rd, r.pa);
+  if (c.y > 0. && c.x * mark_uC.w < h.t) col = mix(col, mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd), c.y * mark_uLook.x);
   vec4 m = mark_march(ro, rd, r.pa, 24 + int(24. * uQ), pL);
   if (m.w <= 0.) return;
   if (m.x * mark_uC.w >= h.t) return;
-  vec3 c = mark_shadeL(pL, rd, m.y, m.x * r.pa, false);
-  col = mix(col, c, m.w * mark_uLook.x);
+  if (c.y >= 1. && c.x < m.x) return;
+  vec3 s = mark_shadeL(pL, rd, m.y, m.x * r.pa, false);
+  col = mix(col, s, m.w * mark_uLook.x);
 }
 
 // The core is the sun: it flares with the blaze (look draws the disc; this brightens it and its glow).
@@ -311,5 +361,5 @@ void mark_sky(Ray r, inout vec3 col) {
   float f = mark_uBeat.z;
   if (f <= 0.001 || mark_uLook.x <= 0.002) return;
   float x = acos(clamp(dot(r.rd, uSunDir), -1., 1.)) / max(uSunRad, 1e-4);
-  col += vec3(1.0, 0.55, 0.22) * f * mark_uLook.x * (smoothstep(1.05, 0.9, x) * 6.0 + 0.9 * exp(-(x - 1.) * 1.5) * step(1., x));
+  col += vec3(1.0, 0.55, 0.22) * f * mark_uLook.x * 0.9 * exp(-(x - 1.) * 1.5) * step(1., x);
 }
