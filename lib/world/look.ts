@@ -27,11 +27,11 @@ export const AIR = {
   Rt: 2040,
   // Rayleigh less steep than Earth's: the dusk band reads steel blue (Quench), not saturated blue; dense at the bottom
   // (scale height 2.5 km): a dark zenith with stars at dusk, a deep orange horizon
-  rayS: [8.5e-3, 14e-3, 24e-3],
+  rayS: [7e-3, 13e-3, 27e-3],
   rayH: 2.5,
   // aerosol that absorbs blue: the horizon turns orange
-  mieS: [6e-3, 5e-3, 4e-3],
-  mieA: [0.6e-3, 3e-3, 9e-3],
+  mieS: [4e-3, 3.2e-3, 2.4e-3],
+  mieA: [0.6e-3, 4e-3, 14e-3],
   mieH: 0.8,
   mieG: 0.8,
   ozA: [0.65e-3, 1.881e-3, 0.085e-3],
@@ -87,7 +87,7 @@ function skyLight(f: Frame): number[] {
   const c = Math.cos(el1), sn = Math.sin(el1);
   return [(h[0] / hl) * c + up[0] * sn, (h[1] / hl) * c + up[1] * sn, (h[2] / hl) * c + up[2] * sn];
 }
-const DUSK_EL = -0.5 * (Math.PI / 180);
+const DUSK_EL = 1.5 * (Math.PI / 180);
 
 const SKY_W = 192,
   SKY_H = 108;
