@@ -157,8 +157,12 @@ async function loop(device) {
   if (device === 'desktop') {
     await page.evaluate((y) => scrollTo(0, y), maxY - 2 * H); await sleep(600);
     const p0 = await page.evaluate(() => window.__qa.progress());
-    const tp = trace(page, 5000);
-    for (let i = 0; i < 40; i++) { await page.mouse.wheel(0, 120); await sleep(50); }
+    // keep wheeling until well past the bottom (input is frame-gated under SwiftShader, so count distance, not ticks)
+    const tp = trace(page, 14000);
+    for (let i = 0, t = Date.now(); Date.now() - t < 12000; i++) {
+      await page.mouse.wheel(0, 120); await sleep(50);
+      if (i % 10 === 9 && (await page.evaluate(([m, h]) => scrollY < m - 3 * h || window.__qa.progress() < 0.2, [maxY, H]))) { await sleep(1500); break; }
+    }
     const tr = await tp;
     const a = analyse(tr, 1);
     fs.writeFileSync(path.join(OUT, `loop-wheel-${dn}.json`), JSON.stringify(tr));
