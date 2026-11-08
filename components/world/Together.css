@@ -34,20 +34,20 @@ html[data-world-on] .tg-line {
 /* Wide: each half's name beside its half, level with the core; the payoff above the mark. */
 html[data-world-on] .tg-human {
   right: calc(100% - var(--mx, 50vw) + var(--mr, 20vw) * 1.18);
-  top: calc(var(--my, 40vh) - 0.5em);
+  top: max(96px, calc(var(--my, 40vh) - 0.5em));
   text-align: right;
   max-width: calc(var(--mx, 50vw) - var(--mr, 20vw) * 1.18 - 16px);
 }
 html[data-world-on] .tg-machine {
   left: calc(var(--mx, 50vw) + var(--mr, 20vw) * 1.18);
-  top: calc(var(--my, 40vh) - 0.5em);
+  top: max(96px, calc(var(--my, 40vh) - 0.5em));
   text-align: left;
   max-width: calc(100% - var(--mx, 50vw) - var(--mr, 20vw) * 1.18 - 16px);
 }
 html[data-world-on] .tg-payoff {
   left: 0;
   right: 0;
-  bottom: calc(100% - var(--my, 40vh) + var(--mr, 20vw) * 1.22);
+  top: max(96px, calc(var(--my, 40vh) - var(--mr, 20vw) * 1.22 - 1.05em));
   text-align: center;
 }
 /* Phones: no room beside the mark; the two names stack above it, the human half on the left, the machine half on the

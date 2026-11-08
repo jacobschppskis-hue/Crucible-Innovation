@@ -116,8 +116,12 @@ export const mark: WorldModule = {
         stage.style.setProperty('--mr', `${markBox.r.toFixed(1)}px`);
       }
     }
+    // the captions belong to the pinned stage: they are gone before the section scrolls away (so they never ride up
+    // under the nav or share the screen with story's heading), whatever the beat is still finishing
+    const a = f.at('together');
+    const pin = f.still ? 1 : Math.min(1, Math.max(0, (a - 0.005) / 0.02)) * Math.min(1, Math.max(0, (0.985 - a) / 0.035));
     for (let i = 0; i < lines.length && i < LINES.length; i++) {
-      const o = lineOpacity(i, b);
+      const o = lineOpacity(i, b) * pin;
       const el = lines[i];
       const s = o.toFixed(3);
       if (el.style.opacity !== s) {

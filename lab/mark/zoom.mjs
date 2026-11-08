@@ -19,7 +19,7 @@ const srv = http.createServer((req, res) => {
 await new Promise((r) => srv.listen(0, r));
 const exe = process.env.PW_CHROMIUM_PATH || '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome';
 const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const prof = dev === 'phone' ? { ...devices['iPhone 15'] } : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 };
+const prof = dev === 'phone' ? { ...devices['iPhone 15'] } : { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 };
 const ctx = await browser.newContext(prof);
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.log('pageerror', e.message));
