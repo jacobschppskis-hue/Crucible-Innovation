@@ -101,6 +101,10 @@ export function keys(): Key[] {
   const NEAR = { sunU: 0, sunV: -170, sunY: 34, sunR: 4.0 };
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
   const FAR2 = { ...FAR, sunV: deg(280) }; // the same place, written one lap on, for the run home
+  // V2, the reference look in orbit (plan/v2/reference-orbit.webp): dusk on the limb. The far sun sits a few degrees
+  // under the limb straight ahead, so the atmosphere lights a sunset band along it: over longitude L, a camera at angle
+  // th and height h sees it at elevation 90 - (L - th), the limb at -acos(R / (R + h)); L = th + 94 + dip.
+  const dusk = (lonDeg: number) => ({ ...FAR, sunV: deg(lonDeg) });
   return [
     // hero: low over the molten sea at sunset, the mark floating over its reflection, its core the sun; stars above
     { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } }, // mark: phone core right of the type, so the glitter column never crosses it
@@ -114,16 +118,16 @@ export function keys(): Key[] {
     { at: ['story', 0], s: 90, h: 7, yaw: 118, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
     { at: ['story', 0.35], s: 360, h: 6, yaw: 80, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
     // V2: one slow climb from the swoop straight up to PayPal's orbit (no zoom onto the vent's glowing patch)
-    { at: ['story', 1], s: deg(14), h: 1300, yaw: 6, pitch: -26, fov: 48, ...FAR, ph: { fov: 62, pitch: -22 } },
+    { at: ['story', 1], s: deg(14), h: 1300, yaw: 6, pitch: -26, fov: 48, ...dusk(170), ph: { fov: 62, pitch: -22 } },
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
     // story-2 (the rest of Jacob's account): the limb and the stars from orbit; the limb in the lower third (pitch =
     // about 13-15 deg above the horizon dip, acos(R / (R + h)))
-    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -37, fov: 46, ...FAR, ph: { fov: 60, pitch: -35 } },
-    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -30, fov: 46, ...FAR, ph: { fov: 60, pitch: -28 } },
+    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -37, fov: 46, ...dusk(176.3), ph: { fov: 60, pitch: -35 } },
+    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -30, fov: 46, ...dusk(216.9), ph: { fov: 60, pitch: -28 } },
     // story-3 (Charlie): coming down over the night side
-    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -18, fov: 48, ...FAR, ph: { fov: 62, pitch: -16 } },
+    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -18, fov: 48, ...dusk(223.6), ph: { fov: 62, pitch: -16 } },
     { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, ...FAR, ph: { fov: 62, pitch: 3 } },
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
