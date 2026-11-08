@@ -84,6 +84,7 @@ html:not(.gl) .nogl-sky::after {
 [data-heat] .w { display: inline-block; will-change: font-variation-settings; }
 .h-sec { font-size: clamp(40px, 6.6vw, 104px); }
 .lede { color: var(--bone-dim); max-width: 34ch; margin: 0; }
+.hero .lede { color: var(--bone); text-shadow: 0 1px 14px #0D0D0B, 0 0 2px #0D0D0B; }
 .small { font-size: 13px; line-height: 1.4; color: var(--bone-dim); }
 .fl { will-change: translate, rotate; }
 
@@ -105,7 +106,7 @@ html:not(.gl) .nogl-sky::after {
   .hero-copy { bottom: 7svh; grid-template-columns: 1fr; }
   .hero h1 { font-size: clamp(46px, 14.5vw, 80px); grid-column: 1; }
   .beats { bottom: 12svh; }
-  .beat { font-size: clamp(40px, 12.4vw, 72px); }
+  .beat { font-size: clamp(34px, 10.6vw, 72px); }
 }
 
 /* ---------- story ---------- */
@@ -145,11 +146,11 @@ html:not(.gl) .nogl-sky::after {
 .pp-word, .pp-name { position: absolute; left: 50%; top: 50%; translate: -50% -50%; white-space: nowrap; margin: 0; }
 .pp-word { font-size: clamp(64px, 12vw, 200px); line-height: 1; }
 .pp-name { font-size: clamp(26px, 3.6vw, 58px); line-height: 1; opacity: 0; }
-.pp-date { position: absolute; left: 50%; top: calc(50% + clamp(52px, 8vw, 130px)); translate: -50% 0; opacity: 0; font-variant-numeric: tabular-nums; }
+.pp-date { position: absolute; left: 50%; bottom: 9svh; translate: -50% 0; opacity: 0; font-variant-numeric: tabular-nums; }
 
 /* ---------- ventures: castings rise out of the liquid ---------- */
 .ventures { position: relative; padding: 26svh 0 10svh; }
-.v-h { font-size: clamp(40px, 6.4vw, 104px); max-width: 12ch; margin-bottom: 12svh; }
+.v-h { font-size: clamp(30px, 9.4vw, 104px); max-width: 12ch; margin-bottom: 12svh; }
 .v { display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(28px, 5vw, 90px); align-items: center; margin: 0 0 20svh; }
 .v.flip { grid-template-columns: 1fr 1.35fr; }
 .v.flip .slab { order: 2; }
@@ -184,7 +185,8 @@ html:not(.gl) .slab-name { display: grid; }
 .thesis { position: relative; height: 300svh; }
 .th-lines { position: absolute; left: var(--gut); right: var(--gut); top: calc(var(--nav-h) + 10svh); display: grid; }
 .th-a, .th-b { grid-area: 1 / 1; }
-.th-lines .disp { font-size: clamp(40px, 6.4vw, 104px); max-width: 13ch; }
+.th-lines .disp { font-size: clamp(30px, 9.2vw, 104px); max-width: 13ch; }
+@media (min-width: 761px) { .th-lines .disp { font-size: clamp(40px, 6.4vw, 104px); } }
 .th-lines p.sub { margin: 22px 0 0; color: var(--bone-dim); }
 .readout { position: absolute; right: var(--gut); top: calc(var(--nav-h) + 11svh); text-align: right; }
 .readout b { display: block; font-size: clamp(34px, 4vw, 64px); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1;
@@ -207,6 +209,13 @@ html:not(.gl) .slab-name { display: grid; }
 .sand { padding: 15svh var(--gut) max(22px, env(safe-area-inset-bottom)); align-items: end; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 
 @media (prefers-reduced-motion: reduce) { .fl { will-change: auto; } }
+/* without JS: no pins, the copy reads straight down */
+html:not(.js) .hero, html:not(.js) .pp, html:not(.js) .thesis { height: auto; }
+html:not(.js) .stick { position: relative; height: auto; min-height: 100svh; overflow: visible; }
+html:not(.js) .beats, html:not(.js) .pp-name, html:not(.js) .pp-date { display: none; }
+html:not(.js) .pp .stick { min-height: 60svh; }
+html:not(.js) .th-lines { position: relative; gap: 12svh; }
+html:not(.js) .th-b { opacity: 1 !important; }
 </style>
 </head>
 <body>
@@ -404,7 +413,7 @@ uniform vec4 uSpot[8];   // hot spots under the surface: x, z, radius, heat
 uniform int uSpotN;
 uniform vec4 uHeat;      // thesis heat, thesis anchor z, shore z, shore on
 uniform vec4 uSlab[3];   // ventures: centre x, z, half w, half h
-uniform vec4 uSlabP[3];  // rise, heat, hover, kind (0 cast bone, 1 forging)
+uniform vec4 uSlabP[3];  // rise, atlas row, hover, kind (0 cast bone, 1 forging)
 uniform int uSlabN;
 uniform sampler2D uRelief;
 uniform vec2 uSwell;     // page swell amplitude, horizon swell amplitude
@@ -438,8 +447,8 @@ float sdRBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(m
 // ---------- the swell: long-crested, rolling toward the viewer (down the page), dispersive ----------
 // x: direction (rad, 0 = toward -z), y: wavelength (world px), z: relative amplitude, w: phase
 const vec4 SW[8] = vec4[8](
-  vec4(0.00, 520., 0.60, 0.0), vec4(-0.24, 330., 0.60, 1.7), vec4(0.19, 240., 0.70, 4.1), vec4(0.38, 170., 0.62, 2.3),
-  vec4(-0.43, 122., 0.55, 5.2), vec4(0.10, 86., 0.45, 0.9), vec4(-0.14, 57., 0.34, 3.3), vec4(0.52, 39., 0.25, 1.1));
+  vec4(0.00, 520., 0.60, 0.0), vec4(-0.12, 330., 0.60, 1.7), vec4(0.10, 240., 0.70, 4.1), vec4(0.19, 170., 0.62, 2.3),
+  vec4(-0.22, 122., 0.55, 5.2), vec4(0.05, 86., 0.45, 0.9), vec4(-0.07, 57., 0.34, 3.3), vec4(0.26, 39., 0.25, 1.1));
 const vec4 SWL[3] = vec4[3](vec4(0.06, 2600., 1.0, 0.7), vec4(-0.18, 1500., 0.8, 2.2), vec4(0.27, 900., 0.7, 4.6));
 vec3 swell(vec2 p, float fp, inout float var) {
   vec3 h = vec3(0.);
@@ -696,7 +705,7 @@ vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
       float bt = sdRBox(lt, S.zw, rad);
       if (bt < 0.) {
         vec2 uv = lt / (S.zw * 2.) + 0.5;
-        vec2 auv = vec2(uv.x, (float(i) + 1. - uv.y) / 3.);
+        vec2 auv = vec2(uv.x, (SP.y + 1. - uv.y) / 3.);
         float tx = 1. / 1024.;
         vec4 T0 = texture(uRelief, auv);
         float hx = texture(uRelief, auv + vec2(tx, 0.)).g - texture(uRelief, auv - vec2(tx, 0.)).g;
@@ -726,14 +735,15 @@ vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
           float sky = 0.5 + 0.5 * n.y;
           col = alb * (dif * vec3(0.95, 0.80, 0.66) * 0.55 + sky * vec3(0.10, 0.13, 0.20)) + sp * vec3(1.0, 0.82, 0.62) * 0.35;
           col += vec3(1.6, 0.5, 0.15) * pow(edge, 6.) * (0.10 + 0.9 * hover) * 0.6;      // hot edge when you touch it
-          col += vec3(3.4, 0.9, 0.24) * T0.b * (0.8 + 0.4 * sin(uT * 2.));              // the mark's core stays orange
+          col = mix(col, vec3(1.1, 0.24, 0.05) * (0.9 + 0.15 * sin(uT * 2.)), T0.b);              // the mark's core stays orange
         } else {
           // still forging: a drifting dark crust with glowing cracks; the name is cut through to the hot metal
           float n1 = fbmAA(lt * 0.016 + vec2(uT * 0.015, -uT * 0.01), 0.016 / uQ, 5);
-          float crk = smoothstep(0.93, 0.995, 1. - abs(2. * n1 - 1.));
-          float tC = 0.13 + 0.5 * crk + 0.06 * grain + 0.5 * T0.r + 0.12 * hover + 0.04 * sin(uT * 1.3 + lt.x * 0.01);
-          col = blackbody(clamp(tC, 0., 0.93)) * (0.75 + 0.25 * SP.y);
-          col += vec3(0.04, 0.035, 0.03) * max(dot(n, normalize(vec3(-0.2, 0.9, 0.4))), 0.);
+          float crk = smoothstep(0.95, 0.997, 1. - abs(2. * n1 - 1.));
+          vec3 crust = vec3(0.022, 0.010, 0.006) * (0.7 + 0.6 * grain) * (0.6 + 0.8 * max(dot(n, normalize(vec3(-0.2, 0.9, 0.4))), 0.));
+          col = mix(crust, blackbody(0.42 + 0.2 * crk + 0.1 * hover), crk * 0.7);
+          col = mix(col, blackbody(0.62 + 0.06 * sin(uT * 1.7 + lt.x * 0.02) + 0.08 * hover + 0.1 * T0.g), T0.r);
+          col += blackbody(0.35) * smoothstep(0.0, 0.7, T0.g) * (1. - T0.r) * 0.5;   // the heat bleeding out of the cuts
           col += vec3(1.8, 0.7, 0.2) * pow(edge, 6.) * hover * 0.6;
         }
         return vec4(col, 1.);
@@ -876,7 +886,7 @@ void main() {
     // crests (a thin line along each), faces turned away catch a little cold sky
     float sz = -hh.z, sxs = -hh.y;
     float lit = sz * 9. + sxs * 2.5;
-    vec3 keyc = (vec3(0.85, 0.74, 0.62) * pow(max(lit, 0.), 1.6) * 0.006 + vec3(0.30, 0.45, 0.85) * max(-lit, 0.) * 0.0025) * page;
+    vec3 keyc = (vec3(0.85, 0.74, 0.62) * pow(max(lit, 0.), 1.6) * 0.006 + vec3(0.30, 0.45, 0.85) * max(-lit, 0.) * 0.0012) * page;
     keyc += vec3(1.0, 0.70, 0.48) * exp(-pow((sz + 0.3 * sxs - 0.04) / 0.009, 2.)) * 0.022 * page;
     // glints only where the visitor made waves: crisp, hot, on the faces that turn to the key
     float iz = -hi.z, ix = -hi.y;
@@ -887,6 +897,7 @@ void main() {
     float crestL = clamp(gCrest / 0.4, 0., 1.);
     glint += (vec3(0.95, 0.62, 0.40) * crestL * 0.05 + vec3(1.0, 0.36, 0.10) * crestL * crestL * 0.05) * page;
     glint -= vec3(0.0012) * smoothstep(0.05, 0.3, -gCrest) * page;
+    glint += vec3(1.0, 0.45, 0.15) * crestL * crestL * 0.25 * (1. - page) * uMark.z;
 
     // the molten body: crust, cracks that glow, troughs hotter; the visitor's wake tears the crust (hotter)
     vec3 emit = vec3(0.);
@@ -899,7 +910,7 @@ void main() {
       float cracks = mix(smoothstep(0.86, 0.985, cr), 0.12, far);
       float n2 = fbmAA(np * 3.1 + vec2(uT * 0.02, 0.), fpN * 3.1, 3);
       float trough = smoothstep(0., -4., hh.x) * 0.6;
-      float T = E * (0.12 + 0.66 * cracks * (0.5 + 0.8 * n2) + 0.2 * trough) + E * min(en * 0.9, 0.45);
+      float T = E * (0.12 + 0.66 * cracks * (0.5 + 0.8 * n2) + 0.2 * trough) + (0.35 + 0.65 * E) * clamp(gCrest * 2.4, 0., 0.78) * (1. - 0.6 * page);
       emit = blackbody(clamp(T, 0., 0.97)) * (0.35 + 0.65 * E);
     }
 
@@ -947,6 +958,7 @@ void main() {
 // Continuum: one world from the horizon to the shore. No libraries; one WebGL2 canvas; one clock.
 (() => {
 'use strict';
+document.documentElement.classList.add('js');
 const Q = new URLSearchParams(location.search);
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches || Q.has('still');
 const FIXT = Q.has('t') ? +Q.get('t') : null;
@@ -1089,14 +1101,25 @@ function toWorld(sx, sy) {
   const d = [X, F[1] * cam.f + Uv[1] * Y, F[2] * cam.f + Uv[2] * Y];
   if (d[1] > -1e-3 * cam.f) return null;
   const t = cam.y / -d[1];
-  return { x: cam.x + d[0] * t, z: cam.z + d[2] * t, sc: t * Math.hypot(d[0], d[1], d[2]) / Math.hypot(d[0], d[1], d[2]) ** 2 * Math.hypot(d[0], d[1], d[2]) / 1 };
+  return { x: cam.x + d[0] * t, z: cam.z + d[2] * t, sc: t };
 }
-// (t is in units of the unnormalised ray; the lateral scale is |d| * t / |d| = t)
-function toWorld2(sx, sy) { const w = toWorld(sx, sy); if (w) { const { F, U: Uv } = basis(cam.pitch); const Y = CH / 2 - sy; const dy = F[1] * cam.f + Uv[1] * Y; w.sc = cam.y / -dy; } return w; }
+// sc: world units per CSS px there, the geometric mean of the lateral and the foreshortened scale (what the shader's
+// anti-aliasing uses), so a wake drawn on the far sea keeps the same on-screen size and never thins below a pixel
+function toWorld2(sx, sy) {
+  const w = toWorld(sx, sy);
+  if (w) {
+    const { F, U: Uv } = basis(cam.pitch);
+    const X = sx - vw / 2, Y = CH / 2 - sy;
+    const dy = F[1] * cam.f + Uv[1] * Y, dz = F[2] * cam.f + Uv[2] * Y;
+    const len = Math.hypot(X, dy, dz);
+    w.sc = (cam.y / -dy) * len / Math.sqrt(Math.max(-dy / len, 0.004)) / len;
+  }
+  return w;
+}
 
 // ---------- the wave model on the CPU (mirrors sea.glsl: swell + wake + rings) ----------
-const SW = [[0.00, 520, 0.60, 0.0], [-0.24, 330, 0.60, 1.7], [0.19, 240, 0.70, 4.1], [0.38, 170, 0.62, 2.3],
-  [-0.43, 122, 0.55, 5.2], [0.10, 86, 0.45, 0.9], [-0.14, 57, 0.34, 3.3], [0.52, 39, 0.25, 1.1]];
+const SW = [[0.00, 520, 0.60, 0.0], [-0.12, 330, 0.60, 1.7], [0.10, 240, 0.70, 4.1], [0.19, 170, 0.62, 2.3],
+  [-0.22, 122, 0.55, 5.2], [0.05, 86, 0.45, 0.9], [-0.07, 57, 0.34, 3.3], [0.26, 39, 0.25, 1.1]];
 let swellAmp = 1;
 function swellAt(x, z, t) {
   let h = 0, gx = 0, gz = 0;
@@ -1389,7 +1412,7 @@ function updPayPal() {
   const warm = sstep(-0.35, 0.1, ppP - 0.0) * (ppT < 0 ? 1 : 0);
   if (ppP > 0.2 && ppT < 0) {
     ppT = now;
-    if (w) ring(w.x, w.z, { speed: 300 * w.sc, W0: 16, slope: 0.24, tau: 3.2, life: 7 });
+    if (w) ring(w.x, w.z, { speed: 420 * w.sc, W0: 16, slope: 0.24, tau: 3.2, life: 7 });
   }
   if (ppP < 0.12 && ppT >= 0) { ppT = -1; ppNames.forEach((o) => (o.up = -1)); }
   const age = ppT < 0 ? -1 : now - ppT;
@@ -1402,13 +1425,13 @@ function updPayPal() {
   ppDate.style.opacity = (ppT < 0 ? 0 : sstep(0.2, 0.8, age) * (1 - sstep(3.4, 4.4, age))).toFixed(3);
   if (w && r.bottom > 0 && r.top < CH) spots.push({ x: w.x, z: w.z, r: Math.max(r.width * 0.32, 70), h: 0.5 * (ppT < 0 ? warm : Math.max(0, 1 - age / 1.6)) });
   // the ring front, 300 px/s, reaches each name in turn; each surfaces white-hot and cools to bone
-  const front = age < 0 ? -1 : 300 * age;
+  const front = age < 0 ? -1 : 420 * age;
   ppNames.forEach((o) => {
     const d = Math.hypot(o.dx, o.dy);
     if (o.up < 0 && front >= d - 30) {
       o.up = now;
       const ww = toWorld2(cx + o.dx, cy + o.dy);
-      if (ww) ring(ww.x, ww.z, { speed: 120, W0: 10, slope: 0.2, tau: 1.6, life: 4 });
+      if (ww) ring(ww.x, ww.z, { speed: 120, W0: 10, slope: 0.12, tau: 1.4, life: 3.5 });
     }
     const a = o.up < 0 ? -1 : now - o.up;
     const s = a < 0 ? 0 : sstep(0, 0.5, a);
@@ -1448,7 +1471,7 @@ function updSlabs(dt) {
     if (s.rise < -5) s.up = false;
     const bob = swellAt(c.x, c.z, now)[0] * 2;
     slabU.set([c.x, c.z, r.width / 2, r.height / 2], slabN * 4);
-    slabPU.set([s.rise + bob, 1, s.hv, s.kind], slabN * 4);
+    slabPU.set([s.rise + bob, s.i, s.hv, s.kind], slabN * 4);
     slabN++;
   }
 }
@@ -1483,7 +1506,7 @@ function updThesis() {
 // ---------- heat type: words widen and gain weight as they warm, then settle ----------
 const heat = (() => {
   const items = [];
-  const REST = { wd: 112, wg: 600 }, HOT = { wd: 125, wg: 800 };
+  const REST = { wd: 112, wg: 600 }, HOT = { wd: innerWidth < 560 ? 117 : 125, wg: 800 };
   function split(el) {
     const walk = (node) => {
       for (const ch of [...node.childNodes]) {
@@ -1505,7 +1528,7 @@ const heat = (() => {
     split(el);
     const words = $$('.w', el).map((w) => ({ el: w, h: 0, shown: -1, cx: 0, cy: 0, on: false }));
     const quote = el.classList.contains('quote');
-    items.push({ el, words, force: el.dataset.hot ? 1 : 0, set: -1, flashT: -99, quote });
+    items.push({ el, words, force: el.dataset.hot ? 1 : 0, set: -1, flashT: -99, quote, hero: !!el.closest('#hero') });
   }
   const byEl = new Map(items.map((i) => [i.el, i]));
   return {
@@ -1527,11 +1550,13 @@ const heat = (() => {
         const flash = it.flashT > 0 ? Math.max(0, 1 - Math.max(0, now - it.flashT - 0.2) / 2.4) * (now >= it.flashT ? 1 : 0) : 0;
         const force = it.force ? Math.max(0, 1 - Math.max(0, now - 0.9) / 2.6) : 0;
         // warms as it crosses the reading line, cools once read
-        const read = it.set >= 0 || it.force ? 0 : 0.55 * Math.exp(-(((it.cy - CH * 0.52) / (CH * 0.2)) ** 2));
+        const read = it.set >= 0 || it.force || it.hero ? 0 : 0.5 * Math.exp(-(((it.cy - CH * 0.52) / (CH * 0.2)) ** 2));
         for (const w of it.words) {
           let wake = 0;
           if (!RM) { const ww = toWorld2(w.cx, w.cy); if (ww) { const o = interactAt(ww.x, ww.z); wake = clamp(o[3] * 4.5 + Math.hypot(o[1], o[2]) * 3, 0, 1); } }
-          const tgt = RM ? (it.set >= 0 ? 0 : 0) : Math.max(read, wake, flash, force, it.set >= 0 ? it.set : 0);
+          const hotSrc = Math.max(wake, flash, force, it.set >= 0 ? it.set : 0);
+          it.hc = hotSrc > read * 0.9;
+          const tgt = RM ? 0 : Math.max(read, hotSrc);
           const tau = tgt > w.h ? 0.07 : 0.7;
           w.h += (tgt - w.h) * Math.min(1, dt / tau);
           if (Math.abs(w.h - w.shown) < 0.004) continue;
@@ -1539,11 +1564,12 @@ const heat = (() => {
           const h = w.h, q = it.quote ? 0.35 : 1;
           const wd = REST.wd + (HOT.wd - REST.wd) * h * q, wg = REST.wg + (HOT.wg - REST.wg) * h * q;
           w.el.style.fontVariationSettings = `'wdth' ${wd.toFixed(1)}, 'wght' ${wg.toFixed(0)}`;
-          const hot = sstep(0.35, 0.85, h);
-          // colour means temperature: bone -> Ember -> white-hot at the top of the range
-          const c = h > 0.85 ? [mix(255, 255, 0), mix(91, 217, (h - 0.85) / 0.15), mix(31, 166, (h - 0.85) / 0.15)] : [mix(232, 255, hot), mix(228, 91, hot), mix(216, 31, hot)];
-          w.el.style.color = h < 0.01 ? '' : `rgb(${c.map((x) => Math.round(x)).join(',')})`;
-          w.el.style.textShadow = h > 0.4 ? `0 0 ${(0.25 * h).toFixed(2)}em rgba(255,91,31,${(0.55 * sstep(0.4, 1, h)).toFixed(2)})` : '';
+          // colour means temperature, along a blackbody, never through pink: bone -> pale amber -> amber -> Ember
+          const RAMP = [[232, 228, 216], [255, 222, 176], [255, 160, 82], [255, 91, 31]];
+          const ch = it.hc ? sstep(0.45, 1, h) * 3 : 0, i0 = Math.min(2, Math.floor(ch)), fr = ch - i0;
+          const c = RAMP[i0].map((v, k) => mix(v, RAMP[i0 + 1][k], fr));
+          w.el.style.color = ch < 0.01 ? '' : `rgb(${c.map((x) => Math.round(x)).join(',')})`;
+          w.el.style.textShadow = it.hc && h > 0.4 ? `0 0 ${(0.25 * h).toFixed(2)}em rgba(255,91,31,${(0.55 * sstep(0.4, 1, h)).toFixed(2)})` : '';
         }
       }
     },

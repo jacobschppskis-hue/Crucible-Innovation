@@ -54,6 +54,21 @@ Test hooks: `?t=<seconds>` fixes the clock, `?q=<scale>` fixes the render scale,
 `window.__step(dt)` advances and renders exactly one frame, `__hold()` / `__resume()`, `__state()`, `__sample(x, y)`
 (the CPU wave field under a screen point).
 
+## How it was tested (Playwright Chromium, SwiftShader, clock held and stepped frame by frame)
+- Hero idle: 9 frames over 6 s; the whole scroll walked at 1440x900 and on `devices['iPhone 15']` (17 positions each:
+  headline, the three beats, mid-tilt, top-down, both chapters, PayPal, each venture, thesis at 293 K and 1811 K, shore).
+- Cursor on the page liquid: slow straight (100 px/s), slow curve, medium (420 px/s), fast flick (2600 px/s), mouse drag;
+  cursor over the hero's lava (380 px/s). Phone: CDP touch drag across the liquid, CDP touch scroll with momentum.
+  Found and fixed along the way: beads on touch/scroll wakes (blend windows assumed equal segment lengths, and speed was
+  re-derived per segment: now nearest segment only, smoothed speed per point, 35 ms low-pass on whole-pixel pointer
+  input), aliasing of the crest light on phones (it was a sharp threshold, now proportional), the hero wake thinning to a
+  dashed line on the far sea (wake scale now follows the foreshortened footprint).
+- The CPU wave field (`__sample`) was probed across a slow hover: a clean V at about Kelvin's angle, continuous arms.
+- No horizontal overflow at 360, 390, 768, 1440 (every element checked at every 700 px of scroll). JS off: all copy
+  readable, no pins. Reduced motion: stills of the hero, story, ventures and shore.
+- Not verified: real GPUs (no hardware here), so 60 fps on a MacBook and an iPhone is designed for (quality steps, DPR
+  cap, skipped work) but not measured; Safari/WebKit not run.
+
 ## References (researched first)
 - TDM, "Seascape" (Shadertoy Ms2SD1): the canonical procedural sea; sky + Fresnel reflection + sun specular on a
   heightfield. Takeaway: the sea's look is mostly the sky it reflects; keep the sky dark and the sea follows.
