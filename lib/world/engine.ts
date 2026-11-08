@@ -141,9 +141,15 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
   let W = window.innerWidth,
     H = window.innerHeight,
     narrow = false;
+  // a place's pin length: from its top at the viewport top to its bottom at the viewport bottom; a place barely taller
+  // than the viewport (or shorter) runs over 80% of its own height instead, so its keys never collapse into a cut
+  const span = (p: PlaceInfo) => {
+    const pin = p.h - H;
+    return Math.max(pin >= 0.5 * H ? pin : Math.max(pin, 0.8 * p.h), 1);
+  };
   const pinY = (name: string, f: number) => {
     const p = places[name];
-    return p ? p.top + f * Math.max(p.h - H, 0) : null;
+    return p ? p.top + f * span(p) : null;
   };
   function measure() {
     W = window.innerWidth;
@@ -154,7 +160,15 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     for (const k of Object.keys(places)) delete places[k];
     for (const el of root.querySelectorAll<HTMLElement>('[data-place]')) {
       const r = el.getBoundingClientRect();
-      places[el.dataset.place!] = { name: el.dataset.place!, top: r.top + sy, h: r.height, el };
+      const name = el.dataset.place!,
+        top = r.top + sy,
+        old = places[name];
+      // a place may be marked on several elements (a heading and its text): it spans all of them
+      if (old) {
+        const bot = Math.max(old.top + old.h, top + r.height);
+        old.top = Math.min(old.top, top);
+        old.h = bot - old.top;
+      } else places[name] = { name, top, h: r.height, el };
     }
     anchors = resolve(mergeKeys((opts.keys ?? defaultKeys)(), mods), pinY, H, narrow, extras);
     resizeCanvas();
@@ -235,7 +249,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     at: (name) => {
       const p = places[name];
       if (!p) return 0;
-      return clamp((f.y - p.top) / Math.max(p.h - H, 1));
+      return clamp((f.y - p.top) / span(p));
     },
     places,
     ch: chv,
@@ -279,7 +293,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
       if (mid >= p.top && p.top > best) {
         best = p.top;
         pl = p.name;
-        pf = clamp((f.y - p.top) / Math.max(p.h - H, 1));
+        pf = clamp((f.y - p.top) / span(p));
       }
     f.place.name = pl;
     f.place.f = pf;

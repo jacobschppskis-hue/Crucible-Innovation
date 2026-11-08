@@ -61,7 +61,9 @@ channels place it: `sunU, sunV, sunY` (surface coords + height; `sunV` absolute 
 
 Sections in page order; each is `data-place="<name>"`. Keys (`journey.ts`) anchor to `(place, f)`: `f = 0` is the
 section top at the viewport top, `f = 1` its bottom at the viewport bottom (pinned sections are taller than the
-viewport; their content is `position: sticky`). `frame.at(name)` = a place's pin progress 0..1 on the current scroll.
+viewport; their content is `position: sticky`). A place less than 1.5 viewports tall runs its f over 80% of its own height
+instead (top at the viewport top -> 0.8 of it scrolled past), so its keys never collapse into a cut. A place marked on
+several elements spans all of them. `frame.at(name)` = a place's pin progress 0..1 on the current scroll.
 
 | place | owner | pin (viewports) | camera (first pass) |
 |---|---|---|---|

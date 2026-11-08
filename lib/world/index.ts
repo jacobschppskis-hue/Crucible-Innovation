@@ -104,7 +104,8 @@ export async function startWorld(root: HTMLElement, opts: WorldOpts = {}): Promi
     async goPlace(name, fr = 0) {
       const p = engine.frame.places[name];
       if (!p) throw new Error(`no place ${name}`);
-      engine.scroll.to(p.top + fr * Math.max(p.h - innerHeight, 0), true);
+      const pin = p.h - innerHeight;
+      engine.scroll.to(p.top + fr * (pin >= 0.5 * innerHeight ? pin : Math.max(pin, 0.8 * p.h)), true);
       await frames(2);
     },
     hold: () => clockApi().pause(),
