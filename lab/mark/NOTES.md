@@ -68,3 +68,20 @@ cast object, which we can make look like film.
   perceptual brightness curve. A hot face mirrors less of the cool sky (a glowing face that kept the blue reflection
   read pink).
 - Shots: `shots/A-sequence-desk.webp` (beat .3 .55 .73 .82 .92), `shots/A-iphone.webp` (0, .45, .73, .82).
+
+## A, round 2 (coordinator's fixes, 07:20 UTC)
+- Gravity: the two runs leave the top together and accelerate (angle = pi(0.3u + 0.7u^2)); each is a liquid run with a
+  rounded tongue (ahead in the middle of the stroke, held back at the walls), white-hot tip, orange body, a cooling
+  tail. Squares are little moulds that fill bottom-up (a level line) as the run reaches each, with a short heat bloom.
+- The weld: one flash at the bottom when both arrive; heat runs back up both halves at once; the blaze is
+  emission-dominated (hottest where they met, Ember toward the top), specular nearly gone, emissivity lower at grazing
+  angles so the glowing pieces keep their form, a slow smooth shimmer flowing down.
+- Setting: a crisp bone front runs down both halves in the order the metal was poured (outer ring a little ahead), the
+  weld last; ahead of it the metal cools orange to dull red. No Ember-to-bone mix. A radial "outside-in" sweep was
+  tried and rejected: a circular front cut the squares into crescents (read as a clipping bug).
+- Cold: bone cast metal (diffuse + bone-tinted sheen), lit by the core (sphere light, soft shadows), a warm fill from
+  the glowing sea below, a cool sky fill and a thin starlit line on the top bevels. Fill colours are inputs (the world's
+  sky/sea decide them).
+- No grain or normal noise on the metal: tried twice, at this scale it only read as specks and mottling.
+- The sea reflection is no longer drawn here (lava/world own it).
+- Shots: `shots/A2-iphone-beat.webp` (iPhone 15: beat 0 .2 .4 .55 / .62 .68 .8 .97), `shots/A2-desk-beat.webp`.

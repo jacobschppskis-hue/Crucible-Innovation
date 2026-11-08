@@ -93,98 +93,143 @@ float coreShadow(vec3 p, vec3 n){
   res = clamp(res, -1., 1.);
   return 0.25 * (1. + res) * (1. + res) * (2. - res);
 }
-// The heat of the beat: one front leaves the top (where the arcs end and the squares begin, after the empty step) and
-// runs down both halves at the same angle: continuous along the arcs, a whole square at a time on the machine half.
-// Returns temperature 0..1 (1 = white-hot edge).
-float frontTheta(float b){ float x = clamp((b - 0.12) / 0.58, 0., 1.); return PI * mix(x, x * x * (3. - 2. * x), 0.35); }
-float heatAt(vec2 p, float id){
+// ---------------- the beat: two runs of metal leave the top together and fill the ring ----------------
+// Timeline on uBeat (scroll, 0..1, reversible): the pour B_POUR..B_MEET (runs accelerate down both sides, as if by
+// gravity), the weld at the bottom (B_MEET), heat running back up both halves at once, the blaze, then it cools
+// through red to bone from the outside in, gone by 0.97.
+const float B_POUR = 0.08, B_MEET = 0.60;
+float runTheta(float b){ float u = clamp((b - B_POUR) / (B_MEET - B_POUR), 0., 1.); return PI * (0.3 * u + 0.7 * u * u); }
+float weld(){ float b = uBeat; return smoothstep(B_MEET - 0.005, B_MEET + 0.01, b) * (1. - smoothstep(B_MEET + 0.015, B_MEET + 0.07, b)); }
+float flare(){ float b = uBeat; return smoothstep(B_MEET, B_MEET + 0.05, b) * (1. - smoothstep(B_MEET + 0.08, B_MEET + 0.30, b)); }
+// angle from the top for a point (left side for the arcs; |x| for both halves)
+float thetaOf(vec2 p){ return clamp(atan(-abs(p.x), p.y) + PI, 0., PI) ; }
+// returns x = temperature (0 cold .. 1 white-hot), y = liquid (0 solid .. 1 molten skin)
+vec2 heatAt(vec3 p3, float id, float px){
   float b = uBeat;
-  if (b <= 0.11 || b >= 1.) return 0.;
-  float tf = frontTheta(b);
-  float th, x;
-  if (id < 1.5) { th = clamp(atan(-p.x, p.y), 0., PI); x = tf - th; }      // arcs: angle from the top, down the left
-  else {                                                                    // squares: whole, from their centre out
-    vec2 c = cellC(int(id) - 2, th);
-    x = tf - th - 0.05 * length(p - c) / HP;
+  if (b <= B_POUR || b >= 0.97) return vec2(0.);
+  vec2 p = p3.xy;
+  float tf = runTheta(b);
+  float th = clamp(atan(p.x, -p.y), -PI, PI); th = PI - abs(th);           // 0 at the top, PI at the bottom
+  float T = 0., wet = 0.;
+  if (id < 1.5) {
+    // the arcs: a run of liquid metal flowing down the channel, its tip a rounded tongue (faster in the middle of the
+    // stroke, held back at the walls, like any viscous flow); white-hot tip, orange body, a tail already cooling
+    float R = id < 0.5 ? RO_ : RI_;
+    float dr = clamp((length(p) - R) / HS, -1., 1.);
+    float x = (tf - th) * R - 1.6 * dr * dr - 0.9 * max(-p3.z + HD, 0.) / HD; // arc length behind the tip (mark units)
+    float on = smoothstep(-px, px, x) * step(0.001, tf);
+    T = on * (0.30 + 0.70 * exp(-max(x, 0.) / 7.0));
+    T += on * 0.25 * exp(-max(x, 0.) / 1.2);                                      // the tip itself, white
+    wet = on;
+  } else {
+    // the squares: each is a little mould that fills from the bottom up as the run reaches it (the level stays level),
+    // the pour entering at its top edge; a short heat bloom as it fills, then the body's orange
+    float thc; vec2 c = cellC(int(id) - 2, thc);
+    float R = int(id) - 2 < 7 ? RO_ : RI_;
+    float lead = thc - HP / R;
+    float f = clamp((tf - lead) * R / 4.0, 0., 1.);                             // fill fraction (4 units of run to fill)
+    float lvl = (c.y - HP) + 2. * HP * f * (2. - f) * 1.04 + 0.12 * sin(p.x * 2.1 + uT * 3.) * f * (1. - f);
+    float on = smoothstep(px, -px, p.y - lvl) * step(0.0001, f);
+    float since = max((tf - lead) * R - 4.0, 0.);
+    T = on * (0.30 + 0.62 * exp(-since / 5.0) + 0.08 * (1. - f));
+    wet = on;
   }
-  // a crisp white-hot edge, then a trail that settles to a low red glow: each half alone only smoulders
-  float on = id < 1.5 ? smoothstep(-0.012, 0.004, x) : smoothstep(0.0, 0.02, x);
-  float T = on * (0.22 + 0.78 * exp(-max(x, 0.) / 0.09));
-  // the meeting: both fronts reach the bottom together and the whole ring blazes at once, brightest where they met
-  float close = smoothstep(0.69, 0.73, b) * (1. - smoothstep(0.73, 0.80, b) * 0.35);
-  float thc = clamp(atan(-abs(p.x), p.y), 0., PI);
-  T = max(T, close * (0.47 + 0.30 * exp(-(PI - (id < 1.5 ? th : thc)) / 0.35) * (1. - smoothstep(0.72, 0.80, b))));
-  // then it cools, top first, both halves together (one material now): orange, red, dark
-  float c = smoothstep(0.76 + 0.10 * (th / PI), 0.92 + 0.08 * (th / PI), b);
-  return clamp(T * (1. - c), 0., 1.);
+  // the weld: both runs reach the bottom at the same instant; one flash there
+  float bot = exp(-(PI - th) * 4.);
+  T += weld() * 0.55 * bot;
+  // heat runs back up both halves at once: the whole ring blazes, hottest where they met, Ember toward the top
+  float up = smoothstep(B_MEET, B_MEET + 0.06, b);
+  float reach = PI * (1. - up);
+  float blaze = smoothstep(reach + 0.15, reach - 0.15, th) * up;
+  float Tb = 0.50 + 0.36 * exp(-(PI - th) / 0.8);
+  T = max(T, blaze * Tb);
+  wet = max(wet, blaze);
+  // then it sets, in the order it was poured: a crisp bone front runs down both halves from the top (the outer ring a
+  // little ahead of the inner), the weld at the bottom last. Ahead of it the metal keeps cooling through orange to
+  // dull red; never an Ember-to-bone mix.
+  bool inner = id > 0.5 && id < 1.5 || id > 8.5;
+  float ts = PI * 1.12 * smoothstep(0.70, 0.95, b) - (inner ? 0.12 : 0.0);
+  float set;
+  if (id < 1.5) {
+    float R = id < 0.5 ? RO_ : RI_;
+    set = smoothstep(px, -px, (th - ts) * R);
+  } else {
+    float thc; vec2 c = cellC(int(id) - 2, thc);
+    float R = int(id) - 2 < 7 ? RO_ : RI_;
+    float g = clamp((ts - (thc - HP / R)) * R / 4.0, 0., 1.);
+    set = smoothstep(-px, px, p.y - (c.y + HP - 2. * HP * g * 1.04)) * step(0.0001, g);
+  }
+  T *= 1. - 0.5 * smoothstep(0.68, 0.92, b);
+  T *= 1. - set;
+  wet *= 1. - set;
+  // a slow shimmer in the molten skin, flowing down with the metal (smooth, large: never specks)
+  float sh = vn3(vec3(th * 9. - uT * 1.2, length(p) * 0.35, uT * 0.4)) - 0.5;
+  T = clamp(T + sh * 0.05 * wet * smoothstep(0.2, 0.5, T), 0., 1.);
+  return vec2(T, wet);
 }
-// incandescence: the colour of a blackbody (Planck at three wavelengths) from 800 K (T 0) to 3200 K (T 1); brightness
+// incandescence: the colour of a blackbody (Planck at three wavelengths) from 750 K (T 0) to 3000 K (T 1); brightness
 // on a perceptual curve (real radiance spans 10^5 over this range; the eye adapts, the film does too)
 vec3 glowRamp(float T){
   if (T <= 0.001) return vec3(0.);
-  float K = 800. + 2400. * T;
+  float K = 750. + 2250. * T;
   vec3 lam = vec3(610., 549., 468.);
   vec3 bb = 1. / (pow(lam / 610., vec3(5.)) * (exp(1.4388e7 / (lam * K)) - 1.));
   bb /= bb.r;
-  return bb * 4.5 * pow(T, 2.8);
+  return bb * 6.0 * pow(T, 2.6);
 }
-float flare(){ float b = uBeat; return smoothstep(0.64, 0.73, b) * (1. - smoothstep(0.76, 0.95, b)); }
-
 // GGX
 float Dggx(float nh, float a){ float a2 = a * a; float d = nh * nh * (a2 - 1.) + 1.; return a2 / (PI * d * d); }
 float Vsmith(float nv, float nl, float a){ float k = a * 0.5; return 0.25 / ((nv * (1. - k) + k) * (nl * (1. - k) + k)); }
 
-vec3 coreRadiance(){ return vec3(9.0, 4.6, 1.9) * (1. + 1.2 * flare()); }
+vec3 coreRadiance(){ return vec3(9.0, 4.6, 1.9) * (1. + 1.0 * flare()); }
 
 // shade a hit on the metal; p local (mark units), rdL local ray dir, roW world origin
 vec3 shadeMetal(vec3 p, vec3 rdL, float id, float px, vec3 roW){
   vec3 n = markN(p, max(px * 0.5, 0.01));
   vec3 v = -rdL;
-  // fine cast-sand grain as a normal perturbation that fades out before the pixel size (kept as roughness)
-  float gf = 5.0, fade = 1. - smoothstep(0.25, 0.7, px * gf);
-  vec3 q = p * gf + id * 7.31;
-  float g0 = vn3(q);
-  vec3 gg = vec3(vn3(q + vec3(.05, 0, 0)) - g0, vn3(q + vec3(0, .05, 0)) - g0, vn3(q + vec3(0, 0, .05)) - g0) / .05;
-  gg -= dot(gg, n) * n;
-  n = normalize(n - gg * 0.035 * fade);
-  float rough = 0.34 + 0.12 * (1. - fade) + 0.06 * (g0 - 0.5);
+  vec2 H = heatAt(p, id, px);
+  float T = H.x, wet = H.y;
+  // Cold: bone cast metal (a sand-cast skin: a broad diffuse part and a metal sheen; no grain, no noise: at this scale
+  // they only read as specks). Hot: a liquid skin, glossy and nearly black but for its own light.
+  float rough = mix(0.30 + 0.10 * (1. - abs(n.z)), 0.06, wet);
   float a = rough * rough;
-  vec3 F0 = vec3(0.80, 0.76, 0.68) * (0.96 + 0.08 * hash12(vec2(id, 3.1)));
+  vec3 bone = vec3(0.80, 0.77, 0.69) * (0.97 + 0.06 * hash12(vec2(id, 3.1)));
+  vec3 F0 = mix(bone * 0.62, vec3(0.05), smoothstep(0.0, 0.3, wet));
+  vec3 alb = bone * 0.55 * (1. - smoothstep(0.0, 0.3, wet)) * (1. - smoothstep(0.05, 0.35, T));
   float nv = max(dot(n, v), 1e-3);
   vec3 col = vec3(0.);
-  // 1. the core: a sphere light at the origin (representative point for the specular)
+  // 1. the core: a sphere light at the origin (representative point for the specular), soft shadows of the pieces
   vec3 L = -p; float dl = length(L); vec3 l = L / dl;
   float sh = coreShadow(p, n);
   vec3 Lc = coreRadiance();
-  float sa2 = (RC * RC) / (dl * dl);
-  float nl = clamp(dot(n, l), 0., 1.);
-  // the core is big next to the pieces: soften the terminator by its angular size
-  float nlS = clamp((dot(n, l) + sqrt(sa2) * 0.6) / (1. + sqrt(sa2) * 0.6), 0., 1.);
+  float sa = RC / dl, sa2 = sa * sa;
+  // the core is big next to the pieces: its cap above a face still lights it (terminator softened by its size)
+  float nlS = clamp((dot(n, l) + sa) / (1. + sa), 0., 1.); nlS *= nlS;
   vec3 r = reflect(-v, n);
   vec3 cr = dot(L, r) * r - L; vec3 cp = L + cr * clamp(RC / max(length(cr), 1e-4), 0., 1.); vec3 ls = normalize(cp);
   vec3 hv = normalize(ls + v);
   float nls = max(dot(n, ls), 0.);
-  float aS = clamp(a + 0.5 * RC / dl, 0., 1.);
+  float aS = clamp(a + 0.5 * sa, 0., 1.);
   float norm = (a * a) / (aS * aS);
   vec3 F = F0 + (1. - F0) * pow(1. - max(dot(hv, v), 0.), 5.);
   vec3 spec = F * Dggx(max(dot(n, hv), 0.), aS) * Vsmith(nv, nls, a) * nls * norm;
-  vec3 diff = (1. - F) * 0.04 / PI * nlS;  // metal: almost no diffuse (a thin oxide skin)
-  col += Lc * PI * sa2 * (spec + diff) * sh;
-  // 2. the dusk and the sea: the metal mirrors what is around it (roughness-blurred by two taps)
+  col += Lc * PI * sa2 * (spec + alb / PI * nlS * 1.0) * sh;
+  // 2. fill: the sky above (cool, starlit), the glowing sea below (warm, low), the afterglow behind; mirrored and diffuse
+  vec3 skyF = vec3(0.20, 0.22, 0.27), seaF = vec3(0.95, 0.66, 0.44);
+  vec3 nW = vec3(n.x, n.y, -n.z);
+  float up = 0.5 + 0.5 * nW.y;
+  vec3 irr = PI * (skyF * up * up + seaF * (1. - up) * (1. - up) * 1.4 + vec3(0.05, 0.03, 0.02) * max(nW.z, 0.));
+  col += alb / PI * irr;
   vec3 rW = normalize(vec3(r.x, r.y, -r.z));
   vec3 e1 = envCol(rW, roW), e2 = envCol(normalize(rW + vec3(0., 0.35, 0.)), roW) * 0.5 + envCol(normalize(rW - vec3(0., 0.35, 0.)), roW) * 0.5;
   vec3 Fe = F0 + (1. - F0) * pow(1. - nv, 5.) * 0.8;
-  float T = heatAt(p.xy, id);
-  // hot metal: its own light swamps what it mirrors (no cool sky on a glowing face: that read pink)
-  col *= 1. - 0.5 * smoothstep(0.08, 0.5, T);
-  col += Fe * mix(e1, e2, smoothstep(0.1, 0.5, a)) * (1. - 0.6 * smoothstep(0.08, 0.5, T));
-  // 3. heat of the beat: incandescence
-  // the edge of a heated piece glows a bit cooler (it loses heat first); the faces are the hottest
-  // edges and corners lose heat first: the faces hold it, the bevels and walls run a little cooler
-  float faceT = T * (0.80 + 0.20 * smoothstep(0.3, 0.95, abs(n.z)));
-  if (id > 1.5) { vec2 c; float th2; c = cellC(int(id) - 2, th2); vec2 dq = abs(p.xy - c) / HP; faceT *= 1. - 0.12 * smoothstep(0.55, 1.0, max(dq.x, dq.y)); }
-  else { float dr = abs(length(p.xy) - (id < 0.5 ? RO_ : RI_)) / HS; faceT *= 1. - 0.10 * smoothstep(0.5, 1.0, dr) - 0.06 * dr * dr; }
-  col += glowRamp(faceT);
+  // starlight on the top edges: a thin cool line where a bevel turns up to the night
+  col += Fe * mix(e1, e2, smoothstep(0.1, 0.5, a)) + vec3(0.10, 0.13, 0.20) * pow(max(nW.y, 0.), 6.) * (1. - abs(n.z)) * 0.6 * (1. - wet);
+  // 3. heat: emission dominates while hot (specular almost gone, but a wet glint stays on the liquid)
+  float hot = smoothstep(0.05, 0.45, T);
+  col *= 1. - 0.85 * hot;
+  // emissivity falls at grazing angles (it is 1 - reflectance): the walls and bevels glow less, so it keeps its form
+  col += glowRamp(T) * (0.62 + 0.38 * pow(nv, 0.5));
   return col;
 }
 
@@ -290,8 +335,6 @@ void main(){
     vec3 r = reflect(rd, n);
     float F = 0.04 + 0.96 * pow(1. - max(dot(n, -rd), 0.), 5.);
     vec3 refl = skyCol(r, P);
-    float tR; vec4 mr = traceMark(P + n * 0.1, r, pa * (1. + 0.0), tR);
-    refl = mix(refl, mr.rgb, mr.a);
     col = refl * F * 1.0 + vec3(0.06, 0.010, 0.002) * (1. - F);
     // the core's glitter column: a GGX lobe widened by the unresolved slope
     vec3 L = normalize(uMark.xyz - P);
