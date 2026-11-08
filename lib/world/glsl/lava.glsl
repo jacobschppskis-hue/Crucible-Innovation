@@ -201,7 +201,37 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   float kk = sqrt(as2) * 0.5;
   float Vis = 0.25 / ((NoL * (1. - kk) + kk) * (NoV * (1. - kk) + kk));
   float Fs = F0 + (1. - F0) * pow(1. - max(dot(v, H), 0.), 5.);
-  col += look_sunLight(s.p) * (lava_uLook.z * D * Vis * Fs * NoL);
+  // glitter: the unresolved little facets of the swell each catch the sun or don't, so the glint path breaks into many
+  // fine sparkles stretched toward the sun instead of a smooth smear. Each cell (a few pixels across, at every distance:
+  // two octaves of the footprint, crossfaded) holds one small round glint at a random spot, or none; the factor's mean
+  // is ~1, so the path's total light is unchanged. Anchored to the surface and drifting with the swell; only where the
+  // slope is unresolved (L.var), so resolved waves keep their own clean highlights.
+  float spk = 1.;
+  float unres = smoothstep(0.0002, 0.003, L.var);
+  if (unres > 0.001 && lava_uLook.z > 0.) {
+    vec2 sv = normalize(vec2(dot(uSunDir, s.eU), dot(uSunDir, s.eV)) + 1e-5);
+    vec2 drift = sv * lava_uA.w * 0.4 + vec2(-sv.y, sv.x) * lava_uA.w * 0.13;
+    // stretch toward the sun: glints elongate along the reflection path
+    vec2 sw = s.w + drift;
+    vec2 gp0 = vec2(dot(sw, vec2(-sv.y, sv.x)), dot(sw, sv) * 0.4);
+    float lvl = log2(max(fp * 5., 1e-4) / 0.05);
+    float l0 = floor(lvl), fr = lvl - l0;
+    float g = 0.;
+    for (int o = 0; o < 2; o++) {
+      float L = l0 + float(o);
+      float cell = 0.05 * exp2(L);
+      vec2 gp = gp0 / cell;
+      vec2 ic = floor(gp), f = fract(gp);
+      vec3 h = world_hash33(vec3(ic, L * 7.13));
+      vec2 d = f - (0.25 + 0.5 * h.xy);
+      float on = step(0.45, h.z) * (0.4 + 1.2 * (h.z - 0.45) / 0.55);
+      // a Gaussian dot, sigma 0.15 cell; mean over the cell = 2 pi s^2 x P(on) x mean(on) ~ 0.141 x 0.55 x 1.0
+      float gl = exp(-dot(d, d) / (2. * 0.15 * 0.15)) * on / 0.078;
+      g += gl * (o == 0 ? 1. - fr : fr);
+    }
+    spk = mix(1., 0.3 + 0.7 * g, unres);
+  }
+  col += look_sunLight(s.p) * (lava_uLook.z * D * Vis * Fs * NoL * spk);
   return mix(col + m.emit, far, k);
 }
 
