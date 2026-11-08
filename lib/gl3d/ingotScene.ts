@@ -9,7 +9,7 @@
 import { addSource, samplePx, sampleGrid, type HG } from '../liquid/field';
 import { clockHeld, onFrame, renderer } from '../liquid/loop';
 import { onLongTasks } from './watchdog';
-import { createBarFloat, farAway, type IngotEnv, type IngotPose } from './ingotPose';
+import { createBarFloat, farAway, type IngotEnv, type IngotPose, type Touch } from './ingotPose';
 import type { IngotKind } from './ingots';
 
 const full = () => /[?&]liquid=full\b/.test(location.search);
@@ -61,7 +61,7 @@ export function startIngot(
   canvas: HTMLCanvasElement,
   host: HTMLElement,
   kind: IngotKind,
-  o: { across: () => boolean; worker: boolean; onDrawn: () => void; onLost: () => void; onFail: () => void; onWorkerFail: () => void },
+  o: { across: () => boolean; worker: boolean; hand?: Touch; onDrawn: () => void; onLost: () => void; onFail: () => void; onWorkerFail: () => void },
 ): () => void {
   const env: IngotEnv = { css: { w: 1, h: 1 }, rect: { left: 0, top: 0, width: 1, height: 1 }, vw: 1, vh: 1, scrollX: 0, scrollY: 0, across: false };
   // The host's box. Up the page it only moves with the scroll, so it is measured every 20th frame (and on resize) and
@@ -93,7 +93,7 @@ export function startIngot(
   read();
   const surface = (x: number, y: number, out: HG) => samplePx(x, y, undefined, out);
   const waves = (x: number, y: number, out: HG) => sampleGrid(x, y, out);
-  const float = createBarFloat((x, y) => addSource(x, y, 0.2, 12, { kind: 'float' }));
+  const float = createBarFloat((x, y, amp = 0.2) => addSource(x, y, amp, amp > 0.3 ? 16 : 12, { kind: 'float' }));
   // For the motion harness: each bar's pose this frame (read-only, updated in place; no DOM writes).
   const w = window as unknown as { __ingots?: Record<string, { pose: IngotPose; t: number }> };
   const probe = { pose: float.pose, t: 0 };
@@ -115,7 +115,7 @@ export function startIngot(
     }
     if (far) return null;
     probe.t = t;
-    return float.step(env, t, dt, surface, waves);
+    return float.step(env, t, dt, surface, waves, o.hand);
   };
 
   const startWorker = (): (() => void) | null => {

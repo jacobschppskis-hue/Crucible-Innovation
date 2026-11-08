@@ -142,16 +142,16 @@ vec2 q=abs(p.xy)-vec2(HA,HB)+4.;float d=max(length(max(q,0.))+min(max(q.x,q.y),0
 vec2 wq=p.xy*vec2(.05,.11);
 float lq=vn(vec3(wq+vec2(uTime*.04,-uTime*.03),uTime*.12+uSeed));
 float st=.8+.4*vn(vec3(p.x*.05,p.y*.22+uTime*.25,uTime*.3+uSeed));
-float gl=(exp(-d/3.5)*.6+exp(-d/10.)*.25)*mix(.7,1.25,lq)*st*(1.-smoothstep(16.,32.,d));
+float gl=(exp(-d/3.2)*.6+exp(-d/9.)*.24)*mix(.7,1.25,lq)*st*(1.-smoothstep(12.,26.,d))*(.88+.12*sin(d*.9-uTime*2.2+lq*5.));
 float pr=length(p.xy-uPoke.xy),pa=uPoke.z,pw=pr-4.-pa*30.;
 float ring=uPoke.w*exp(-pa*1.4)*(exp(-pw*pw/5.)-.5*exp(-(pw+3.)*(pw+3.)/5.))*smoothstep(0.,4.,pr);
-col=bb(.42)*uTemp*gl+vec3(1.,.72,.42)*ring*(.25+uTemp)*(.6+.4*st);
+col=max(bb(.42)*uTemp*gl*(1.+.8*ring)+vec3(1.,.72,.42)*ring*(.2+.5*uTemp)*(.6+.4*st),0.);
 }
 col*=uExp;
 col=clamp((col*(2.51*col+.03))/(col*(2.43*col+.59)+.14),0.,1.);
 col=pow(col,vec3(1./2.2));
 if(uMat==6||uRefl>0.){
-vec2 sc=gl_FragCoord.xy/uVp;float ef=smoothstep(0.,.09,min(min(sc.x,1.-sc.x),min(sc.y,1.-sc.y)));
+vec2 sc=gl_FragCoord.xy/uVp;float ef=smoothstep(.01,.12,min(min(sc.x,1.-sc.x),min(sc.y,1.-sc.y)));
 float a=max(col.r,max(col.g,col.b));
 if(uRefl>0.){a=uRefl*exp(-max(p.z+HZ,0.)/8.)*(.55+.6*vn(vec3(vW.x*.04,vW.y*.55-uTime*.4,uTime*.5)));col*=a;}
 o=vec4(col,a)*ef;}else

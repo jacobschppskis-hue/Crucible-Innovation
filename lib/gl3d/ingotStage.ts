@@ -14,12 +14,14 @@ export function buildIngot(canvas: HTMLCanvasElement | OffscreenCanvas, kind: In
   spec.root.parent = liquid;
   const { root, parts } = addIngot(stage, spec);
   const bar = parts[parts.length - 1];
+  const pool = parts.find((o) => o.material === 'pool');
   const place = (p: IngotPose, k: number, t: number) => {
     // Pitch about the bar's length, roll about its width (lifting its +x end), then the turn about the liquid's normal.
     root.rotation = [p.pitch, -p.roll, p.yaw];
     // Drift in the liquid's plane (page y down = toward the viewer), bob along its normal.
     root.position = [p.dx * k, (-p.dy * k) / Math.cos(TILT), p.bob * k];
     for (const o of parts) o.time = t;
+    if (pool) pool.poke = [p.px, p.py, p.pa, p.ps];
   };
   place(REST, 0, 0);
   return { stage, root, bar, place };
