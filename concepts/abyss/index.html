@@ -1,0 +1,1388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crucible · Abyss concept</title>
+<meta name="description" content="Concept: crucibleinnovation.com seen from above, a molten sea with the Split Ring floating on it.">
+<meta name="theme-color" content="#0d0d0b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap">
+<style>
+:root {
+  --ground: #0d0d0b;
+  --ground-2: #16150f;
+  --line: #23221d;
+  --line-strong: #3a3832;
+  --bone: #e8e4d8;
+  --bone-dim: #a3a095;
+  --ember: #ff5b1f;
+  --ember-hot: #ffb347;
+  --ember-deep: #a8380c;
+  --ink: #16150f;
+  --ink-dim: #4f4c44;
+  --quench: #7cb6ff;
+  --molten-ink: #2a0c02;
+  --ember-tint: rgb(255 91 31 / 0.3);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --nav-h: 64px;
+  --gx: clamp(16px, 4vw, 64px);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { background: var(--ground); -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; color: var(--bone);
+  font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 17px; line-height: 1.6;
+  font-variation-settings: 'wdth' 100; overflow-x: clip; -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--ember-tint); }
+canvas, svg, img { user-select: none; -webkit-user-select: none; -webkit-user-drag: none; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 3px; border-radius: 4px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* The sea: one fixed canvas under everything; every section is transparent over it. */
+#sea { position: fixed; inset: 0; width: 100%; height: 100%; z-index: -1; display: block; pointer-events: none;
+  background: radial-gradient(60% 50% at 70% 45%, #3a1206 0%, #140805 45%, var(--ground) 100%); }
+html.gl #sea { background: var(--ground); }
+
+/* Nav: opaque ground, no translucency. */
+.nav { position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h); z-index: 20; background: var(--ground);
+  border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 28px; padding: 0 var(--gx); }
+.wm { font-weight: 650; letter-spacing: -0.03em; line-height: 1; text-decoration: none; white-space: nowrap; }
+.nav .wm { font-size: 26px; margin-right: auto; }
+.spark { position: relative; display: inline-block; }
+.spark::after { content: ''; position: absolute; left: calc(50% + 0.015em); top: 0.115em; width: 0.14em; height: 0.14em;
+  border-radius: 50%; background: var(--ember); transform: translateX(-50%); box-shadow: 0 0 0.12em var(--ember); }
+.nav-links { display: none; gap: 26px; font-size: 15px; }
+.nav-links a { text-decoration: none; color: var(--bone-dim); }
+.nav-links a:hover { color: var(--bone); }
+@media (min-width: 820px) { .nav-links { display: flex; } }
+.btn { display: inline-flex; align-items: center; gap: 0.5em; height: 44px; padding: 0 20px; border-radius: 999px;
+  font: 600 15px/1 Archivo, sans-serif; letter-spacing: -0.01em; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.btn-hot { background: var(--ember); color: var(--ground); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28); }
+.btn-hot:hover { box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28), 0 10px 30px -8px rgb(255 91 31 / 0.7); }
+.btn-ghost { color: var(--bone); border: 1px solid var(--line-strong); background: var(--ground); }
+.btn-ghost:hover { border-color: var(--bone-dim); }
+.nav .btn { height: 38px; padding: 0 16px; font-size: 14px; }
+.arrow { width: 1em; height: 1em; }
+
+/* Plates: cooled metal floating on the sea. The shader draws them at these boxes; the DOM only holds the words.
+   Without WebGL they get a plain dark plate. */
+[data-plate] { position: relative; }
+.bob { display: block; will-change: transform; }
+.slug > .bob, .slug { display: inline-block; }
+html:not(.gl) [data-plate] { background: #11100d; box-shadow: 0 0 0 1px #4a1c0a; }
+html:not(.gl) .bar { background: #b9b3a5; }
+html:not(.gl) .bar[data-k="4"] { background: #e2541c; }
+
+.h-display { font-weight: 760; font-variation-settings: 'wdth' 108; letter-spacing: -0.035em; line-height: 0.92; margin: 0; }
+.slug { padding: 0.07em 0.2em 0.1em; margin: 0 0 0.08em; }
+/* Display words cool as they surface: hot (--c 0) to bone (--c 1). */
+.cool { color: color-mix(in oklab, var(--bone) calc(var(--c, 1) * 100%), #ff8a3d);
+  opacity: clamp(0, calc((var(--e, 1) - 0.35) * 2.2), 1); }
+.fade { opacity: clamp(0, calc((var(--e, 1) - 0.3) * 1.8), 1); }
+.dim { color: var(--bone-dim); }
+.lede { font-size: clamp(17px, 1.35vw, 20px); line-height: 1.55; }
+
+section { position: relative; }
+.wrap { padding: 0 var(--gx); max-width: 1440px; margin: 0 auto; }
+.pin > .stage { position: sticky; top: 0; height: 100vh; height: 100svh; overflow: hidden; padding-top: var(--nav-h); }
+
+/* ---------------- Hero ---------------- */
+#hero { height: 400vh; }
+.hero-copy { position: absolute; left: var(--gx); right: var(--gx); bottom: clamp(28px, 6vh, 72px); }
+.hero-copy h1 { font-size: clamp(54px, 7.4vw, 132px); }
+.hero-copy h1 .slug { display: table; }
+.hero-meta { margin-top: 22px; max-width: 30rem; padding: 18px 22px 20px; }
+.hero-meta p { margin: 0 0 16px; color: var(--bone-dim); }
+.hero-meta .row { display: flex; flex-wrap: wrap; gap: 10px; }
+.alloyed { opacity: clamp(0, calc((var(--e, 1) - 0.35) * 2.2), 1); color: color-mix(in oklab, var(--bone) calc(var(--c, 1) * 100%), #ffd9a0);
+  text-shadow: 0 0 calc((1 - var(--c, 1)) * 0.4em) rgb(255 140 60 / calc((1 - var(--c, 1)) * 0.9)); }
+.beats { position: absolute; left: var(--gx); right: var(--gx); bottom: clamp(28px, 8vh, 96px); pointer-events: none; }
+.beat { position: absolute; left: 0; bottom: 0; font-size: clamp(44px, 6.2vw, 112px); }
+.beat .slug { display: table; }
+.mark-still { position: absolute; display: none; }
+html:not(.gl) .mark-still, html.still .mark-still { display: block; }
+@media (max-width: 1023px) {
+  .hero-copy h1 { font-size: clamp(44px, 12.2vw, 92px); }
+  .hero-meta { padding: 14px 16px 16px; }
+  .hero-meta p { font-size: 15.5px; }
+  .beat { font-size: clamp(40px, 11.5vw, 80px); }
+}
+
+/* ---------------- Story ---------------- */
+#story { padding: 18vh 0 0; }
+.sec-head { font-size: clamp(48px, 8vw, 140px); margin-bottom: 8vh; }
+.chapter { display: grid; gap: 28px; margin-bottom: 14vh; }
+.who { display: flex; flex-direction: column; gap: 14px; align-self: start; }
+.who-name { padding: 14px 18px; }
+.who-name h3 { margin: 0; font-size: 28px; font-weight: 720; font-variation-settings: 'wdth' 112; letter-spacing: -0.02em; line-height: 1.05; }
+.who-name p { margin: 4px 0 0; font-size: 15px; color: var(--bone-dim); }
+.text { padding: clamp(20px, 3vw, 40px); max-width: 44rem; }
+.text p { margin: 0 0 1.1em; }
+.text p:last-child { margin-bottom: 0; }
+@media (min-width: 1024px) {
+  .chapter { grid-template-columns: minmax(260px, 340px) minmax(0, 44rem); gap: 6vw; }
+  .who { position: sticky; top: calc(var(--nav-h) + 6vh); }
+}
+.crt { position: relative; width: 100%; max-width: 340px; aspect-ratio: 4 / 3; border-radius: 22px / 26px; overflow: hidden;
+  background: #0b0b0a; box-shadow: inset 0 0 0 2px #2a2925, inset 0 0 40px 10px #000, 0 0 0 10px #151410, 0 0 0 11px #2c2a25; margin: 11px; }
+.crt canvas { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0.55; image-rendering: pixelated; }
+.crt .bars { position: absolute; left: 12%; right: 12%; top: 16%; height: 42%; display: flex; }
+.crt .bars i { flex: 1; }
+.crt .ring { position: absolute; left: 50%; top: 37%; width: 34%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  border: 2px solid rgb(232 228 216 / 0.75); border-radius: 50%; box-shadow: 0 0 0 1px #000; }
+.crt .ring::after { content: ''; position: absolute; left: 50%; top: 50%; width: 14%; aspect-ratio: 1; border-radius: 50%; background: var(--ember); transform: translate(-50%, -50%); }
+.crt .cap { position: absolute; left: 0; right: 0; bottom: 13%; text-align: center; font-size: 13px; font-weight: 650; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--bone); text-shadow: 0 0 6px rgb(232 228 216 / 0.5); }
+.crt .cap span { display: block; font-weight: 450; color: var(--bone-dim); letter-spacing: 0.02em; text-transform: none; font-size: 12px; }
+.crt .scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgb(0 0 0 / 0.38) 0 1px, transparent 1px 3px); pointer-events: none; }
+.crt .roll { position: absolute; left: 0; right: 0; height: 30%; top: calc(var(--roll, 0) * 130% - 30%);
+  background: linear-gradient(transparent, rgb(232 228 216 / 0.05), transparent); pointer-events: none; }
+.crt .glass { position: absolute; inset: 0; border-radius: inherit; background: radial-gradient(120% 90% at 30% 20%, rgb(124 182 255 / 0.08), transparent 45%); pointer-events: none; }
+.pull { font-size: clamp(36px, 5vw, 84px); margin: 4vh 0 12vh; }
+
+/* PayPal: one source, six rivers, six castings. */
+#paypal { height: 300vh; margin-bottom: 8vh; }
+.pp { position: absolute; inset: var(--nav-h) 0 0; }
+.pp-node { position: absolute; transform: translate(-50%, -50%); padding: 8px 14px 9px; font-weight: 700; letter-spacing: -0.02em;
+  font-variation-settings: 'wdth' 112; font-size: clamp(16px, 1.6vw, 24px); line-height: 1; white-space: nowrap; }
+.pp-src { font-size: clamp(30px, 3.6vw, 56px); padding: 12px 20px 14px; }
+.pp-cap { position: absolute; left: var(--gx); right: var(--gx); bottom: 6vh; max-width: 34rem; padding: 14px 18px; font-size: clamp(17px, 1.4vw, 21px); }
+.pp-cap p { margin: 0; }
+
+/* ---------------- Ventures ---------------- */
+#ventures { padding: 16vh 0 10vh; }
+#ventures .lead { padding: 12px 18px; margin: 0 0 12vh; display: inline-block; font-size: clamp(18px, 1.6vw, 22px); }
+.venture { display: grid; gap: 22px; margin: 0 0 18vh; text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bar { position: relative; width: 100%; max-width: 620px; aspect-ratio: 8 / 5; display: flex; align-items: center; }
+.bar .bob { width: 100%; height: 100%; position: relative; }
+.stamp { position: absolute; left: 47%; right: 10%; top: 50%; transform: translateY(-50%); font-weight: 780; font-variation-settings: 'wdth' 118;
+  letter-spacing: -0.03em; line-height: 0.95; font-size: clamp(26px, 4.4vw, 52px); color: var(--ink); opacity: clamp(0, calc((var(--e, 1) - 0.7) * 4), 1);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.35), 0 -1px 0 rgb(0 0 0 / 0.35); }
+.bar[data-k="4"] .stamp { left: 12%; color: var(--molten-ink); text-shadow: 0 1px 0 rgb(255 200 120 / 0.35); font-size: clamp(36px, 6.4vw, 80px); }
+.v-info { padding: 22px 24px 24px; max-width: 34rem; align-self: center; }
+.v-status { font-size: 14px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+.v-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--quench); display: inline-block; }
+.v-status.hot i { background: var(--ember); box-shadow: 0 0 8px var(--ember); }
+.v-name { font-size: clamp(44px, 5.6vw, 92px); font-weight: 800; font-variation-settings: 'wdth' 122; letter-spacing: -0.04em; line-height: 0.9; margin: 0 0 14px; }
+.v-name.molten { color: #ff7b3a; text-shadow: 0 0 0.35em rgb(255 91 31 / 0.55); animation: simmer 3.2s ease-in-out infinite alternate; }
+@keyframes simmer { to { color: #ff9a4d; text-shadow: 0 0 0.5em rgb(255 91 31 / 0.7); } }
+.v-tag { font-size: clamp(20px, 1.8vw, 26px); font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+.v-blurb { margin: 0 0 20px; color: var(--bone-dim); }
+.v-open { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 999px;
+  border: 1.5px solid var(--ember); color: var(--bone); font-weight: 650; font-size: 15px; transition: background-color .2s, color .2s; }
+.v-open .arrow { transition: transform .3s var(--ease-out); }
+.venture:hover .v-open, .venture:focus-visible .v-open { background: var(--ember); color: var(--ground); }
+.venture:hover .v-open .arrow { transform: translateX(4px); }
+.venture:focus-visible { outline: none; }
+@media (min-width: 1024px) {
+  .venture { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 5vw; align-items: center; }
+  .venture:nth-of-type(even) .bar { order: 2; justify-self: end; }
+}
+
+/* ---------------- Thesis ---------------- */
+#thesis { height: 260vh; }
+.th { position: absolute; inset: var(--nav-h) var(--gx) 0; display: flex; flex-direction: column; justify-content: center; gap: 22px; }
+.th h2 { font-size: clamp(46px, 7.6vw, 136px); }
+.th h2 .slug { display: table; }
+.th-meta { display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch; }
+.th-meta > div { padding: 14px 18px; }
+.th-meta p { margin: 0; font-size: clamp(17px, 1.4vw, 21px); }
+.kelvin { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: clamp(22px, 2vw, 30px); font-variant-numeric: tabular-nums; color: var(--bone); }
+.kelvin small { font-size: 13px; color: var(--bone-dim); font-family: Archivo, sans-serif; display: block; }
+
+/* ---------------- Footer: the shore ---------------- */
+footer { position: relative; min-height: 112vh; padding: 0 var(--gx) 40px; display: flex; flex-direction: column; justify-content: flex-end; }
+.cta { padding: 20px 24px 22px; max-width: 30rem; margin-bottom: 26vh; align-self: flex-start; }
+.cta h2 { font-size: clamp(30px, 3.4vw, 50px); margin-bottom: 14px; }
+.cta p { margin: 0 0 18px; color: var(--bone-dim); }
+.foot-giant { font-size: clamp(88px, 23vw, 380px); line-height: 0.8; margin: 0 0 3vh -0.04em; color: var(--bone); }
+.foot-row { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: center; justify-content: space-between; font-size: 15px; color: var(--bone-dim); }
+.foot-row nav { display: flex; flex-wrap: wrap; gap: 8px 22px; }
+.foot-row a { text-decoration: none; }
+.foot-row a:hover { color: var(--bone); }
+.concept-tag { position: fixed; right: 12px; bottom: 12px; z-index: 30; font-size: 12px; color: var(--bone-dim); background: var(--ground); padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); }
+
+/* Reduced motion / still: the pinned scenes collapse to their resting frames. */
+html.still #hero { height: auto; }
+html.still #hero > .stage { position: relative; height: 100svh; }
+html.still .beats { display: none; }
+html.still #paypal { height: auto; }
+html.still #paypal > .stage { position: relative; }
+html.still #thesis { height: auto; }
+html.still #thesis > .stage { position: relative; }
+html.still .v-name.molten { animation: none; }
+</style>
+</head>
+<body>
+<canvas id="sea" aria-hidden="true"></canvas>
+
+<header class="nav">
+  <a class="wm" href="https://crucibleinnovation.com/" aria-label="Crucible">cruc<span class="spark">ı</span>ble</a>
+  <nav class="nav-links" aria-label="Main">
+    <a href="#story">Story</a><a href="#ventures">Ventures</a><a href="https://crucibleinnovation.com/work">Work</a><a href="https://crucibleinnovation.com/sites">Sites</a>
+  </nav>
+  <a class="btn btn-hot" href="https://crucibleinnovation.com/sites#start">Start a project</a>
+</header>
+
+<main>
+  <!-- 1. Hero: the Split Ring floating on the sea, then the story beats as you scroll. -->
+  <section id="hero" class="pin" data-pin="hero">
+    <div class="stage">
+      <svg class="mark-still" id="markStill" viewBox="0 0 64 64" aria-hidden="true"></svg>
+      <div class="hero-copy">
+        <h1 class="h-display" aria-label="Intelligence, alloyed">
+          <span class="slug cool" data-plate data-k="1" data-delay="0.15" data-win="-1,0,0.07,0.15"><span class="bob">Intelligence,</span></span>
+          <span class="slug" data-plate data-k="2" data-delay="0.45" data-win="-1,0,0.09,0.17" data-hot><span class="bob alloyed">alloyed</span></span>
+        </h1>
+        <div class="hero-meta fade" data-plate data-k="0" data-delay="0.8" data-win="-1,0,0.04,0.11">
+          <div class="bob">
+            <p>Human judgment and machine range, fused into one material. Crucible is a studio that builds and ships ventures.</p>
+            <div class="row">
+              <a class="btn btn-hot" href="https://crucibleinnovation.com/sites">See Crucible Sites <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></a>
+              <a class="btn btn-ghost" href="#ventures">Our ventures</a>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="beats" aria-hidden="false">
+        <p class="beat h-display"><span class="slug cool" data-plate data-k="1" data-win="0.17,0.23,0.36,0.42"><span class="bob">Not the person</span></span></p>
+        <p class="beat h-display"><span class="slug cool" data-plate data-k="1" data-win="0.43,0.49,0.6,0.66"><span class="bob">Not the model</span></span></p>
+        <h2 class="beat h-display"><span class="slug cool" data-plate data-k="1" data-win="0.67,0.74,2,3"><span class="bob">Neither, alone</span></span></h2>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. The founders' story. -->
+  <section id="story">
+    <div class="wrap">
+      <h2 class="sec-head h-display"><span class="slug cool" data-plate data-k="1"><span class="bob">Why Crucible</span></span></h2>
+
+      <article class="chapter" aria-label="Jacob Schopp">
+        <div class="who">
+          <div class="crt" data-crt><canvas width="80" height="60"></canvas>
+            <div class="bars"><i style="background:#e8e4d8"></i><i style="background:#c9c5ba"></i><i style="background:#a3a095"></i><i style="background:#7d7a71"></i><i style="background:#57554e"></i><i style="background:#33322d"></i><i style="background:#1a1915"></i></div>
+            <div class="ring"></div><div class="roll"></div><div class="scan"></div><div class="glass"></div>
+            <div class="cap">Jacob Schopp<span>Portrait coming</span></div>
+          </div>
+          <div class="who-name" data-plate data-k="0"><div class="bob"><h3>Jacob Schopp</h3><p>Co-founder, Crucible</p></div></div>
+        </div>
+        <div>
+          <div class="text fade" data-plate data-k="0" id="jacobA"><div class="bob"></div></div>
+        </div>
+      </article>
+    </div>
+
+    <section id="paypal" class="pin" data-pin="paypal" aria-label="PayPal and the companies that came after it">
+      <div class="stage">
+        <div class="pp" id="pp">
+          <div class="pp-node pp-src h-display slug cool" data-plate data-k="1" data-pp="0" data-win="-1,0.06,9,9"><span class="bob">PayPal</span></div>
+          <div class="pp-node h-display slug cool" data-plate data-k="1" data-pp="1"><span class="bob">YouTube</span></div>
+          <div class="pp-node h-display slug cool" data-plate data-k="1" data-pp="2"><span class="bob">LinkedIn</span></div>
+          <div class="pp-node h-display slug cool" data-plate data-k="1" data-pp="3"><span class="bob">Yelp</span></div>
+          <div class="pp-node h-display slug cool" data-plate data-k="1" data-pp="4"><span class="bob">Palantir</span></div>
+          <div class="pp-node h-display slug cool" data-plate data-k="1" data-pp="5"><span class="bob">SpaceX</span></div>
+          <div class="pp-node h-display slug cool" data-plate data-k="1" data-pp="6"><span class="bob">Tesla</span></div>
+          <div class="pp-cap fade" data-plate data-k="0" data-win="0.55,0.68,9,9"><div class="bob"><p>So much came out of a single company. <span class="dim">Jacob, on the PayPal Mafia</span></p></div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="wrap">
+      <article class="chapter" aria-label="Jacob Schopp, continued">
+        <div class="who"></div>
+        <div>
+          <h3 class="pull h-display" aria-label="I want to know what happens when a group like it comes together earlier"><span class="slug cool" data-plate data-k="1"><span class="bob">I want to know what happens</span></span> <span class="slug cool" data-plate data-k="1"><span class="bob">when a group like it</span></span> <span class="slug cool" data-plate data-k="1"><span class="bob">comes together earlier</span></span></h3>
+          <div class="text fade" data-plate data-k="0" id="jacobB"><div class="bob"></div></div>
+        </div>
+      </article>
+
+      <article class="chapter" aria-label="Charles Rochford">
+        <div class="who">
+          <div class="crt" data-crt><canvas width="80" height="60"></canvas>
+            <div class="bars"><i style="background:#e8e4d8"></i><i style="background:#c9c5ba"></i><i style="background:#a3a095"></i><i style="background:#7d7a71"></i><i style="background:#57554e"></i><i style="background:#33322d"></i><i style="background:#1a1915"></i></div>
+            <div class="ring"></div><div class="roll"></div><div class="scan"></div><div class="glass"></div>
+            <div class="cap">Charles Rochford<span>Portrait coming</span></div>
+          </div>
+          <div class="who-name" data-plate data-k="0"><div class="bob"><h3>Charles Rochford</h3><p>Co-founder, Crucible</p></div></div>
+        </div>
+        <div>
+          <div class="text fade" data-plate data-k="0" id="charlie"><div class="bob"></div></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 3. Ventures: each one surfaces out of the sea. -->
+  <section id="ventures">
+    <div class="wrap">
+      <h2 class="sec-head h-display" style="margin-bottom:3vh"><span class="slug cool" data-plate data-k="1"><span class="bob">Ventures</span></span></h2>
+      <p class="lead fade" data-plate data-k="0"><span class="bob">One is live. Two are still molten.</span></p>
+
+      <a class="venture" href="https://crucibleinnovation.com/sites" data-venture>
+        <div class="bar" data-plate data-k="3" data-bar><div class="bob"><span class="stamp" aria-hidden="true">Crucible Sites</span></div></div>
+        <div class="v-info fade" data-plate data-k="0"><div class="bob">
+          <p class="v-status"><i></i>Live</p>
+          <h3 class="v-name">Crucible Sites</h3>
+          <p class="v-tag">Websites for local businesses, built in days.</p>
+          <p class="v-blurb">Designed and built by hand by the two of us. No payment until you've approved the design.</p>
+          <span class="v-open">Open Crucible Sites <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </div></div>
+      </a>
+
+      <a class="venture" href="https://crucibleinnovation.com/ventures/verge" data-venture>
+        <div class="bar" data-plate data-k="4" data-bar><div class="bob"><span class="stamp" aria-hidden="true">Verge</span></div></div>
+        <div class="v-info fade" data-plate data-k="0"><div class="bob">
+          <p class="v-status hot"><i></i>Coming soon, still molten</p>
+          <h3 class="v-name molten">Verge</h3>
+          <p class="v-tag">Find your verge</p>
+          <p class="v-blurb">An AI coach for endurance athletes, built on the training data they already have.</p>
+          <span class="v-open">Open Verge <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </div></div>
+      </a>
+
+      <a class="venture" href="https://crucibleinnovation.com/ventures/trellis" data-venture>
+        <div class="bar" data-plate data-k="4" data-bar><div class="bob"><span class="stamp" aria-hidden="true">Trellis</span></div></div>
+        <div class="v-info fade" data-plate data-k="0"><div class="bob">
+          <p class="v-status hot"><i></i>Coming soon, still molten</p>
+          <h3 class="v-name molten">Trellis</h3>
+          <p class="v-tag">A day that actually fits</p>
+          <p class="v-blurb">An AI day planner that works with what you know.</p>
+          <span class="v-open">Open Trellis <svg class="arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8h10M9 4l4 4-4 4"/></svg></span>
+        </div></div>
+      </a>
+    </div>
+  </section>
+
+  <!-- 4. Thesis: the sea heats until only the alloy holds. -->
+  <section id="thesis" class="pin" data-pin="thesis">
+    <div class="stage">
+      <div class="th">
+        <h2 class="h-display" aria-label="An alloy is stronger than its metals">
+          <span class="slug cool" data-plate data-k="1" data-win="0,0.1,9,9"><span class="bob">An alloy is stronger</span></span>
+          <span class="slug cool" data-plate data-k="1" data-win="0.04,0.14,9,9"><span class="bob">than its metals</span></span>
+        </h2>
+        <div class="th-meta">
+          <div class="fade" data-plate data-k="0" data-win="0.12,0.22,9,9"><div class="bob"><p>Steel is harder than iron. Bronze is harder than copper.</p></div></div>
+          <div class="fade" data-plate data-k="0" data-win="0.12,0.22,9,9"><div class="bob"><span class="kelvin" id="kelvin">293 K</span><small>Sea temperature</small></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="shore">
+  <div class="cta fade" data-plate data-k="0"><div class="bob">
+    <h2 class="h-display">Start a project</h2>
+    <p>Tell us what you're building, or what your business needs.</p>
+    <a class="btn btn-hot" href="mailto:jacob@crucibleinnovation.com">jacob@crucibleinnovation.com</a>
+  </div></div>
+  <p class="foot-giant wm" aria-label="Crucible">cruc<span class="spark">ı</span>ble</p>
+  <div class="foot-row">
+    <nav aria-label="Footer"><a href="https://crucibleinnovation.com/sites">Crucible Sites</a><a href="#ventures">Ventures</a><a href="https://crucibleinnovation.com/work">Work</a><a href="#story">Story</a></nav>
+    <span>© 2026 Crucible</span>
+  </div>
+</footer>
+<div class="concept-tag">Concept: Abyss</div>
+
+<script>
+'use strict';
+// ============================================================================================
+// Copy (the founders' words, verbatim from data/story.ts)
+// ============================================================================================
+const JACOB = [
+  'My name is Jacob Schopp, and I am still in high school. Crucible, which I co-founded with Charlie Rochford, is the name we build our ventures under.',
+  'Crucible started with a car ride, when my dad put on the audiobook of Walter Isaacson’s biography of Elon Musk. Most of what I took from it concerned Elon himself, but part of the book covers PayPal and the people who worked there before eBay bought the company in 2002. After the sale, members of that group went on to found YouTube, LinkedIn, Yelp and Palantir, while Elon used much of his share of the money to fund SpaceX and later to invest in Tesla. People call them the PayPal Mafia. It is interesting that so much came out of a single company, and I do not believe it was luck, the members being exceptional people who found each other early and continued to back one another long after PayPal itself was gone. When Jeremy Stoppelman and Russel Simmons set out to start Yelp, it was their former PayPal colleague Max Levchin who put up the first million dollars.',
+  'That group came together mostly in their twenties. I want to know what happens when a group like it comes together earlier. Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.',
+  'The name comes from what a crucible actually is, a vessel built to hold metal as it melts, in which separate metals can be combined into an alloy. Steel, being mostly iron with a small amount of carbon added, is far stronger than the iron it is made from. That is the idea behind the name, and it applies to the way people work with one another as much as it does to the way people work with AI. The logo is two rings, half drawn as continuous lines and half as pixels, meeting at an orange core. The human half and the machine half. I believe that people who learn to work alongside AI now, while they are young, will be able to build things that only a few years ago would have required a far larger and more experienced team.',
+  'For now, Crucible has one venture, Crucible Sites, which designs and builds websites for local businesses. Charlie and I build the sites together, and our first ones are already lined up. It is small compared to what I want Crucible to become, and I know that. However it is real work, and it is where we are learning to ship.',
+  'Some people hear all of this and find it unrealistic for someone my age, perhaps even egotistical. I can understand why they react that way. But if I commit myself fully to this and have even a .1% chance of building something that changes the world, would that not be worth it? I intend to find out, and maybe, years from now, the people who build it with me will have a name too.',
+];
+const CHARLIE = [
+  'I’m Charles Rochford, a young entrepreneur, developer, and co-founder of Crucible Innovation. I’ve always been fascinated by technology, entrepreneurship, and the potential for new ideas to change the world. My passion comes from a desire to create something meaningful, challenge conventional thinking, and contribute to a future that’s better than the world we live in today.',
+  'My interest in entrepreneurship began with a curiosity about how businesses operate and how technology can be used to solve real-world problems. Since then, I’ve spent much of my time exploring new ideas, developing technical skills, and learning what it takes to turn a concept into something valuable. Through my experiences in software development, business strategy, and entrepreneurship, I’ve come to appreciate both the creativity and persistence required to build something from the ground up.',
+  'As a co-founder of Crucible Innovation, I want to help create a company that stands for more than financial success. I believe that businesses have the potential to be powerful forces for positive change, and I want our work to reflect that belief. My goal is to build something that makes people’s lives better, creates new opportunities, and contributes to meaningful progress.',
+  'Outside of entrepreneurship, I’m a high school student with a strong interest in mathematics, science, and technology. Studying mathematics several years ahead of my grade level has strengthened my analytical thinking and problem-solving abilities. I’m constantly looking for opportunities to learn, challenge myself, and develop skills that will help me pursue increasingly ambitious goals.',
+  'Ultimately, I want to spend my life building things that matter. I don’t measure success solely by the size of a company or the amount of money it generates, but also by the positive impact it has on the people and world around it. Through Crucible Innovation, I hope to turn that philosophy into action, helping create a future defined by progress, opportunity, and lasting improvement.',
+  'For me, Crucible Innovation is more than a business. It’s an opportunity to turn ambition into action and contribute to making the world a better place.',
+];
+const fill = (id, ps) => { document.querySelector('#' + id + ' .bob').innerHTML = ps.map((p) => `<p>${p}</p>`).join(''); };
+fill('jacobA', JACOB.slice(0, 2));
+fill('jacobB', JACOB.slice(2));
+fill('charlie', CHARLIE);
+
+// The mark (lib/splitRing.ts geometry): rings r 27 / 15, band 3.6, squares 3.6 (9 and 5), core 4.5.
+const RING = { c: 32, px: 3.6, core: 4.5, rings: [{ r: 27, n: 9 }, { r: 15, n: 5 }] };
+const CELLS = RING.rings.flatMap(({ r, n }, ring) => Array.from({ length: n }, (_, i) => {
+  const a = -Math.PI / 2 + (i + 1) * Math.PI / (n + 1);
+  return { x: r * Math.cos(a), y: r * Math.sin(a), ring, a };
+}));
+(function markSvg() {
+  const arc = (r) => { const ro = r + 1.8, ri = r - 1.8; return `<path d="M32 ${32 - ro}A${ro} ${ro} 0 0 0 32 ${32 + ro}V${32 + ri}A${ri} ${ri} 0 0 1 32 ${32 - ri}Z" fill="#e8e4d8"/>`; };
+  document.getElementById('markStill').innerHTML = arc(27) + arc(15) +
+    CELLS.map((c) => `<rect x="${(32 + c.x - 1.8).toFixed(3)}" y="${(32 + c.y - 1.8).toFixed(3)}" width="3.6" height="3.6" fill="#e8e4d8"/>`).join('') +
+    '<circle cx="32" cy="32" r="4.5" fill="#ff5b1f"/>';
+})();
+
+// ============================================================================================
+// Setup, flags and test hooks
+// ============================================================================================
+const Q = new URLSearchParams(location.search);
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches || Q.has('still');
+const root = document.documentElement;
+if (RM) root.classList.add('still');
+const canvas = document.getElementById('sea');
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance', preserveDrawingBuffer: Q.has('shot') });
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const mix = (a, b, t) => a + (b - a) * t;
+
+// The swell: the same sum as swellGLSL. Directions, wavelength (px), amplitude (px of height).
+const SWELL = [[0.8, 0.6, 620, 3.0], [-0.35, 0.94, 350, 2.0], [0.98, -0.2, 190, 1.1], [0.45, 0.89, 105, 0.5]].map(([x, y, l, a]) => {
+  const k = 2 * Math.PI / l; return { x, y, k, w: k * 6.2 * Math.sqrt(l), a };
+});
+function swellAt(px, py, t) {
+  let h = 0, gx = 0, gy = 0;
+  for (const s of SWELL) { const ph = (s.x * px + s.y * py) * s.k - s.w * t; h += s.a * Math.sin(ph); const c = s.a * s.k * Math.cos(ph); gx += c * s.x; gy += c * s.y; }
+  return [h, gx, gy];
+}
+const SWELL_GLSL = SWELL.map((s, i) => `  { float ph = dot(vec2(${s.x.toFixed(4)}, ${s.y.toFixed(4)}), p) * ${s.k.toFixed(6)} - ${s.w.toFixed(5)} * t;
+    r.x += ${s.a.toFixed(3)} * sin(ph); r.yz += ${(s.a * s.k).toFixed(6)} * vec2(${s.x.toFixed(4)}, ${s.y.toFixed(4)}) * cos(ph); }`).join('\n');
+
+// ============================================================================================
+// Shaders
+// ============================================================================================
+const VS = `#version 300 es
+in vec2 aP; void main() { gl_Position = vec4(aP, 0.0, 1.0); }`;
+
+// The wave grid: a damped wave equation on cells anchored to the page. R height, G velocity, B broken crust.
+const SIM_FS = `#version 300 es
+precision highp float;
+uniform sampler2D uPrev;
+uniform ivec2 uN;
+uniform int uShift;
+uniform float uDt, uC2, uDamp;
+uniform int uNS;
+uniform vec4 uA[8];   // segment start.xy, end.xy (cells)
+uniform vec4 uB[8];   // radius (cells), push (height/s), break (/s), ring radius (cells, 0 = solid)
+out vec4 o;
+vec4 at(ivec2 c) {
+  if (c.x < 0 || c.y < 0 || c.x >= uN.x || c.y >= uN.y) return vec4(0.0);
+  return texelFetch(uPrev, c, 0);
+}
+float seg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-4), 0.0, 1.0); return length(pa - ba * h); }
+void main() {
+  ivec2 c = ivec2(gl_FragCoord.xy); ivec2 s = c + ivec2(0, uShift);
+  vec4 m = at(s);
+  float n4 = at(s + ivec2(1, 0)).x + at(s - ivec2(1, 0)).x + at(s + ivec2(0, 1)).x + at(s - ivec2(0, 1)).x;
+  float d4 = at(s + ivec2(1, 1)).x + at(s - ivec2(1, 1)).x + at(s + ivec2(1, -1)).x + at(s + ivec2(-1, 1)).x;
+  float lap = (4.0 * n4 + d4 - 20.0 * m.x) / 6.0;
+  vec2 p = gl_FragCoord.xy;
+  float edge = min(min(p.x, float(uN.x) - p.x), min(p.y, float(uN.y) - p.y));
+  float damp = uDamp + 5.0 * (1.0 - smoothstep(0.0, 10.0, edge));
+  float h = m.x, v = m.y, b = m.z;
+  v += (uC2 * lap - damp * v) * uDt;
+  for (int i = 0; i < 8; i++) {
+    if (i >= uNS) break;
+    float d = seg(p, uA[i].xy, uA[i].zw);
+    if (uB[i].w > 0.0) d = abs(d - uB[i].w);
+    float r2 = uB[i].x * uB[i].x;
+    float g = exp(-d * d / r2);
+    // zero mean (a narrow push and a wide lift of the same volume): it makes waves, never a trough
+    v -= uB[i].y * (g - 0.5 * exp(-d * d / (4.0 * r2))) * uDt;
+    b += uB[i].z * g * uDt;
+  }
+  h += v * uDt;
+  h -= h * 0.25 * uDt;
+  b = clamp(b * exp(-uDt / 2.2) + abs(v) * 0.004 * uDt, 0.0, 1.6);
+  o = vec4(h, v, b, 1.0);
+}`;
+
+const SEA_FS = `#version 300 es
+precision highp float;
+out vec4 O;
+uniform vec2 uV;          // viewport, css px
+uniform float uS;         // canvas px per css px
+uniform float uT;         // time (s)
+uniform float uScroll;    // page scroll (px)
+uniform float uHeat;      // 0..1 (thesis)
+uniform float uWide;      // 1 on desktop
+uniform sampler2D uSim; uniform vec2 uSimN; uniform float uCell, uFrac, uSimOn;
+uniform vec4 uPl[24]; uniform vec4 uPm[24]; uniform int uNPl;
+uniform vec4 uPc[17];     // logo pieces: x, y (css px), angle, sink
+uniform vec4 uPd[17];     // scale, lift, -, -
+uniform vec4 uLogo;       // unit px, active, core glow, flare
+uniform vec4 uRv[7];      // [0] source xy, active, cool; [i] dest xy, ctrl xy
+uniform vec4 uRp[6];      // head, arrive, width, -
+uniform vec4 uShore;      // y (css px, screen), active, -, -
+uniform vec4 uPtr;        // pointer x, y (css px), strength, -
+uniform float uDbg;
+
+float h21(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+vec2 h22(vec2 p) { float n = h21(p); return vec2(n, h21(p + n + 17.17)); }
+float vn(vec2 p) {
+  vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(h21(i), h21(i + vec2(1, 0)), u.x), mix(h21(i + vec2(0, 1)), h21(i + vec2(1, 1)), u.x), u.y);
+}
+float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * vn(p); p = mat2(1.6, 1.2, -1.2, 1.6) * p; a *= 0.5; } return v; }
+vec3 bb(float t) {   // blackbody ramp: dark, deep red, Ember, amber, white-hot
+  t = clamp(t, 0.0, 1.2);
+  vec3 c = mix(vec3(0.0), vec3(0.32, 0.03, 0.0), smoothstep(0.0, 0.3, t));
+  c = mix(c, vec3(0.95, 0.24, 0.05), smoothstep(0.25, 0.55, t));
+  c = mix(c, vec3(1.0, 0.55, 0.16), smoothstep(0.5, 0.78, t));
+  c = mix(c, vec3(1.0, 0.86, 0.6), smoothstep(0.76, 0.98, t));
+  return c * (1.0 + 1.6 * smoothstep(0.85, 1.2, t));
+}
+vec3 swell(vec2 p, float t) {
+  vec3 r = vec3(0.0);
+${SWELL_GLSL}
+  return r;
+}
+vec3 voro(vec2 x, float t) {
+  vec2 n = floor(x), f = fract(x); float d1 = 8.0, d2 = 8.0, id = 0.0;
+  for (int j = -1; j <= 1; j++) for (int i = -1; i <= 1; i++) {
+    vec2 g = vec2(float(i), float(j)); vec2 hh = h22(n + g);
+    vec2 r = g + 0.5 + 0.4 * sin(t + 6.2831 * hh) - f; float d = dot(r, r);
+    if (d < d1) { d2 = d1; d1 = d; id = hh.x; } else if (d < d2) d2 = d;
+  }
+  return vec3(sqrt(d1), sqrt(d2), id);
+}
+vec3 simAt(vec2 sp) { return texture(uSim, (sp + vec2(0.0, uFrac)) / uCell / uSimN).xyz; }
+mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
+float sdBox(vec2 p, vec2 b) { vec2 q = abs(p) - b; return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0); }
+float arcD(vec2 q, float r) {   // the left (human) half of a ring: a band 3.6 wide ending on x = 0
+  if (q.x <= 0.0) return abs(length(q) - r) - 1.8;
+  return length(vec2(q.x, max(0.0, abs(abs(q.y) - r) - 1.8)));
+}
+float pieceD(int i, vec2 q) {
+  if (i == 0) return arcD(q, 27.0);
+  if (i == 1) return arcD(q, 15.0);
+  if (i == 16) return length(q) - 4.5;
+  return sdBox(q, vec2(1.5)) - 0.3;
+}
+// The whole mark at rest (for the Crucible Sites stamp), in mark units around its centre.
+float markD(vec2 q) {
+  float d = min(arcD(q, 27.0), arcD(q, 15.0));
+  for (int k = 1; k <= 9; k++) { float a = -1.5708 + float(k) * 0.314159; d = min(d, sdBox(q - 27.0 * vec2(cos(a), sin(a)), vec2(1.5)) - 0.3); }
+  for (int k = 1; k <= 5; k++) { float a = -1.5708 + float(k) * 0.523599; d = min(d, sdBox(q - 15.0 * vec2(cos(a), sin(a)), vec2(1.5)) - 0.3); }
+  return min(d, length(q) - 4.5);
+}
+float segP(vec2 p, vec2 a, vec2 b, out float h) { vec2 pa = p - a, ba = b - a; h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+vec3 tone(vec3 c) {   // linear in the darks, a soft shoulder over 0.55
+  vec3 k = 0.55 + 0.45 * (1.0 - exp(-(c - 0.55) / 0.45));
+  return mix(c, k, step(0.55, c));
+}
+
+void main() {
+  vec2 sp = vec2(gl_FragCoord.x, uV.y * uS - gl_FragCoord.y) / uS;  // screen css px, y down
+  vec2 P = sp + vec2(0.0, uScroll);                  // page px
+  float t = uT;
+  float px = 1.0 / uS;                                // one canvas pixel in css px
+
+  // ---------- the surface: swell + wave grid ----------
+  vec3 sw = swell(P, t);
+  vec3 sm = vec3(0.0); vec2 sg = vec2(0.0); float simLap = 0.0;
+  if (uSimOn > 0.5) {
+    sm = simAt(sp);
+    float e = uCell;
+    float hx1 = simAt(sp + vec2(e, 0)).x, hx0 = simAt(sp - vec2(e, 0)).x, hy1 = simAt(sp + vec2(0, e)).x, hy0 = simAt(sp - vec2(0, e)).x;
+    sg = vec2(hx1 - hx0, hy1 - hy0) / (2.0 * e);
+    simLap = (hx1 + hx0 + hy1 + hy0 - 4.0 * sm.x);
+  }
+  vec2 grad = sw.yz + sg;
+  float slope = length(sg);
+  vec3 n = normalize(vec3(-(sw.yz * 1.6 + sg * 5.0), 1.0));
+  float br = sm.z;
+
+  // ---------- crust plates on the lava ----------
+  float plate = mix(150.0, 240.0, uWide);
+  // where the sea is busy: some reaches are crusted over and dark, others crack and glow
+  float act = smoothstep(0.32, 0.72, fbm(P / 760.0 + vec2(t * 0.006, -t * 0.004)));
+  vec2 drift = vec2(t * 2.2, -t * 0.9) + 26.0 * vec2(fbm(P / 900.0 + t * 0.01), fbm(P / 900.0 + 7.3 - t * 0.01));
+  vec2 Pc = P + drift + grad * 34.0;                 // waves bend the crust
+  Pc += 16.0 * (vec2(vn(Pc / 46.0), vn(Pc / 46.0 + 9.7)) - 0.5) + 5.0 * (vec2(vn(Pc / 13.0 + 3.3), vn(Pc / 13.0 + 5.1)) - 0.5);   // jagged seams
+  vec3 v = voro(Pc / plate, t * 0.05);
+  float sPx = (v.y - v.x) * plate * 0.5;            // ~distance to the nearest seam, px
+  float wn = vn(Pc / (plate * 0.45) + 3.1);
+  float heat = uHeat;
+  act = mix(act, 1.0, heat);
+  float seamW = (0.35 + 0.9 * act + 3.0 * wn * wn * wn * act) * (1.0 + heat * 9.0);
+  seamW += 30.0 * smoothstep(0.62, 0.9, act * vn(Pc / 300.0 + 4.0));   // a few open pools where plates drift apart
+  seamW += slope * 30.0 + max(sm.x, 0.0) * 5.0 + br * 22.0;   // wakes crack it open
+  // the nucleus keeps a pool open around the ring: plates break up into floes toward it
+  float poolF = 0.0;
+  if (uLogo.y > 0.5) poolF = smoothstep(48.0, 30.0, length(sp - uPc[16].xy) / uLogo.x + 6.0 * (wn - 0.5)) * uLogo.z;
+  seamW += poolF * poolF * 70.0;
+  // the shore: the crust breaks up into surf before it reaches the sand
+  float shoreDy = -1e5;
+  if (uShore.y > 0.5) shoreDy = sp.y - (uShore.x + 26.0 * (fbm(vec2(P.x / 340.0, 3.7)) - 0.5) * 2.0 + 9.0 * sin(P.x / 170.0));
+  seamW += 80.0 * smoothstep(-300.0, -60.0, shoreDy);
+  float aa = max(fwidth(sPx), px) * 1.2;
+  float crust = smoothstep(seamW - aa, seamW + aa, sPx);
+  // fine cracks inside each plate
+  vec3 v2 = voro(Pc / (plate * 0.32) + 11.0, t * 0.08);
+  float s2 = (v2.y - v2.x) * plate * 0.16;
+  float a2 = max(fwidth(s2), px) * 1.2;
+  float crack = (1.0 - smoothstep(0.3 - a2, 0.3 + a2 + 0.4, s2)) * (0.25 + 0.75 * act);
+  // the lava under it
+  float flow = fbm(P / 70.0 + vec2(t * 0.15, -t * 0.08) + v.z * 3.0);
+  float tl = 0.30 + 0.28 * act + 0.3 * flow + 0.18 * wn + 0.2 * (1.0 - clamp(sPx / max(seamW, 0.5), 0.0, 1.0)) * smoothstep(24.0, 6.0, seamW) + br * 0.35 + slope * 1.2 + heat * 0.12;
+  // wide open lava (pools, a hot sea) isn't a flat glow: a skin of cooler metal streams across it
+  float fl2 = fbm(P / 110.0 + vec2(t * 0.25, t * 0.07) + 2.0 * vec2(flow, wn));
+  float streak = smoothstep(0.35, 0.75, fl2);
+  tl = mix(tl, 0.42 + 0.34 * streak + 0.06 * heat, smoothstep(6.0, 26.0, seamW));
+  tl = min(tl, 0.86);
+  vec3 lava = bb(tl);
+  // crust: dark basalt, a little glass in it, reflecting a pale dusk sky
+  float tone0 = 0.75 + 0.5 * v.z;
+  float grain = vn(P * 0.6) * 0.5 + vn(P * 1.7) * 0.5;
+  vec3 crustC = vec3(0.040, 0.036, 0.033) * tone0 * (0.8 + 0.4 * grain);
+  // crust relief: wrinkles and ropes, catching the sky and the glow
+  float r0 = fbm(Pc / 26.0);
+  vec2 rg = vec2(r0 - fbm(Pc / 26.0 + vec2(0.12, 0.0)), r0 - fbm(Pc / 26.0 + vec2(0.0, 0.12))) * 1.2;
+  vec3 nc = normalize(n + vec3(rg, 0.0));
+  vec3 Rv = reflect(vec3(0, 0, -1), nc);
+  float cloud = fbm(P / 520.0 + vec2(t * 0.012, t * 0.004) + Rv.xy * 2.0);
+  // the sky above, in the glass of the crust: a pale dusk, cool at the zenith, warm where clouds catch the glow
+  vec3 sky = mix(vec3(0.045, 0.058, 0.085), vec3(0.12, 0.10, 0.11), smoothstep(0.4, 0.8, cloud));
+  float band = clamp(0.5 + 9.0 * dot(Rv.xy, normalize(vec2(-0.35, -0.94))), 0.0, 1.6);   // tilt toward the bright part of the sky
+  crustC += sky * (0.15 + 0.7 * band) * (0.6 + 0.4 * grain) * (1.0 - 0.4 * act);
+  vec3 Ls = normalize(vec3(-0.22, -0.32, 1.0));
+  float glint = pow(max(dot(Rv, Ls), 0.0), 900.0);
+  crustC += vec3(0.48, 0.66, 0.95) * glint * (0.25 + 0.75 * smoothstep(0.02, 0.12, slope));
+  // edge glow: each plate's rim is hotter than its middle
+  float rim = exp(-max(sPx - seamW, 0.0) / (6.0 + 6.0 * heat));
+  crustC += bb(0.36 + 0.14 * wn + 0.1 * act) * rim * (0.08 + 0.3 * act + 0.5 * heat);
+  crustC += bb(0.3) * crack * 0.22 * (0.3 + wn);
+  if (poolF > 0.0) {
+    // the ring sits in a pool the nucleus keeps molten; its ripples catch the light like water under a low sun
+    float u = uLogo.x; vec2 cc = uPc[16].xy; float rc = length(sp - cc) / u;
+    vec3 liquid = bb(0.2 + 0.55 * exp(-rc / 8.0) + 0.1 * flow + 0.1 * br) * (0.35 + 0.65 * exp(-rc / 14.0));
+    vec3 Lc3 = normalize(vec3(cc - sp, 26.0 * u));
+    vec3 Rn = reflect(vec3(0, 0, -1), n);
+    liquid += vec3(1.0, 0.68, 0.38) * pow(max(dot(Rn, Lc3), 0.0), 14.0) * 2.6 * exp(-rc / 34.0);
+    liquid += vec3(0.5, 0.62, 0.85) * pow(max(dot(Rn, normalize(vec3(0.3, 0.8, 1.0))), 0.0), 40.0) * 0.12;   // a little cool sky in it
+    lava = mix(lava, liquid, smoothstep(0.0, 0.6, poolF));
+    crustC += bb(0.4) * 0.25 * poolF;
+    crust *= 1.0 - smoothstep(0.75, 0.95, poolF);
+  }
+  // the wake on the crust: heat squeezed up along its crests, the troughs a little darker, a cool sheen on its faces
+  float crestL = smoothstep(0.03, 0.25, -simLap) * smoothstep(0.0, 0.25, sm.x);
+  crustC += bb(0.52 + 0.25 * crestL) * crestL * 0.9;
+  crustC *= 1.0 - 0.35 * smoothstep(0.2, 1.4, -sm.x);
+  crustC += vec3(0.4, 0.55, 0.8) * smoothstep(0.08, 0.35, slope) * 0.05;
+  float open = smoothstep(0.35, 1.0, br);            // a drag tears it open
+  crust *= 1.0 - open;
+  vec3 col = mix(lava, crustC, crust);
+
+  // ---------- the Split Ring ----------
+  if (uLogo.y > 0.5) {
+    float u = uLogo.x;
+    vec2 cc = uPc[16].xy;
+    float rc = length(sp - cc) / u;                    // distance to the core, mark units
+    // the nucleus melts the crust around it and lights what's near
+    vec3 Lc = normalize(vec3(cc - sp, 7.0 * u));
+    float lit = max(dot(n, Lc), 0.0);
+    float fall = 1.0 / (1.0 + rc * rc / 90.0);
+    col += vec3(1.0, 0.5, 0.18) * (0.10 + 0.9 * pow(lit, 6.0) * 0.25) * fall * uLogo.z * (1.0 + uLogo.w);
+    col += vec3(1.0, 0.62, 0.3) * exp(-rc / 3.2) * 0.9 * uLogo.z * (1.0 + 2.0 * uLogo.w);
+    col += vec3(1.0, 0.45, 0.15) * exp(-rc / 14.0) * 0.18 * uLogo.z;
+    // the pieces
+    float best = 1e9; int bi = -1; vec2 bq = vec2(0.0);
+    for (int i = 0; i < 16; i++) {
+      vec2 q = rot(-uPc[i].z) * (sp - uPc[i].xy) / (u * uPd[i].x);
+      float d = pieceD(i, q);
+      if (d < best) { best = d; bi = i; bq = q; }
+    }
+    float dpx = best * u;
+    float sink = bi >= 0 ? uPc[bi].w : 0.0;
+    float lift = bi >= 0 ? uPd[bi].y : 0.0;
+    // lava climbs the walls: a hot meniscus around each piece
+    float men = exp(-max(dpx, 0.0) / (2.2 + 4.0 * sink)) * step(0.0, dpx);
+    col = mix(col, bb(0.72 + 0.1 * flow), men * 0.7 * (0.5 + 0.5 * uLogo.z));
+    float inside = 1.0 - smoothstep(-0.8 * px, 0.8 * px, dpx);
+    if (inside > 0.0) {
+      float bev = clamp(-best / 0.9, 0.0, 1.0);
+      vec2 g = normalize(vec2(dFdx(best), -dFdy(best)) + 1e-6);
+      vec3 pn = normalize(vec3(g * (1.0 - bev) * 1.6, 1.0));
+      pn = normalize(pn + vec3(grad * 0.6 + vec2(lift) * 0.0, 0.0));
+      float gr = vn(bq * 6.0 + float(bi) * 7.0) * 0.6 + vn(bq * 17.0) * 0.4;
+      vec3 alb = vec3(0.91, 0.89, 0.85) * (0.62 + 0.16 * gr);
+      vec3 Lk = normalize(vec3(cc - sp, 3.0 * u));
+      float key = max(dot(pn, Lk), 0.0);
+      float fk = 1.0 / (1.0 + rc * rc / 400.0);
+      vec3 mc = alb * (vec3(1.05, 1.0, 0.94) + vec3(1.0, 0.55, 0.25) * key * fk * 1.2 * uLogo.z);
+      mc += alb * vec3(0.30, 0.38, 0.52) * max(dot(pn, normalize(vec3(-0.4, -0.6, 1.0))), 0.0) * 0.45;   // cool fill from above
+      vec3 Rp = reflect(vec3(0, 0, -1), pn);
+      mc += vec3(0.55, 0.72, 1.0) * pow(max(dot(Rp, normalize(vec3(-0.35, -0.5, 1.0))), 0.0), 40.0) * 0.35 * (1.0 - bev * 0.7);
+      mc += vec3(1.0, 0.45, 0.15) * pow(1.0 - bev, 3.0) * 0.35 * fk * uLogo.z;           // warm fillet
+      mc *= 1.0 + lift * 0.04;
+      // sinking: lava closes over it, edges first
+      float cov = smoothstep(0.0, 0.35, sink * 1.5 - bev * 0.5 - 0.1 * vn(bq * 0.8 + float(bi)));
+      vec3 under = mix(mc * 0.35, bb(0.5 + 0.2 * flow), 0.65) * (1.0 - 0.35 * sink);
+      mc = mix(mc, under, cov);
+      col = mix(col, mc, inside);
+    }
+    // the core: white-hot, a soft corona
+    float dc = (length(sp - cc) / u - 4.5 * uPd[16].x) * u;
+    float coreIn = 1.0 - smoothstep(-0.8 * px, 0.8 * px, dc);
+    float rim0 = smoothstep(-4.5 * u, 0.0, dc);
+    vec3 coreC = mix(vec3(3.2, 2.9, 2.4), vec3(2.4, 1.0, 0.3), rim0 * rim0) * (1.0 + 0.06 * sin(t * 1.7) + 0.5 * uLogo.w);
+    col = mix(col, coreC * uLogo.z + col * (1.0 - uLogo.z), coreIn);
+    col += vec3(1.0, 0.6, 0.3) * exp(-max(dc, 0.0) / (1.1 * u)) * 0.9 * uLogo.z * (1.0 - coreIn);
+  }
+
+  // ---------- PayPal: one source, six rivers ----------
+  if (uRv[0].z > 0.5) {
+    vec2 S = uRv[0].xy;
+    float coolR = uRv[0].w;
+    for (int i = 0; i < 6; i++) {
+      vec2 D = uRv[i + 1].xy, C = uRv[i + 1].zw;
+      float head = uRp[i].x;
+      if (head <= 0.0) continue;
+      float bd = 1e9, bt = 0.0; vec2 prev = S;
+      for (int k = 1; k <= 14; k++) {
+        float tt = float(k) / 14.0; vec2 cur = mix(mix(S, C, tt), mix(C, D, tt), tt);
+        float hh; float d = segP(sp, prev, cur, hh);
+        if (d < bd) { bd = d; bt = (float(k - 1) + hh) / 14.0; }
+        prev = cur;
+      }
+      float L = length(D - S) * 1.15;
+      float w = uRp[i].z * (1.0 - 0.45 * coolR) * (0.8 + 0.4 * vn(vec2(bt * L / 40.0 - t * 0.6, float(i))));
+      float ahead = (bt - head) * L;                 // px past the front
+      float on = 1.0 - smoothstep(-2.0, 6.0, ahead);
+      float fr = exp(-pow(ahead / 18.0, 2.0)) * (1.0 - coolR);
+      float river = (1.0 - smoothstep(w - aa, w + aa, bd)) * on;
+      float glow = exp(-max(bd - w, 0.0) / (w * 1.8)) * on;
+      float st = vn(vec2(bt * L / 26.0 - t * 2.2, bd / w * 1.5 + float(i) * 3.0));
+      float temp = mix(0.78 + 0.18 * st, 0.36 + 0.14 * st, coolR) + fr * 0.4;
+      col = mix(col, bb(temp), river);
+      col += bb(temp * 0.8) * glow * 0.35 * (1.0 - river);
+    }
+    float dS = length(sp - S);
+    col = mix(col, bb(0.7 + 0.2 * flow - 0.2 * coolR), smoothstep(110.0, 40.0, dS) * 0.8);
+  }
+
+  // ---------- the shore: glowing surf on black sand ----------
+  if (uShore.y > 0.5) {
+    float x = P.x;
+    float dy = shoreDy;                              // > 0 toward the sand
+    float sheet = 0.0, front = 0.0, wet = 0.0, crest = 0.0, trail = 0.0;
+    for (int k = 0; k < 3; k++) {
+      float fk = float(k);
+      float ph = t / (6.0 + fk * 1.7) + fk * 0.37 + 0.35 * vn(vec2(x / 420.0 + fk * 9.0, fk));
+      float s = fract(ph);
+      float cyc = floor(ph);
+      // run-up: in fast, back slow; the front is lobed (cusps), different every wave
+      float up = smoothstep(0.0, 0.22, s) * (1.0 - smoothstep(0.22, 0.62, s));
+      float reachK = (34.0 + 58.0 * vn(vec2(x / 150.0 - fk * 3.0, cyc * 1.7))) * up;
+      float f = reachK - 4.0;
+      float on = 1.0 - smoothstep(f - 1.2, f + 1.2, dy);
+      float fresh = 1.0 - smoothstep(0.18, 0.6, s);
+      sheet = max(sheet, on * step(0.0, dy) * (0.25 + 0.75 * fresh) * step(s, 0.62));
+      front = max(front, exp(-pow((dy - f) / 2.0, 2.0)) * fresh * step(-4.0, dy) * step(s, 0.62));
+      wet = max(wet, smoothstep(reachK + 40.0, reachK, dy) * smoothstep(0.1, 0.5, s) * (1.0 - smoothstep(0.6, 1.0, s)));
+      // the breaker coming in: a curved, broken line of light that brightens as it nears the sand
+      float a = smoothstep(0.62, 1.0, s);
+      float yc = -190.0 * (1.0 - a) - 8.0 * vn(vec2(x / 90.0, cyc + fk));
+      float broken = smoothstep(0.25, 0.65, vn(vec2(x / 140.0 + cyc * 3.1, fk * 5.0)));
+      float live = step(0.62, s) * broken;
+      crest = max(crest, exp(-pow((dy - yc) / (1.6 + 2.5 * a), 2.0)) * live * (0.35 + 0.65 * a));
+      trail = max(trail, exp(-max(yc - dy, 0.0) / (10.0 + 30.0 * a)) * step(dy, yc) * live * a * 0.5);
+    }
+    float sand = smoothstep(-2.0, 2.0, dy);
+    vec3 sea = col;
+    sea += bb(0.66 + 0.25 * crest) * crest * 2.0 + bb(0.55) * trail * 0.9;
+    // black sand: fine grain, a few cold glints of starlight
+    float g1 = vn(P * 1.3), g2 = vn(P * 0.35);
+    vec3 sandC = vec3(0.030, 0.028, 0.026) * (0.7 + 0.5 * g1 + 0.3 * g2);
+    vec2 cell = floor(P / 3.0);
+    float sparkle = step(0.9972, h21(cell)) * (0.5 + 0.5 * sin(t * 2.0 + h21(cell + 3.0) * 30.0));
+    sandC += vec3(0.5, 0.64, 0.85) * sparkle * 0.5 * smoothstep(60.0, 160.0, dy);
+    // wet sand mirrors the surf's glow, then dries
+    sandC += bb(0.48) * wet * 0.16 * (0.6 + 0.4 * g2);
+    vec3 shore = mix(sea, sandC, sand);
+    vec3 film = bb(0.5 + 0.22 * fl2 + 0.15 * sheet);
+    shore = mix(shore, film, sheet * sand * 0.92);
+    shore += bb(0.92) * front * 0.85 * sand;
+    col = shore;
+  }
+
+  // ---------- plates: cooled metal floating on the sea, text sits on these ----------
+  for (int i = 0; i < 24; i++) {
+    if (i >= uNPl) break;
+    vec4 R = uPl[i]; vec4 M = uPm[i];
+    vec2 hb = R.zw * 0.5; vec2 c = R.xy + hb;
+    int kind = int(M.y + 0.5);
+    float rr = kind >= 3 ? min(hb.x, hb.y) * 0.16 : 3.0;
+    float d = sdBox(sp - c, hb - rr) - rr;
+    float ir = (vn(sp * 0.07 + float(i) * 13.0) - 0.5) * (kind >= 3 ? 0.8 : 1.4);
+    d += ir;
+    if (d > 70.0) continue;
+    float e = M.x, hov = M.z;
+    float up = smoothstep(0.15, 0.85, e);
+    // outside: the lava parts around it, a hot seam on its edge
+    float rimW = kind == 0 ? 3.0 : (kind >= 3 ? 7.0 + hov * 5.0 : 4.5);
+    float seamOut = (1.0 - smoothstep(rimW * 0.4, rimW, d)) * step(0.0, d) * up;
+    float halo = exp(-max(d, 0.0) / (rimW * 2.5)) * step(0.0, d) * up;
+    float hotR = (kind == 0 ? 0.56 : 0.7) + 0.1 * flow + hov * 0.12 + (kind == 2 ? M.w * 0.25 : 0.0);
+    col = mix(col, bb(hotR), seamOut * (kind == 0 ? 0.55 : 0.85));
+    col += bb(hotR * 0.85) * halo * (kind == 0 ? 0.10 : 0.22) * (1.0 + hov);
+    // the rising shape glows through the crust before it breaks the surface
+    float pre = (1.0 - smoothstep(-2.0, 2.0, d)) * e * (1.0 - e) * 4.0;
+    col += bb(0.6) * pre * (1.0 - up) * 0.35;
+    if (d < 1.5) {
+      float inside = 1.0 - smoothstep(-0.8 * px, 0.8 * px, d);
+      float id = clamp(-d, 0.0, 400.0);
+      vec2 lp = sp - c;
+      vec3 mc;
+      if (kind <= 2) {
+        // dark cooled plate: grain, a bevel catching a cool line from above and a warm one from the lava
+        float gr = vn(lp * 0.55 + float(i) * 5.0) * 0.5 + vn(lp * 0.13) * 0.5;
+        mc = vec3(0.064, 0.060, 0.055) * (0.85 + 0.3 * gr) + vec3(0.012, 0.014, 0.02) * fbm(lp / 160.0 + float(i));
+        float bev = 1.0 - smoothstep(0.0, 3.5, id);
+        vec2 g = normalize(vec2(dFdx(d), -dFdy(d)) + 1e-6);
+        mc += vec3(0.34, 0.5, 0.75) * bev * pow(max(dot(-g, normalize(vec2(-0.45, 0.9))), 0.0), 2.0) * 0.55;
+        mc += bb(0.62) * bev * pow(max(dot(-g, normalize(vec2(0.4, -0.9))), 0.0), 2.0) * 0.4;
+        float sh = M.w;                        // a hot slug (alloyed) still cooling
+        if (kind == 2) mc += bb(0.5 + 0.3 * sh) * bev * sh * 1.2;
+      } else if (kind == 3) {
+        // the Crucible Sites bar: cast bone metal, the mark cut into its top
+        float wall = min(hb.x, hb.y) * 0.16;
+        float bev = 1.0 - smoothstep(0.0, wall, id);
+        bev = bev * bev * (3.0 - 2.0 * bev);
+        vec2 g = normalize(vec2(dFdx(d), -dFdy(d)) + 1e-6);
+        vec3 bn = normalize(vec3(-g * bev * 2.2, 1.0));
+        float gr = vn(lp * 0.7 + 3.0) * 0.5 + vn(lp * 2.1) * 0.3 + vn(lp * 0.08) * 0.2;
+        vec3 alb = vec3(0.91, 0.885, 0.84) * (0.7 + 0.12 * gr);
+        float mu = R.w * 0.54 / 64.0;
+        vec2 mcen = vec2(c.x - hb.x + wall + 34.0 * mu, c.y);
+        float md = markD((sp - mcen) / mu) * mu;
+        float cut = 1.0 - smoothstep(-0.6, 0.6, md);
+        float cutEdge = exp(-abs(md) / 1.1);
+        vec3 lightD = normalize(vec3(0.2 + M.w * 0.3, -0.75, 0.9));
+        float lam = max(dot(bn, lightD), 0.0);
+        mc = alb * (0.45 + 0.85 * lam) * (1.0 - 0.15 * length(lp / hb) * (1.0 - bev));
+        mc += bb(0.62) * pow(bev, 1.2) * 0.75 * (0.5 + 0.7 * max(dot(g, vec2(0.0, 1.0)), 0.0));   // lava light on the walls
+        mc += vec3(1.0, 0.55, 0.22) * exp(-abs(id - wall) / 1.6) * 0.25;                       // warm fillet line
+        vec3 Rb = reflect(vec3(0, 0, -1), bn);
+        float box = smoothstep(0.2, 0.0, abs(lp.x / hb.x + 0.2 - M.w * 0.6)) * smoothstep(1.0, 0.4, abs(lp.y / hb.y));
+        mc += vec3(0.62, 0.72, 0.9) * box * 0.10 * (1.0 - bev);                                 // a softbox sliding over the top
+        // the cut: a darker floor, its upper wall in shadow, its lower wall catching the light
+        vec2 mg = normalize(vec2(dFdx(md), -dFdy(md)) + 1e-6);
+        float wallC = (1.0 - smoothstep(0.0, 1.6, -md)) * cut;
+        mc = mix(mc, mc * 0.42 * (0.85 + 0.3 * gr), cut);
+        mc += alb * 0.45 * wallC * max(dot(mg, vec2(0.0, -1.0)), 0.0);
+        mc *= 1.0 - 0.35 * wallC * max(dot(mg, vec2(0.0, 1.0)), 0.0);
+        // sand-cast pits: small, round, sparse
+        vec2 pc = floor(lp / 7.0); vec2 pq = fract(lp / 7.0) - 0.5 - (h22(pc + float(i)) - 0.5) * 0.5;
+        float pit = step(0.82, h21(pc * 1.7 + float(i))) * (1.0 - smoothstep(0.06, 0.13, length(pq)));
+        mc *= 1.0 - pit * 0.3;
+        // cooling: drained metal is hot first
+        float coolB = smoothstep(0.55, 1.0, e);
+        mc = mix(bb(0.82 - 0.1 * gr), mc, coolB);
+        mc += bb(0.7) * hov * bev * 0.2;
+      } else {
+        // a bar still molten: blackbody glow, a dark crust drifting with cracks
+        float wall = min(hb.x, hb.y) * 0.13;
+        float bev = 1.0 - smoothstep(0.0, wall, id);
+        vec2 bq2 = lp + 6.0 * vec2(vn(lp / 18.0), vn(lp / 18.0 + 4.0));
+        vec3 vb = voro(bq2 / 34.0 + vec2(t * 0.04, t * 0.015) + float(i) * 5.0, t * 0.15);
+        float sb = (vb.y - vb.x) * 17.0;
+        float cr = 1.0 - smoothstep(0.4, 1.6, sb);                 // bright cracks
+        float fb = fbm(lp / 70.0 + vec2(t * 0.08, 0.0) + float(i));
+        float skin = 0.47 + 0.12 * fb + 0.06 * vb.z;               // a cooling skin, dark orange
+        float tb = mix(skin, 0.86, cr) - 0.16 * bev * (1.0 - cr) + 0.1 * hov + 0.03 * sin(t * 1.3 + float(i));
+        mc = bb(tb) * (0.9 + 0.2 * fb);
+        vec2 g = normalize(vec2(dFdx(d), -dFdy(d)) + 1e-6);
+        mc += vec3(1.0, 0.82, 0.55) * exp(-abs(id - wall) / 1.5) * 0.22;                        // the hot fillet
+        mc *= 1.0 - 0.35 * bev * max(dot(g, vec2(0.0, -1.0)), 0.0);                             // walls facing away a touch darker
+      }
+      // emerging: the lava drains off, edges last
+      float field = 1.0 - clamp(id / max(min(hb.x, hb.y), 1.0), 0.0, 1.0);
+      field = 0.8 * field + 0.2 * vn(lp / 90.0 + float(i) * 3.7);
+      float lvl = e * 1.25 - 0.15;
+      float drained = smoothstep(field - 0.05, field + 0.05, lvl);
+      float film = exp(-pow((field - lvl) / 0.04, 2.0)) * (1.0 - smoothstep(0.95, 1.0, e));
+      // still under: the dark plate shows through a thin moving film of metal that runs off it, middle first
+      vec3 lavaFilm = bb(0.4 + 0.22 * smoothstep(0.3, 0.8, fbm(lp / 50.0 + vec2(t * 0.4, float(i))))) ;
+      vec3 under = mix(mc * 0.6, lavaFilm, 0.55 + 0.25 * (1.0 - up));
+      vec3 surf = mix(under, mc, drained) + bb(0.85) * film * 0.55 * up;
+      col = mix(col, surf, inside * up);
+    }
+  }
+
+  // pointer glow: the cursor is a small hot keel
+  float dp = length(sp - uPtr.xy);
+  col += bb(0.7) * exp(-dp * dp / 60.0) * uPtr.z * 0.25;
+
+  col = tone(col);
+  if (uDbg > 0.5) col = vec3(0.5 + 0.25 * sm.x, 0.5 - 0.25 * sm.x, sm.z);
+  if (uDbg > 1.5) col = vec3(crestL, -simLap * 2.0, simLap * 2.0);
+  col += (h21(gl_FragCoord.xy + fract(t) * 91.0) - 0.5) / 255.0 * 1.5;   // dither
+  O = vec4(col, 1.0);
+}`;
+
+// ============================================================================================
+// GL plumbing
+// ============================================================================================
+let ok = !!gl, simOK = false;
+let prog, simProg, U = {}, SU = {}, simTex = [], simFB = [], simIdx = 0, simN = [0, 0];
+function compile(fs) {
+  const mk = (type, src) => { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) + '\n' + src.split('\n').map((l, i) => (i + 1) + ': ' + l).join('\n'));
+    return s; };
+  const p = gl.createProgram(); gl.attachShader(p, mk(gl.VERTEX_SHADER, VS)); gl.attachShader(p, mk(gl.FRAGMENT_SHADER, fs));
+  gl.bindAttribLocation(p, 0, 'aP'); gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  return p;
+}
+function uniforms(p) {
+  const o = {}; const n = gl.getProgramParameter(p, gl.ACTIVE_UNIFORMS);
+  for (let i = 0; i < n; i++) { const info = gl.getActiveUniform(p, i); const name = info.name.replace(/\[0\]$/, ''); o[name] = gl.getUniformLocation(p, info.name); }
+  return o;
+}
+let soft = false;
+if (ok) {
+  try {
+    prog = compile(SEA_FS); U = uniforms(prog);
+    const ext = gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float');
+    if (ext) { simProg = compile(SIM_FS); SU = uniforms(simProg); simOK = true; }
+    const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+    const rn = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '';
+    soft = /swiftshader|llvmpipe|software/i.test(rn);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+    root.classList.add('gl');
+  } catch (e) { console.warn('[abyss] WebGL off:', e.message.slice(0, 2000)); ok = false; }
+}
+if (RM) simOK = false;
+window.__err = null;
+
+// The wave grid: cells anchored to the page.
+let CELL = 4;
+function makeSim(w, h) {
+  if (!simOK) return;
+  for (const t of simTex) gl.deleteTexture(t);
+  for (const f of simFB) gl.deleteFramebuffer(f);
+  simTex = []; simFB = [];
+  for (let i = 0; i < 2; i++) {
+    const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) { simOK = false; }
+    gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
+    simTex.push(t); simFB.push(f);
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  simN = [w, h];
+}
+
+// ============================================================================================
+// Quality: render scale steps, DPR capped
+// ============================================================================================
+const DPR = Math.min(window.devicePixelRatio || 1, 2);
+const STEPS = [1.5, 1.25, 1.0, 0.85, 0.72, 0.6, 0.5];
+let qi = Q.has('q') ? -1 : (soft ? STEPS.length - 1 : 1);
+let qScale = Q.has('q') ? +Q.get('q') : 0;
+const scaleNow = () => qi < 0 ? qScale : Math.min(STEPS[qi], DPR);
+let VW = 0, VH = 0, S = 1, wide = false;
+function resize() {
+  VW = innerWidth; VH = innerHeight; wide = VW >= 1024;
+  S = scaleNow();
+  canvas.width = Math.round(VW * S); canvas.height = Math.round(VH * S);
+  CELL = wide ? 4 : 3;
+  if (simOK) {
+    const w = Math.ceil(VW / CELL) + 2, h = Math.ceil(VH / CELL) + 2;
+    if (w !== simN[0] || h !== simN[1]) makeSim(w, h);
+  }
+  layoutPP();
+}
+
+// ============================================================================================
+// Input: one pointer (mouse, pen or finger), in page px. It cuts the wake.
+// ============================================================================================
+const ptr = { x: 0, y: 0, has: false, down: false, touch: false, last: null, glow: 0, sp: 0, seen: -10 };
+const onLiquid = (el) => !el.closest('a, button, input, textarea, p, h1, h2, h3, li, .stamp');
+addEventListener('pointermove', (e) => { if (e.pointerType === 'touch') return; ptr.x = e.clientX; ptr.y = e.clientY; ptr.has = true; ptr.touch = false; ptr.seen = clockT; }, { passive: true });
+addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch') return; ptr.down = true; ptr.x = e.clientX; ptr.y = e.clientY; ptr.has = true;
+  if (onLiquid(e.target) && e.button === 0) e.preventDefault(); });
+addEventListener('pointerup', () => { ptr.down = false; });
+document.addEventListener('pointerleave', () => { ptr.has = false; ptr.last = null; });
+document.documentElement.addEventListener('mouseleave', () => { ptr.has = false; ptr.last = null; });
+const tpos = (e) => { const t = e.touches[0]; if (!t) return; ptr.x = t.clientX; ptr.y = t.clientY; ptr.has = true; ptr.touch = true; ptr.down = true; ptr.seen = clockT; };
+addEventListener('touchstart', (e) => { ptr.last = null; tpos(e); }, { passive: true });
+addEventListener('touchmove', tpos, { passive: true });
+addEventListener('touchend', (e) => { if (!e.touches.length) { ptr.has = false; ptr.down = false; ptr.last = null; } }, { passive: true });
+addEventListener('touchcancel', () => { ptr.has = false; ptr.down = false; ptr.last = null; }, { passive: true });
+
+// ============================================================================================
+// Scenes
+// ============================================================================================
+const pins = {};
+document.querySelectorAll('[data-pin]').forEach((el) => { pins[el.dataset.pin] = { el, p: 0, ps: 0 }; });
+const plates = [...document.querySelectorAll('[data-plate]')].map((el, i) => {
+  const win = el.dataset.win ? el.dataset.win.split(',').map(Number) : null;
+  return { el, i, bob: el.querySelector(':scope > .bob') || el.firstElementChild, k: +el.dataset.k, win, pin: el.closest('[data-pin]')?.dataset.pin,
+    e: RM ? 1 : 0, c: RM ? 1 : 0, hov: 0, hover: false, hot: el.hasAttribute('data-hot') ? 1 : 0, pp: el.dataset.pp != null ? +el.dataset.pp : -1, rect: null, bx: 0, by: 0, seed: i * 1.37, delay: +(el.dataset.delay || 0) };
+});
+document.querySelectorAll('[data-venture]').forEach((a) => {
+  const ps = plates.filter((p) => a.contains(p.el));
+  const on = (v) => () => ps.forEach((p) => (p.hover = v));
+  a.addEventListener('pointerenter', on(true)); a.addEventListener('pointerleave', on(false));
+  a.addEventListener('focus', on(true)); a.addEventListener('blur', on(false));
+  a.addEventListener('touchstart', on(true), { passive: true }); a.addEventListener('touchend', () => setTimeout(on(false), 400), { passive: true });
+});
+
+// Logo pieces: 0, 1 the arcs (pivot at the ring centre), 2..15 the squares, 16 the core.
+const pieces = [];
+for (let i = 0; i < 17; i++) {
+  const c = i >= 2 && i < 16 ? CELLS[i - 2] : null;
+  const ang = c ? Math.atan2(c.y, c.x) : 0;
+  pieces.push({ i, rx: c ? c.x : 0, ry: c ? c.y : 0, ox: 0, oy: 0, vx: 0, vy: 0, a: 0, va: 0, sink: 0, scale: 1, lift: 0,
+    seed: Math.sin(i * 12.9898) * 43758.5453 % 1, dir: ang, sx: 0, sy: 0, shed: 0 });
+}
+const logo = { cx: 0, cy: 0, u: 6, active: false, glow: 1, flare: 0, lastFlare: -1, ripple: 0, prevP: 0 };
+
+// PayPal rivers: layout of nodes (in the pinned stage), computed from viewport size.
+const ppNodes = [...document.querySelectorAll('[data-pp]')].sort((a, b) => a.dataset.pp - b.dataset.pp);
+function layoutPP() {
+  const st = document.getElementById('pp'); if (!st) return;
+  const W = st.clientWidth, H = st.clientHeight;
+  const pts = [];
+  if (W >= 1024) {
+    pts.push([0.16, 0.42]);
+    const ys = [0.12, 0.25, 0.38, 0.51, 0.64, 0.77];
+    ys.forEach((y, i) => pts.push([0.62 + 0.2 * Math.sin((i / 5) * Math.PI) * 0.6 + (i % 2) * 0.12, y + 0.02]));
+  } else {
+    pts.push([0.5, 0.14]);
+    [[0.25, 0.36], [0.74, 0.40], [0.22, 0.52], [0.76, 0.56], [0.28, 0.68], [0.7, 0.72]].forEach((p) => pts.push(p));
+  }
+  ppNodes.forEach((n, i) => { n.style.left = (pts[i][0] * 100) + '%'; n.style.top = (pts[i][1] * 100) + '%'; });
+}
+
+// ============================================================================================
+// The clock and the frame
+// ============================================================================================
+let clockT = Q.has('t') ? +Q.get('t') : 0;
+const T0 = clockT;
+let manual = Q.has('paused');
+let lastScroll = scrollY, floorS = Math.floor(scrollY / 4), frameN = 0;
+let heat = 0, heatS = 0, heatVis = 0, noDraw = false;
+const srcs = [];   // per frame: { ax, ay, bx, by (page px), r (px), push, brk, ring (px) }
+const crts = [...document.querySelectorAll('[data-crt]')].map((el) => ({ el, cv: el.querySelector('canvas'), roll: Math.random() }));
+crts.forEach((c) => { c.ctx = c.cv.getContext('2d'); c.img = c.ctx.createImageData(80, 60); });
+
+function pinProgress(p) {
+  const r = p.el.getBoundingClientRect();
+  return clamp(-r.top / Math.max(1, r.height - VH));
+}
+function spring(cur, target, dt, tau) { return target + (cur - target) * Math.exp(-dt / tau); }
+const win4 = (w, p) => w[0] < 0 ? 1 - smooth(w[2], w[3], p) : smooth(w[0], w[1], p) * (1 - smooth(w[2], w[3], p));
+
+function step(dt) {
+  frameN++;
+  clockT += dt;
+  const t = clockT;
+  const sy = scrollY;
+  // ---- scenes ----
+  for (const k in pins) { const p = pins[k]; p.p = pinProgress(p); p.ps = RM ? p.p : spring(p.ps, p.p, dt, 0.06); }
+  const HP = RM ? 0 : pins.hero.ps;
+  const PP = RM ? 1 : pins.paypal.ps;
+  const TP = RM ? 0.55 : pins.thesis.ps;
+  // thesis heat: 293 K → 1811 K while it is on screen
+  const thR = pins.thesis.el.getBoundingClientRect();
+  const thOn = thR.top < VH && thR.bottom > 0;
+  heat = thOn ? smooth(0.08, 0.85, TP) : 0;
+  heatS = RM ? heat : spring(heatS, heat, dt, 0.25);
+  // the sea re-crusts as the Thesis scrolls away; the readout keeps its number
+  const thSt = pins.thesis.el.firstElementChild.getBoundingClientRect();
+  heatVis = heatS * clamp(thSt.bottom / VH) * clamp((VH - thSt.top) / VH * 1.5);
+  const kel = Math.round(293 + (1811 - 293) * heatS);
+  const kEl = document.getElementById('kelvin'); const ks = kel + ' K'; if (kEl.textContent !== ks) kEl.textContent = ks;
+
+  // ---- plates: read every box first ----
+  for (const p of plates) p.rect = p.el.getBoundingClientRect();
+  // ---- hero logo ----
+  const heroSt = pins.hero.el.firstElementChild.getBoundingClientRect();
+  logo.active = ok && heroSt.bottom > 0 && heroSt.top < VH;
+  const sizeS = wide ? Math.min(VH * 0.74, VW * 0.42) : Math.min(VW * 0.8, (VH - 64) * 0.4);
+  logo.u = sizeS / 64;
+  logo.cx = heroSt.left + (wide ? VW * 0.7 : VW * 0.5);
+  logo.cy = heroSt.top + 64 + (wide ? (VH - 64) * 0.47 : (VH - 64) * 0.27);
+  updateLogo(dt, t, HP);
+  // ---- plate states ----
+  for (const p of plates) {
+    let target;
+    if (RM) target = 1;
+    else if (p.win && p.pin) target = win4(p.win, pins[p.pin].ps);
+    else if (p.pp >= 0) target = ppArrive(p.pp, PP);
+    else target = smooth(VH * 1.02, VH * 0.72, p.rect.top);
+    if (p.pp === 0) target = smooth(0.0, 0.06, PP);
+    if (p.delay && !RM) target *= smooth(p.delay, p.delay + 0.5, t - T0);
+    const tau = p.k >= 3 ? 0.18 : 0.12;
+    p.e = RM ? target : spring(p.e, target, dt, tau);
+    // display words cool after they surface; the hot slug (alloyed) cools over ~3 s from load
+    p.c = RM ? 1 : clamp(p.c + (p.e > 0.7 ? dt / 1.4 : -dt / 0.5));
+    if (p.e < 0.05) p.c = 0;
+    p.hov = spring(p.hov, p.hover ? 1 : 0, dt, 0.12);
+    if (p.hot) { if (p.heatv == null || p.e < 0.3) p.heatv = 1; else p.heatv = RM ? 0 : clamp(p.heatv - dt / 3.4); }
+    // bob: the swell under its centre
+    const r = p.rect;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2 + sy;
+    if (!RM) {
+      const [h, gx, gy] = swellAt(cx, cy, t);
+      const amp = p.k >= 3 ? 1.6 : (p.k === 0 ? 0.6 : 1.1);
+      p.bx = -gx * 28 * amp + Math.sin(t * 0.35 + p.seed) * 0.8 * amp;
+      p.by = -gy * 28 * amp + h * 0.35 * amp;
+      if (p.k >= 3) p.by -= p.hov * 4;
+      p.tilt = gx * 3;
+    } else { p.bx = p.by = 0; p.tilt = 0; }
+    // a venture surfacing: ripples ring out once as it breaks the surface
+    if (p.k >= 3) {
+      if (p.e > 0.5 && !p.rang) { p.rang = true; srcs.push({ ax: cx - r.width * 0.3, ay: cy, bx: cx + r.width * 0.3, by: cy, r: 7, push: 900, brk: 2, ring: r.height * 0.5 + 6 }); }
+      if (p.e < 0.2) p.rang = false;
+    }
+  }
+  // ---- pointer: the wake ----
+  const page = [ptr.x, ptr.y + sy];
+  let speed = 0;
+  if (ptr.has && !RM) {
+    if (ptr.last) {
+      const dx = page[0] - ptr.last[0], dy = page[1] - ptr.last[1];
+      const len = Math.hypot(dx, dy);
+      speed = len / Math.max(dt, 1e-3);
+      if (len > 0.3 && len < 900) {
+        const strong = ptr.down ? 1 : 0;
+        const k = clamp(speed / 500, 0.15, 1.6);
+        srcs.push({ ax: ptr.last[0], ay: ptr.last[1], bx: page[0], by: page[1], r: (ptr.touch ? 7 : 5) * (1 + 0.5 * strong), push: (2400 + 3000 * strong) * k * (ptr.touch ? 1.3 : 1),
+          brk: ((ptr.touch ? 3 : 2) * k + strong * 6 * k) * 10, ring: 0, line: true });
+      }
+    }
+    ptr.last = page;
+  }
+  ptr.sp = spring(ptr.sp, speed, dt, 0.1);
+  ptr.glow = spring(ptr.glow, ptr.has && !ptr.touch && t - ptr.seen < 1.5 ? clamp(ptr.sp / 400, 0.15, 1) : 0, dt, 0.2);
+  // ---- logo: the nucleus breathes ripples ----
+  if (logo.active && !RM) {
+    logo.ripple -= dt;
+    if (logo.ripple <= 0) { logo.ripple = 1.9; srcs.push({ ax: logo.cx, ay: logo.cy + sy, bx: logo.cx, by: logo.cy + sy, r: 6, push: 2200 * logo.glow, brk: 0, ring: 4.5 * logo.u + 4 }); }
+    for (const pc of pieces) if (pc.shed > 0) { const x = logo.cx + pc.rx * logo.u + pc.ox, y = logo.cy + pc.ry * logo.u + pc.oy + sy; srcs.push({ ax: x, ay: y, bx: x, by: y, r: logo.u * 2.2, push: 900 * pc.shed, brk: 0.4 * pc.shed, ring: 0 }); pc.shed = 0; }
+  }
+  // ---- simulate ----
+  if (simOK && ok) simulate(dt, sy);
+  else srcs.length = 0;
+  // ---- draw ----
+  if (ok && !noDraw) draw(t, sy, HP, PP);
+  // ---- DOM writes ----
+  for (const p of plates) {
+    if (p.bob) p.bob.style.transform = `translate3d(${p.bx.toFixed(2)}px, ${p.by.toFixed(2)}px, 0)`;
+    const st = p.el.style;
+    st.setProperty('--e', p.e.toFixed(3)); st.setProperty('--c', p.c.toFixed(3));
+    if (p.hot) p.bob.style.setProperty('--c', (1 - (p.heatv || 0)).toFixed(3));
+  }
+  // CRT noise (the placeholders), only while on screen, every other frame
+  if (frameN % 2 === 0) for (const c of crts) {
+    const r = c.el.getBoundingClientRect(); if (r.bottom < 0 || r.top > VH) continue;
+    const d = c.img.data; let s = (frameN * 9301 + 49297) % 233280;
+    for (let i = 0; i < d.length; i += 4) { s = (s * 9301 + 49297) % 233280; const v = (s / 233280) * 255; d[i] = d[i + 1] = d[i + 2] = v; d[i + 3] = 255; }
+    c.ctx.putImageData(c.img, 0, 0);
+    c.roll = (c.roll + dt * 0.12) % 1; c.el.style.setProperty('--roll', c.roll.toFixed(3));
+  }
+  lastScroll = sy;
+}
+
+// PayPal: when each river reaches its company (0..1 of the pinned scene).
+const ppHead = (i, P) => clamp((P - 0.1 - i * 0.045) / 0.32);
+const ppArrive = (i, P) => smooth(0.9, 1.0, ppHead(i - 1, P));
+
+function updateLogo(dt, t, P) {
+  if (RM) {
+    for (const pc of pieces) { pc.ox = pc.oy = 0; pc.sink = 0; pc.a = 0; }
+    logo.glow = 1; logo.flare = 0; return;
+  }
+  // the story: "Not the person" the machine half scatters and sinks; "Not the model" the human half leaves; then both fuse
+  const scatter = smooth(0.16, 0.26, P) * (1 - smooth(0.42, 0.52, P));
+  const leave = smooth(0.42, 0.52, P) * (1 - smooth(0.66, 0.76, P));
+  const fuse = smooth(0.70, 0.78, P);
+  logo.glow = 1 - 0.45 * Math.max(scatter, leave) + 0.0 * fuse;
+  if (logo.prevP < 0.74 && P >= 0.74) logo.lastFlare = t;
+  logo.prevP = P;
+  logo.flare = logo.lastFlare > 0 ? Math.max(0, 1 - (t - logo.lastFlare) / 1.6) ** 2 : 0;
+  if (logo.flare > 0.98 && !logo.flared) { logo.flared = true; srcs.push({ ax: logo.cx, ay: logo.cy + scrollY, bx: logo.cx, by: logo.cy + scrollY, r: 10, push: 2400, brk: 3, ring: 12 * logo.u }); }
+  if (logo.flare < 0.5) logo.flared = false;
+  const u = logo.u;
+  const pxp = ptr.x, pyp = ptr.y;
+  for (const pc of pieces) {
+    let tx = 0, ty = 0, sink = 0;
+    if (pc.i >= 2 && pc.i < 16) {
+      const r = 1.8 + 0.9 * ((pc.seed * 7) % 1);
+      tx += Math.cos(pc.dir + (pc.seed - 0.5) * 0.8) * r * 14 * u * scatter / 10;
+      ty += Math.sin(pc.dir + (pc.seed - 0.5) * 0.8) * r * 14 * u * scatter / 10;
+      sink = scatter * (0.55 + 0.3 * pc.seed);
+    } else if (pc.i < 2) {
+      tx -= (pc.i === 0 ? 16 : 22) * u * leave; ty += (pc.i === 0 ? -3 : 3) * u * leave;
+      sink = leave * 0.6;
+    }
+    if (pc.i === 16) sink = 0;
+    // the swell rocks it: drift with the slope, slow yaw
+    const wx = logo.cx + pc.rx * u + pc.ox, wy = logo.cy + pc.ry * u + pc.oy + scrollY;
+    const [h, gx, gy] = swellAt(wx, wy, t);
+    tx += -gx * 40 + Math.sin(t * 0.4 + pc.seed * 6) * 1.2;
+    ty += -gy * 40 + Math.cos(t * 0.33 + pc.seed * 5) * 1.2;
+    let fx = 0, fy = 0;
+    // the cursor pushes them: its speed along its path, and away from it
+    if (ptr.has && pc.i !== 16) {
+      const dx = wx - (pxp), dy = wy - scrollY - pyp; const d = Math.hypot(dx, dy) + 1e-3;
+      const R = (pc.i < 2 ? 10 : 5) * u;
+      const f = Math.exp(-(d * d) / (R * R)) * clamp(ptr.sp / 300, 0, 3);
+      fx += (dx / d) * f * 2600; fy += (dy / d) * f * 2600;
+    }
+    const k = pc.i < 2 ? 18 : 30, c = pc.i < 2 ? 7 : 9;
+    pc.vx += (k * (tx - pc.ox) - c * pc.vx + fx) * dt; pc.vy += (k * (ty - pc.oy) - c * pc.vy + fy) * dt;
+    pc.ox += pc.vx * dt; pc.oy += pc.vy * dt;
+    const ta = (pc.i < 2 ? 0.015 : 0.08) * Math.sin(t * 0.3 + pc.seed * 9) + gx * 0.6 + (pc.i >= 2 && pc.i < 16 ? (pc.seed - 0.5) * 0.9 * scatter : 0);
+    pc.va += (20 * (ta - pc.a) - 6 * pc.va) * dt; pc.a += pc.va * dt;
+    pc.sink = spring(pc.sink, sink, dt, 0.25);
+    pc.lift = h;
+    pc.scale = 1 - 0.07 * pc.sink;
+    // shed a ripple only when the cursor's waves move it
+    const rel = Math.hypot(pc.vx, pc.vy);
+    if (fx * fx + fy * fy > 1 && rel > 60 && Math.random() < dt * 8) pc.shed = clamp(rel / 300, 0, 1.5);
+  }
+}
+
+const A = new Float32Array(32), B = new Float32Array(32);
+function simulate(dt, sy) {
+  const n = clamp(Math.round(dt * 120), 1, 4), sdt = dt / n;
+  const fs = Math.floor(sy / CELL), shift = fs - floorS; floorS = fs;
+  const oy = floorS * CELL;
+  const big = Math.abs(shift) > simN[1];
+  gl.useProgram(simProg);
+  gl.viewport(0, 0, simN[0], simN[1]);
+  const c = 210 / CELL;
+  gl.uniform2i(SU.uN, simN[0], simN[1]);
+  gl.uniform1f(SU.uDt, sdt); gl.uniform1f(SU.uC2, c * c); gl.uniform1f(SU.uDamp, 0.4);
+  const list = srcs.splice(0, 8);
+  for (let s = 0; s < n; s++) {
+    // each substep stamps its slice of every moving source, so the path is continuous
+    let m = 0;
+    for (const q of list) {
+      const f0 = q.line ? s / n : 0, f1 = q.line ? (s + 1) / n : 1;
+      if (!q.line && s > 0) continue;
+      const ax = mix(q.ax, q.bx, f0), ay = mix(q.ay, q.by, f0), bx = mix(q.ax, q.bx, f1), by = mix(q.ay, q.by, f1);
+      A.set([ax / CELL, (ay - oy) / CELL, bx / CELL, (by - oy) / CELL], m * 4);
+      const segL = Math.hypot(bx - ax, by - ay) / CELL;
+      const w = q.line ? clamp(segL / 2, 0.15, 3) : 1 / sdt / 30;
+      B.set([q.r / CELL, q.push * w, q.brk * w, (q.ring || 0) / CELL], m * 4);
+      m++;
+    }
+    gl.uniform4fv(SU.uA, A); gl.uniform4fv(SU.uB, B); gl.uniform1i(SU.uNS, m);
+    gl.uniform1i(SU.uShift, s === 0 ? (big ? 100000 : shift) : 0);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, simTex[simIdx]); gl.uniform1i(SU.uPrev, 0);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, simFB[1 - simIdx]);
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    simIdx = 1 - simIdx;
+  }
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+}
+
+const PL = new Float32Array(96), PM = new Float32Array(96), PC = new Float32Array(68), PD = new Float32Array(68), RV = new Float32Array(28), RP = new Float32Array(24);
+function draw(t, sy, HP, PP) {
+  gl.useProgram(prog);
+  gl.viewport(0, 0, canvas.width, canvas.height);
+  gl.uniform2f(U.uV, VW, VH); gl.uniform1f(U.uS, canvas.width / VW);
+  gl.uniform1f(U.uT, t % 3000); gl.uniform1f(U.uScroll, sy % 20000);
+  gl.uniform1f(U.uHeat, heatVis); gl.uniform1f(U.uWide, wide ? 1 : 0);
+  gl.uniform1f(U.uSimOn, simOK ? 1 : 0);
+  if (simOK) {
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, simTex[simIdx]); gl.uniform1i(U.uSim, 0);
+    gl.uniform2f(U.uSimN, simN[0], simN[1]); gl.uniform1f(U.uCell, CELL); gl.uniform1f(U.uFrac, sy - floorS * CELL);
+  } else { gl.uniform2f(U.uSimN, 1, 1); gl.uniform1f(U.uCell, 4); }
+  // plates on screen
+  let m = 0;
+  for (const p of plates) {
+    const r = p.rect;
+    if (m >= 24 || r.bottom < -80 || r.top > VH + 80 || r.width < 1 || p.e < 0.002) continue;
+    PL.set([r.left + p.bx, r.top + p.by, r.width, r.height], m * 4);
+    PM.set([p.e, p.k, p.hov, p.k === 2 ? (p.heatv || 0) : (p.tilt || 0)], m * 4);
+    m++;
+  }
+  gl.uniform4fv(U.uPl, PL); gl.uniform4fv(U.uPm, PM); gl.uniform1i(U.uNPl, m);
+  // logo
+  for (const pc of pieces) {
+    PC.set([logo.cx + pc.rx * logo.u + pc.ox, logo.cy + pc.ry * logo.u + pc.oy, pc.a, pc.sink], pc.i * 4);
+    PD.set([pc.scale, pc.lift, 0, 0], pc.i * 4);
+  }
+  gl.uniform4fv(U.uPc, PC); gl.uniform4fv(U.uPd, PD);
+  gl.uniform4f(U.uLogo, logo.u, logo.active ? 1 : 0, logo.glow, logo.flare);
+  // rivers
+  const ppSt = pins.paypal.el.firstElementChild.getBoundingClientRect();
+  const ppOn = ppSt.bottom > 0 && ppSt.top < VH && PP > 0.02;
+  if (ppOn) {
+    const nodes = plates.filter((p) => p.pp >= 0).sort((a, b) => a.pp - b.pp);
+    const ctr = (p) => [p.rect.left + p.rect.width / 2 + p.bx, p.rect.top + p.rect.height / 2 + p.by];
+    const S0 = ctr(nodes[0]);
+    const cool = RM ? 0.5 : smooth(0.72, 1.0, PP);
+    RV.set([S0[0], S0[1], 1, cool], 0);
+    for (let i = 1; i <= 6; i++) {
+      const D = ctr(nodes[i]);
+      const mx = (S0[0] + D[0]) / 2, my = (S0[1] + D[1]) / 2, dx = D[0] - S0[0], dy = D[1] - S0[1];
+      const bend = (i % 2 ? 1 : -1) * 0.18;
+      RV.set([D[0], D[1], mx - dy * bend, my + dx * bend], i * 4);
+      RP.set([RM ? 1 : ppHead(i - 1, PP), 0, wide ? 6 : 4.5, 0], (i - 1) * 4);
+    }
+  } else RV[2] = 0;
+  gl.uniform4fv(U.uRv, RV); gl.uniform4fv(U.uRp, RP);
+  // shore
+  const fr = document.getElementById('shore').getBoundingClientRect();
+  const giant = document.querySelector('.foot-giant').getBoundingClientRect();
+  const shoreY = giant.top - Math.min(110, VH * 0.12);
+  gl.uniform4f(U.uShore, shoreY, fr.top < VH + 400 ? 1 : 0, 0, 0);
+  gl.uniform4f(U.uPtr, ptr.x, ptr.y, RM ? 0 : ptr.glow, 0);
+  gl.uniform1f(U.uDbg, Q.has('dbg') ? +(Q.get('dbg') || 1) : 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+}
+
+// ============================================================================================
+// Loop + quality adaptation + hooks
+// ============================================================================================
+let last = performance.now(), slow = 0, fast = 0;
+function tick(now) {
+  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  if (!manual && !document.hidden) {
+    try { step(RM ? 0 : dt); } catch (e) { window.__err = e.message; console.error(e); manual = true; }
+    if (!RM && qi >= 0 && frameN > 30) {
+      if (dt > 0.021) { slow += dt; fast = 0; } else { fast += dt; slow = Math.max(0, slow - dt * 0.5); }
+      if (slow > 0.8 && qi < STEPS.length - 1) { qi++; slow = 0; resize(); }
+      if (fast > 6 && qi > 1 && !soft) { qi--; fast = 0; resize(); }
+    }
+  }
+  requestAnimationFrame(tick);
+}
+addEventListener('resize', resize);
+resize();
+if (RM) { addEventListener('scroll', () => step(0), { passive: true }); addEventListener('resize', () => step(0)); }
+document.fonts?.ready.then(() => { layoutPP(); });
+step(0.016);
+requestAnimationFrame((n) => { last = n; tick(n); });
+window.__step = (dt = 1 / 60, n = 1, lite = false) => { manual = true; for (let i = 0; i < n; i++) { noDraw = lite && i < n - 1; step(dt); } noDraw = false; };
+window.__pause = () => { manual = true; };
+window.__resume = () => { manual = false; last = performance.now(); };
+window.__state = () => ({ ok, simOK, soft, S, qi, t: clockT, hero: pins.hero.ps, pp: pins.paypal.ps, th: pins.thesis.ps, heat: heatS, plates: plates.filter((p) => p.e > 0.01).length });
+window.__simMax = () => {
+  if (!simOK) return null; gl.bindFramebuffer(gl.FRAMEBUFFER, simFB[simIdx]);
+  const px = new Float32Array(simN[0] * simN[1] * 4); gl.readPixels(0, 0, simN[0], simN[1], gl.RGBA, gl.FLOAT, px);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null); let mh = 0, mb = 0; for (let i = 0; i < px.length; i += 4) { mh = Math.max(mh, Math.abs(px[i])); mb = Math.max(mb, px[i + 2]); } return { mh, mb };
+};
+</script>
+</body>
+</html>
