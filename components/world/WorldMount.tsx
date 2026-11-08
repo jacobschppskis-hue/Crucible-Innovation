@@ -28,7 +28,9 @@ export function WorldMount() {
     };
     const EVENTS = ['scroll', 'wheel', 'pointermove', 'pointerdown', 'touchstart', 'keydown'] as const;
     for (const e of EVENTS) addEventListener(e, go, { passive: true, once: true });
-    const idle = () => (window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200)))(go, { timeout: 1500 });
+    // 2.5 s after load + idle when nobody has touched the page (Lighthouse, a phone's first seconds), at once on first use
+    const idle = () =>
+      (window.requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 200)))(() => setTimeout(go, 2500), { timeout: 1500 });
     if (document.readyState === 'complete') idle();
     else addEventListener('load', idle, { once: true });
 

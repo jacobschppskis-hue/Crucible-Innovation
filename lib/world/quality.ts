@@ -23,7 +23,7 @@ export function createQuality(opts: { dpr: number; software: boolean; pinned?: n
   const cap = Math.min(opts.dpr, MAX_SCALE);
   // the best step this device can use (nothing above its own pixel ratio)
   const top = Math.max(0, SCALES.findIndex((s) => s <= cap + 1e-3));
-  const start = opts.full ? top : opts.pinned != null ? Math.min(SCALES.length - 1, Math.max(top, opts.pinned)) : opts.software ? SCALES.length - 2 : Math.min(SCALES.length - 1, top + 1);
+  const start = opts.full ? top : opts.pinned != null ? Math.min(SCALES.length - 1, Math.max(top, opts.pinned)) : opts.software ? SCALES.length - 1 : Math.min(SCALES.length - 1, top + 1);
   let slow = 0,
     fast = 0,
     climbs = 0,

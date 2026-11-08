@@ -3,7 +3,7 @@
 // shader, into an offscreen HDR target at the quality step's scale) -> bloom -> the post pass into the canvas -> every
 // module's after(). The canvas only resizes with the viewport, never for a quality step (WebKit blanks a resized canvas).
 
-import { clock, onFrame, renderer } from '@/lib/liquid/loop';
+import { clock, clockHeld, onFrame, renderer } from '@/lib/liquid/loop';
 import { cameraFrom, hitSea, project, rayAt, sunFrom, surf, surfOf } from './camera';
 import { BLOOM_DOWN, BLOOM_UP, compose, type Composed } from './compose';
 import { clamp, type Channels, type Frame, type PlaceInfo, type V3 } from './frame';
@@ -331,8 +331,15 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     g.drawArrays(g.TRIANGLES, 0, 3);
   }
 
+  // software GL (no GPU: CI, Lighthouse): draw at most ~12 fps so the main thread keeps breathing
+  let lastDraw = -1;
   function tick(t: number, dt: number) {
     if (dead) return;
+    if (software && !opts.full && fixedT == null && !clockHeld() && t - lastDraw < 1 / 12 && lastDraw >= 0) {
+      rend.done(t);
+      return;
+    }
+    lastDraw = t;
     update(t, dt);
     // a still page draws only when something changed
     if (still) {

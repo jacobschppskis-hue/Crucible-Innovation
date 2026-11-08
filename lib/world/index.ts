@@ -88,6 +88,8 @@ export async function startWorld(root: HTMLElement, opts: WorldOpts = {}): Promi
         places: Object.fromEntries(Object.values(f.places).map((p) => [p.name, { top: p.top, h: p.h }])),
         narrow: f.narrow,
         still: f.still,
+        // a progress where the camera is low over the sea (cursor/finger wakes): the middle of the ventures place
+        seaP: f.loopLen && f.places.ventures ? (f.places.ventures.top + 0.5 * Math.max(f.places.ventures.h - innerHeight, 0)) / f.loopLen : 0.73,
       };
     },
     async go(p) {

@@ -109,8 +109,8 @@ export function keys(): Key[] {
     { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2 } },
     { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 1, fov: 46, ...NEAR, ph: { fov: 62, pitch: 0 } },
     // story: the core recedes into the sky and sets as the camera turns to the night and climbs
-    { at: ['story', 0], s: 90, h: 24, yaw: 70, pitch: 2, fov: 50, ...FAR, ph: { fov: 64 } },
-    { at: ['story', 1], s: deg(12), h: 420, yaw: 15, pitch: -8, fov: 50, ...FAR, ph: { fov: 64 } },
+    { at: ['story', 0], s: 90, h: 24, yaw: 70, pitch: 4, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
+    { at: ['story', 1], s: deg(12), h: 420, yaw: 15, pitch: -8, fov: 50, ...FAR, ph: { fov: 64, pitch: 0 } },
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
@@ -119,13 +119,13 @@ export function keys(): Key[] {
     { at: ['story-2', 1], s: deg(90), h: 2200, yaw: 8, pitch: -12, fov: 46, ...FAR, ph: { fov: 60 } },
     // story-3 (Charlie): coming down over the night side
     { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -16, fov: 48, ...FAR, ph: { fov: 62 } },
-    { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: -8, fov: 48, ...FAR, ph: { fov: 62 } },
+    { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, ...FAR, ph: { fov: 62, pitch: 3 } },
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
     { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
     // thesis: climb; the sea heats from 293 K to 1811 K below (the sun still well under the limb ahead)
-    { at: ['thesis', 0], s: deg(151.5), h: 30, yaw: 0, pitch: -10, fov: 50, ...FAR, ph: { fov: 64 } },
-    { at: ['thesis', 1], s: deg(156), h: 480, yaw: 0, pitch: -18, fov: 46, ...FAR, ph: { fov: 60 } },
+    { at: ['thesis', 0], s: deg(151.5), h: 30, yaw: 0, pitch: 4, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
+    { at: ['thesis', 1], s: deg(156), h: 480, yaw: 0, pitch: -6, fov: 46, ...FAR, ph: { fov: 60, pitch: -4 } },
     // shore: the sunrise over the limb, made by the climb (the horizon drops away under the sun ahead)
     { at: ['shore', 0], s: deg(158), h: 700, yaw: 0, pitch: -24, fov: 46, ...FAR, ph: { fov: 60, pitch: -22 } },
     { at: ['shore', 1], s: deg(160.5), h: 1300, yaw: 0, pitch: -27, fov: 46, ...FAR, ph: { fov: 60, pitch: -25 } },
