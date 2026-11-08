@@ -63,9 +63,9 @@ for (const [name, prof] of Object.entries(profiles)) {
     }
     if (args.touch) {
       // a finger drag (an arc) on the glass
-      const y = vp.height * 0.72, x0 = vp.width * 0.18, x1 = vp.width * 0.82, n = 40;
+      const y = vp.height * (+args.ty || 0.72), x0 = vp.width * 0.18, x1 = vp.width * 0.82, n = 40;
       for (let i = 0; i <= n; i++) {
-        const x = x0 + ((x1 - x0) * i) / n, yy = y - Math.sin((i / n) * Math.PI) * vp.height * 0.12;
+        const x = x0 + ((x1 - x0) * i) / n, yy = y - Math.sin((i / n) * Math.PI) * vp.height * (+args.arc || 0.12);
         await cdp.send('Input.dispatchTouchEvent', { type: i ? 'touchMove' : 'touchStart', touchPoints: [{ x, y: yy, id: 1 }] });
         await step(page);
       }

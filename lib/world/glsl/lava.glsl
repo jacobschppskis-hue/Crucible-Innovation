@@ -173,10 +173,10 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   T += 300. * clamp(L.stretch, -0.12, 0.12);         // (true Planck: +-36 K is already ~2x in brightness)
   float fresh = 1. - exp(-1.6 * max(L.energy, 0.));
   // the visitor's waves tear the skin open to the hot metal under it, whatever the place's own (cooled) temperature:
-  // the stirred band glows at least ~1150 K, its crests ~1320 K (as hot as the monoliths' feet) (thin bright V lines; the troughs between them stay
+  // the stirred band glows at least ~1090 K, its crests ~1320 K (as hot as the monoliths' feet) (thin bright V lines; the troughs between them stay
   // the place's colour), so a wake reads on the darkest night sea and at every quality step
-  float cw = clamp(L.crest * 1.4, 0., 1.);
-  T = mix(T, max(T + 40., 1150.), fresh * 0.8);
+  float cw = smoothstep(0.12, 0.55, L.crest);         // the crests themselves: thin lines, not the band around them
+  T = mix(T, max(T + 30., 1090.), fresh * 0.7);
   T = mix(T, max(T + 80., 1320.), cw);
   float skin = lava_uTone.z * (1. - 0.7 * max(fresh, cw));
   float Tseen = T - skin * (1. - exp(-lava_uTone.w / NoV));
