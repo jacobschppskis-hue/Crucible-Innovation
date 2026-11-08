@@ -213,7 +213,7 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
     vec2 drift = sv * lava_uA.w * 0.4 + vec2(-sv.y, sv.x) * lava_uA.w * 0.13;
     // stretch toward the sun: glints elongate along the reflection path
     vec2 sw = s.w + drift;
-    vec2 gp0 = vec2(dot(sw, vec2(-sv.y, sv.x)), dot(sw, sv) * 0.4);
+    vec2 gp0 = vec2(dot(sw, vec2(-sv.y, sv.x)), dot(sw, sv) * 0.25);
     float lvl = log2(max(fp * 5., 1e-4) / 0.05);
     float l0 = floor(lvl), fr = lvl - l0;
     float g = 0.;
@@ -224,12 +224,16 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
       vec2 ic = floor(gp), f = fract(gp);
       vec3 h = world_hash33(vec3(ic, L * 7.13));
       vec2 d = f - (0.25 + 0.5 * h.xy);
-      float on = step(0.45, h.z) * (0.4 + 1.2 * (h.z - 0.45) / 0.55);
-      // a Gaussian dot, sigma 0.15 cell; mean over the cell = 2 pi s^2 x P(on) x mean(on) ~ 0.141 x 0.55 x 1.0
-      float gl = exp(-dot(d, d) / (2. * 0.15 * 0.15)) * on / 0.078;
+      // sparse and heavy-tailed: one cell in four holds a glint, a few of them brilliant, most faint
+      float on = step(0.75, h.z) * pow((h.z - 0.75) / 0.25, 2.) * 3.;
+      // a Gaussian dot, sigma 0.13 cell; mean over the cell = 2 pi s^2 x P(on) x mean(on) = 0.106 x 0.25 x 1 = 0.0265
+      float gl = exp(-dot(d, d) / (2. * 0.13 * 0.13)) * on / 0.0265;
       g += gl * (o == 0 ? 1. - fr : fr);
     }
-    spk = mix(1., 0.3 + 0.7 * g, unres);
+    // a pixel much wider than the swell's little facets holds many glints at once: their sum is smooth (contrast falls
+    // as 1/sqrt(N)), so the sparkle fades out with the footprint; from high up the sea never fills with white specks
+    float contrast = 1. - smoothstep(0.25, 1.6, fp);
+    spk = mix(1., 0.55 + 0.45 * g, unres * contrast);
   }
   col += look_sunLight(s.p) * (lava_uLook.z * D * Vis * Fs * NoL * spk);
   return mix(col + m.emit, far, k);
