@@ -105,12 +105,14 @@ html[data-loop] body {
   margin-top: 1.5rem;
   max-width: 22rem;
 }
+/* Wide screens (mark): the core sits right of centre (journey yaw 162), so the type keeps to the left, the paragraph
+   under the headline, and the sun's glitter column runs on the dark sea to their right */
 @media (min-width: 1024px) {
+  .w-hero-title {
+    font-size: clamp(4rem, 7.2vw, 7.5rem);
+  }
   .w-hero-meta {
-    position: absolute;
-    right: 2rem;
-    bottom: clamp(2rem, 6vh, 4rem);
-    margin-top: 0;
+    max-width: 24rem;
   }
 }
 
