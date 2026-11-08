@@ -1,7 +1,7 @@
 // Screenshots Crucible's own home page for /work, from the built site (out/), so /work shows the page as it is now:
 // public/work/crucible-site-{960,1440}.webp (desktop, 1440 × 900) and public/work/crucible-site-phone-{390,780}.webp
-// (390 × 844 at 2x). Shot at full quality (?liquid=full) once the logo's pour has settled (section.ig[data-settled])
-// and the 3D canvas has drawn, so there are no black frames or loading states.
+// (390 × 844 at 2x). Shot at full quality (?world=full) on the hero once the world engine runs (html[data-world-on]),
+// with the clock held and stepped so the frame is drawn and settled: no black frames or loading states.
 // Usage: npm run build && node scripts/shoot-own.mjs [built site dir, default out/]
 // Needs Playwright's Chromium (or CHROMIUM_PATH) and sharp (Next installs it). Software GL is fine (it's slow, not wrong).
 import { chromium } from '@playwright/test';
@@ -42,17 +42,18 @@ const shots = [
 for (const s of shots) {
   const ctx = await browser.newContext({ viewport: s.viewport, deviceScaleFactor: s.scale, isMobile: !!s.mobile, hasTouch: !!s.mobile });
   const page = await ctx.newPage();
-  await page.goto(`${base}/?liquid=full`, { waitUntil: 'load' });
+  await page.goto(`${base}/?world=full&motion`, { waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
-  // The pour runs on wall-clock time; software GL takes a while. Then let the 3D canvas and the liquid draw a few
-  // more frames (the canvases ack each drawn frame) so the shot is the settled page, not a frame in flight.
-  await page.waitForSelector('section.ig[data-settled]', { timeout: 120_000 });
+  // The world starts after load + idle (or first use); software GL is slow, so give it time, then hold the clock on the
+  // hero and step a few frames so the camera spring and the frame in flight have settled.
   await page.mouse.move(-10, -10);
-  await page.waitForTimeout(2500);
-  await page.evaluate(() => {
-    const w = /** @type {any} */ (window);
-    if (typeof w.__liquidFreeze === 'function') w.__liquidFreeze(12);
+  await page.waitForSelector('html[data-world-on]', { timeout: 120_000 });
+  await page.evaluate(async () => {
+    const w = /** @type {any} */ (window).__world;
+    await w.goPlace('hero', 0);
+    w.hold();
   });
+  for (let i = 0; i < 40; i++) await page.evaluate(() => /** @type {any} */ (window).__world.step(1000 / 30));
   await page.waitForTimeout(1500);
   const png = await page.screenshot({ type: 'png' });
   for (const w of s.widths) {
