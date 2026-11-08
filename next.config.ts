@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   output: 'export',
   // GitHub Pages can't resize images, so showcase screenshots ship pre-sized (640/960/1440 wide)
   // and lib/imageLoader.ts points each srcset entry at the right file.
+  // GLSL files (lib/world/glsl/*.glsl) import as strings
+  webpack: (config) => {
+    config.module.rules.push({ test: /\.glsl$/, type: 'asset/source' });
+    return config;
+  },
   images: { loader: 'custom', loaderFile: './lib/imageLoader.ts', deviceSizes: [640, 960, 1440], imageSizes: [320, 480] },
 };
 

@@ -72,8 +72,22 @@ export function Liquid() {
     let idleId = 0;
     let timer = 0;
     const touched = firstUse();
+    // The home page's world (lib/world) paints its own ground: wait until it is gone (a client navigation away).
+    const worldGone = () =>
+      new Promise<void>((res) => {
+        if (!document.querySelector('[data-world-root]')) return res();
+        const on = (e: Event) => {
+          if (!(e as CustomEvent<{ on: boolean }>).detail.on) {
+            removeEventListener('crucible:world', on);
+            res();
+          }
+        };
+        addEventListener('crucible:world', on);
+      });
     richTier().then(async (ok) => {
       if (!ok || dead) return;
+      await worldGone();
+      if (dead) return;
       await Promise.race([touched, new Promise<void>((r) => (timer = window.setTimeout(r, UNTOUCHED * 1000)))]);
       clearTimeout(timer);
       if (dead) return;

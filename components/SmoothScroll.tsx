@@ -13,12 +13,25 @@ export function SmoothScroll() {
     if (document.querySelector('[data-world]')) return;
     let lenis: { destroy(): void } | undefined;
     let cancelled = false;
-    import('lenis').then(({ default: Lenis }) => {
-      if (cancelled) return;
-      lenis = new Lenis({ lerp: 0.12, anchors: true, autoRaf: true });
-    });
+    // The home page's world (lib/world/loop.ts) runs its own Lenis (the loop): this one steps aside while it is on.
+    const start = () => {
+      if (lenis || cancelled || document.querySelector('[data-world-root]')) return;
+      import('lenis').then(({ default: Lenis }) => {
+        if (cancelled || lenis || document.querySelector('[data-world-root]')) return;
+        lenis = new Lenis({ lerp: 0.12, anchors: true, autoRaf: true });
+      });
+    };
+    const onWorld = (e: Event) => {
+      if ((e as CustomEvent<{ on: boolean }>).detail.on) {
+        lenis?.destroy();
+        lenis = undefined;
+      } else setTimeout(start, 0);
+    };
+    addEventListener('crucible:world', onWorld);
+    start();
     return () => {
       cancelled = true;
+      removeEventListener('crucible:world', onWorld);
       lenis?.destroy();
     };
   }, [pathname]);
