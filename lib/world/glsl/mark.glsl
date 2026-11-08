@@ -373,10 +373,29 @@ void mark_over(Ray r, Hit h, inout vec3 col) {
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, r.pa);
   if (c.y > 0. && c.x * mark_uC.w < h.t) col = mix(col, mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd), c.y * mark_uLook.x);
-  vec4 m = mark_march(ro, rd, r.pa, 24 + int(24. * uQ), pL, 1.9);
+  int steps = 24 + int(24. * uQ);
+  vec4 m = mark_march(ro, rd, r.pa, steps, pL, 1.9);
   if (m.w <= 0.) return;
   if (m.x * mark_uC.w >= h.t) return;
   if (c.y >= 1. && c.x < m.x) return;
+  // When a render pixel is magnified (the low quality steps on phones: more than ~0.8 CSS px each), the bevels and
+  // walls are thinner than a pixel and their shading flips from pixel to pixel (a staircase along every edge). There,
+  // the mark's own pixels take four sub-rays on a rotated grid, each with its own coverage and shading, averaged.
+  if (uPx > 0.8) {
+    mat3 Bt = transpose(mark_uB);
+    vec3 R = Bt * uCam[0], U = Bt * uCam[1];
+    vec3 acc = vec3(0.); float cs = 0.;
+    for (int k = 0; k < 4; k++) {
+      vec2 o = k == 0 ? vec2(0.125, 0.375) : k == 1 ? vec2(-0.375, 0.125) : k == 2 ? vec2(-0.125, -0.375) : vec2(0.375, -0.125);
+      vec3 rk = normalize(rd + (R * o.x + U * o.y) * r.pa);
+      vec3 pk; vec4 mk = mark_march(ro, rk, r.pa, steps, pk, 0.9);
+      if (mk.w <= 0.) continue;
+      acc += mark_shadeL(pk, rk, mk.y, mk.x * r.pa, false) * mk.w;
+      cs += mk.w;
+    }
+    if (cs > 0.) col = mix(col, acc / cs, cs * 0.25 * mark_uLook.x);
+    return;
+  }
   vec3 s = mark_shadeL(pL, rd, m.y, m.x * r.pa, false);
   col = mix(col, s, m.w * mark_uLook.x);
 }
