@@ -14,6 +14,8 @@ uniform float look_uLandAmt;    // 0..1 how much land
 // Signed land field (> 0 land). q: unit sphere point; fp: footprint (air km). The journey's own great circle (x = 0)
 // stays open sea, so the low swoops always fly over the molten sea; continents lie off to the sides.
 float look_land(vec3 q, float fp) {
+  // V2: the reference frame is rivers on a dark disk, no continents (their coasts near the limb read as blocks)
+  if (look_uLandAmt <= 0.0) return -1.0;
   vec3 p = q * (look_uRg / 520.0);
   float fpq = fp / 520.0;
   float c = look_fbm(p + vec3(3.1, 1.7, 0.4), 10, fpq, 0.5);
@@ -40,8 +42,12 @@ vec3 look_eddy(vec3 p, vec3 n, float fpq) {
 // A crisp line of heat along the zero set of a field f: a band |f| < w (field units) with derivative anti-aliasing,
 // capped at a true half-width wTrue where the field goes flat (no blobs). fpu: the pixel footprint in field units.
 // When the line is thinner than the pixel its energy is spread over it (a far thread stays a faint thread).
+// set by look_planetFarT for the pixel being shaded: 0 face-on .. 1 at the limb (screen derivatives there are constant
+// per 2x2 quad and huge, and quantised the river lines into blocks at a low render scale)
+float look_gLimb = 0.0;
+
 float look_line(float f, float w, float fpu, float wTrue) {
-  float af = abs(f), fw = fwidth(f);
+  float af = abs(f), fw = mix(fwidth(f), fpu * 0.8, look_gLimb);
   // a band of the field, anti-aliased by its screen derivative: clean edges
   float e = max(max(fw * 1.2, fpu * 0.5), 1e-5);
   float we = max(w, e);
@@ -51,7 +57,7 @@ float look_line(float f, float w, float fpu, float wTrue) {
   // |grad f| floored: where the field is momentarily flat inside a current, a raw ratio punched black holes in it
   float d = af / max(fw / max(fpu, 1e-6), 0.35);
   float cap = 1.0 - smoothstep(wTrue, wTrue * 2.5 + fpu * 3.0, d);
-  return band * cap;
+  return band * mix(cap, 1.0, look_gLimb);
 }
 
 // The sea's surface temperature (K) at unit point q; land: look_land's value there (hotter surf along shores).
@@ -98,6 +104,7 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   float fp = s.fw * sqrt(s.graz) / look_uK;
   // toward the limb the footprint gets very long: there the fields use the long axis (blurrier, never blocky)
   float limb = 1.0 - smoothstep(0.08, 0.35, s.graz);
+  look_gLimb = limb;
   fp = mix(fp, s.fw / look_uK, limb);
   vec3 p = q * look_uRg;
   float lf = look_land(q, fp);

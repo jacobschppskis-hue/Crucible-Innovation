@@ -27,13 +27,13 @@ export const AIR = {
   Rt: 2070,
   // Rayleigh less steep than Earth's: the dusk band reads steel blue (Quench), not saturated blue; dense at the bottom
   // (scale height 2.5 km): a dark zenith with stars at dusk, a deep orange horizon
-  rayS: [7e-3, 13e-3, 27e-3],
+  rayS: [4.6e-3, 8.6e-3, 18e-3], // x0.66 at the bottom for the taller air: the same day-side haze from orbit
   // V2 (Jacob: 'make the atmosphere stronger so there's more of a sky in the hero'): a deeper air, so the dusk band
   // over the sea is taller and the limb from orbit a wider glow; still dense at the bottom so the zenith keeps its stars
   rayH: 4.2,
   // aerosol that absorbs blue: the horizon turns orange
-  mieS: [4e-3, 3.2e-3, 2.4e-3],
-  mieA: [0.6e-3, 4e-3, 14e-3],
+  mieS: [2.8e-3, 2.2e-3, 1.7e-3],
+  mieA: [0.42e-3, 2.8e-3, 9.8e-3],
   mieH: 1.3,
   mieG: 0.8,
   ozA: [0.65e-3, 1.881e-3, 0.085e-3],
@@ -201,7 +201,7 @@ function makeLook(): WorldModule {
     provides: ['look_sky', 'look_atmo', 'look_post'],
     glsl: [atmoGlsl, sunGlsl, skyGlsl, planetGlsl].join('\n'),
     post: postGlsl,
-    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 1, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0.6, 'look.moon': 0, 'look.moonAz': 150, 'look.moonEl': 14 },
+    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 1, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0, 'look.moon': 0, 'look.moonAz': 150, 'look.moonEl': 14 },
     init({ gl: g, u }) {
       gl = g;
       ldr = !(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
@@ -242,7 +242,7 @@ function makeLook(): WorldModule {
       u.set('look_uSunLimbT', SUN.limb);
       u.set('look_uLavaGain', (ch['look.lava'] ?? 1) * UNIT);
       u.set('look_uHeat', ch['look.heat'] ?? 0);
-      u.set('look_uLandAmt', ch['look.land'] ?? 0.6);
+      u.set('look_uLandAmt', ch['look.land'] ?? 0);
       u.set('look_uLimb', 0);
       // the moon: placed relative to the camera (az from its forward direction round the local up, positive toward the
       // camera's LEFT (side = up x forward): az 150 = behind the left shoulder; el above the horizon). ventures mirrors
