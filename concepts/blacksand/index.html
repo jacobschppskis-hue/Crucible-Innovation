@@ -129,7 +129,7 @@ section { position: relative; }
 .who b { display: block; font-weight: 700; font-stretch: 112%; font-size: 1.125rem; color: var(--bone); }
 .ch-body p { color: #d9d5c9; }
 .ch-body p:first-of-type::first-line { color: var(--bone); }
-.pull { font-weight: 700; font-stretch: 112%; font-size: clamp(1.75rem, 3.1vw, 2.75rem); line-height: 1.08; letter-spacing: -0.025em; margin: 1.2em 0 1.1em; color: var(--bone); }
+.pull { display: block; font-weight: 700; font-stretch: 112%; font-size: clamp(1.75rem, 3.1vw, 2.75rem); line-height: 1.08; letter-spacing: -0.025em; margin: 1.2em 0 1.1em; color: var(--bone); }
 .cont { margin-top: 0 !important; }
 .cont .ch-body { grid-column: 2; }
 @media (max-width: 900px) {
@@ -145,13 +145,17 @@ section { position: relative; }
 @keyframes roll { from { background-position: 0 100%; } to { background-position: 0 -60%; } }
 
 /* ---------- the PayPal delta ---------- */
-.delta { position: relative; height: clamp(520px, 72vh, 640px); margin: clamp(60px, 10vh, 120px) 0; max-width: var(--col); }
-.delta .src { position: absolute; left: 0; font-weight: 800; font-stretch: 125%; font-size: clamp(2rem, 4.2vw, 3.6rem); line-height: 1; letter-spacing: -0.03em; transform: translateY(-50%); }
+.delta { position: relative; height: clamp(500px, 66vh, 600px); margin: clamp(80px, 12vh, 140px) auto; max-width: 62rem; }
+.delta .src { position: absolute; left: 50%; top: 0; font-weight: 800; font-stretch: 125%; font-size: clamp(2.25rem, 4.2vw, 3.6rem); line-height: 1; letter-spacing: -0.03em; transform: translateX(-50%); white-space: nowrap; }
+@media (max-width: 760px) { .delta { height: 640px; } }
+.delta.v .nm { transform: translateY(-50%); }
 .delta .cap { position: absolute; left: 0; top: 0; margin: 0; max-width: 22rem; }
-.delta .nm { position: absolute; padding-bottom: 4px; font-weight: 700; font-stretch: 112%; font-size: clamp(1rem, 1.6vw, 1.375rem); line-height: 1; letter-spacing: -0.01em; color: #4b4943; transition: color 0.8s cubic-bezier(.16,1,.3,1); white-space: nowrap; transform: translate(-100%, -100%); }
-.delta .nm.lit { color: var(--bone); }
+.delta .nm { position: absolute; font-weight: 700; font-stretch: 112%; font-size: clamp(1rem, 1.6vw, 1.375rem); line-height: 1; letter-spacing: -0.01em; color: var(--bone-dim); white-space: nowrap; transform: translateX(-50%); }
+/* the metal arrives: the name flashes hot, then cools to bone */
+.delta .nm.lit { animation: lit 1.8s cubic-bezier(.2,.7,.3,1) forwards; }
+@keyframes lit { 0% { color: #fff3dc; text-shadow: 0 0 16px rgb(255 140 60 / 0.85); } 40% { color: var(--ember-hot); text-shadow: 0 0 8px rgb(255 91 31 / 0.5); } 100% { color: var(--bone); text-shadow: none; } }
 html:not(.gl) .delta .nm { color: var(--bone); }
-.delta .yr { position: absolute; left: 0; font-size: 0.8125rem; color: var(--bone-dim); font-weight: 500; }
+.delta .yr { position: absolute; left: 50%; transform: translateX(-50%); white-space: nowrap; top: clamp(2.6rem, 4.9vw, 4.2rem); font-size: 0.8125rem; color: var(--bone-dim); font-weight: 500; }
 
 /* ---------- ventures: names cast into the sand ---------- */
 .ventures { padding-top: clamp(140px, 20vh, 240px); }
@@ -160,12 +164,12 @@ html:not(.gl) .delta .nm { color: var(--bone); }
 .v-cast { display: block; width: max-content; max-width: 100%; font-weight: 800; font-stretch: 125%; font-size: min(8.2vw, 8.25rem); line-height: 1; letter-spacing: 0; white-space: nowrap; }
 @media (max-width: 760px) { .v-cast { font-size: 9.4vw; } }
 .gl.cast-ok .v-cast { color: transparent; }
-.v-row { display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; margin-top: 18px; }
+.v-row { max-width: 34rem; display: flex; flex-wrap: wrap; gap: 6px 22px; align-items: baseline; margin-top: 18px; }
 .v-status { font-size: 0.8125rem; font-weight: 600; color: var(--bone); }
 .v-status.hot { color: var(--ember-hot); }
 .v-tag { font-weight: 700; font-stretch: 112%; font-size: 1.125rem; }
 .v-blurb { color: var(--bone-dim); }
-.v-open { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px #4a4840; font-weight: 600; font-size: 0.9375rem; color: var(--bone); margin-left: auto; transition: box-shadow 0.25s, color 0.25s, background 0.25s; }
+.v-open { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: 999px; box-shadow: inset 0 0 0 1px #4a4840; font-weight: 600; font-size: 0.9375rem; color: var(--bone); transition: box-shadow 0.25s, color 0.25s, background 0.25s; }
 .v-open svg { width: 16px; height: 16px; transition: transform 0.3s cubic-bezier(.16,1,.3,1); }
 .venture:hover .v-open, .venture:focus-visible .v-open, .venture.on .v-open { box-shadow: inset 0 0 0 1px var(--ember); color: var(--ember); }
 .venture:hover .v-open svg, .venture:focus-visible .v-open svg { transform: translateX(4px); }
@@ -193,6 +197,7 @@ html:not(.gl) .delta .nm { color: var(--bone); }
 @media (prefers-reduced-motion: reduce) {
   .cool { animation: none; }
   .crt::after { animation: none; }
+  .delta .nm.lit { animation: none; color: var(--bone); }
   .js [data-rv], .js .line > span { transition: none; opacity: 1; transform: none; }
 }
 </style>
@@ -254,8 +259,8 @@ html:not(.gl) .delta .nm { color: var(--bone); }
 
     <article class="chapter cont" data-sand>
       <div class="ch-body" data-rv>
-        <p>That group came together mostly in their twenties. I want to know what happens when a group like it comes together earlier. Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
-        <p class="pull">I want to know what happens when a group like it comes together earlier.</p>
+        <!-- One paragraph of Jacob's, unchanged: its second sentence breaks out at display size, in place -->
+        <p>That group came together mostly in their twenties. <span class="pull">I want to know what happens when a group like it comes together earlier.</span> Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
         <p>The name comes from what a crucible actually is, a vessel built to hold metal as it melts, in which separate metals can be combined into an alloy. Steel, being mostly iron with a small amount of carbon added, is far stronger than the iron it is made from. That is the idea behind the name, and it applies to the way people work with one another as much as it does to the way people work with AI. The logo is two rings, half drawn as continuous lines and half as pixels, meeting at an orange core. The human half and the machine half. I believe that people who learn to work alongside AI now, while they are young, will be able to build things that only a few years ago would have required a far larger and more experienced team.</p>
         <p>For now, Crucible has one venture, Crucible Sites, which designs and builds websites for local businesses. Charlie and I build the sites together, and our first ones are already lined up. It is small compared to what I want Crucible to become, and I know that. However it is real work, and it is where we are learning to ship.</p>
         <p>Some people hear all of this and find it unrealistic for someone my age, perhaps even egotistical. I can understand why they react that way. But if I commit myself fully to this and have even a .1% chance of building something that changes the world, would that not be worth it? I intend to find out, and maybe, years from now, the people who build it with me will have a name too.</p>
@@ -279,7 +284,7 @@ html:not(.gl) .delta .nm { color: var(--bone); }
     </article>
   </section>
 
-  <section class="ventures wrap" id="ventures" aria-labelledby="h-v">
+  <section class="ventures wrap" id="ventures" aria-labelledby="h-v" data-cove>
     <h2 class="h-sec" id="h-v" data-sand data-rv>One cast, <span class="thin">two still pouring</span></h2>
     <div class="vlist">
       <a class="venture" href="https://crucibleinnovation.com/sites/" data-sand data-v="1">
@@ -399,13 +404,13 @@ uniform vec3 uSun;          // sky px: x (from centre), y (above horizon), core 
 uniform vec2 uSunG;         // ground point under it, where the ripples start
 uniform vec4 uShore;        // hero shore Z, hero run-up, footer shore Z, footer run-up
 uniform vec2 uStrip;        // strip run-up, coast texture length
-uniform sampler2D uCoast;   // per 8 px of page: coast X, its slope
+uniform sampler2D uCoast;   // per 8 px of page: coast X, its slope, the run-up there (32-bit, interpolated here)
 uniform sampler2D uSim;     // r h, g h_prev, b furrow
 uniform vec4 uSimM;         // cell px, rem px, grid w, grid h (cells)
 uniform float uSimOn;
 uniform sampler2D uAtlas;
 uniform vec4 uTR[4], uTA[4], uTP[4];
-uniform vec4 uGate[4];
+uniform vec4 uGate[4], uGate2[4];
 uniform int uTN;
 uniform vec4 uDl[8];
 uniform float uDlLen[6];
@@ -433,7 +438,10 @@ vec2 ground(vec2 css, out float w){
   float cx = uView.x*.5;
   return vec2(cx + (css.x - cx)/w, uHB - (db - d) - db*uDepth*(1./w - 1.));
 }
-vec2 coastAt(float Z){ return texture(uCoast, vec2((Z/8. + .5)/uStrip.y, .5)).xy; }
+vec4 coastAt(float Z){
+  float i = clamp(Z/8., 0., uStrip.y - 1.001), i0 = floor(i);
+  return mix(texelFetch(uCoast, ivec2(int(i0), 0), 0), texelFetch(uCoast, ivec2(int(i0) + 1, 0), 0), i - i0);
+}
 
 /* ---------- the mark, as a hairline drawing around the sun ---------- */
 float sdBox(vec2 p, float h){ vec2 q = abs(p) - h; return length(max(q, 0.)) + min(max(q.x, q.y), 0.); }
@@ -559,28 +567,35 @@ void main(){
 
   // ---------------- the coast ----------------
   float s1 = uShore.x + uShore.y*(.16*sin(G.x*.0021 + 1.3) + .09*sin(G.x*.0057 + 4.) + .12*(noise(vec2(G.x*.004, 9.)) - .5)) - G.y;       // hero shore, sea is far
-  vec2 cc = coastAt(G.y);
+  vec4 cc = coastAt(G.y);
   float s2 = (G.x - cc.x)/sqrt(1. + cc.y*cc.y);                                  // the shore down the page, sea right
   float s3 = G.y - uShore.z;                                                     // the page's end, sea below
   float s = smax(smax(s1, s2, 160.), s3, 160.);
   float w1 = smoothstep(-60., 60., s1 - max(s2, s3)), w3 = smoothstep(-60., 60., s3 - max(s1, s2));
   float w2 = clamp(1. - w1 - w3, 0., 1.);
-  float A = uShore.y*w1 + uStrip.x*w2 + uShore.w*w3;
+  float A = uShore.y*w1 + cc.z*w2 + uShore.w*w3;
   float aU = G.x*(w1 + w3) + G.y*w2;                                             // along the shore
   vec2 toSea = normalize(vec2(0., -1.)*w1 + vec2(1., 0.)*w2 + vec2(0., 1.)*w3 + 1e-4);
   float heatK = 1. + uHeat.z*.55*smoothstep(uHeat.x - 300., uHeat.x, G.y)*(1. - smoothstep(uHeat.y, uHeat.y + 400., G.y));
   float lf = mix(1., 3.2, w2 + w3*.6); LF = lf;
   float tau = uTime/T + .55*noise(vec2(aU*.0011*lf, 3.1)) + .16*noise(vec2(aU*.0032*lf, 7.7));
+  float fpx = max(length(dFdx(G)), length(dFdy(G)));      // ground px per render pixel: band-limits every wave
+  float L = -s;
+  float E, up, Ac;
+  float dt = sinceLeft(L, tau, A, aU, E, up, Ac);
+  float ew = max(fwidth(E - L), .35);                     // the swash edge, anti-aliased over one pixel
 
   // interaction waves (screen space, anchored to the page)
-  vec3 sim = vec3(0.); vec2 sg = vec2(0.);
+  vec3 sim = vec3(0.); vec2 sg = vec2(0.); float trk = 0.; vec2 tg = vec2(0.);
   if (uSimOn > .5){
     vec2 cell = vec2(1./uSimM.z, 1./uSimM.w);
     vec2 su = vec2(css.x/(uSimM.x*uSimM.z), 1. - (css.y + uSimM.y)/(uSimM.x*uSimM.w));
-    sim = texture(uSim, su).rgb;
-    float hl = texture(uSim, su - vec2(cell.x, 0.)).r, hr = texture(uSim, su + vec2(cell.x, 0.)).r;
-    float hu = texture(uSim, su + vec2(0., cell.y)).r, hd = texture(uSim, su - vec2(0., cell.y)).r;
-    sg = vec2(hr - hl, hu - hd)/(2.*uSimM.x);       // per css px; y: toward screen-up is +
+    vec4 s0 = texture(uSim, su);
+    sim = s0.rgb; trk = s0.a;
+    vec4 tl = texture(uSim, su - vec2(cell.x, 0.)), tr = texture(uSim, su + vec2(cell.x, 0.));
+    vec4 tu = texture(uSim, su + vec2(0., cell.y)), td = texture(uSim, su - vec2(0., cell.y));
+    sg = vec2(tr.r - tl.r, tu.r - td.r)/(2.*uSimM.x);       // per css px; y: toward screen-up is +
+    tg = vec2(tr.a - tl.a, tu.a - td.a)/(2.*uSimM.x);
   }
 
   // flow pattern of the metal (fades with footprint, so the far sea doesn't alias)
@@ -603,7 +618,8 @@ void main(){
     float x = fract(tau + D/lam);
     float face = exp(-pow((1. - x)/.07, 2.));
     float back = exp(-x/.2);
-    float amp = smoothstep(band*2.2, band*.25, D)*(.55 + .45*noise(vec2(aU*.004, floor(tau + D/lam)*3.1)));
+    float bS = 1. - smoothstep(.1, .25, 7.*fpx/lam);          // a crest face holds ~7 harmonics of the spacing
+    float amp = smoothstep(band*2.2, band*.25, D)*(.55 + .45*noise(vec2(aU*.004, floor(tau + D/lam)*3.1)))*bS;
     float hgt = (x > .5 ? face : back)*amp;
     float dhd = (x > .5 ? 2.*(1. - x)/(.07*.07)*face : -back/.2)*amp/lam;   // d height / d D
     // the surface's slope: the waves across the shore, a slow noise swell, the sun's ripples, the wakes
@@ -611,18 +627,25 @@ void main(){
     vec2 Ps = Gd*.012 + vec2(t*.05, -t*.03);
     float e1 = .8*foot + 2.;
     float h0 = noise(Ps), hx = noise(Ps + vec2(e1*.012, 0.)), hz = noise(Ps + vec2(0., e1*.012));
-    grad += vec2(hx - h0, hz - h0)/e1*mix(3.5, 1.6, detail)*(1. - smoothstep(4., 30., foot)*.6);
+    float bN = 1. - smoothstep(.1, .25, .024*fpx);           // the slow swell noise, faded before it aliases
+    float calm = 1. - .65*smoothstep(band*1.5, band*5., D);  // far out the sea is glassy
+    grad += vec2(hx - h0, hz - h0)/e1*mix(3.5, 1.6, detail)*bN*calm;
+    // the sun's ripples: a few soft rings, only near its column
     vec2 rd = G - uSunG; float rr = length(rd);
-    grad += (rd/max(rr, 1.))*cos(rr*.05 - t*1.4)*.16*exp(-rr/1400.)*smoothstep(10., 90., rr)*w1;
-    grad += vec2(sg.x, -sg.y)*12.;
+    float bR = 1. - smoothstep(.1, .25, .05*fpx/6.2832);
+    float nearCol = exp(-pow((css.x - uView.x*.5)/(uSun.z*7.), 2.));
+    grad += (rd/max(rr, 1.))*cos(rr*.05 - t*1.4)*.1*exp(-rr/650.)*smoothstep(10., 90., rr)*w1*bR*nearCol;
+    vec2 wg = vec2(sg.x, -sg.y)*12. + vec2(tg.x, -tg.y)*5.;
+    grad += wg/(1. + length(wg)/.22);                       // soft-limited, so a hard stroke never flips the reflection
     // emission: crust far out, hotter toward the shore; each wave's face opens fresh metal, its back drags crust
     float tm = .14 + .42*pow(hotness, 1.6) + .16*veins*hotness + .06*veins*veins;
     tm += amp*(.42*face - .08*back);
     float brk = smoothstep(lam*1.1, 0., D);
     float foamN = fbm3(Gd*vec2(.035, .05) + vec2(t*.25, -t*.4));
-    float foam = brk*exp(-x/.45)*smoothstep(.35, .7, foamN + .2*brk);
+    float foam = brk*exp(-x/.45)*smoothstep(.35, .7, foamN + .2*brk)*bS;
     tm += foam*.35 + brk*.12 + smoothstep(lam*.5, 0., D)*.22;
-    float wk = clamp(length(sg)*30. + sim.r*.8, 0., .45);
+    float arms = clamp(length(tg)*uSimM.x*14., 0., 1.);
+    float wk = clamp(length(sg)*30. + sim.r*.8, 0., .4) + arms*.38;
     tm += wk*(.5 + .5*(1. - depth));
     tm *= .86 + .14*heatK;
     vec3 em = blackbody(min(tm, .985));
@@ -636,9 +659,10 @@ void main(){
     float F = .03 + .97*pow(1. - max(dot(-v, nn), 0.), 5.);
     vec3 sky; float sa;
     if (r.z < -.01 && r.y > 0.){ vec2 sp = vec2(uF*r.x/(-r.z), uF*r.y/(-r.z)); sky = skyCol(sp, fw*1.5, sa); }
-    else sky = vec3(.02, .025, .04);
+    else sky = skyCol(vec2(uF*r.x/max(abs(r.z), .05), 0.), fw*1.5, sa);   // below the horizon: it sees the far sea's warm haze, never a dark hole
     float lum = dot(em, vec3(.3, .5, .2));
     col = em + sky*F*(1. - smoothstep(.1, .6, lum))*.9;
+    col += blackbody(.62 + .25*arms)*arms*.42;                // the wake's two arms glint even on the glassy far sea
     float haze = exp(-(Y - uHor)/(10. + .03*uView.y));
     col = mix(col, vec3(1., .62, .40)*.82, haze*.85);
     // the sun's column on the water, glittering
@@ -647,9 +671,6 @@ void main(){
     col += vec3(1., .55, .25)*exp(-colx*colx/(uSun.z*uSun.z*1.1))*glit*(1. - smoothstep(0., .55, (Y - uHor)/(uHB - uHor)))*.8*w1;
   } else {
     // ================= the sand =================
-    float L = -s;
-    float E, up, Ac;
-    float dt = sinceLeft(L, tau, A, aU, E, up, Ac);
     float heatW = exp(-dt/1.5), wet = exp(-dt/5.5);
     // black volcanic sand: grain at ~1.6 px, sparse glints
     float gr = noise(G*.62)*.6 + noise(G*1.7)*.4;
@@ -676,17 +697,16 @@ void main(){
     for (int i = 0; i < 4; i++){
       if (i >= uTN) break;
       vec4 R = uTR[i];
-      // the gate: a channel from the sea into each venture's mould
-      vec4 gt = uGate[i];
-      if (gt.w > 0. && G.x > gt.x - 2. && G.x < gt.y && abs(G.y - gt.z) < gt.w*3.){
-        float dd = abs(G.y - gt.z + 2.*sin(G.x*.05)) - gt.w;
-        float m = smoothstep(fw, -fw, dd);
-        float mode = uTP[i].x;
+      // the gate: a thin channel in the sand, curving from the sea to a mould that's still being fed
+      vec4 g1 = uGate[i], g2 = uGate2[i];
+      if (g2.w > 0. && G.x > min(g1.x, g2.x) - 12. && G.x < max(g1.z, g2.x) + 12. && G.y > min(min(g1.y, g1.w), g2.y) - 12. && G.y < max(max(g1.y, g1.w), g2.y) + 12.){
+        vec2 bz = sdBez(G, g1.xy, g1.zw, g2.xy);
+        float wg = g2.z*mix(1.25, .8, bz.y);
+        float dd = bz.x - wg;
+        float m = smoothstep(.8, -.8, dd);
         float hov = uTP[i].z;
-        vec3 metal;
-        if (mode < 1.5) metal = vec3(.70, .67, .60)*(.7 + .3*noise(G*.3)) + blackbody(.55)*hov*.6;
-        else metal = blackbody(.62 + .18*sin(G.x*.09 + t*4.)*.5 + .2*hov + .1*veins);
-        col = mix(col*(1. + .9*exp(-max(dd, 0.)/10.)*(mode > 1.5 ? 1. : .2)), metal, m);
+        vec3 metal = blackbody(.6 + .14*sin(bz.y*40. - t*3.) + .18*hov);
+        col = mix(col + warm*.05*exp(-max(dd, 0.)/6.), metal, m);
       }
       if (G.x < R.x || G.x > R.z || G.y < R.y || G.y > R.w) continue;
       vec2 f = (G - R.xy)/(R.zw - R.xy);
@@ -736,9 +756,9 @@ void main(){
       } else {
         // still forging: molten, a drifting crust with glowing cracks
         float cr2 = fbm3(G*.022 + vec2(t*.04, -t*.03) + float(i)*7.);
-        float crustM = smoothstep(.5, .6, cr2)*(1. - hov*.8);
+
         float tmF = .64 + .2*veins + .06*sin(G.x*.04 - t*1.5) + rim*.08 + .14*hov;
-        metal = mix(blackbody(tmF), blackbody(.22 + .2*veins), crustM*.85);
+        metal = blackbody(tmF + .05*(cr2 - .5));
         col += blackbody(.5)*wall*(.25 + .4*hov);
       }
       col = mix(col, metal, m);
@@ -753,8 +773,8 @@ void main(){
       float best = b.x - wt, gb = b.y*Lt/Lm, wb = wt;
       for (int i = 0; i < 6; i++){
         vec2 bb = sdBez(G, S, uDl[2 + i].xy, uDl[2 + i].zw);
-        float wi = mix(6.5, 4., bb.y);
-        float di = bb.x - wi;
+        float wi = mix(6.5, 4.5, bb.y);
+        float di = min(bb.x - wi, length(G - uDl[2 + i].zw) - 8.);
         float hsm = clamp(.5 + .5*(di - best)/6., 0., 1.);
         float nb = mix(di, best, hsm) - 6.*hsm*(1. - hsm);
         if (di < best){ gb = (Lt + bb.y*uDlLen[i])/Lm; wb = wi; }
@@ -765,7 +785,7 @@ void main(){
       float inC = smoothstep(fw, -fw, best);
       float dpt = clamp(-best/wb, 0., 1.);
       // the groove, before the metal reaches it
-      vec3 groove = col*(.55 + .45*smoothstep(-wb, 0., best));
+      vec3 groove = col*(.8 + .2*smoothstep(-wb, 0., best));
       float pulse = .5 + .5*sin(gb*Lm*.055 - t*3.2);
       float tip = exp(-pow((gb - fr)*Lm/18., 2.))*step(fr, .999);
       vec3 lava = blackbody(.52 + .28*dpt + .1*pulse + .25*tip + .06*veins);
@@ -775,19 +795,19 @@ void main(){
     }
 
     // ---------- the swash: the sheet of metal running up the sand, the foam line at its edge ----------
-    if (L < E){
+    if (L < E + ew){
       // the sheet: thick behind the front, thinning to a lacy edge; streaks run up and down the beach
       float th = clamp((E - L)/(.5*Ac + 1.) + smoothstep(.12*Ac, 0., L), 0., 1.);
       vec2 sp = vec2(aU*.03, L*.012 - t*mix(-.25, .6, up));
       float streak = fbm3(sp*vec2(1., 3.));
       float lace = smoothstep(.4, .62, fbm3(mat2(.8, .6, -.6, .8)*G*.045 + vec2(t*.1, t*.2)));
       float tmS = .40 + .40*sqrt(th) + .12*streak + up*.08 - (1. - up)*(1. - th)*.3*(1. - lace);
-      tmS += clamp(length(sg)*25. + sim.r*.6, 0., .3);
+      tmS += clamp(length(sg)*25. + sim.r*.6, 0., .3) + clamp(length(tg)*uSimM.x*14., 0., 1.)*.25;
       vec3 sheet = blackbody(min(tmS*(.88 + .12*heatK), .98));
       float edgeW = 3. + foot*2.5 + (1. - up)*4.;
       float edge = exp(-pow((E - L)/edgeW, 2.));
       sheet = mix(sheet, vec3(1., .9, .7), edge*(up*.9 + (1. - up)*.45*lace));
-      float a = smoothstep(0., .06 + foot*.01, th)*(.62 + .38*sqrt(th));
+      float a = smoothstep(-ew, ew, E - L)*(.62 + .38*sqrt(th));
       a *= mix(mix(.55, 1., lace*(1. - th) + th), 1., up);
       col = mix(col, sheet + typeHot*blackbody(.75)*.15, a);
     }
@@ -809,7 +829,7 @@ uniform sampler2D uPrev;
 uniform vec2 uTexel;
 uniform float uShift, uC2, uDamp, uDt;
 uniform vec4 uSeg[2];
-uniform vec3 uStr[2];        // wave strength, furrow strength, radius (cells)
+uniform vec4 uStr[2];        // wave strength, furrow strength, radius (cells), track strength
 float segD(vec2 p, vec2 a, vec2 b){ vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba)/max(dot(ba, ba), 1e-4), 0., 1.); return length(pa - ba*h); }
 void main(){
   vec2 px = gl_FragCoord.xy;
@@ -819,8 +839,12 @@ void main(){
           + texture(uPrev, uv + vec2(0., uTexel.y)).r + texture(uPrev, uv - vec2(0., uTexel.y)).r - 4.*s.r;
   float h = s.r + (s.r - s.g)*(1. - uDamp*uDt) + uC2*l;
   float fur = s.b*exp(-uDt/2.4);
+  // the wake's track: the hull's path, spreading as it ages (so its two edges open into a V behind the pointer) and fading
+  float la = texture(uPrev, uv + vec2(uTexel.x, 0.)).a + texture(uPrev, uv - vec2(uTexel.x, 0.)).a
+           + texture(uPrev, uv + vec2(0., uTexel.y)).a + texture(uPrev, uv - vec2(0., uTexel.y)).a - 4.*s.a;
+  float trk = s.a*exp(-uDt/2.2) + min(.24, 5.*uDt)*la;      // spreads ~15 px a second
   for (int i = 0; i < 2; i++){
-    if (uStr[i].x + uStr[i].y <= 0.) continue;
+    if (uStr[i].x + uStr[i].y + uStr[i].w <= 0.) continue;
     float d = segD(px, uSeg[i].xy, uSeg[i].zw);
     float r = uStr[i].z;
     // the hull: a zero-mean dipole at the moving bow (pushed up ahead, drawn down behind), so no trough builds up
@@ -829,12 +853,13 @@ void main(){
     float g = exp(-dot(q, q)/(r*r));
     h += uStr[i].x*g*dot(q, dir)/r;
     fur = max(fur, uStr[i].y*exp(-d*d/(r*r*.35)));
+    trk = max(trk, uStr[i].w*exp(-d*d/(r*r*.5)));
   }
   // sponge at the edges, and anything shifted in from outside starts flat
   vec2 e = min(px, 1./uTexel - px);
   float sp = smoothstep(0., 4., min(e.x, e.y));
-  if (uv.y < 0. || uv.y > 1.) { h = 0.; s.r = 0.; fur = 0.; }
-  oc = vec4(h*sp, s.r*sp, fur, 1.);
+  if (uv.y < 0. || uv.y > 1.) { h = 0.; s.r = 0.; fur = 0.; trk = 0.; }
+  oc = vec4(h*sp, s.r*sp, fur, trk*sp);
 }`;
 
 function compile(type, src) {
@@ -1015,8 +1040,12 @@ function layout() {
   const N = Math.ceil(L.pageH / 8) + 4;
   L.coastN = N;
   const req = new Float32Array(N).fill(-1e5);
-  // clear the text by the surf's longest run-up, plus a margin of dry sand
-  const gap = (phone ? 12 : 40) + (phone ? 40 : 84) * 1.15;
+  // reading sections get a thin, quiet fringe of surf at the edge (5% of the width, 4% on phones); coves open between
+  // sections, where the run-up is longer. The text is cleared by the fringe's longest run-up plus dry sand.
+  const Afr = phone ? 12 : 26, Acove = phone ? 40 : 80;
+  const gap = (phone ? 12 : 28) + Afr * 1.15;
+  const coveRow = new Uint8Array(N);
+  document.querySelectorAll('[data-cove]').forEach((el) => { const r = pageRect(el); for (let i = Math.max(0, Math.floor(r.y0 / 8)); i <= Math.min(N - 1, Math.ceil(r.y1 / 8)); i++) coveRow[i] = 1; });
   document.querySelectorAll('[data-sand]').forEach((el) => {
     const r = pageRect(el);
     let right = r.x1;
@@ -1031,21 +1060,40 @@ function layout() {
     const i0 = Math.max(0, Math.floor((r.y0 - 20) / 8)), i1 = Math.min(N - 1, Math.ceil((r.y1 + 20) / 8));
     for (let i = i0; i <= i1; i++) req[i] = Math.max(req[i], right + gap);
   });
-  const base = phone ? L.W - 30 : Math.max(L.W * 0.8, Math.min(L.W - 180, 1100));
-  const cove = phone ? L.W * 0.62 : L.W * 0.62;
+  const base = L.W * (phone ? 0.96 : 0.95);
+  const cove = phone ? L.W * 0.56 : L.W * 0.62;
   const stripStart = L.HB - (phone ? 0 : L.H * 0.1);
   const arr = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     const Z = i * 8;
-    arr[i] = req[i] > -1e4 ? Math.max(req[i], Math.min(base, L.W - 24)) : cove + (base - cove) * 0.25 * (1 + Math.sin(Z * 0.004));
+    arr[i] = req[i] > -1e4 ? Math.max(req[i], coveRow[i] ? 0 : base) : cove + (base - cove) * 0.2 * (1 + Math.sin(Z * 0.004));
     if (Z < stripStart) arr[i] = L.W + 900;
+  }
+  // round the text's envelope: a parabolic dilation (radius of curvature ~320 px), so the coast never kinks around a box
+  {
+    const R2 = 2 * (phone ? 200 : 320), W = phone ? 30 : 60, src = req.slice();
+    for (let i = 0; i < N; i++) {
+      let m = src[i];
+      for (let j = Math.max(0, i - W); j <= Math.min(N - 1, i + W); j++) if (src[j] > -1e4) { const dz = (i - j) * 8; m = Math.max(m, src[j] - dz * dz / R2); }
+      if (m > -1e4 && (src[i] > -1e4 || coveRow[i] || m > (phone ? 0 : L.W * 0.5))) req[i] = Math.max(req[i], m);
+    }
+  }
+  // inside a cove section the coast follows the content as one bay: rows between items are interpolated, not opened
+  for (let i = 0; i < N; i++) {
+    if (!coveRow[i] || req[i] > -1e4) continue;
+    let lo = i, hi = i;
+    while (lo > 0 && coveRow[lo] && req[lo] <= -1e4) lo--;
+    while (hi < N - 1 && coveRow[hi] && req[hi] <= -1e4) hi++;
+    const a0 = req[lo] > -1e4 ? req[lo] : null, a1 = req[hi] > -1e4 ? req[hi] : null;
+    if (a0 !== null && a1 !== null) arr[i] = a0 + (a1 - a0) * (i - lo) / (hi - lo);
+    else if (a0 !== null || a1 !== null) arr[i] = Math.max(a0 ?? 0, a1 ?? 0);
   }
   for (let i = 0; i < N; i++) if (req[i] > -1e4) req[i] = Math.max(req[i], 0);
   const sm = (a, rad) => { const o = new Float32Array(N); for (let i = 0; i < N; i++) { let acc = 0, wsum = 0; for (let j = -rad; j <= rad; j++) { const k = Math.min(N - 1, Math.max(0, i + j)); const ww = Math.exp(-(j * j) / (rad * rad * 0.35)); acc += a[k] * ww; wsum += ww; } o[i] = acc / wsum; } return o; };
   let a = arr;
   for (let it = 0; it < 4; it++) {
     a = sm(a, phone ? 14 : 22);
-    for (let i = 0; i < N; i++) { if (req[i] > -1e4) a[i] = Math.max(a[i], req[i]); }
+    for (let i = 0; i < N; i++) { if (req[i] > -1e4) a[i] = Math.max(a[i], req[i], coveRow[i] ? 0 : base); }
   }
   a = sm(a, 3);
   const ramp = phone ? 260 : 520;
@@ -1055,10 +1103,19 @@ function layout() {
     if (z < ramp) a[i] = Math.max(a[i], z < 0 ? L.W + 900 : a[i] + (L.W + 900 - a[i]) * (0.5 + 0.5 * Math.cos(Math.PI * z / ramp)));
   }
   coastArr = a;
-  const data = new Float32Array(N * 2);
-  for (let i = 0; i < N; i++) { data[i * 2] = a[i]; data[i * 2 + 1] = (a[Math.min(N - 1, i + 1)] - a[Math.max(0, i - 1)]) / 16; }
+  // run-up per row: the fringe's near text, the cove's away from it (by distance to the nearest text row)
+  const dist = new Float32Array(N).fill(1e9);
+  let lastR = -1e9;
+  for (let i = 0; i < N; i++) { if (req[i] > -1e4) lastR = i; dist[i] = (i - lastR) * 8; }
+  lastR = 1e9;
+  for (let i = N - 1; i >= 0; i--) { if (req[i] > -1e4) lastR = i; dist[i] = Math.min(dist[i], (lastR - i) * 8); }
+  let Arow = new Float32Array(N);
+  for (let i = 0; i < N; i++) { const k = Math.min(1, Math.max(0, (dist[i] - 40) / 200)); Arow[i] = Afr + (Acove - Afr) * k * k * (3 - 2 * k); }
+  Arow = sm(Arow, 6);
+  const data = new Float32Array(N * 4);
+  for (let i = 0; i < N; i++) { data[i * 4] = a[i]; data[i * 4 + 1] = (a[Math.min(N - 1, i + 1)] - a[Math.max(0, i - 1)]) / 16; data[i * 4 + 2] = Arow[i]; }
   if (coastTex) gl.deleteTexture(coastTex);
-  coastTex = tex(N, 1, gl.RG16F, gl.RG, gl.FLOAT, gl.LINEAR, data);
+  coastTex = tex(N, 1, gl.RGBA32F, gl.RGBA, gl.FLOAT, gl.NEAREST, data);
   gl.bindTexture(gl.TEXTURE_2D, coastTex);
   L.stripA = phone ? 40 : 84;
   // the page's end: the sea under the footer's wordmark
@@ -1071,37 +1128,45 @@ function layout() {
   const coastX = (Z) => a[Math.max(0, Math.min(N - 1, Math.round(Z / 8)))];
   // gates from the sea to each venture's mould
   L.types.forEach((t, i) => {
-    if (i === 0) { L.gates.push([0, 0, 0, 0]); return; }
+    if (i === 0 || t.P[0] < 1.5) { L.gates.push([0, 0, 0, 0, 0, 0, 0, 0]); return; }
     const r = pageRect(castEls[i - 1]);
-    const z = r.y0 + (r.y1 - r.y0) * 0.6;
-    L.gates.push([r.x1 - 6, coastX(z) + 30, z, phone ? 3 : 5]);
+    const p0 = [r.x1 - (r.y1 - r.y0) * 0.06, r.y0 + (r.y1 - r.y0) * 0.52];
+    const zE = r.y0 - (phone ? 10 : 26);
+    const e = [coastX(zE) - 2, zE];
+    const c = [p0[0] + (e[0] - p0[0]) * 0.3, p0[1] - (phone ? 6 : 14)];
+    L.gates.push([p0[0], p0[1], c[0], c[1], e[0], e[1], phone ? 1.6 : 2.4, 1]);
   });
-  // the delta: PayPal at the source, six channels fanning out to the coast
+  // the delta: PayPal at the source, centred; one river splitting into six channels, each ending in a pool under a name.
+  // Desktop: a fan, the six names in a row. Phones: a vertical delta, the names in two columns of three.
   const dr = pageRect(delta);
-  const dh = dr.y1 - dr.y0, zc = dr.y0 + dh * 0.5;
-  dlSrc.style.top = (dh * 0.5) + 'px';
-  dlYr.style.top = (dh * 0.5 + dlSrc.offsetHeight * 0.55 + 6) + 'px';
-  const srcR = pageRect(dlSrc);
-  const P0 = [srcR.x1 + 14, zc];
-  const Sx = dr.x0 + (dr.x1 - dr.x0) * (phone ? 0.42 : 0.44);
-  const S = [Sx, zc + 4];
-  const Ct = [(P0[0] + S[0]) / 2, zc - 10];
+  const dh = dr.y1 - dr.y0, dw = dr.x1 - dr.x0, cx = (dr.x0 + dr.x1) / 2;
+  const yrR = pageRect(dlYr);
+  const P0 = [cx, yrR.y1 + 14];
+  const trunkX = dr.x0 + dw * 0.74;
+  const S = phone ? [trunkX, dr.y0 + dh * 0.24] : [cx + 0.5, dr.y0 + dh * 0.42];
+  const Ct = phone ? [trunkX, P0[1]] : [cx - 6, (P0[1] + S[1]) / 2];
+  delta.classList.toggle('v', phone);
   const ends = [], ctrls = [], lens = [];
   const lenB = (A0, C0, B0) => { let l = 0, px = A0[0], py = A0[1]; for (let k = 1; k <= 24; k++) { const t = k / 24, it = 1 - t; const x = it * it * A0[0] + 2 * it * t * C0[0] + t * t * B0[0], y = it * it * A0[1] + 2 * it * t * C0[1] + t * t * B0[1]; l += Math.hypot(x - px, y - py); px = x; py = y; } return l; };
   const Lt = lenB(P0, Ct, S);
-  const t0 = dr.y0 + dh * 0.08, t1 = dr.y1 - dh * 0.08;
   for (let i = 0; i < 6; i++) {
-    const z = t0 + (t1 - t0) * (i / 5);
-    const ex = coastX(z) + 40;
-    const E = [ex, z];
-    const C = [S[0] + (ex - S[0]) * 0.42, z + (i - 2.5) * 3];
+    let E, C;
+    if (!phone) {
+      E = [dr.x0 + dw * (i + 0.5) / 6, dr.y0 + dh * 0.84];
+      C = [S[0] + (E[0] - S[0]) * 0.8, S[1] + (E[1] - S[1]) * 0.28];
+    } else {
+      // one river down the right, shedding a branch into each name's row: nothing crosses a name
+      const z = dr.y0 + dh * (0.36 + i * 0.115);
+      E = [dr.x0 + dlNames[i].offsetWidth + 22, z];
+      C = [S[0] + 0.5, z - 2];
+    }
     ends.push(E); ctrls.push(C); lens.push(lenB(S, C, E));
     const nm = dlNames[i];
-    nm.style.left = (Math.min(coastX(z) - 16, dr.x1) - dr.x0) + 'px';
-    nm.style.top = (z - dr.y0 - 16) + 'px';
+    nm.style.left = phone ? '0px' : (E[0] - dr.x0) + 'px';
+    nm.style.top = phone ? (E[1] - dr.y0) + 'px' : (E[1] - dr.y0 + 14) + 'px';
   }
   const Lm = Lt + Math.max(...lens);
-  L.dl = { P0, Ct, S, Lt, Lm, ends, ctrls, lens, box: [dr.x0 - 20, dr.y0 - 40, L.W + 10, dr.y1 + 40], namesAt: lens.map((l) => (Lt + l * 0.82) / Lm) };
+  L.dl = { P0, Ct, S, Lt, Lm, ends, ctrls, lens, box: [dr.x0 - 24, dr.y0 - 10, dr.x1 + 24, dr.y1 + 10], namesAt: lens.map((l) => (Lt + l) / Lm) };
   const tr = pageRect(thesisEl);
   L.heat = [tr.y0, tr.y1];
   needsFrame = true;
@@ -1162,11 +1227,13 @@ function simStep(dt) {
       const dx = X - p.px, dy = Yp - p.py, len = Math.hypot(dx, dy);
       const speed = len / Math.max(dt, 1e-3);
       const wave = Math.min(1.6, speed / 900) * (p.kind === 'touch' ? 1.25 : 1);
+      // the track carries the slow strokes; fast ones have the wave's own V, so it eases off with speed
+      const trail = speed > 15 ? Math.min(0.85, 0.45 + speed / 700) * (1 - 0.55 * Math.min(1, Math.max(0, (speed - 600) / 1400))) : 0;
       // touch scrolls are vertical: only a sideways finger drag scores the sand, a mouse drag always does
       const cdx = p.x - (p.lcx ?? p.x), cdy = p.y - (p.lcy ?? p.y);
       const sideways = p.kind !== 'touch' || Math.abs(cdx) > Math.abs(cdy) * 1.3;
       const fur = p.down && sideways ? Math.min(1, speed / 300) : 0;
-      if (len > 0.3 && len < 600) segs.push({ x0: p.px, y0: p.py, x1: X, y1: Yp, wave, fur });
+      if (len > 0.3 && len < 600) segs.push({ x0: p.px, y0: p.py, x1: X, y1: Yp, wave, fur, trail });
     }
     p.px = X; p.py = Yp; p.lcx = p.x; p.lcy = p.y;
   }
@@ -1178,18 +1245,18 @@ function simStep(dt) {
   gl.useProgram(S.p);
   gl.uniform2f(S.u.uTexel, 1 / SIM.gw, 1 / SIM.gh);
   const c2 = Math.min(0.48, Math.pow(SIM.c * sdt / SIM.cell, 2));
-  gl.uniform1f(S.u.uC2, c2); gl.uniform1f(S.u.uDamp, 1.7); gl.uniform1f(S.u.uDt, sdt);
+  gl.uniform1f(S.u.uC2, c2); gl.uniform1f(S.u.uDamp, 1.5); gl.uniform1f(S.u.uDt, sdt);
   gl.viewport(0, 0, SIM.gw, SIM.gh);
   for (let k = 0; k < n; k++) {
-    const segArr = new Float32Array(8), str = new Float32Array(6);
+    const segArr = new Float32Array(8), str = new Float32Array(8);
     segs.forEach((s, i) => {
       const a = k / n, b = (k + 1) / n;
       const toG = (x, y) => [x / SIM.cell, SIM.gh - (y - sc) / SIM.cell - SIM.rem * 0];
       const p0 = toG(s.x0 + (s.x1 - s.x0) * a, s.y0 + (s.y1 - s.y0) * a), p1 = toG(s.x0 + (s.x1 - s.x0) * b, s.y0 + (s.y1 - s.y0) * b);
       segArr.set([p0[0], p0[1], p1[0], p1[1]], i * 4);
-      str.set([s.wave * 0.22 * (sdt * 120), s.fur, SIM.cell === 4 ? 2.6 : 2.2], i * 3);
+      str.set([s.wave * 0.15 * (sdt * 120), s.fur, SIM.cell === 4 ? 2.6 : 2.2, s.trail], i * 4);
     });
-    gl.uniform4fv(S.u.uSeg, segArr); gl.uniform3fv(S.u.uStr, str);
+    gl.uniform4fv(S.u.uSeg, segArr); gl.uniform4fv(S.u.uStr, str);
     gl.uniform1f(S.u.uShift, k === 0 ? -shiftCells : 0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, SIM.fb[1 - SIM.cur]);
     gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, SIM.tex[SIM.cur]); gl.uniform1i(S.u.uPrev, 0);
@@ -1201,7 +1268,7 @@ function simStep(dt) {
 
 /* ---------------- quality ---------------- */
 const STEPS = [1, 0.85, 0.72, 0.6, 0.5, 0.42];
-let qi = Q_FORCE !== null ? -1 : 2, dprCap = 1.5;
+let qi = Q_FORCE !== null ? -1 : 1, dprCap = 1.5;
 let scale = 1;
 function resize() {
   const d = Math.min(devicePixelRatio || 1, dprCap);
@@ -1261,8 +1328,9 @@ function render() {
   gl.activeTexture(gl.TEXTURE3); gl.bindTexture(gl.TEXTURE_2D, atlasTex || coastTex); gl.uniform1i(u.uAtlas, 3);
   const n = atlasReady ? L.types.length : 0;
   const TR = new Float32Array(16), TA = new Float32Array(16), TP = new Float32Array(16), GT = new Float32Array(16);
-  for (let i = 0; i < n; i++) { TR.set(L.types[i].R, i * 4); TA.set(L.types[i].A, i * 4); TP.set(L.types[i].P, i * 4); if (L.gates[i]) GT.set(L.gates[i], i * 4); }
-  gl.uniform4fv(u.uTR, TR); gl.uniform4fv(u.uTA, TA); gl.uniform4fv(u.uTP, TP); gl.uniform4fv(u.uGate, GT); gl.uniform1i(u.uTN, n);
+  const GT2 = new Float32Array(16);
+  for (let i = 0; i < n; i++) { TR.set(L.types[i].R, i * 4); TA.set(L.types[i].A, i * 4); TP.set(L.types[i].P, i * 4); if (L.gates[i]) { GT.set(L.gates[i].slice(0, 4), i * 4); GT2.set(L.gates[i].slice(4, 8), i * 4); } }
+  gl.uniform4fv(u.uTR, TR); gl.uniform4fv(u.uTA, TA); gl.uniform4fv(u.uTP, TP); gl.uniform4fv(u.uGate, GT); gl.uniform4fv(u.uGate2, GT2); gl.uniform1i(u.uTN, n);
   if (L.dl) {
     const D = L.dl, dl = new Float32Array(32);
     dl.set([D.P0[0], D.P0[1], D.Ct[0], D.Ct[1]], 0); dl.set([D.S[0], D.S[1], D.Lt, D.Lm], 4);
@@ -1300,6 +1368,7 @@ function loop(ts) {
 function still() { if (!needsFrame) return; needsFrame = false; update(1); render(); }
 window.__step = (dt = 1 / 60, n = 1, draw = true) => { for (let i = 0; i < n; i++) { now += dt; t += dt; update(dt); simStep(dt); } if (draw) render(); return t; };
 window.__render = () => { update(1); render(); };
+window.__simRead = () => { gl.bindFramebuffer(gl.FRAMEBUFFER, SIM.fb[SIM.cur]); const px = new Float32Array(SIM.gw * SIM.gh * 4); gl.readPixels(0, 0, SIM.gw, SIM.gh, gl.RGBA, gl.FLOAT, px); gl.bindFramebuffer(gl.FRAMEBUFFER, null); const mx = [0, 0, 0, 0]; for (let i = 0; i < px.length; i++) mx[i % 4] = Math.max(mx[i % 4], Math.abs(px[i])); return mx; };
 window.__blacksand = { L, SIM, ptrs, get t() { return t; }, set t(v) { t = v; }, get q() { return scale; }, layout, ptr: ptrUpdate };
 
 async function start() {

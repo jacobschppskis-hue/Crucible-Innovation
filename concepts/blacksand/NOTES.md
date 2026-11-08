@@ -28,16 +28,26 @@ atlas and a 1-D coast profile):
 - **Sky**: gradient with a pale cold band, stars, basalt sea stacks and a headland, the sun with the mark's hairline
   ghost. The sea reflects it all with Fresnel from each row's camera ray: the sun's glittering column, the stacks, the
   ring. Ripples spread from under the sun.
-- **Cursor and fingers**: a damped wave-equation grid (half-float ping-pong, 4-5 px cells, 120 Hz substeps), anchored
-  to the page (shifted by whole cells on scroll). A moving pointer is stamped as a continuous segment per substep, so
-  above the wave speed it leaves a V wake with smooth ridges and below it a bow ripple: no drops. A resting cursor or
-  finger makes a wake as the page scrolls under it. Dragging on the sand scores a glowing furrow that cools.
+- **Cursor and fingers**: a damped wave-equation grid (half-float ping-pong, 4-5 px cells, 120 Hz substeps, more when a
+  stroke is fast so the bow never jumps a cell), anchored to the page (shifted by whole cells on scroll). The pointer is
+  a zero-mean dipole at the moving bow (no trough builds up), which draws the Mach V of a fast stroke. Slow strokes
+  (where a plain wave grid can only make rings) leave a **track** in a second channel: stamped along the path, it
+  spreads (~15 px/s) and fades, so its two edges open into a smooth V behind the pointer at any speed. A resting
+  cursor or finger makes a wake while the page scrolls. A mouse drag or a sideways finger drag scores a glowing furrow
+  in the sand; vertical (scroll) strokes don't.
+- **Band-limiting**: every wave feature in the sea fades before its phase changes faster than ~1/4 cycle per render
+  pixel (from `dFdx/dFdy` of the ground position), so the far sea stays glassy instead of aliasing into moiré; rays that
+  reflect below the horizon see the far sea's warm haze, never a dark hole.
+- **The coast through the page**: a thin, quiet fringe (5% of the width, 4% on phones) beside reading sections, coves
+  between sections, and one bay at the ventures (`data-cove`). The profile is 32-bit, interpolated in the shader, and
+  the text envelope is rounded with a parabolic dilation so the shoreline never kinks; the run-up varies per row.
 - **Type in the sand**: a canvas atlas of the wordmark and venture names (Archivo), blurred for the mould's walls.
   Lit from the sea's side, it's filled with metal: the wordmark by the surf, Crucible Sites cast and cooled to bone (it's
-  live), Verge and Trellis still molten with a drifting crust (still forging), each fed by a gate channel from the sea.
+  live), Verge and Trellis still molten (one seamless glow: still forging), each fed by a thin channel curving to the bay.
   Hover/focus/tap heats a venture's cast and its "Open" control turns Ember.
-- **PayPal delta**: one river of metal leaves "PayPal" and splits into six channels that run down the beach into the
-  surf; the names light as the metal reaches them. Scroll pours it (latched, so it never un-pours), pulses keep flowing.
+- **PayPal delta**: centred under "PayPal" (eBay buys it, 2002). Desktop: the river fans into six channels ending in
+  pools over a row of names. Phones: one river runs down and sheds a branch into each name's row (nothing crosses a
+  name). Each name flashes hot as the metal arrives, then cools to bone. Scroll pours it (latched, so it never un-pours), pulses keep flowing.
 - **Quality**: DPR capped at 1.5, render scale steps (1 → 0.42) on slow frames, back up at most twice; one rAF.
   Reduced motion: one still frame, re-drawn on scroll. Test hooks: `?t=<s>` (fixed time), `?q=<scale>`,
   `window.__step(dt, n)`, `window.__render()`, `window.__blacksand`.
