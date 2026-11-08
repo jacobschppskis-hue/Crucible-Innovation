@@ -28,6 +28,15 @@ Ember stays the only hot UI colour: the core, the CTAs, the "Live" dot, the ı d
 - **Reduced motion.** The clock is frozen at a chosen frame, there is no sim, and the page re-renders only on scroll, so every scene is a still. With no JS or no WebGL2 the page falls back to a dark molten-glow background with all content readable.
 - **Test hooks.** `?t=<s>` holds the clock, `?q=<0-5>` sets quality, `?notext` hides the DOM; `window.__step(dt)`, `__hold()`, `__resume()`, `__state()`.
 
+## Round 2 (coordinator review)
+- **Type never shares the frame with the mark.** The hero mark sits above the sea and the type sits on black sand. In the story, PayPal and Charlie's chapter the camera faces away from the sun, so the type has the night sky to itself. In ventures the sun sits low behind the slabs, under the heading. In the thesis it sits to the right of the type, then rises off the limb below it. Phones get their own keyframe overrides.
+- **The whole mark floats above the sea.** In the hero the sun is placed by angle so its lowest square clears the horizon plus a gap. The sea reflects the mark, broken by the swell.
+- **The halo is lit from the sun inside it.** Hot inner rims face the core, the far faces are dark, and a starlit Quench rim runs along the outer edges.
+- **Jacob's sentence appears once.** It is set in place inside his paragraph as the display break-out; the text itself is unedited, only split around the break-out.
+- **Verge and Trellis are one seamless glow,** with no crust or cracks: hottest where they leave the sea, with a slow breath of heat. They are bigger on phones (the camera moves closer).
+- **No glyph shadows behind type.** Legibility comes from composition.
+- **PayPal is organic.** Three curving trunks of varied width leave the pool, fork, and taper into the six castings, revealed by PayPal's wave and flowing. There are no straight spokes and no ring around PayPal.
+
 ## Tested (Playwright Chromium with SwiftShader, deterministic frames via `?t` and `__step`)
 - **Hero:** idle over about 5 s in 8 frames (swash runs up and drains, crests come in, glitter moves); the three beats; 2× crops of the shoreline. That found and fixed a black contour line at the waterline caused by a wrong inverse of the drain curve.
 - **Cursor:** medium and fast strokes. A first version made a lasting trough (net volume), then glare; the dipole source plus curvature glow fixed both.

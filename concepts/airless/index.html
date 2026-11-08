@@ -95,15 +95,16 @@ a { color: inherit; }
   position: absolute; left: var(--gut); right: var(--gut); bottom: clamp(1.5rem, 6vh, 4rem);
   display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 1.5rem 3rem;
 }
-.hero h1 { font-size: clamp(3rem, 8.2vw, 8.6rem); grid-column: 1 / -1; }
+.hero h1 { font-size: clamp(3rem, 7vw, 7.4rem); grid-column: 1; grid-row: 1 / span 2; }
 .hero h1 .ln { display: block; }
-.hero .lede { grid-column: 1; }
-.hero .ctas { display: flex; gap: .75rem; flex-wrap: wrap; grid-column: 2; justify-self: end; }
+.hero .lede { grid-column: 2; grid-row: 1; align-self: end; }
+.hero .ctas { display: flex; gap: .75rem; flex-wrap: wrap; grid-column: 2; grid-row: 2; }
 .beats { position: absolute; left: var(--gut); right: var(--gut); bottom: clamp(2rem, 9vh, 5.5rem); pointer-events: none; }
 .beat { position: absolute; left: 0; bottom: 0; margin: 0; font-size: clamp(2.8rem, 9vw, 8.5rem); }
 .beat small { display: block; font-size: 1rem; font-weight: 400; font-stretch: 100%; letter-spacing: 0; line-height: 1.5; color: var(--bone-dim); margin-top: 1rem; max-width: 34ch; }
 @media (max-width: 760px) {
   .hero-copy { grid-template-columns: 1fr; bottom: 1.25rem; gap: 1rem; }
+  .hero h1, .hero .lede, .hero .ctas { grid-column: 1; grid-row: auto; }
   .hero .ctas { grid-column: 1; justify-self: start; }
   .hero h1 { font-size: clamp(2.4rem, 11.4vw, 5rem); font-stretch: 112%; }
   .beat { font-size: clamp(2.6rem, 13.5vw, 4.4rem); }
@@ -230,17 +231,17 @@ html[data-notext] main, html[data-notext] footer, html[data-notext] .readout, ht
   <section class="hero pin" id="top" data-scene="hero">
     <div class="stage">
       <div class="hero-copy" data-heroc>
-        <h1 class="display" data-reflect="shadow" data-shadow="0.95"><span class="ln">Intelligence,</span> <span class="ln">alloyed</span></h1>
-        <p class="lede" data-cool="0.8">Human judgment and machine range, fused into one material. Crucible is a studio that builds and ships ventures.</p>
+        <h1 class="display" data-reflect="shadow" data-shadow="0"><span class="ln">Intelligence,</span> <span class="ln">alloyed</span></h1>
+        <p class="lede">Human judgment and machine range, fused into one material. Crucible is a studio that builds and ships ventures.</p>
         <div class="ctas">
           <a class="btn" href="#ventures">See the ventures</a>
           <a class="btn ghost" href="#story">Why Crucible</a>
         </div>
       </div>
       <div class="beats" aria-hidden="true">
-        <p class="beat display" data-beat="0" data-fade data-reflect="shadow" data-shadow="0.9">Not the person<small>The machine half scatters.</small></p>
-        <p class="beat display" data-beat="1" data-fade data-reflect="shadow" data-shadow="0.9">Not the model<small>The human half leaves.</small></p>
-        <p class="beat display" data-beat="2" data-fade data-reflect="shadow" data-shadow="0.9">Neither, alone<small>Together they make the core burn.</small></p>
+        <p class="beat display" data-beat="0" data-fade data-reflect="shadow" data-shadow="0">Not the person<small>The machine half scatters.</small></p>
+        <p class="beat display" data-beat="1" data-fade data-reflect="shadow" data-shadow="0">Not the model<small>The human half leaves.</small></p>
+        <p class="beat display" data-beat="2" data-fade data-reflect="shadow" data-shadow="0">Neither, alone<small>Together they make the core burn.</small></p>
       </div>
     </div>
   </section>
@@ -260,10 +261,11 @@ html[data-notext] main, html[data-notext] footer, html[data-notext] .readout, ht
       <div class="words" data-cool>
         <p>My name is Jacob Schopp, and I am still in high school. Crucible, which I co-founded with Charlie Rochford, is the name we build our ventures under.</p>
         <p>Crucible started with a car ride, when my dad put on the audiobook of Walter Isaacson’s biography of Elon Musk. Most of what I took from it concerned Elon himself, but part of the book covers PayPal and the people who worked there before eBay bought the company in 2002. After the sale, members of that group went on to found YouTube, LinkedIn, Yelp and Palantir, while Elon used much of his share of the money to fund SpaceX and later to invest in Tesla. People call them the PayPal Mafia. It is interesting that so much came out of a single company, and I do not believe it was luck, the members being exceptional people who found each other early and continued to back one another long after PayPal itself was gone. When Jeremy Stoppelman and Russel Simmons set out to start Yelp, it was their former PayPal colleague Max Levchin who put up the first million dollars.</p>
+        <p>That group came together mostly in their twenties.</p>
         <p class="pull">I want to know what happens when a group like it comes together earlier.</p>
         <details>
           <summary>Keep reading</summary>
-          <p>That group came together mostly in their twenties. I want to know what happens when a group like it comes together earlier. Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
+          <p>Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
           <p>The name comes from what a crucible actually is, a vessel built to hold metal as it melts, in which separate metals can be combined into an alloy. Steel, being mostly iron with a small amount of carbon added, is far stronger than the iron it is made from. That is the idea behind the name, and it applies to the way people work with one another as much as it does to the way people work with AI. The logo is two rings, half drawn as continuous lines and half as pixels, meeting at an orange core. The human half and the machine half. I believe that people who learn to work alongside AI now, while they are young, will be able to build things that only a few years ago would have required a far larger and more experienced team.</p>
           <p>For now, Crucible has one venture, Crucible Sites, which designs and builds websites for local businesses. Charlie and I build the sites together, and our first ones are already lined up. It is small compared to what I want Crucible to become, and I know that. However it is real work, and it is where we are learning to ship.</p>
           <p>Some people hear all of this and find it unrealistic for someone my age, perhaps even egotistical. I can understand why they react that way. But if I commit myself fully to this and have even a .1% chance of building something that changes the world, would that not be worth it? I intend to find out, and maybe, years from now, the people who build it with me will have a name too.</p>
@@ -352,7 +354,7 @@ html[data-notext] main, html[data-notext] footer, html[data-notext] .readout, ht
   <section class="thesis pin" id="thesis" data-scene="thesis">
     <div class="stage">
       <div class="th-copy">
-        <h2 class="display" data-reflect="1" data-shadow="0.6">An alloy is stronger than its metals</h2>
+        <h2 class="display" data-reflect="1">An alloy is stronger than its metals</h2>
         <p data-cool>Steel is harder than iron. Bronze is harder than copper.</p>
       </div>
     </div>
@@ -361,7 +363,7 @@ html[data-notext] main, html[data-notext] footer, html[data-notext] .readout, ht
 
 <!-- 6. Down on the far shore. -->
 <footer class="foot" id="foot" data-scene="foot">
-  <p class="foot-giant" aria-hidden="true" data-reflect="1" data-shadow="0.3">cruc<span class="i">ı</span>ble</p>
+  <p class="foot-giant" aria-hidden="true" data-reflect="1">cruc<span class="i">ı</span>ble</p>
   <div class="foot-low">
     <div>
       <p class="label">Write to us</p>
@@ -510,7 +512,7 @@ float shoreLine(float u, float base){ return base + 1.3 * sin(u * 0.19 + 1.0) + 
 float sandH(vec2 w){
   float v = w.y; float h = -6.0;
   if (v < 60.0) {
-    float sl = shoreLine(w.x, 3.6);
+    float sl = shoreLine(w.x, 5.1);
     float l = (sl - v) * 0.09;
     l = l < 0.55 ? l : 0.55 + (l - 0.55) * 0.3;
     l += 0.1 * ridges(w, 1.2) * smoothstep(0.0, 3.0, sl - v);
@@ -533,7 +535,7 @@ float sandH(vec2 w){
   }
   return h;
 }
-float shoreBase(float v){ return v < 60.0 ? 3.6 : (v > 272.0 ? 305.0 : 105.0); }
+float shoreBase(float v){ return v < 60.0 ? 5.1 : (v > 272.0 ? 305.0 : 105.0); }
 // The surf: a level that runs up the beach fast and drains slowly, its phase wandering along the shore.
 float surgeF(float u, float base){ return fract(uT / 5.2 + 0.7 * vn(vec2(u * 0.028, base)) + u * 0.004); }
 float surgeL(float f){ return 0.17 * (smoothstep(0.0, 0.2, f) - smoothstep(0.2, 1.0, f)); }
@@ -598,8 +600,10 @@ vec4 halo(vec3 d, float pa){
     float dr = length(ma) - r;
     float cov = smoothstep(1.3 + px, 1.3 - px, abs(dr)) * endx * av;
     float rr = clamp(dr / 1.3, -1.0, 1.0);
-    float lit = pow(0.5 - 0.5 * rr, 1.6);
-    vec3 c = BONE * (0.34 + 0.62 * lit) * mix(vec3(1.0), SUNC, 0.3) + QUENCH * 0.16 * pow(0.5 + 0.5 * rr, 4.0);
+    // a round bar of bone metal around a sun: the face toward the core lit hot, the far face in shadow, a starlit rim
+    float lit = pow(clamp(0.5 - 0.5 * rr, 0.0, 1.0), 1.7);
+    float rim = smoothstep(-0.45, -0.92, rr);
+    vec3 c = BONE * (0.1 + 0.78 * lit) * mix(vec3(1.0), SUNC, 0.45) + SUNC * 0.55 * rim + QUENCH * 0.3 * smoothstep(0.55, 0.95, rr);
     col = mix(col, c, cov); a = max(a, cov);
   }
   float sm = uHalo.x;
@@ -618,8 +622,8 @@ vec4 halo(vec3 d, float pa){
       float cov = smoothstep(1.6 + px, 1.6 - px, b);
       vec2 toC = normalize(-p);
       float f = clamp(dot(q, toC) / 1.6, -1.0, 1.0);
-      float lit = pow(0.5 + 0.5 * f, 1.6);
-      vec3 c = BONE * (0.36 + 0.62 * lit) * mix(vec3(1.0), SUNC, 0.3) + QUENCH * 0.16 * pow(0.5 - 0.5 * f, 4.0);
+      float lit = pow(clamp(0.5 + 0.5 * f, 0.0, 1.0), 1.7);
+      vec3 c = BONE * (0.1 + 0.78 * lit) * mix(vec3(1.0), SUNC, 0.45) + SUNC * 0.5 * smoothstep(0.5, 0.92, f) + QUENCH * 0.3 * smoothstep(-0.55, -0.95, f);
       col = mix(col, c, cov); a = max(a, cov);
     }
   }
@@ -714,11 +718,11 @@ vec3 monoShade(int i, vec3 Pw, vec3 lp, vec3 nl, vec3 rd, float pa, float tt){
       c = mix(c, EMBER * (1.1 + 0.6 * heat), core);
     }
   } else {
-    // still forging: blackbody, a drifting crust with glowing cracks, hottest where it leaves the sea
-    float n1 = fbm(lp.xy * vec2(1.6, 1.0) * 1.7 + vec2(float(i) * 7.0, -uT * 0.12), 5);
-    float cr = pow(1.0 - abs(2.0 * n1 - 1.0), 7.0);
-    float T = 0.34 + 0.42 * lavaLight + cr * 0.32 + heat * 0.14 - 0.05 * max(dot(nW, up), 0.0);
-    if (abs(nl.y) > 0.5) T -= 0.06;
+    // still forging: one seamless glow, no crust; hottest where it leaves the sea, a slow breath of heat
+    float hf = (lp.y + E.y) / (2.0 * E.y);
+    float br = 0.025 * sin(uT * 0.9 + float(i) * 2.0) + 0.03 * (vn(vec2(lp.x * 0.6 + float(i) * 5.0, lp.y * 0.35 - uT * 0.25)) - 0.5);
+    float T = 0.6 + 0.3 * lavaLight - 0.1 * hf + br + heat * 0.12;
+    if (abs(nl.y) > 0.5) T -= 0.04;
     c = bb(clamp(T, 0.0, 0.97)) * 1.05;
     vec3 r = reflect(rd, nW); c += SUNC * pow(max(dot(r, S), 0.0), 40.0) * 0.15;
   }
@@ -784,32 +788,52 @@ vec3 lava(vec3 P, vec3 rd, float t, vec2 w, vec3 nUp, float pa, vec2 css, float 
   g += ring(w, uSunG.xy, 0.8, 0.12, 1.7, 14.0, fw) + ring(w, uSunG.xy, 1.9, 0.04, 2.8, 9.0, fw);
   float heat = 0.0;
   if (uPay.w > 0.0) {
-    // PayPal: one pool, one wave out of it; where the wave arrives, a casting ignites and keeps rippling.
+    // PayPal: one pool; the metal leaves it as rivers that curve and branch, each ending in a casting that ignites
+    // when the metal arrives and keeps rippling. Revealed by the wave out of PayPal; no spokes, no ring round it.
     vec2 c = uPay.xy; float p = uPay.z; float dc = length(w - c) + 1e-3;
     float front = p * 24.0;
     float on = smoothstep(0.0, 0.05, p);
     float aa = fw * 1.5 + 0.02;
-    float fr = exp(-pow((dc - front) / 0.5, 2.0)) * on * (1.0 - smoothstep(0.75, 1.0, p)) * smoothstep(1.0, 3.0, dc);
-    g += vec3(0.1 * fr, -0.4 * (dc - front) * fr * (w - c) / dc);
-    heat += 0.3 * fr;
-    float rc = 1.25;
-    heat += on * (0.62 * smoothstep(rc + aa, rc - aa, dc) + 0.16 * smoothstep(rc + 0.6, rc, dc) + 0.12 * exp(-dc * dc / 6.0));
-    heat += on * 0.3 * smoothstep(0.86, 1.0, sin(dc * 1.4 - uT * 2.2)) * exp(-(dc - rc) / 4.5) * step(rc, dc) * smoothstep(front + 0.5, front - 1.5, dc);
-    g += ring(w, c, 1.4, 0.05 * on, 2.2, 7.0, fw);
+    float fr = exp(-pow((dc - front) / 0.6, 2.0)) * on * (1.0 - smoothstep(0.75, 1.0, p)) * smoothstep(1.0, 3.0, dc);
+    g += vec3(0.08 * fr, -0.3 * (dc - front) * fr * (w - c) / dc);
+    float rc = 1.25 + 0.18 * (vn(vec2(atan(w.y - c.y, w.x - c.x) * 2.0, 1.0)) - 0.5);
+    heat += on * (0.62 * smoothstep(rc + aa, rc - aa, dc) + 0.12 * smoothstep(rc + 0.6, rc, dc));
+    g += ring(w, c, 1.4, 0.04 * on, 2.2, 6.0, fw);
+    float shown = smoothstep(front + 0.3, front - 0.8, dc);
+    float riv = 0.0;
+    for (int gi = 0; gi < 3; gi++){
+      vec2 sa = uPayS[gi * 2].xy, sb = uPayS[gi * 2 + 1].xy;
+      vec2 J = c + ((sa + sb) * 0.5 - c) * 0.46;
+      // the trunk to the fork
+      vec2 ab = J - c; float L = length(ab); vec2 dir = ab / L; vec2 nr = vec2(-dir.y, dir.x);
+      float tt = dot(w - c, dir) / L; float lat = dot(w - c, nr);
+      float ofs = (1.6 * sin(PI * clamp(tt, 0.0, 1.0)) * (float(gi) - 1.0 + 0.5)) + 0.35 * sin(tt * L * 0.7 + float(gi) * 2.0) * clamp(tt, 0.0, 1.0);
+      float flow = vn(vec2(tt * L * 1.1 - uT * 1.9, float(gi) * 3.0));
+      float wid = mix(0.42, 0.26, clamp(tt, 0.0, 1.0)) * (0.85 + 0.3 * flow) + aa * 0.5;
+      float inT = step(0.0, tt) * step(tt, 1.02);
+      riv = max(riv, inT * smoothstep(wid + aa, wid - aa, abs(lat - ofs)) * (0.6 + 0.4 * flow));
+      vec2 Jc = J + nr * (1.6 * sin(PI * 1.0) * (float(gi) - 0.5));
+      for (int k = 0; k < 2; k++){
+        vec2 s = k == 0 ? sa : sb;
+        vec2 ab2 = s - J; float L2 = length(ab2); vec2 d2 = ab2 / L2; vec2 n2 = vec2(-d2.y, d2.x);
+        float t2 = dot(w - J, d2) / L2; float l2 = dot(w - J, n2);
+        float side = k == 0 ? 1.0 : -1.0;
+        float o2 = side * 1.1 * sin(PI * clamp(t2, 0.0, 1.0)) + 0.25 * sin(t2 * L2 * 0.9 + float(gi * 2 + k)) * clamp(t2, 0.0, 1.0);
+        float f2 = vn(vec2(t2 * L2 * 1.2 - uT * 2.1, float(gi * 2 + k) * 5.0));
+        float w2 = mix(0.26, 0.13, clamp(t2, 0.0, 1.0)) * (0.85 + 0.3 * f2) + aa * 0.5;
+        float in2 = step(-0.02, t2) * step(t2, 1.0);
+        riv = max(riv, in2 * smoothstep(w2 + aa, w2 - aa, abs(l2 - o2)) * (0.55 + 0.45 * f2));
+      }
+    }
+    heat += 0.42 * riv * shown * uPay.w;
     for (int i = 0; i < 6; i++){
       vec2 s = uPayS[i].xy; float act = smoothstep(uPayS[i].z, uPayS[i].z + 0.05, p);
-      float ds = length(w - s) + 1e-3; float rp = 0.8 * (0.6 + 0.4 * act);
-      heat += act * (0.6 * smoothstep(rp + aa, rp - aa, ds) + 0.14 * smoothstep(rp + 0.5, rp, ds) + 0.08 * exp(-ds * ds / 4.0));
+      float ds = length(w - s) + 1e-3;
+      float rp = (0.75 + 0.15 * (vn(vec2(atan(w.y - s.y, w.x - s.x) * 1.5, float(i) * 4.0)) - 0.5)) * (0.6 + 0.4 * act);
+      heat += act * (0.6 * smoothstep(rp + aa, rp - aa, ds) + 0.12 * smoothstep(rp + 0.45, rp, ds));
       float grow = clamp((p - uPayS[i].z) * 40.0, 0.0, 30.0);
-      heat += act * 0.26 * smoothstep(0.86, 1.0, sin(ds * 1.6 - uT * 2.6)) * exp(-(ds - rp) / 3.5) * step(rp, ds) * smoothstep(grow, grow - 2.0, ds);
+      heat += act * 0.2 * smoothstep(0.88, 1.0, sin(ds * 1.6 - uT * 2.6)) * exp(-(ds - rp) / 3.0) * step(rp + 0.3, ds) * smoothstep(grow, grow - 2.0, ds);
       g += ring(w, s, 1.6, 0.04 * act, 2.6, 5.0, fw);
-      // the channel the metal ran along: a thin current, still flowing
-      vec2 ab = s - c; float L = length(ab);
-      float hh = clamp(dot(w - c, ab) / (L * L), 0.0, 1.0); float dl = length(w - c - ab * hh);
-      float reach = clamp(front / L, 0.0, 1.0);
-      float flow = vn(vec2(hh * L * 1.2 - uT * 2.0, float(i) * 3.0));
-      float wid = 0.1 + 0.05 * flow + aa * 0.5;
-      heat += 0.36 * smoothstep(wid + aa, wid - aa * 0.5, dl) * smoothstep(reach + 0.002, reach - 0.03, hh) * (0.5 + 0.5 * flow) * step(rc / L, hh) * step(hh, 1.0 - rp / L) * uPay.w;
     }
   }
   if (uMonOn > 0.0) {
@@ -1092,27 +1116,30 @@ const at = (s, f) => { const x = SEC[s]; return x.top + f * Math.max(x.h - H, 0)
    sz size (× the hero's), moon: az/el (deg), halo visibility. The journey: shore → open sea → the PayPal wave → over a
    sand island → the slabs → up above the limb → down on the far shore. */
 function keys() {
-  const D = { dm: 0, saz: 0, sel: 0, calm: 0, sz: 1, halo: 1, yaw: 0 };
+  const D = { dm: 0, saz: 0, sel: 0, calm: 0, sz: 1, halo: 1, yaw: 0, float: 0 };
+  const BEHIND = { dm: 1, saz: 168, sel: 8, halo: 0 }; // the sun behind the camera: type has the sky to itself
   return [
-    { y: 0,                       ph: { pitch: -15 }, s: 0,     h: 1.55, pitch: -7.5, dv: 24,  u: 0,   hy: 2.5,  maz: -27, mel: 21 },
-    { y: at('hero', 0.82),        ph: { pitch: -14 }, s: 2.0,   h: 1.7,  pitch: -7.0, dv: 24,  u: 0,   hy: 2.6,  maz: -26, mel: 22 },
-    { y: at('story', 0),          s: 26,    h: 3.4,  pitch: -16,  yaw: 6,   dv: 40,  u: -10, hy: 7.5, sz: 0.85, maz: -30, mel: 24, halo: 0.9, calm: 0.3 },
-    { y: at('story', 1),          s: 50,    h: 3.8,  pitch: -18,  yaw: 10,  dv: 46,  u: -18, hy: 10,  sz: 0.8, maz: -20, mel: 26, halo: 0.85, calm: 0.3 },
-    { y: at('paypal', 0.05),      s: 64,    h: 9,    pitch: -38,  dv: 60,  u: 26,  hy: 26,  sz: 0.7, maz: -38, mel: 22, halo: 0.8, calm: 1 },
-    { y: at('paypal', 0.95),      s: 67,    h: 10,   pitch: -41,  dv: 64,  u: 30,  hy: 30,  sz: 0.7, maz: -36, mel: 24, halo: 0.8, calm: 1 },
-    { y: at('story2', 0),         s: 92,    h: 4.4,  pitch: -10,  yaw: -8,  dv: 50,  u: 34,  hy: 14,  sz: 0.8, maz: -50, mel: 16, halo: 0.85, calm: 0.3 },
-    { y: at('story2', 1),         s: 116,   h: 4.0,  pitch: -9,   yaw: -12, dv: 44,  u: 30,  hy: 9,   sz: 0.85, maz: -56, mel: 14, halo: 0.9, calm: 0.3 },
-    { y: at('ventures', 0.02),    ph: { pitch: -11, h: 3.2 }, s: 140,   h: 2.3,  pitch: -3,   dv: 50,  u: 3,   hy: 5.5, sz: 0.85, maz: 40, mel: 22, calm: 0.45 },
-    { y: at('ventures', 0.98),    ph: { pitch: -11, h: 3.4 }, s: 143,   h: 2.5,  pitch: -3,   dv: 50,  u: 3,   hy: 6.0, sz: 0.85, maz: 42, mel: 23, calm: 0.45 },
-    { y: at('thesis', 0.02),      s: 172,   h: 8,    pitch: -6,   dv: 70,  u: 0,   hy: 3,   maz: -34, mel: 28, calm: 0.2 },
-    // high above the limb: the planet's curve, the sun rising off its edge
-    { y: at('thesis', 0.9),       s: 196,   h: 58,   pitch: -34,  dv: 70,  u: 0,   hy: 3,   dm: 1, saz: 0, sel: -40.5, sz: 1.05, ph: { sz: 0.7, sel: -42 }, maz: -30, mel: -12, calm: 0.2 },
+    // hero: the mark floats wholly above the sea (float: its lowest square clears the horizon), reflected below
+    { y: 0,                       ph: { pitch: -10, sz: 0.82 }, s: 0,     h: 1.55, pitch: -8.5, dv: 24, u: 0, hy: 2.5, float: 1, maz: -27, mel: 21 },
+    { y: at('hero', 0.97),        ph: { pitch: -9.8, sz: 0.82 }, s: 1.0,   h: 1.62, pitch: -8.3, dv: 24, u: 0, hy: 2.6, float: 1, maz: -26, mel: 22 },
+    { y: at('story', 0),          s: 26,    h: 3.4,  pitch: -16,  yaw: 6,   dv: 40,  u: -10, hy: 7.5, ...BEHIND, maz: -30, mel: 24, calm: 0.3 },
+    { y: at('story', 1),          s: 50,    h: 3.8,  pitch: -18,  yaw: 10,  dv: 46,  u: -18, hy: 10,  ...BEHIND, maz: -20, mel: 26, calm: 0.3 },
+    { y: at('paypal', 0.05),      s: 64,    h: 9,    pitch: -38,  dv: 60,  u: 26,  hy: 26,  ...BEHIND, maz: -38, mel: 22, calm: 1 },
+    { y: at('paypal', 0.95),      s: 67,    h: 10,   pitch: -41,  dv: 64,  u: 30,  hy: 30,  ...BEHIND, maz: -36, mel: 24, calm: 1 },
+    { y: at('story2', 0),         s: 92,    h: 4.4,  pitch: -10,  yaw: -8,  dv: 50,  u: 34,  hy: 14,  ...BEHIND, maz: -50, mel: 16, calm: 0.3 },
+    { y: at('story2', 1),         s: 116,   h: 4.0,  pitch: -9,   yaw: -12, dv: 44,  u: 30,  hy: 9,   ...BEHIND, maz: -56, mel: 14, calm: 0.3 },
+    // ventures: the sun low behind the slabs, under the heading's line
+    { y: at('ventures', 0.02),    ph: { pitch: -9, h: 3.0, s: 145, hy: 3.6, sz: 0.62 }, s: 140, h: 2.3, pitch: -3, dv: 50, u: 3, hy: 4.6, sz: 0.75, maz: 40, mel: 22, calm: 0.45 },
+    { y: at('ventures', 0.98),    ph: { pitch: -9, h: 3.1, s: 148, hy: 3.8, sz: 0.62 }, s: 143, h: 2.5, pitch: -3, dv: 50, u: 3, hy: 5.0, sz: 0.75, maz: 42, mel: 23, calm: 0.45 },
+    // thesis: the sun off to the right of the type, then rising off the limb below it
+    { y: at('thesis', 0.02),      ph: { u: 0, hy: -1, sz: 0.6 }, s: 172, h: 8, pitch: -6, dv: 70, u: 40, hy: 6, sz: 0.85, maz: -34, mel: 28, calm: 0.2 },
+    { y: at('thesis', 0.9),       ph: { saz: 0, sel: -43.2, sz: 0.55 }, s: 196, h: 58, pitch: -34, dv: 70, u: 0, hy: 3, dm: 1, saz: 24, sel: -41.6, sz: 0.85, maz: -30, mel: -12, calm: 0.2 },
     { y: at('foot', 0) - H * 0.6, s: 290,   h: 7,    pitch: -10,  dv: 40,  u: 0,   hy: 2,   sz: 0.8, maz: 40, mel: 14, halo: 0, calm: 0 },
     { y: at('foot', 0),           s: 301.6, h: 1.6,  pitch: -9,   dv: 30,  u: 0,   hy: 0.75, sz: 0.75, maz: 36, mel: 16, halo: 0, calm: 0 },
   ].map((k) => ({ ...D, ...k, ...(narrow && k.ph ? k.ph : {}) }));
 }
 let KEYS = [];
-const KF = ['s', 'h', 'pitch', 'yaw', 'dv', 'u', 'hy', 'sz', 'maz', 'mel', 'halo', 'dm', 'saz', 'sel', 'calm'];
+const KF = ['s', 'h', 'pitch', 'yaw', 'dv', 'u', 'hy', 'sz', 'maz', 'mel', 'halo', 'dm', 'saz', 'sel', 'calm', 'float'];
 function journey(y) {
   const K = KEYS; if (!K.length) return K[0];
   if (y <= K[0].y) return K[0];
@@ -1220,7 +1247,7 @@ function ppLayout() {
   Object.assign(cam, camFrom(k));
   const spots = narrow
     ? { c: [0.5, 0.62], p: [[0.2, 0.5], [0.24, 0.8], [0.56, 0.9], [0.84, 0.74], [0.8, 0.5], [0.52, 0.44]] }
-    : { c: [0.6, 0.56], p: [[0.37, 0.64], [0.46, 0.83], [0.74, 0.82], [0.88, 0.6], [0.84, 0.36], [0.62, 0.3]] };
+    : { c: [0.6, 0.56], p: [[0.37, 0.62], [0.47, 0.78], [0.73, 0.78], [0.88, 0.58], [0.84, 0.36], [0.62, 0.3]] };
   const toSea = ([fx, fy]) => { const h = hitSea(rayAt(fx * W, fy * H)) || { u: 0, v: k.s + 10 }; return { u: h.u, v: h.v }; };
   const c = toSea(spots.c); PP.cu = c.u; PP.cv = c.v;
   PP.pts = spots.p.map((q) => ({ ...toSea(q), d: 0 }));
@@ -1255,7 +1282,7 @@ function frameState(dt) {
   heroC.style.opacity = 1 - sstep(0.04, 0.12, hp);
   heroC.style.transform = `translateY(${-sstep(0.02, 0.14, hp) * 6}vh)`;
   heroC.style.visibility = hp > 0.13 ? 'hidden' : '';
-  const bw = [[0.16, 0.22, 0.36, 0.42], [0.42, 0.48, 0.6, 0.66], [0.66, 0.72, 2, 2]];
+  const bw = [[0.16, 0.22, 0.36, 0.42], [0.42, 0.48, 0.6, 0.66], [0.66, 0.72, 0.93, 0.99]];
   beats.forEach((b, i) => {
     const [a0, a1, b0, b1] = bw[i]; const o = sstep(a0, a1, hp) * (1 - sstep(b0, b1, hp));
     b.style.opacity = o; b.style.transform = `translateY(${(1 - sstep(a0, a1, hp)) * 3 - sstep(b0, b1, hp) * 3}vh)`;
@@ -1270,11 +1297,17 @@ function render(dt) {
   const k = J;
 
   // the sun: placed on the planet's surface frame (ahead dv, aside u, height hy), so the ripples sit right under it
-  const sunSz = Math.min(W * 0.045, H * 0.038) * k.sz * (narrow ? 1.15 : 1);
+  const sunSz = Math.min(W * 0.045, H * 0.028) * k.sz * (narrow ? 1.15 : 1);
   const sw = world(k.u, cam.s + k.dv, k.hy, cam.s);
   const sd = V.sub(sw, [0, cam.h, 0]); const sdist = Math.hypot(...sd);
-  const saz = (k.saz * Math.PI) / 180, sel0 = (k.sel * Math.PI) / 180;
-  const sdir = V.norm(V.add(V.mul(V.norm(sd), 1 - k.dm), V.mul([Math.sin(saz) * Math.cos(sel0), Math.sin(sel0), -Math.cos(saz) * Math.cos(sel0)], k.dm)));
+  let saz = (k.saz * Math.PI) / 180, sel0 = (k.sel * Math.PI) / 180, dm = k.dm;
+  if (k.float > 0) {
+    // the halo reaches 20/3.6 sun radii below the core; keep all of it (plus a gap) above the sea's horizon
+    const dip = Math.acos(R / (R + cam.h));
+    const az0 = Math.atan2(sd[0], -sd[2]);
+    saz = mix(saz, az0, k.float); sel0 = mix(sel0, -dip + Math.atan((sunSz * (20 / 3.6) * 1.06 + 12) / F), k.float); dm = Math.max(dm, k.float);
+  }
+  const sdir = V.norm(V.add(V.mul(V.norm(sd), 1 - dm), V.mul([Math.sin(saz) * Math.cos(sel0), Math.sin(sel0), -Math.cos(saz) * Math.cos(sel0)], dm)));
   const sAng = Math.atan(sunSz / F);
   const maz = (k.maz * Math.PI) / 180, mel = (k.mel * Math.PI) / 180;
   const mdir = [Math.sin(maz) * Math.cos(mel), Math.sin(mel), -Math.cos(maz) * Math.cos(mel)];
