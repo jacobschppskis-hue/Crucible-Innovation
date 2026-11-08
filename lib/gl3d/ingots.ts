@@ -3,7 +3,7 @@
 // a relief map drawn here (white = cut in): Crucible Sites carries the Split Ring and its name, the bars still forging
 // carry their names alone. `ingot(kind)` returns a mesh-less root plus
 // the bar; `addIngot` (index.ts) parents the bar to the root: move/rotate the root to float and turn it.
-import { BAR, goldBar } from './geometry';
+import { BAR, goldBar, type Mesh } from './geometry';
 import { reliefCanvas } from './materials';
 import { RING, arcOutline, cells } from '../splitRing';
 import type { ObjectInit } from './core';
@@ -27,13 +27,23 @@ export async function loadIngotFont() {
 /** The root object is `root` (no mesh); `parts[0]` is the bar, parented to it by `addIngot`. */
 export type IngotSpec = { root: ObjectInit; parts: ObjectInit[] };
 
+/** The liquid's surface under the bar: a quad in the plane of its foot, `m` units past it all round (the light it casts). */
+function pool(m = 34): Mesh {
+  const a = BAR.L / 2 + m, b = BAR.W / 2 + m, z = -BAR.H / 2;
+  return {
+    p: new Float32Array([-a, -b, z, a, -b, z, a, b, z, -a, b, z]),
+    n: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1]),
+    i: new Uint16Array([0, 1, 2, 0, 2, 3]),
+  };
+}
+
 // The stamp covers the flat of the top face (84.8 x 30.8 at BAR's size); 2048 px across.
 const SW = 82, SH = 29, MW = 2048, MH = Math.round((MW * SH) / SW);
 const PX = MW / SW; // canvas px per object unit
 
 /** The Crucible Split Ring (lib/splitRing.ts), `size` units tall, centred at (x, y) units from the stamp's centre (y up). */
 function ring(c: CanvasRenderingContext2D, x: number, y: number, size: number) {
-  const k = (size * PX) / 57; // the mark's box is 3.5..60.5 of its 64 units
+  const k = (size * PX) / 57.6; // the mark's box is 3.2..60.8 of its 64 units
   c.save();
   c.translate(MW / 2 + x * PX, MH / 2 - y * PX);
   c.scale(k, k);
@@ -58,6 +68,17 @@ function name(c: CanvasRenderingContext2D, s: string, cap: number) {
   c.fillText(s, MW / 2, MH / 2 + (cap / 2) * PX);
 }
 
+function soften(cv: HTMLCanvasElement | OffscreenCanvas, px: number) {
+  const c = cv.getContext('2d') as CanvasRenderingContext2D | null;
+  if (!c || !('filter' in c)) return;
+  const copy = typeof document === 'undefined' ? new OffscreenCanvas(cv.width, cv.height) : document.createElement('canvas');
+  copy.width = cv.width; copy.height = cv.height;
+  (copy.getContext('2d') as CanvasRenderingContext2D).drawImage(cv as HTMLCanvasElement, 0, 0);
+  c.filter = `blur(${px}px)`;
+  c.drawImage(copy as HTMLCanvasElement, 0, 0);
+  c.filter = 'none';
+}
+
 export function ingot(kind: IngotKind): IngotSpec {
   const root: ObjectInit = {};
   const stamp = reliefCanvas(MW, MH, (c) => {
@@ -69,12 +90,19 @@ export function ingot(kind: IngotKind): IngotSpec {
       name(c, kind === 'verge' ? 'Verge' : 'Trellis', 12.5);
     }
   });
+  // A cast stamp has a soft lip, not a pixel step: a slight blur so the cut's walls shade smoothly (no stair-stepped
+  // highlight along the edges at any size). Where canvas filters are missing it stays sharp.
+  soften(stamp, 1.6);
   const relief = { canvas: stamp, x: 0, y: 0, w: SW, h: SH };
-  const bar: ObjectInit =
-    kind === 'sites'
-      ? // Set and cooled: bone metal, a faint warm temper (straw to bronze) along the top edges, the stamp cut in darker.
-        { mesh: goldBar(), material: 'bar', tone: 0.2, temper: [0, 0.45], grain: 0.5, seed: 2, relief: { ...relief, strength: -2.4 } }
-      : // Still glowing all over; the stamp a little cooler.
-        { mesh: goldBar(), material: 'ingot', grain: 0.45, seed: kind === 'verge' ? 3 : 9, relief: { ...relief, strength: -2.8 } };
-  return { root, parts: [bar] };
+  const hot = kind !== 'sites';
+  const mesh = goldBar();
+  const bar: ObjectInit = hot
+    ? // Still molten all over: one seamless glow, the name cut in a little cooler.
+      { mesh, material: 'ingot', grain: 0.45, seed: kind === 'verge' ? 3 : 9, relief: { ...relief, strength: -2.6 } }
+    : // Set and cooled: bone metal with a faint warm temper along the top edges and the last of its heat in the stamp.
+      { mesh, material: 'bar', tone: 0.2, temp: 1, temper: [0, 0.45], grain: 0.5, seed: 2, relief: { ...relief, strength: -2.4 } };
+  // Its reflection in the liquid (the same bar mirrored through the surface at its foot) and the light it casts there.
+  const mirror: ObjectInit = { ...bar, relief: { ...relief, strength: 0 }, scale: [1, 1, -1], position: [0, 0, -BAR.H], reflect: hot ? 0.55 : 0.22 };
+  const glow: ObjectInit = { mesh: pool(), material: 'pool', temp: hot ? 1 : 0.06, seed: bar.seed };
+  return { root, parts: [mirror, glow, bar] };
 }

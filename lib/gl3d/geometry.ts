@@ -180,20 +180,20 @@ export function recentre(m: Mesh): Vec3 {
 export type Piece = { id: string; kind: 'arc' | 'square' | 'core'; mesh: Mesh; center: Vec3; ring?: 0 | 1 };
 
 /**
- * The mark as separate pieces: 2 arcs, 14 upright squares, the core. Units are mark units (64 across), origin at the
+ * The mark as separate pieces: 2 arcs, 11 upright squares, the core. Units are mark units (64 across), origin at the
  * ring centre, y up, front toward +z. Each mesh is centred on its own bounding box; `center` is that rest position.
  * Squares sit on their circles (lib/splitRing.ts `cells()`), ring 0 then 1, top → bottom.
  */
-export function logoPieces(depth = 2.4, bev = 0.4): Piece[] {
+export function logoPieces(depth = 2.4, bev = 0.55, seg = 4): Piece[] {
   const { c, px, stroke, rings, core } = RING;
   const out: Piece[] = [];
   rings.forEach(({ r }, ri) => {
-    const mesh = extrude(arcChains(r, stroke), depth, bev);
+    const mesh = extrude(arcChains(r, stroke), depth, bev, seg);
     out.push({ id: `arc${ri}`, kind: 'arc', mesh, center: recentre(mesh), ring: ri as 0 | 1 });
   });
   const k = [0, 0];
   for (const q of cells()) {
-    const mesh = slab(px / 2, px / 2, depth, bev);
+    const mesh = slab(px / 2, px / 2, depth, bev, seg);
     out.push({ id: `sq${q.ring}-${k[q.ring]++}`, kind: 'square', mesh, center: [q.x - c, c - q.y, 0], ring: q.ring });
   }
   out.push({ id: 'core', kind: 'core', mesh: sphere(core), center: [0, 0, 0] });

@@ -1,4 +1,4 @@
-// The home logo, live: 2 arcs, 14 upright squares and the core, each its own object on a transparent canvas, all on the
+// The home logo, live: 2 arcs, 11 upright squares and the core, each its own object on a transparent canvas, all on the
 // mark's circles (lib/splitRing.ts).
 // Every piece's pose comes from the main thread with each tick of the one clock (logoScene.ts: the scroll story's
 // offsets plus its floating on the page's wave grid, the cursor's push included); this file applies exactly that pose,
@@ -20,7 +20,7 @@ export const LOGO_SPAN = 2.4;
 const MARK = 64;
 
 /**
- * Per piece (logoPieces() order: arc 0, arc 1, the 14 squares, the core), POSE_STRIDE numbers in mark units (y up)
+ * Per piece (logoPieces() order: arc 0, arc 1, the 11 squares, the core), POSE_STRIDE numbers in mark units (y up)
  * and radians: the story's offset [x, y, z, rx, ry, rz, scale], then the floating [x, y, z, rx, ry, rz]. The floating
  * is scaled by how much of it shows (0 while the metal is poured, 1 once released).
  */
@@ -154,6 +154,11 @@ export function createLogoRunner(
       const cy = rect.top + rect.height / 2;
       for (const r of tick.ripples) opts.emit(cx + r.x * px, cy - r.y * px + env.scrollY, r.amp, r.size, t);
     }
+    // The core lights the bone metal around it (wherever the story or the floating has taken it); its skin drifts slowly.
+    const core = bodies[bodies.length - 1].obj;
+    const cs = typeof core.scale === 'number' ? core.scale : core.scale[0];
+    stage.light = [core.position[0], core.position[1], core.position[2], core.visible ? cs : 0];
+    for (const b of bodies) b.obj.time = t;
     stage.render();
     if (!shown) {
       shown = true;

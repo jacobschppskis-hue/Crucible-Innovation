@@ -8,8 +8,8 @@ const IRON = 1811; // iron melts at 1811 K
 
 /**
  * Scroll heats the section from room temperature (293 K) to iron's melting point (1811 K): a furnace glow rises from
- * the floor (CSS), and on the rich tier WebGL flames (lib/gl/molten.ts) come up with it: they rise at one calm pace at
- * every temperature; only their width, height and brightness grow with the heat.
+ * the floor (CSS), and on the rich tier a WebGL surface of iron (lib/gl/molten.ts) goes from glowing cracks to flowing
+ * molten metal.
  */
 export function Thesis() {
   const ref = useRef<HTMLElement>(null);
@@ -23,10 +23,8 @@ export function Thesis() {
     const el = ref.current!;
     let shown = -1;
     const off = trackScroll(el, 'pin', (p) => {
-      // Heat climbs at a near-steady rate through most of the pin (half linear, half smoothstep: soft at both ends,
-      // never more than 1.25x the average rate), so the fire comes up evenly rather than rushing through the middle.
-      const s = seg(p, 0.04, 0.84);
-      const k = 0.5 * s + 0.5 * s * s * (3 - 2 * s);
+      // The Nov 2 timing: the heat eases in and out between 8% and 78% of the pin.
+      const k = ease.inOut(seg(p, 0.08, 0.78));
       heat.current = k;
       el.style.setProperty('--k', k.toFixed(4));
       // One line fully leaves before the next arrives.

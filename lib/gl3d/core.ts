@@ -32,6 +32,11 @@ export type ObjectInit = {
   /** Hot metal: this much cooler where the surface turns away from the eye (0..1; never below a glowing orange, so no
    * crust), so a stream or a drop reads as white at its heart and orange at its edges. */
   edge?: number;
+  /** Drawn as the object's reflection in the liquid (its mesh mirrored under it): blended, this opacity at the surface,
+   *  fading with depth. The 'pool' material (light the object casts on the liquid) is blended too. */
+  reflect?: number;
+  /** 'pool': a ripple from a poke, [x, y (object units), age (s), strength]. */
+  poke?: [number, number, number, number];
   parent?: Obj;
   visible?: boolean;
 };
@@ -55,6 +60,8 @@ export type Stage = {
   /** Render scale 0.3..1 (× devicePixelRatio): lower it on slow frames. */
   quality: number;
   exposure: number;
+  /** A point light in world units [x, y, z, strength] (the logo's glowing core lighting the bone metal); strength 0 = none. */
+  light?: [number, number, number, number];
   add(o: ObjectInit): Obj;
   remove(o: Obj): void;
   /** Re-read the canvas' CSS size (call on resize; also done lazily in render). */
@@ -119,7 +126,7 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
   if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
   gl.useProgram(prog);
   const U: Record<string, WebGLUniformLocation | null> = {};
-  for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uTime', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy', 'uEdge']) U[n] = gl.getUniformLocation(prog, n);
+  for (const n of ['uM', 'uVP', 'uMat', 'uTone', 'uTemp', 'uGlow', 'uSeed', 'uGrain', 'uExp', 'uRel', 'uTemper', 'uEye', 'uTime', 'uRelP', 'uNM', 'uRelT', 'uClip', 'uTy', 'uEdge', 'uCore', 'uRefl', 'uVp', 'uPoke']) U[n] = gl.getUniformLocation(prog, n);
 
   const meshes = new WeakMap<Mesh, { vao: WebGLVertexArrayObject; bufs: WebGLBuffer[]; n: number; type: number }>();
   const texes = new WeakMap<object, WebGLTexture>();
@@ -236,7 +243,10 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
       gl.uniformMatrix4fv(U.uVP, false, mul(P, V));
       gl.uniform3f(U.uEye, eye[0], eye[1], eye[2]);
       gl.uniform1f(U.uExp, st.exposure);
+      gl.uniform4f(U.uCore, ...(st.light ?? [0, 0, 0, 0]));
       gl.uniform1i(U.uRelT, 0);
+      gl.uniform2f(U.uVp, tw, th);
+      gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
       for (const o of objs) {
         if (!o.mesh || !o.visible) continue;
         let hidden = false;
@@ -249,6 +259,12 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
         for (let c = 0; c < 3; c++) { const l = Math.hypot(M[c * 4], M[c * 4 + 1], M[c * 4 + 2]) || 1; nm.push(M[c * 4] / l, M[c * 4 + 1] / l, M[c * 4 + 2] / l); }
         gl.uniformMatrix3fv(U.uNM, false, nm);
         gl.uniform1i(U.uMat, MATERIALS[o.material]);
+        // reflections and pools: blended (premultiplied), drawn before the bar and never written to depth
+        const blend = o.material === 'pool' || !!o.reflect;
+        if (blend) gl.enable(gl.BLEND); else gl.disable(gl.BLEND);
+        gl.depthMask(!blend);
+        gl.uniform1f(U.uRefl, o.reflect ?? 0);
+        gl.uniform4f(U.uPoke, o.poke?.[0] ?? 0, o.poke?.[1] ?? 0, o.poke?.[2] ?? 99, o.poke?.[3] ?? 0);
         gl.uniform4f(U.uClip, o.clip?.[0] ?? 0, o.clip?.[1] ?? 1, o.clip?.[2] ?? 0, o.clip?.[3] ?? 1e6); gl.uniform1f(U.uTy, o.tgrad ?? 0); gl.uniform1f(U.uEdge, o.edge ?? 0);
         gl.uniform1f(U.uTone, o.tone ?? 0); gl.uniform1f(U.uTemp, o.temp); gl.uniform1f(U.uGlow, o.glow); gl.uniform1f(U.uSeed, o.seed); gl.uniform1f(U.uGrain, o.grain);
         const r = o.relief, t = o.temper;
@@ -261,6 +277,8 @@ export function createStage(canvas: Cv, opts: StageOptions = {}): Stage {
         gl.bindVertexArray(g.vao);
         gl.drawElements(gl.TRIANGLES, g.n, g.type, 0);
       }
+      gl.disable(gl.BLEND);
+      gl.depthMask(true);
       if (fixed) {
         // resolve the samples at the target's size, then scale it up onto the canvas
         let src = rt.fbo;
