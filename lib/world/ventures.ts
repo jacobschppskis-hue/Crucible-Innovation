@@ -63,7 +63,7 @@ export function pressVenture(i: number) {
 
 /** The rise of monolith i for the section's pin progress p: one after another over the first ~65% of the pin. */
 export const riseAt = (p: number, i: number) => {
-  const c = clamp((p - (0.005 + i * 0.12)) / 0.3);
+  const c = clamp((p - (0.005 + i * 0.1)) / 0.25);
   return c * c * (3 - 2 * c);
 };
 
@@ -115,7 +115,7 @@ function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
   // they sink back into the sea over the end of their own pin, so the thesis opens on an empty sea (continuous,
   // reversible; the words leave with them)
-  const th = clamp((p - 0.84) / 0.16);
+  const th = clamp((p - 0.72) / 0.2);
   const sinkK = 1 - th * th * (3 - 2 * th);
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;

@@ -81,7 +81,8 @@
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
+  font-weight: 600;
   color: var(--bone);
 }
 .wv-status i {
@@ -89,9 +90,6 @@
   height: 0.45rem;
   border-radius: 50%;
   background: var(--bone-dim);
-}
-.wv-item[data-kind='live'] .wv-status {
-  color: var(--ember);
 }
 .wv-item[data-kind='live'] .wv-status i {
   background: var(--ember);
