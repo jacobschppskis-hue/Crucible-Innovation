@@ -76,3 +76,12 @@ technically) in case a real-looking version is wanted later: it would need the l
 anisotropic (vertical) blur proportional to the wave slope variance, which is the lava module's information.
 
 Wide screens now read at 20 px body / 28 px lead / 44rem measure (the coordinator found 18 px small at 1440).
+
+## 13:45 UTC (after a worker restart)
+- QA P1 fixed: without JS the Thesis lines stack at full opacity (pin + crossfade only under html[data-world]);
+  `lab/story/nojs-check.mjs` verifies it on iPhone 15 and 1440.
+- Thesis contrast by composition: `thesis` measures the bottom of the pinned type every frame (`thesis_uClear`) and the
+  metal pools only below it; above, the sea stays cold dark metal. Frames: `shots/thesis-phone-v2.webp`.
+- Story opening now sits on dark sky with the world's latest journey (9e8fce4); the CRT tube powers on in view.
+- Open: the glowing surf under the footer wordmark (Jacob's footer like) is unassigned; not started this late without
+  world's OK.
