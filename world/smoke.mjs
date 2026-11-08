@@ -6,6 +6,7 @@
 // Checks, at iPhone 15 and 1440x900: the page loads with no console/page errors, the h1 paints without waiting on
 // WebGL, the world starts, frames at five places along the journey are neither black nor white, the page never
 // scrolls sideways (also at 360 px), and the loop's two ends look the same.
+import { domRules } from '../lab/qa/rules.mjs';
 import { args, target, browser, context, watch, benignError, waitWorld, settle, shot, stats, diff, saveWebp, QA, path } from '../lab/qa/lib.mjs';
 
 const A = args({ target: 'out', only: '' });
@@ -42,6 +43,9 @@ async function run(device) {
   if (/rgb\(255, 255, 255\)/.test(body.bg)) fail(device, `body background is white (${body.bg}): set body{background:transparent}`);
   if (/rgb\(0, 0, 0\)\b/.test(body.color) && !/rgba\(0, 0, 0, 0\)/.test(body.color)) fail(device, `body colour is black (${body.color})`);
 
+  // Jacob's copy/brand rules: P0s fail the smoke, the rest are warnings (the deep harness reports them all)
+  const home = ['out', 'dist', 'frame'].includes(A.target) || /\/$/.test(tg.path);
+  for (const r of await page.evaluate(domRules, { home })) (r.sev === 'P0' ? fail : warn)(device, `${r.rule}: ${r.text}`);
   if (kind !== 'none') await page.evaluate(() => window.__qa.hold());
   const frames = {};
   for (const p of PLACES) {

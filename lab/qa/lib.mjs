@@ -198,7 +198,9 @@ export async function settle(page, frames = 60, ms = 1000 / 60) {
 
 // ---------- pixels ----------
 export async function shot(page, opts = {}) {
-  return page.screenshot({ type: 'png', animations: 'allow', caret: 'initial', ...opts });
+  // a SwiftShader frame queue can delay the capture; retry once after letting it drain
+  try { return await page.screenshot({ type: 'png', animations: 'allow', caret: 'initial', timeout: 45000, ...opts }); }
+  catch (e) { await page.waitForTimeout(2000); return page.screenshot({ type: 'png', animations: 'allow', caret: 'initial', timeout: 90000, ...opts }); }
 }
 export async function raw(png) {
   const { data, info } = await sharp(png).removeAlpha().raw().toBuffer({ resolveWithObject: true });

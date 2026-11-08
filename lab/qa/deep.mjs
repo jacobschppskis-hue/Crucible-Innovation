@@ -8,14 +8,17 @@ import {
   args, target, browser, context, watch, benignError, waitWorld, adapter, settle, shot, stats, diff, raw, saveWebp,
   relLum, contrast, cdp, touchDrag, tap, flick, sleep, sharp, fs, path, QA,
 } from './lib.mjs';
+import { domRules, pixelRules } from './rules.mjs';
 
-const A = args({ target: 'out', checks: 'walk,film,loop,touch,keys,rm,nojs,nowebgl,frame,overflow,dead,contrast,perf,memory', devices: 'iphone,desktop', n: '24' });
+const A = args({ target: 'out', checks: 'rules,walk,film,loop,touch,keys,rm,nojs,nowebgl,frame,overflow,dead,contrast,perf,memory', devices: 'iphone,desktop', n: '24' });
 const TAG = A.tag || A.target.replace(/[^a-z0-9]+/gi, '-').slice(0, 30);
 const OUT = path.join(QA, 'out', TAG);
 const SHOTS = path.join(QA, 'shots', TAG);
 fs.mkdirSync(OUT, { recursive: true }); fs.mkdirSync(SHOTS, { recursive: true });
 const CHECKS = new Set(String(A.checks).split(','));
 const DEVS = String(A.devices).split(',').map((d) => (d === 'iphone' ? 'iphoneFull' : d));
+// dark specks per hot lava pixel above which the sea reads dirty (calibrated: Airless crust lava vs smooth lava)
+const SPECK = +(A.speck ?? 0.004);
 const findings = []; // {sev: 'P0'|'P1'|'P2', check, device, msg, frame?}
 const info = [];
 const F = (sev, check, device, msg, frame) => { findings.push({ sev, check, device, msg, frame: frame && path.relative(path.join(QA, '..', '..'), frame) }); console.log(`${sev} ${check} [${device}] ${msg}`); };
@@ -50,7 +53,7 @@ async function walk(device) {
   const { ctx, page, log, kind } = await open(device);
   if (kind === 'none') { F('P0', 'walk', devName(device), 'no world hooks (__world / __state)'); await ctx.close(); return; }
   await page.evaluate(() => window.__qa.hold());
-  const N = +A.n, files = [];
+  const N = +A.n, files = [], walkStats = [];
   const dir = path.join(OUT, 'walk', devName(device));
   let prev = null;
   for (let i = 0; i <= N; i++) {
@@ -65,6 +68,13 @@ async function walk(device) {
     if (s.mean < 0.0015 && s.grad < 0.0004) F('P0', 'walk', devName(device), `p=${p.toFixed(3)} black frame`, f);
     if (s.mean > 0.55) F('P1', 'walk', devName(device), `p=${p.toFixed(3)} frame mostly white/blown (mean L ${s.mean.toFixed(2)})`, f);
     if (s.hot > 0.25) F('P2', 'walk', devName(device), `p=${p.toFixed(3)} ${(s.hot * 100).toFixed(0)}% of the frame is saturated Ember/orange (colour budget?)`, f);
+    // Jacob's named failure modes, per frame
+    const px = await pixelRules(png);
+    if (px.hotFrac > 0.03 && px.speckFrac > SPECK) F('P1', 'lava', devName(device), `p=${p.toFixed(3)} dark specks in the lava: ${(px.speckFrac * 1000).toFixed(1)}‰ of hot pixels (> ${(SPECK * 1000).toFixed(1)}‰) — "dark crust plates ... specks" read as dirty`, f);
+    if (px.coolFrac > 0.05) F('P2', 'colour', devName(device), `p=${p.toFixed(3)} Quench/blue covers ${(px.coolFrac * 100).toFixed(1)}% of the frame (budget ~5%)`, f);
+    const em = (await page.evaluate(domRules, { emberCount: true }).catch(() => [])).find((r) => r.rule === 'ember-things');
+    if (em && em.n > 3) F('P2', 'colour', devName(device), `p=${p.toFixed(3)} ${em.n} Ember UI things on screen (about 3 max): ${em.text}`, f);
+    walkStats.push({ p, ...px, mean: +s.mean.toFixed(4), ember: em?.n });
     if (prev && i === N) {
       const d = await diff(prev.first, png);
       if (d.mad > 6) F('P0', 'loop', devName(device), `last frame (p=1) != first frame (p=0): mean |Δ| ${d.mad.toFixed(1)}, p99 ${d.p99}`, f);
@@ -72,6 +82,7 @@ async function walk(device) {
     }
     if (i === 0) prev = { first: png };
   }
+  fs.writeFileSync(path.join(dir, 'stats.json'), JSON.stringify(walkStats));
   await contactSheet(files, path.join(SHOTS, `walk-${devName(device)}.webp`), device === 'desktop' ? 5 : 9, device === 'desktop' ? 288 : 130);
   I('walk', devName(device), `${N + 1} frames -> ${path.relative(QA, dir)}; sheet shots/${TAG}/walk-${devName(device)}.webp; state ${JSON.stringify(await page.evaluate(() => window.__qa.state())).slice(0, 200)}`);
   for (const e of log.errors.filter((e) => !benignError(e)).slice(0, 5)) F('P1', 'walk', devName(device), e);
@@ -624,9 +635,27 @@ async function memory() {
   await ctx.close();
 }
 
+// ---------------------------------------------------------------- rules: Jacob's copy/brand failure modes over the whole page
+async function rules(device) {
+  const dn = devName(device);
+  const { ctx, page } = await open(device);
+  const home = /\/$|crucible\.html|frame\.html/.test(URL0);
+  const seen = new Set();
+  const maxY = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  for (let y = 0; y <= maxY; y += Math.max(400, Math.round(maxY / 12))) {
+    await page.evaluate((y) => scrollTo(0, y), y); await sleep(150);
+    for (const r of await page.evaluate(domRules, { home })) {
+      const k = r.rule + r.text; if (seen.has(k)) continue; seen.add(k);
+      F(r.sev, 'rules', dn, `${r.rule}: ${r.text}`);
+    }
+  }
+  I('rules', dn, `${seen.size} distinct rule findings`);
+  await ctx.close();
+}
+
 // ---------------------------------------------------------------- run
 const t0 = Date.now();
-const per = { walk, film, loop, touch, rm, nojs, nowebgl, frame, dead, contrast: contrastCheck };
+const per = { rules, walk, film, loop, touch, rm, nojs, nowebgl, frame, dead, contrast: contrastCheck };
 const once = { overflow, perf, memory };
 for (const ch of CHECKS) {
   if (ch === 'keys') continue; // part of loop
