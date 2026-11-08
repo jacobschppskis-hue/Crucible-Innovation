@@ -378,6 +378,20 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng, bool cheap) {
     // look's sun light at this point: coloured and dimmed by the air, out at night
     spec += Fs * D * norm * ventures_vis(NoV, NoL, sqrt(aT2 * aB2)) * NoL * look_sunLight(h.wp);
   }
+  // the moon (look's one cold light, on only at this place): the same anisotropic lobe, so a face turned to it carries
+  // a cool sheen and the fillets a cold line while the foot stays hot
+  vec3 Lm = look_moonDir();
+  float NoLm = dot(n, Lm);
+  vec3 Em = look_moonLight();
+  if (NoLm > 0.0 && Em.r + Em.g + Em.b > 0.0) {
+    vec3 hv = normalize(v + Lm);
+    float NoH = max(dot(n, hv), 0.0), VoH = max(dot(v, hv), 0.0);
+    float aT2 = clamp(aT + 0.004, 0.0, 1.0), aB2 = clamp(aB + 0.004, 0.0, 1.0);
+    float ToH = dot(Tg, hv), BoH = dot(Bg, hv);
+    float dd = ToH * ToH / (aT2 * aT2) + BoH * BoH / (aB2 * aB2) + NoH * NoH;
+    float D = 1.0 / (VENTURES_PI * aT2 * aB2 * dd * dd);
+    spec += ventures_fresnel(F0, tint, VoH) * D * (aT * aB) / (aT2 * aB2) * ventures_vis(NoV, NoLm, sqrt(aT2 * aB2)) * NoLm * Em;
+  }
   // the pool's light on the metal's lower faces, as a broad area light below (it is in the environment too, but the
   // blurred env underestimates a large bright source at close range): only on faces turned down or out
   float poolLit = exp(-max(hs, 0.0) / (H * 0.12)) * ventures_sat(0.3 - dot(n, up) * 0.7);

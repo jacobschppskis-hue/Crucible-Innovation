@@ -30,6 +30,8 @@ struct Sea { vec3 p; vec3 up; vec3 q; vec3 eU; vec3 eV; vec2 w; float t; float f
 struct SeaMod { vec3 g; float heat; vec3 emit; float calm; float rough; vec4 aux; };
 vec3 look_sky(Ray r);
 vec3 look_sunLight(vec3 p) { return uSunE; }
+vec3 look_moonLight() { return vec3(0.0); }
+vec3 look_moonDir() { return vec3(0.0, 1.0, 0.0); }
 ${mono}
 vec3 look_sky(Ray r) { return ventures_skyA(r.rd, vec3(0.0, 1.0, 0.0), r.pa); }
 vec3 agx(vec3 c){ c = max(c, 0.0); vec3 x = c / (c + 0.6); return pow(x, vec3(1.15)); }

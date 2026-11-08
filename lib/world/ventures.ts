@@ -98,8 +98,21 @@ function placeS() {
   return s0;
 }
 
+function moonDir(f: Frame): V3 {
+  if (!((f.ch['look.moon'] ?? 0) > 0)) return f.sun.dir;
+  const up = f.cam.up, fw = f.cam.f;
+  const h = V.norm(V.madd(fw, up, -V.dot(fw, up)));
+  const side = V.cross(up, h);
+  const az = ((f.ch['look.moonAz'] ?? 150) * Math.PI) / 180,
+    el = ((f.ch['look.moonEl'] ?? 14) * Math.PI) / 180;
+  return V.norm(V.madd(V.mul(V.add(V.mul(h, Math.cos(az)), V.mul(side, Math.sin(az))), Math.cos(el)), up, Math.sin(el)));
+}
+
 function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
+  // they sink back into the sea as the camera climbs away into the thesis (continuous, reversible)
+  const th = clamp(f.at('thesis') / 0.22);
+  const sinkK = 1 - th * th * (3 - 2 * th);
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;
   const H = 2 * MONO_E[1];
@@ -118,7 +131,7 @@ function frameUpdate(f: Frame, u: Uniforms) {
     [S.hover[i], S.hoverV[i]] = spring(S.hover[i], S.hoverV[i], S.hoverT[i], dt, 0.12);
     S.press[i] *= dt > 0 ? Math.exp(-dt / 0.35) : 1;
     // the camera is far from them anywhere else on the journey: risen only inside their own pin
-    const rise = riseAt(p, i);
+    const rise = riseAt(p, i) * sinkK;
     const liftTo = S.hover[i] * 0.22 - S.press[i] * 0.3;
     [S.lift[i], S.liftV[i]] = spring(S.lift[i], S.liftV[i], liftTo, dt, 0.16);
     const bob = Math.sin(t * 0.6 + i * 2.1) * 0.035 * rise;
@@ -134,7 +147,8 @@ function frameUpdate(f: Frame, u: Uniforms) {
     // the crown of the cast face carries a vertical highlight band (never the whole face lit, never all dark)
     const toCam = V.sub(f.cam.pos, foot);
     const hc = V.norm(V.madd(toCam, fup, -V.dot(toCam, fup)));
-    const sd = f.sun.dir;
+    // the light the faces are aimed at: look's moon at this place (the same direction look computes), else the sun
+    const sd = moonDir(f);
     const hs = V.madd(sd, fup, -V.dot(sd, fup));
     const hh = V.norm(V.add(hc, V.mul(V.norm(hs), clamp(V.dot(sd, fup) * 6 + 1, 0, 1))));
     const zx = V.dot(hh, x),
@@ -243,9 +257,11 @@ function bindDom(root: HTMLElement) {
 export function venturesKeys(R: number): Key[] {
   const deg = (a: number) => (a * Math.PI * R) / 180;
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
+  // look's cold moon, low behind the camera's shoulder (fades in from story-3 and out into the thesis)
+  const MOON = { 'look.moon': 1.2, 'look.moonAz': 150, 'look.moonEl': 12 };
   return [
-    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ph: { fov: 64, pitch: 5 } },
-    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ph: { fov: 64, pitch: 5 } },
+    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 5 } },
+    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 5 } },
   ];
 }
 
