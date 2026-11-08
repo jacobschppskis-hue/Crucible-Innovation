@@ -71,7 +71,7 @@ vec3 look_starLayer(vec3 d, float pa, float n, float p, float fmin, float fmax, 
   vec2 sp = cell + 0.22 + 0.56 * look_h22(cell + f * 31.7 + seed * 7.0);
   vec3 sd = look_faceDir(f, sp / n * 2.0 - 1.0);
   float ang = acos(clamp(dot(sd, d), -1.0, 1.0));
-  float sig = max(pa * 0.62, 1e-6);
+  float sig = max(pa * 0.5, 1e-6); // a one-pixel point spread
   float F = min(fmin * pow(max(look_h11(hs.y * 91.7 + seed), 1e-4), -0.6667), fmax);
   float tq = look_h11(hs.z * 53.1 + seed);
   float T = tq < 0.12 ? mix(3100.0, 4200.0, tq / 0.12) : tq < 0.86 ? mix(4400.0, 7600.0, (tq - 0.12) / 0.74) : mix(8500.0, 22000.0, (tq - 0.86) / 0.14);
@@ -79,9 +79,9 @@ vec3 look_starLayer(vec3 d, float pa, float n, float p, float fmin, float fmax, 
 }
 
 vec3 look_stars(vec3 d, float pa) {
-  vec3 c = look_starLayer(d, pa, 128.0, 0.42, 2.0e-8, 1.2e-6, 1.0, 1.8);
-  c += look_starLayer(d, pa, 52.0, 0.55, 6.0e-8, 4.0e-6, 2.0, 0.8);
-  c += look_starLayer(d, pa, 18.0, 0.62, 3.0e-7, 1.6e-5, 3.0, 0.3);
+  vec3 c = look_starLayer(d, pa, 128.0, 0.16, 1.2e-8, 6.0e-7, 1.0, 1.8);
+  c += look_starLayer(d, pa, 52.0, 0.22, 4.0e-8, 2.0e-6, 2.0, 0.8);
+  c += look_starLayer(d, pa, 18.0, 0.3, 2.0e-7, 1.0e-5, 3.0, 0.3);
   float band = look_band(d);
   if (band > 0.002) {
     vec3 q = d * 6.0;
