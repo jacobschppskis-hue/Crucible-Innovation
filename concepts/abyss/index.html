@@ -74,12 +74,15 @@ html.gl #sea { background: var(--ground); }
 [data-plate] { position: relative; }
 .bob { display: block; will-change: transform; }
 .slug > .bob, .slug { display: inline-block; }
-html:not(.gl) [data-plate] { background: #11100d; box-shadow: 0 0 0 1px #4a1c0a; }
 html:not(.gl) .bar { background: #b9b3a5; }
 html:not(.gl) .bar[data-k="4"] { background: #e2541c; }
 
 .h-display { font-weight: 760; font-variation-settings: 'wdth' 108; letter-spacing: -0.035em; line-height: 0.92; margin: 0; }
-.slug { padding: 0.07em 0.2em 0.1em; margin: 0 0 0.08em; }
+.slug { padding: 0; margin: 0 0 0.04em; }
+/* Type is the cooled metal: a cool line of sky on the top of each letter, a little heat below (no plates, no boxes). */
+.h-display { text-shadow: 0 -1px 0 rgb(124 182 255 / 0.18), 0 2px 10px rgb(0 0 0 / 0.6); }
+.said { display: block; margin: 0.5em 0 0.6em; font-size: clamp(30px, 3.4vw, 54px); line-height: 1.02; font-weight: 740;
+  font-variation-settings: 'wdth' 108; letter-spacing: -0.03em; color: var(--bone); }
 /* Display words cool as they surface: hot (--c 0) to bone (--c 1). */
 .cool { color: color-mix(in oklab, var(--bone) calc(var(--c, 1) * 100%), #ff8a3d);
   opacity: clamp(0, calc((var(--e, 1) - 0.35) * 2.2), 1); }
@@ -96,7 +99,7 @@ section { position: relative; }
 .hero-copy { position: absolute; left: var(--gx); right: var(--gx); bottom: clamp(28px, 6vh, 72px); }
 .hero-copy h1 { font-size: clamp(54px, 7.4vw, 132px); }
 .hero-copy h1 .slug { display: table; }
-.hero-meta { margin-top: 22px; max-width: 30rem; padding: 18px 22px 20px; }
+.hero-meta { margin-top: 22px; max-width: 30rem; }
 .hero-meta p { margin: 0 0 16px; color: var(--bone-dim); }
 .hero-meta .row { display: flex; flex-wrap: wrap; gap: 10px; }
 .alloyed { opacity: clamp(0, calc((var(--e, 1) - 0.35) * 2.2), 1); color: color-mix(in oklab, var(--bone) calc(var(--c, 1) * 100%), #ffd9a0);
@@ -109,7 +112,6 @@ html:not(.gl) .mark-still { display: block; }
 @media (max-width: 1023px) { .mark-still { right: auto; left: 50%; top: calc(64px + 27vh); width: min(80vw, 40vh); transform: translate(-50%, -50%); } }
 @media (max-width: 1023px) {
   .hero-copy h1 { font-size: clamp(44px, 12.2vw, 92px); }
-  .hero-meta { padding: 14px 16px 16px; }
   .hero-meta p { font-size: 15.5px; }
   .beat { font-size: clamp(40px, 11.5vw, 80px); }
 }
@@ -119,10 +121,10 @@ html:not(.gl) .mark-still { display: block; }
 .sec-head { font-size: clamp(48px, 8vw, 140px); margin-bottom: 8vh; }
 .chapter { display: grid; gap: 28px; margin-bottom: 14vh; }
 .who { display: flex; flex-direction: column; gap: 14px; align-self: start; }
-.who-name { padding: 14px 18px; }
+.who-name { padding: 4px 0 0 11px; }
 .who-name h3 { margin: 0; font-size: 28px; font-weight: 720; font-variation-settings: 'wdth' 112; letter-spacing: -0.02em; line-height: 1.05; }
 .who-name p { margin: 4px 0 0; font-size: 15px; color: var(--bone-dim); }
-.text { padding: clamp(20px, 3vw, 40px); max-width: 44rem; }
+.text { max-width: 40rem; font-size: 18px; line-height: 1.65; }
 .text p { margin: 0 0 1.1em; }
 .text p:last-child { margin-bottom: 0; }
 @media (min-width: 1024px) {
@@ -149,15 +151,15 @@ html:not(.gl) .mark-still { display: block; }
 /* PayPal: one source, six rivers, six castings. */
 #paypal { height: 300vh; margin-bottom: 8vh; }
 .pp { position: absolute; inset: var(--nav-h) 0 0; }
-.pp-node { position: absolute; transform: translate(-50%, -50%); padding: 8px 14px 9px; font-weight: 700; letter-spacing: -0.02em;
+.pp-node { position: absolute; transform: translate(-50%, -50%); padding: 6px 4px; font-weight: 700; letter-spacing: -0.02em;
   font-variation-settings: 'wdth' 112; font-size: clamp(16px, 1.6vw, 24px); line-height: 1; white-space: nowrap; }
-.pp-src { font-size: clamp(30px, 3.6vw, 56px); padding: 12px 20px 14px; }
-.pp-cap { position: absolute; left: var(--gx); right: var(--gx); bottom: 6vh; max-width: 34rem; padding: 14px 18px; font-size: clamp(17px, 1.4vw, 21px); }
+.pp-src { font-size: clamp(34px, 4.2vw, 64px); }
+.pp-cap { position: absolute; left: var(--gx); right: var(--gx); bottom: 6vh; max-width: 34rem; font-size: clamp(17px, 1.4vw, 21px); }
 .pp-cap p { margin: 0; }
 
 /* ---------------- Ventures ---------------- */
 #ventures { padding: 16vh 0 10vh; }
-#ventures .lead { padding: 12px 18px; margin: 0 0 12vh; display: inline-block; font-size: clamp(18px, 1.6vw, 22px); }
+#ventures .lead { margin: 0 0 12vh; display: inline-block; font-size: clamp(18px, 1.6vw, 22px); }
 .venture { display: grid; gap: 22px; margin: 0 0 18vh; text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .bar { position: relative; width: 100%; max-width: 620px; aspect-ratio: 8 / 5; display: flex; align-items: center; }
 .bar .bob { width: 100%; height: 100%; position: relative; }
@@ -165,7 +167,7 @@ html:not(.gl) .mark-still { display: block; }
   letter-spacing: -0.03em; line-height: 0.95; font-size: clamp(26px, 4.4vw, 52px); color: var(--ink); opacity: clamp(0, calc((var(--e, 1) - 0.7) * 4), 1);
   text-shadow: 0 1px 0 rgb(255 255 255 / 0.35), 0 -1px 0 rgb(0 0 0 / 0.35); }
 .bar[data-k="4"] .stamp { left: 12%; color: var(--molten-ink); text-shadow: 0 1px 0 rgb(255 200 120 / 0.35); font-size: clamp(36px, 6.4vw, 80px); }
-.v-info { padding: 22px 24px 24px; max-width: 34rem; align-self: center; }
+.v-info { max-width: 34rem; align-self: center; }
 .v-status { font-size: 14px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
 .v-status i { width: 8px; height: 8px; border-radius: 50%; background: var(--quench); display: inline-block; }
 .v-status.hot i { background: var(--ember); box-shadow: 0 0 8px var(--ember); }
@@ -191,14 +193,14 @@ html:not(.gl) .mark-still { display: block; }
 .th h2 { font-size: clamp(46px, 7.6vw, 136px); }
 .th h2 .slug { display: table; }
 .th-meta { display: flex; flex-wrap: wrap; gap: 14px; align-items: stretch; }
-.th-meta > div { padding: 14px 18px; }
+.th-meta { gap: 28px; }
 .th-meta p { margin: 0; font-size: clamp(17px, 1.4vw, 21px); }
 .kelvin { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: clamp(22px, 2vw, 30px); font-variant-numeric: tabular-nums; color: var(--bone); }
 .th-meta small { font-size: 13px; color: var(--bone-dim); font-family: Archivo, sans-serif; display: block; }
 
 /* ---------------- Footer: the shore ---------------- */
 footer { position: relative; min-height: 112vh; padding: 0 var(--gx) 40px; display: flex; flex-direction: column; justify-content: flex-end; }
-.cta { padding: 20px 24px 22px; max-width: 30rem; margin-bottom: 26vh; align-self: flex-start; }
+.cta { max-width: 30rem; margin-bottom: 26vh; align-self: flex-start; }
 .cta h2 { font-size: clamp(30px, 3.4vw, 50px); margin-bottom: 14px; }
 .cta p { margin: 0 0 18px; color: var(--bone-dim); }
 .foot-giant { font-size: clamp(88px, 23vw, 380px); line-height: 0.8; margin: 0 0 3vh -0.04em; color: var(--bone); }
@@ -297,7 +299,6 @@ html.still .v-name.molten { animation: none; }
       <article class="chapter" aria-label="Jacob Schopp, continued">
         <div class="who"></div>
         <div>
-          <h3 class="pull h-display" aria-label="I want to know what happens when a group like it comes together earlier"><span class="slug cool" data-plate data-k="1"><span class="bob">I want to know what happens</span></span> <span class="slug cool" data-plate data-k="1"><span class="bob">when a group like it</span></span> <span class="slug cool" data-plate data-k="1"><span class="bob">comes together earlier</span></span></h3>
           <div class="text fade" data-plate data-k="0" id="jacobB"><div class="bob"></div></div>
         </div>
       </article>
@@ -414,6 +415,9 @@ const CHARLIE = [
 const fill = (id, ps) => { document.querySelector('#' + id + ' .bob').innerHTML = ps.map((p) => `<p>${p}</p>`).join(''); };
 fill('jacobA', JACOB.slice(0, 2));
 fill('jacobB', JACOB.slice(2));
+// Jacob's line, set once and in place: the sentence itself grows inside his paragraph
+(() => { const p = document.querySelector('#jacobB p'); const q = 'I want to know what happens when a group like it comes together earlier.';
+  p.innerHTML = p.innerHTML.replace(q, `<span class="said">${q}</span>`); })();
 fill('charlie', CHARLIE);
 
 // The mark: Jacob's logo family (lib/splitRing.ts, 48-unit grid carried into the 64 box, U = 4/3): rings r 20 / 12,
@@ -684,6 +688,27 @@ void main() {
   crust *= 1.0 - open;
   vec3 col = mix(lava, crustC, crust);
 
+  // ---------- the calm sea: most of every screen ----------
+  // a thin dark skin over the metal, glassy, a faint deep red where it runs thin, the sky in it.
+  // Crust plates and bright seams only where something happens: round the ring's pool, the Thesis heat, the surf.
+  float rcN = uLogo.y > 0.5 ? length(sp - uPc[16].xy) / uLogo.x : 1e4;
+  float crustAmt = 0.0;
+  if (uLogo.y > 0.5) crustAmt = smoothstep(72.0, 44.0, rcN + 10.0 * (wn - 0.5)) * uLogo.z;
+  crustAmt = max(crustAmt, smoothstep(0.0, 0.35, heat));
+  crustAmt = max(crustAmt, smoothstep(-480.0, -220.0, shoreDy));
+  float under = fbm(P / 420.0 + vec2(t * 0.02, -t * 0.012));
+  vec3 calm = vec3(0.016, 0.014, 0.013) + vec3(0.06, 0.008, 0.0) * smoothstep(0.42, 0.85, under);
+  vec3 R0 = reflect(vec3(0, 0, -1), n);
+  float cl0 = fbm(P / 640.0 + vec2(t * 0.01, t * 0.004) + R0.xy * 3.0);
+  vec3 sky0 = mix(vec3(0.026, 0.036, 0.056), vec3(0.07, 0.06, 0.07), smoothstep(0.45, 0.8, cl0));
+  float band0 = clamp(0.5 + 5.0 * dot(R0.xy, normalize(vec2(-0.35, -0.94))), 0.0, 1.4);
+  calm += sky0 * (0.3 + 0.6 * band0);
+  calm += vec3(0.5, 0.66, 0.95) * pow(max(dot(R0, Ls), 0.0), 700.0) * (0.1 + 0.9 * smoothstep(0.02, 0.12, slope)) * 0.5;
+  // a wake on the glass: its crests catch a little heat; the keel cuts the skin to the glow below, then it heals
+  calm += bb(0.5) * crestL * 0.3;
+  calm = mix(calm, bb(0.5 + 0.3 * smoothstep(0.4, 1.2, br) + 0.1 * flow), smoothstep(0.2, 0.9, br) * 0.85);
+  col = mix(calm, col, crustAmt);
+
   // ---------- the Split Ring ----------
   if (uLogo.y > 0.5) {
     float u = uLogo.x;
@@ -716,11 +741,12 @@ void main() {
       vec3 pn = normalize(vec3(g * (1.0 - bev) * 1.6, 1.0));
       pn = normalize(pn + vec3(grad * 0.6 + vec2(lift) * 0.0, 0.0));
       float gr = vn(bq * 6.0 + float(bi) * 7.0) * 0.6 + vn(bq * 17.0) * 0.4;
-      vec3 alb = vec3(0.91, 0.89, 0.85) * (0.62 + 0.16 * gr);
+      vec3 alb = vec3(0.93, 0.90, 0.85) * (0.84 + 0.05 * gr);
       vec3 Lk = normalize(vec3(cc - sp, 3.0 * u));
       float key = max(dot(pn, Lk), 0.0);
       float fk = 1.0 / (1.0 + rc * rc / 400.0);
-      vec3 mc = alb * (vec3(1.05, 1.0, 0.94) + vec3(1.0, 0.55, 0.25) * key * fk * 1.2 * uLogo.z);
+      vec3 mc = alb * (vec3(0.95, 0.92, 0.88) + vec3(1.0, 0.55, 0.25) * key * fk * 1.0 * uLogo.z);
+      mc *= 0.92 + 0.16 * smoothstep(-1.0, 1.0, dot(normalize(sp - cc), vec2(-0.6, -0.8)));     // a soft sheen across the metal
       mc += alb * vec3(0.30, 0.38, 0.52) * max(dot(pn, normalize(vec3(-0.4, -0.6, 1.0))), 0.0) * 0.45;   // cool fill from above
       vec3 Rp = reflect(vec3(0, 0, -1), pn);
       mc += vec3(0.55, 0.72, 1.0) * pow(max(dot(Rp, normalize(vec3(-0.35, -0.5, 1.0))), 0.0), 40.0) * 0.35 * (1.0 - bev * 0.7);
@@ -752,12 +778,18 @@ void main() {
       float bd = 1e9, bt = 0.0; vec2 prev = S;
       for (int k = 1; k <= 14; k++) {
         float tt = float(k) / 14.0; vec2 cur = mix(mix(S, C, tt), mix(C, D, tt), tt);
+        vec2 dir = normalize(D - S); vec2 nrm = vec2(-dir.y, dir.x);
+        cur += nrm * sin(tt * 9.0 + float(i) * 0.9 * tt) * 16.0 * tt * (1.0 - tt) * 4.0 * tt;   // meanders, once branched
         float hh; float d = segP(sp, prev, cur, hh);
         if (d < bd) { bd = d; bt = (float(k - 1) + hh) / 14.0; }
         prev = cur;
       }
       float L = length(D - S) * 1.15;
-      float w = uRp[i].z * (1.0 - 0.45 * coolR) * (0.8 + 0.4 * vn(vec2(bt * L / 40.0 - t * 0.6, float(i))));
+      float w = uRp[i].z * (1.0 - 0.45 * coolR) * (0.8 + 0.4 * vn(vec2(bt * L / 40.0 - t * 0.6, float(i)))) * (1.35 - 0.6 * bt);
+      float rd = length(sp - D) / 16.0;
+      // the river ends in a small pool beside its name: hot as it arrives, cooling with the rest
+      col = mix(col, bb(mix(0.8, 0.45, coolR) + 0.06 * flow), (1.0 - smoothstep(0.75, 1.0, rd)) * uRp[i].y);
+      col += bb(mix(0.62, 0.38, coolR)) * exp(-max(rd - 1.0, 0.0) / 1.2) * step(1.0, rd) * uRp[i].y * 0.35;
       float ahead = (bt - head) * L;                 // px past the front
       float on = 1.0 - smoothstep(-2.0, 6.0, ahead);
       float fr = exp(-pow(ahead / 18.0, 2.0)) * (1.0 - coolR);
@@ -768,8 +800,9 @@ void main() {
       col = mix(col, bb(temp), river);
       col += bb(temp * 0.8) * glow * 0.35 * (1.0 - river);
     }
-    float dS = length(sp - S);
-    col = mix(col, bb(0.7 + 0.2 * flow - 0.2 * coolR), smoothstep(110.0, 40.0, dS) * 0.8);
+    float rS = length(sp - S) / 22.0;
+    col = mix(col, bb(0.82 + 0.1 * flow - 0.25 * coolR), 1.0 - smoothstep(0.8, 1.0, rS));
+    col += bb(0.6 - 0.15 * coolR) * exp(-max(rS - 1.0, 0.0) / 1.5) * step(1.0, rS) * 0.4;
   }
 
   // ---------- the shore: glowing surf on black sand ----------
@@ -828,6 +861,12 @@ void main() {
     float ir = (vn(sp * 0.07 + float(i) * 13.0) - 0.5) * (kind >= 3 ? 0.8 : 1.4);
     d += ir;
     if (d > 70.0) continue;
+    if (kind <= 2) {
+      // type sits straight on the sea; under it, nothing hot may get bright (AA at any moment)
+      float m = (1.0 - smoothstep(0.0, 36.0, d - ir)) * smoothstep(0.1, 0.5, M.x);
+      col = mix(col, min(col, vec3(0.10, 0.09, 0.09)), m);
+      continue;
+    }
     float e = M.x, hov = M.z;
     float up = smoothstep(0.15, 0.85, e);
     // outside: the lava parts around it, a hot seam on its edge
@@ -895,14 +934,12 @@ void main() {
         // a bar still molten: blackbody glow, a dark crust drifting with cracks
         float wall = min(hb.x, hb.y) * 0.13;
         float bev = 1.0 - smoothstep(0.0, wall, id);
-        vec2 bq2 = lp + 6.0 * vec2(vn(lp / 18.0), vn(lp / 18.0 + 4.0));
-        vec3 vb = voro(bq2 / 58.0 + vec2(t * 0.03, t * 0.012) + float(i) * 5.0, t * 0.15);
-        float sb = (vb.y - vb.x) * 29.0 * (0.7 + 0.6 * vn(bq2 / 40.0));
-        float cr = 1.0 - smoothstep(0.4, 1.6, sb);                 // bright cracks
-        float fb = fbm(lp / 70.0 + vec2(t * 0.08, 0.0) + float(i));
-        float skin = 0.47 + 0.12 * fb + 0.06 * vb.z;               // a cooling skin, dark orange
-        float tb = mix(skin, 0.86, cr) - 0.16 * bev * (1.0 - cr) + 0.1 * hov + 0.03 * sin(t * 1.3 + float(i));
-        mc = bb(tb) * (0.9 + 0.2 * fb);
+        // seamless: one uninterrupted glow, slow convection moving under it, hottest in the middle
+        float fb = fbm(lp / 110.0 + vec2(t * 0.05, -t * 0.03) + float(i));
+        float fb2 = fbm(lp / 40.0 - vec2(t * 0.09, 0.0) + float(i) * 3.0);
+        float mid = 1.0 - length(lp / hb) * 0.5;
+        float tb = 0.6 + 0.12 * fb + 0.04 * fb2 + 0.08 * mid - 0.14 * bev + 0.08 * hov + 0.02 * sin(t * 1.3 + float(i));
+        mc = bb(tb);
         vec2 g = normalize(vec2(dFdx(d), -dFdy(d)) + 1e-6);
         mc += vec3(1.0, 0.82, 0.55) * exp(-abs(id - wall) / 1.5) * 0.22;                        // the hot fillet
         mc *= 1.0 - 0.35 * bev * max(dot(g, vec2(0.0, -1.0)), 0.0);                             // walls facing away a touch darker
@@ -1151,8 +1188,8 @@ function step(dt) {
       p.tilt = gx * 3;
     } else { p.bx = p.by = 0; p.tilt = 0; }
     // a venture surfacing: ripples ring out once as it breaks the surface
-    if (p.k >= 3) {
-      if (p.e > 0.5 && !p.rang) { p.rang = true; srcs.push({ ax: cx - r.width * 0.3, ay: cy, bx: cx + r.width * 0.3, by: cy, r: 7, push: 900, brk: 2, ring: r.height * 0.5 + 6 }); }
+    if (p.k >= 1 || r.height < 260) {
+      if (p.e > 0.5 && !p.rang && r.bottom > 0 && r.top < VH) { p.rang = true; srcs.push({ ax: cx - r.width * 0.3, ay: cy, bx: cx + r.width * 0.3, by: cy, r: 7, push: p.k >= 3 ? 900 : 420, brk: p.k >= 3 ? 2 : 0, ring: r.height * 0.5 + 6 }); }
       if (p.e < 0.2) p.rang = false;
     }
   }
@@ -1337,15 +1374,20 @@ function draw(t, sy, HP, PP) {
   if (ppOn) {
     const nodes = plates.filter((p) => p.pp >= 0).sort((a, b) => a.pp - b.pp);
     const ctr = (p) => [p.rect.left + p.rect.width / 2 + p.bx, p.rect.top + p.rect.height / 2 + p.by];
-    const S0 = ctr(nodes[0]);
+    // the source pool sits just past PayPal, each end pool just before its name
+    const src = nodes[0].rect;
+    const S0 = wide ? [src.right + 26 + nodes[0].bx, src.top + src.height / 2 + nodes[0].by] : [src.left + src.width / 2, src.bottom + 26 + nodes[0].by];
+    const end = (p) => wide ? [p.rect.left - 20 + p.bx, p.rect.top + p.rect.height / 2 + p.by] : [p.rect.left + p.rect.width / 2 + p.bx, p.rect.top - 14 + p.by];
+    const ppMid = [0, 0]; for (let i = 1; i <= 6; i++) { const c = end(nodes[i]); ppMid[0] += c[0] / 6; ppMid[1] += c[1] / 6; }
     const cool = RM ? 0.5 : smooth(0.72, 1.0, PP);
     RV.set([S0[0], S0[1], 1, cool], 0);
     for (let i = 1; i <= 6; i++) {
-      const D = ctr(nodes[i]);
-      // each river leaves the source along the main direction and fans out to its company: they never cross
-      const C = wide ? [S0[0] + (D[0] - S0[0]) * 0.5, S0[1]] : [S0[0] + (D[0] - S0[0]) * 0.15, S0[1] + (D[1] - S0[1]) * 0.55];
+      const D = end(nodes[i]);
+      // one river leaves PayPal and branches: every path bends round the same point, so they run as one trunk
+      // and part gradually (never crossing)
+      const C = [S0[0] + (ppMid[0] - S0[0]) * 0.62, S0[1] + (ppMid[1] - S0[1]) * 0.62];
       RV.set([D[0], D[1], C[0], C[1]], i * 4);
-      RP.set([RM ? 1 : ppHead(i - 1, PP), 0, wide ? 6 : 4.5, 0], (i - 1) * 4);
+      RP.set([RM ? 1 : ppHead(i - 1, PP), RM ? 1 : ppArrive(i, PP), wide ? 5 : 4, nodes[i].rect.width / 2], (i - 1) * 4);
     }
   } else RV[2] = 0;
   gl.uniform4fv(U.uRv, RV); gl.uniform4fv(U.uRp, RP);

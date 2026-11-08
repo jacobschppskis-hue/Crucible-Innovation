@@ -72,3 +72,14 @@ Not tested: a real GPU frame time (no GPU here). The shader is one full-screen p
 lookups; the render scale steps down on slow frames, so a MacBook should hold 60 fps at a lower step if needed, but this
 is the first thing to measure on hardware. Shots in `shots/` (07 still shows the PayPal rivers crossing, fixed since).
 Known: faint 1-cell column stripes can show in the pool at 2x under strong ripple light (half-float grid sampling).
+
+## Round 2 (coordinator review)
+- The sea is now calm almost everywhere: a thin dark glassy skin with a faint deep-red undertone, the long swell and the
+  cool sky in it. Crust plates and bright seams only round the ring's pool, under the Thesis heat and in the surf; a
+  wake's keel cuts the skin to the glow below and heals.
+- No plates or outlines behind any text: type sits straight on the sea; under words the shader caps anything hot so
+  text stays AA. Headings still surface hot and cool to bone; ripples close round them as they come up.
+- Jacob's "I want to know what happens..." is set once, in place, growing inside his paragraph.
+- Verge and Trellis are one seamless glow (no crust), still rising out of the lava.
+- PayPal: one river leaves PayPal and branches, meandering, into six; each ends in a small pool beside its name; no boxes.
+- The ring's pieces read as smooth cast bone metal; the pool and ripples are unchanged.
