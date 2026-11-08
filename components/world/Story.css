@@ -104,6 +104,24 @@
 .wch-break > .wch-p {
   max-width: 40rem;
 }
+/* wide screens: reading size, not caption size (20 px body, ~68 characters a line) */
+@media (min-width: 1024px) {
+  .wch-text > p,
+  .wch-break > .wch-p {
+    max-width: 44rem;
+  }
+  .wch-lead {
+    font-size: 1.75rem;
+    line-height: 1.45;
+  }
+  .wch-p {
+    font-size: 1.25rem;
+    line-height: 1.65;
+  }
+  .wstory-sub {
+    font-size: 1.25rem;
+  }
+}
 .wch-lead {
   font-size: 1.375rem;
   line-height: 1.5;

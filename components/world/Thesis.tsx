@@ -15,13 +15,13 @@ export function Thesis() {
         <div className="wthesis-in container-x">
           <div className="wthesis-lines">
             <div className="wthesis-a">
-              <p className="wthesis-h wide" data-reflect>
+              <p className="wthesis-h wide">
                 Nothing new happens at 293&nbsp;K
               </p>
               <p className="wthesis-s">293 K is room temperature.</p>
             </div>
             <div className="wthesis-b">
-              <p className="wthesis-h wide" data-reflect>
+              <p className="wthesis-h wide">
                 An alloy is stronger than its metals
               </p>
               <p className="wthesis-s">Steel is harder than iron. Bronze is harder than copper.</p>

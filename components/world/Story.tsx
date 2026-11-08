@@ -15,7 +15,7 @@ export function Story({ paypal }: { paypal?: React.ReactNode }) {
         s={jacob}
         intro={
           <div className="wstory-head">
-            <h2 id="story-h" className="h-section" data-reflect>
+            <h2 id="story-h" className="h-section">
               Why Crucible
             </h2>
             <p className="wstory-sub">Jacob Schopp and Charles Rochford, co-founders, each in their own words.</p>

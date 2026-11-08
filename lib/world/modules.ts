@@ -9,7 +9,6 @@ import type { Key } from './journey';
 import { defaultLook } from './defaults/look';
 import { lava } from './lava';
 import { defaultLava } from './defaults/lava';
-import { type } from './type'; // story
 import { thesis } from './thesis'; // story
 import { look } from './look';
 import { paypal } from './paypal'; // paypal
@@ -63,7 +62,7 @@ export const MODULES: WorldModule[] = [
   // together: import { together } from './together'; together,
   paypal, // paypal: PayPal -> six companies
   // ventures: import { ventures } from './ventures'; ventures,
-  type, // story: display type reflected in the sea
+  // type (story, lib/world/type.ts): display type reflected in the sea; off: it read as glyph noise, not a reflection
   thesis, // story: the sea heats 293 K -> 1811 K
 ];
 

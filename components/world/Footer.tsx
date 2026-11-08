@@ -64,10 +64,10 @@ export function Footer() {
       </div>
       </div>
 
-      {/* the wordmark over the day side; low over the sea the world reflects it (data-reflect) */}
+      {/* the wordmark over the day side */}
       <div className="wfoot-dawn" data-place="dawn" aria-hidden>
         <div className="wfoot-giant">
-          <div className="wfoot-word" data-reflect>
+          <div className="wfoot-word">
             <Wordmark />
           </div>
         </div>

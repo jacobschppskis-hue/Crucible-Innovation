@@ -217,8 +217,13 @@ void type_sky(Ray r, inout vec3 col){
   if (z <= 1e-3) return;
   float fc = uFocal * uPx; // focal length in CSS px
   vec2 px = uView * 0.5 + vec2(dot(r.rd, uCam[0]), -dot(r.rd, uCam[1])) / z * fc;
-  float lod = log2(max(r.pa * fc * type_uScale, 1.0));
-  vec4 t = type_at(px, lod);
+  // a reflection on moving liquid is soft and stretched down the line of sight: five taps spread vertically, a
+  // coarser mip, and it is dim (the glyphs' light, not a copy of them)
+  float lod = log2(max(r.pa * fc * type_uScale, 1.0)) + 1.5;
+  float span = max(r.pa * fc, 1.0) * 6.0 + 4.0;
+  vec4 t = vec4(0.0);
+  for (int i = -2; i <= 2; i++) t += type_at(px + vec2(0.0, float(i) * span), lod);
+  t *= 0.2;
   col = col * (1.0 - t.a) + t.rgb * type_uGain;
 }
 `;
@@ -258,7 +263,7 @@ export const type: WorldModule = {
     // a line hangs in the sky over the sea only while we are low over it: from orbit a reflection of the type would
     // wrap round the planet's curve (it read as a glitch), so it fades out between 120 and 500 m up
     const h = f.cam.h;
-    u.set('type_uGain', 0.65 * (h <= 120 ? 1 : h >= 500 ? 0 : 1 - (h - 120) / 380));
+    u.set('type_uGain', 0.4 * (h <= 120 ? 1 : h >= 500 ? 0 : 1 - (h - 120) / 380));
     u.set('type_uScale', SCALE);
   },
   dispose() {

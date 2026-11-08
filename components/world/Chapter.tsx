@@ -64,7 +64,7 @@ export function Chapter({ s, intro, interlude, after = 1, place }: { s: FounderS
       {statement && (
         <div className="container-x" data-place={place[1] ?? place[0]}>
           <blockquote className="wch-statement">
-            <p className="wide" data-reflect>
+            <p className="wide">
               {statement.text}
             </p>
           </blockquote>
@@ -84,7 +84,7 @@ function Paragraph({ text, lead, breakOut }: { text: string; lead?: boolean; bre
   return (
     <div className="wch-break">
       {before && <p className="wch-p">{before}</p>}
-      <p className="wch-break-line wide" data-reflect>
+      <p className="wch-break-line wide">
         {breakOut}
       </p>
       {after && <p className="wch-p">{after}</p>}
