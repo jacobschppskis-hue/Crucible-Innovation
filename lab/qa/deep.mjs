@@ -489,7 +489,7 @@ async function contrastCheck(device) {
         seen.add(el);
         const cs = getComputedStyle(el);
         let op = 1, x = el; while (x && x.nodeType === 1) { const c = getComputedStyle(x); op *= +c.opacity; if (c.visibility === 'hidden' || c.display === 'none') { op = 0; break; } x = x.parentElement; }
-        if (op < 0.2) continue;
+        if (op < 0.9) continue; // judge resting text only: a line mid-crossfade is a transition, not a reading state
         const r = document.createRange(); r.selectNodeContents(el);
         // only what a reader sees: drop line boxes covered by something else (the opaque nav, a dialog)
         const shown = (b) => { const h = document.elementFromPoint(Math.min(innerWidth - 1, Math.max(0, b.left + b.width / 2)), Math.min(innerHeight - 1, Math.max(0, b.top + b.height / 2))); return !h || el.contains(h) || h.contains(el); };
