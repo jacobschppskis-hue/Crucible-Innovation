@@ -39,7 +39,7 @@ export const AIR = {
   ozW: 14,
   groundAlb: [0.03, 0.03, 0.03],
   glow: [0.004, 0.0012, 0.0003],
-  airglow: [1.5e-5, 2.8e-5, 4.5e-5],
+  airglow: [3.5e-5, 6.5e-5, 1.05e-4],
   airglowH: 9,
 };
 

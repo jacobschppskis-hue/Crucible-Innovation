@@ -120,6 +120,9 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   float sw = 0.5 / 520.0, wv = max(sw, fp / 520.0);
   float shore = exp(-lf * lf / (wv * wv)) * (sw / wv);
   vec3 emit = seaE * (1.0 - land) + look_planck(1350.0 + look_uHeat * 400.0) * look_uLavaGain * shore;
+  // a floor of faint, smooth glow over the whole sea, so the night side always reads as a sphere from orbit (the
+  // currents, PayPal's places and the text own everything brighter); limb darkening comes from the air in front of it
+  emit = max(emit, vec3(0.034, 0.0062, 0.0011) * (look_uLavaGain / 3.0) * (1.0 - land));
   // lava lakes inland: small, sparse, very hot pools, like a city's lights on Earth's night side (they tell you how big
   // the continent is). Each is a disc ~2-6 km across, energy-averaged into the pixel when smaller than it.
   if (land > 0.01) {
