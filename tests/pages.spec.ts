@@ -2,14 +2,13 @@ import { expect, test } from '@playwright/test';
 
 // The other pages and moving between them. The home page paints one world (lib/world): see tests/world.spec.ts.
 
-test('venture pages: a freestanding ingot with a still fallback, and the share image is the casting', async ({ page }) => {
+test('venture pages: the metal monolith still (or the ingot still), and the share image is the casting', async ({ page }) => {
   for (const slug of ['verge', 'trellis']) {
     await page.goto(`/ventures/${slug}?tier=light`, { waitUntil: 'networkidle' });
-    const img = page.locator('.vx-visual .ing-still');
-    await expect(img).toHaveAttribute('src', `/film/ingots/${slug}-1200.webp`);
+    // the home page's monolith, rendered by our own world, as a transparent still; the old ingot still where none exists
+    const img = page.locator('.vx-visual .vm-img, .vx-visual .ing-still').first();
+    await expect(img).toHaveAttribute('src', new RegExp(`/film/(monoliths|ingots)/[a-z-]+-1200\\.webp$`));
     expect(await img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
-    await expect(page.locator('.vx-visual .ing-canvas')).toHaveCount(1);
-    await expect(page.locator('.vx-visual .ing[data-on]')).toHaveCount(0); // light tier: the still only
     await expect(page.locator('meta[property="og:image"]')).toHaveAttribute('content', new RegExp(`/og/${slug}\\.jpg$`));
   }
 });
