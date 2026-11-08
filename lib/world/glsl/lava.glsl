@@ -189,7 +189,16 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   float up = dot(rd, s.up);
   if (up < 0.002) rd = normalize(rd + s.up * (0.002 - up));
   Ray rr; rr.ro = s.p + s.up * 0.02; rr.rd = rd; rr.pa = r.pa / s.graz + sqrt(a2); rr.depth = 1;
-  col += world_env(rr) * F * lava_uLook.w;
+  // two taps spread up and down the reflection by the skin's roughness: a tall bright thing (a monolith) is then a soft
+  // broken streak, not hard strips with black gaps where single rays hit or miss it
+  float spread = clamp(sqrt(a2) * 0.6, 0.004, 0.12);
+  vec3 side = normalize(cross(rd, s.up) + 1e-6);
+  vec3 vup = normalize(cross(side, rd));
+  Ray r2 = rr;
+  rr.rd = normalize(rd + vup * spread);
+  r2.rd = normalize(rd - vup * spread);
+  if (dot(r2.rd, s.up) < 0.002) r2.rd = normalize(r2.rd + s.up * (0.002 - dot(r2.rd, s.up)));
+  col += 0.5 * (world_env(rr) + world_env(r2)) * F * lava_uLook.w;
 
   // the sun as a light (look's, after the air): GGX widened by the unresolved slopes and the sun's own disc, so it is a
   // glitter path, never a dot
