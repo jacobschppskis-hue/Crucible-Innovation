@@ -60,7 +60,7 @@ export function pressVenture(i: number) {
 
 /** The rise of monolith i for the section's pin progress p: one after another over the first ~65% of the pin. */
 export const riseAt = (p: number, i: number) => {
-  const c = clamp((p - (0.03 + i * 0.12)) / 0.32);
+  const c = clamp((p - (0.005 + i * 0.12)) / 0.3);
   return c * c * (3 - 2 * c);
 };
 
@@ -275,10 +275,10 @@ export const ventures: WorldModule = {
       const over = cx[order[2]] - (view.w - iw / 2 - 24);
       if (over > 0) for (const k of order) cx[k] -= over;
     }
-    const any = ventureBoxes.some((b) => b.rise > 0);
-    if (any !== armed) {
-      armed = any;
-      sec.toggleAttribute('data-armed', any);
+    // armed from the first frame the world draws (not from the first rise), so the layout never jumps mid-scroll
+    if (!armed) {
+      armed = true;
+      sec.setAttribute('data-armed', '');
     }
     ventureBoxes.forEach((b, i) => {
       const h = hits[i],
