@@ -51,7 +51,7 @@ float look_seaTemp(vec3 q, float fp, float land) {
   // fine flow lines riding the currents; they resolve as the camera comes down
   float fl = look_fbm(pw * 6.0, 9, fpq * 6.0, 0.62);
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
-  float T = 1065.0 + 45.0 * broad + 200.0 * cur * (0.82 + 0.5 * fl) + 40.0 * fl;
+  float T = 1110.0 + 45.0 * broad + 180.0 * cur * (0.82 + 0.5 * fl) + 40.0 * fl;
   T += 120.0 * exp(-max(0.0, -land) * 22.0);
   return T + look_uHeat * 520.0;
 }

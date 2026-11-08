@@ -31,7 +31,7 @@ export const AIR = {
   rayH: 2.5,
   // aerosol that absorbs blue: the horizon turns orange
   mieS: [6e-3, 5e-3, 4e-3],
-  mieA: [0.5e-3, 2e-3, 6e-3],
+  mieA: [0.6e-3, 3e-3, 9e-3],
   mieH: 0.8,
   mieG: 0.8,
   ozA: [0.65e-3, 1.881e-3, 0.085e-3],
@@ -60,6 +60,30 @@ const sstep = (a: number, b: number, x: number) => {
   const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+
+/**
+ * The direction the air is lit from. The sun is the mark's core: while it hangs near over the sea (the hero), it is a
+ * hot object ~10 deg up, and a physical sky lit from 10 deg up is a washed, beige day sky. So while the core is near
+ * ('look.dusk', default: from its distance) the sky's light keeps the core's azimuth but sits on the horizon: the air
+ * glows as at sunset (orange band, steel-blue band, stars above), under the core. Far away the core is the star and
+ * lights the air from where it is.
+ */
+function skyLight(f: Frame): number[] {
+  const d = f.sun.dir,
+    up = f.cam.up;
+  let dusk = f.ch['look.dusk'] ?? -1;
+  if (dusk < 0) dusk = 1 - sstep(Math.log(3e3), Math.log(3e5), Math.log(Math.max(f.sun.dist, 1)));
+  if (dusk <= 0) return [...d];
+  const e = d[0] * up[0] + d[1] * up[1] + d[2] * up[2];
+  const h = [d[0] - up[0] * e, d[1] - up[1] * e, d[2] - up[2] * e];
+  const hl = Math.hypot(h[0], h[1], h[2]) || 1;
+  const el = Math.asin(Math.max(-1, Math.min(1, e)));
+  // the horizon from the camera's height dips a little; put the light just above the geometric horizon
+  const el1 = el + (DUSK_EL - el) * dusk;
+  const c = Math.cos(el1), sn = Math.sin(el1);
+  return [(h[0] / hl) * c + up[0] * sn, (h[1] / hl) * c + up[1] * sn, (h[2] / hl) * c + up[2] * sn];
+}
+const DUSK_EL = -0.5 * (Math.PI / 180);
 
 const SKY_W = 192,
   SKY_H = 108;
@@ -159,7 +183,7 @@ function makeLook(): WorldModule {
     provides: ['look_sky', 'look_atmo', 'look_post'],
     glsl: [atmoGlsl, sunGlsl, skyGlsl, planetGlsl].join('\n'),
     post: postGlsl,
-    channels: { 'look.sunDisc': 1, 'look.gain': 3, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0.6 },
+    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 3, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0.6 },
     init({ gl: g, u }) {
       gl = g;
       ldr = !(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
@@ -181,7 +205,8 @@ function makeLook(): WorldModule {
       const w = sstep(12, 30, hAir);
       const ch = f.ch;
       airUniforms((n, v) => u.set(n, v), K);
-      u.set('look_uSun', f.sun.dir);
+      const sun = skyLight(f);
+      u.set('look_uSun', sun);
       u.set('look_uSunR', f.sun.rad);
       u.set('look_uCam', cam);
       u.set('look_uHighW', w);
@@ -205,7 +230,7 @@ function makeLook(): WorldModule {
       // the sky-view LUT at the camera, while it is low enough to use it
       if (progs && w < 1) {
         airUniforms(sharedSet, K);
-        shared.look_uSun = f.sun.dir;
+        shared.look_uSun = sun;
         shared.look_uSunR = f.sun.rad;
         shared.look_uCam = cam;
         run(progs.sky, luts.look_uSkyLUT, u, shared);
