@@ -217,6 +217,9 @@ function makeLook(): WorldModule {
       u.set('look_uSunR', f.sun.rad);
       u.set('look_uCam', cam);
       u.set('look_uHighW', w);
+      // from high up the limb seen against the sun blazes: real aerosol has a sharp forward peak the single-lobe
+      // phase function misses; low down it would put a second sun on the horizon under the core, so it fades in with height
+      u.set('look_uFwd', 0.7 * sstep(30, 200, hAir));
       u.set('look_uSteps', Math.round(10 + 14 * f.quality.q));
       u.set('look_uStarGain', (ch['look.stars'] ?? 1) * UNIT);
       u.set('look_uSunDisc', ch['look.sunDisc'] ?? 1);

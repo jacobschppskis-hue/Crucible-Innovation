@@ -27,6 +27,7 @@ uniform vec3 look_uSun;          // direction to the sun (world = air frame: sam
 uniform float look_uSunR;        // the sun's angular radius (rad)
 uniform vec3 look_uSunE;         // sun illuminance colour above the air
 uniform vec3 look_uCam;          // camera position in air km
+uniform float look_uFwd;         // share of a sharp forward aerosol lobe (seen from orbit: the sunrise blaze on the limb)
 
 const float LOOK_PI = 3.14159265359;
 
@@ -128,7 +129,7 @@ void look_march(vec3 ro, vec3 rd, float tMax, int steps, float jitter, out vec3 
   t1 = min(t1, tMax);
   if (t1 <= t0) return;
   float cosT = dot(rd, look_uSun);
-  float pR = look_phaseR(cosT), pM = look_phaseM(cosT, look_uMieG);
+  float pR = look_phaseR(cosT), pM = mix(look_phaseM(cosT, look_uMieG), look_phaseM(cosT, 0.985), look_uFwd);
   float fn = float(steps);
   // samples crowd at the ray's closest approach to the planet: the middle of a limb chord seen from space, the ground
   // end of a ray into the sea, the camera's end of a ray going up
