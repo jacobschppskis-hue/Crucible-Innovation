@@ -10,7 +10,7 @@ import {
 } from './lib.mjs';
 import { domRules, pixelRules } from './rules.mjs';
 
-const A = args({ target: 'out', checks: 'rules,walk,film,loop,touch,keys,rm,nojs,nowebgl,frame,overflow,dead,contrast,perf,memory', devices: 'iphone,desktop', n: '24' });
+const A = args({ target: 'out', checks: 'rules,walk,film,loop,inertia,touch,keys,rm,nojs,nowebgl,frame,overflow,dead,contrast,perf,memory', devices: 'iphone,desktop', n: '24' });
 const TAG = A.tag || A.target.replace(/[^a-z0-9]+/gi, '-').slice(0, 30);
 const OUT = path.join(QA, 'out', TAG);
 const SHOTS = path.join(QA, 'shots', TAG);
@@ -50,7 +50,8 @@ async function contactSheet(files, out, cols = 6, w = 240) {
 
 // ---------------------------------------------------------------- walk: the whole journey, frame by frame, held clock
 async function walk(device) {
-  const { ctx, page, log, kind } = await open(device);
+  // a fixed scene clock (?t=8): frames depend only on the camera, so walks are comparable run to run
+  const { ctx, page, log, kind } = await open(device, { url: A.walkLive ? URL0 : withQ(URL0, 't=8') });
   if (kind === 'none') { F('P0', 'walk', devName(device), 'no world hooks (__world / __state)'); await ctx.close(); return; }
   await page.evaluate(() => window.__qa.hold());
   const N = +A.n, files = [], walkStats = [];
@@ -69,13 +70,17 @@ async function walk(device) {
     if (s.mean > 0.55) F('P1', 'walk', devName(device), `p=${p.toFixed(3)} frame mostly white/blown (mean L ${s.mean.toFixed(2)})`, f);
     if (s.hot > 0.25) F('P2', 'walk', devName(device), `p=${p.toFixed(3)} ${(s.hot * 100).toFixed(0)}% of the frame is saturated Ember/orange (colour budget?)`, f);
     // Jacob's named failure modes, per frame
-    const px = await pixelRules(png);
+    // judge the world alone: dark glyphs and black-on-Ember button labels would read as specks
+    const hideH = await page.addStyleTag({ content: 'main,footer,nav,header,[data-place]{visibility:hidden!important}' });
+    const worldPng = await shot(page);
+    await hideH.evaluate((e) => e.remove());
+    const px = await pixelRules(worldPng);
     if (px.hotFrac > 0.03 && px.speckFrac > SPECK) F('P1', 'lava', devName(device), `p=${p.toFixed(3)} dark specks in the lava: ${(px.speckFrac * 1000).toFixed(1)}‰ of hot pixels (> ${(SPECK * 1000).toFixed(1)}‰) — "dark crust plates ... specks" read as dirty`, f);
     if (px.coolFrac > 0.05) F('P2', 'colour', devName(device), `p=${p.toFixed(3)} Quench/blue covers ${(px.coolFrac * 100).toFixed(1)}% of the frame (budget ~5%)`, f);
     const em = (await page.evaluate(domRules, { emberCount: true }).catch(() => [])).find((r) => r.rule === 'ember-things');
     if (em && em.n > 3) F('P2', 'colour', devName(device), `p=${p.toFixed(3)} ${em.n} Ember UI things on screen (about 3 max): ${em.text}`, f);
     walkStats.push({ p, ...px, mean: +s.mean.toFixed(4), ember: em?.n });
-    if (prev && i === N) {
+    if (prev && i === N && !A.walkLive) {
       const d = await diff(prev.first, png);
       if (d.mad > 6) F('P0', 'loop', devName(device), `last frame (p=1) != first frame (p=0): mean |Δ| ${d.mad.toFixed(1)}, p99 ${d.p99}`, f);
       else I('loop', devName(device), `p=1 frame matches p=0 (mean |Δ| ${d.mad.toFixed(2)})`);
@@ -636,6 +641,51 @@ async function memory() {
   await ctx.close();
 }
 
+// ---------------------------------------------------------------- inertia: touch momentum at a fixed frame rate (held clock)
+// One clock frame per touch event, so the loop's touch physics see an exact 30/60/120 Hz. A finger flicks at 3000 px/s
+// (a brisk phone flick) and lifts; then frames run until the page stops. Native iOS (UIScrollView, decay 0.998/ms)
+// glides about v * 0.5 s = ~1500 px after lift and stops ~2.5 s later. Lenis' syncTouch measures velocity per frame,
+// so its glide changes with the frame rate.
+async function inertia(device) {
+  if (device === 'desktop') return;
+  const dn = devName(device);
+  const { ctx, page, kind } = await open(device, { url: INPUT_URL });
+  if (kind !== 'world') { await ctx.close(); return; }
+  const c = await cdp(page);
+  const rows = [];
+  for (const hz of [30, 60, 120]) {
+    const ms = 1000 / hz, v = 3000, per = (v * ms) / 1000, moves = Math.round(0.12 * hz); // 120 ms of finger travel
+    await page.evaluate(() => { window.__qa.resume(); window.__qa.go(0.3); });
+    await sleep(1500);
+    await page.evaluate(() => window.__qa.hold());
+    for (let i = 0; i < 10; i++) await page.evaluate((ms) => window.__qa.step(ms), ms);
+    const y0 = await page.evaluate(() => window.__world.state().scroll);
+    let ts = Date.now() / 1000, x = 195, y = 700;
+    await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }], timestamp: ts });
+    await page.evaluate((ms) => window.__qa.step(ms), ms);
+    for (let i = 0; i < moves; i++) {
+      ts += ms / 1000; y -= per;
+      await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y, id: 1 }], timestamp: ts });
+      await page.evaluate((ms) => window.__qa.step(ms), ms);
+    }
+    const yLift = await page.evaluate(() => window.__world.state().scroll);
+    ts += ms / 1000;
+    await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: ts });
+    const trace = await page.evaluate(async (ms) => { const out = []; for (let i = 0; i < 360 * (ms / 16.67); i++) { window.__qa.step(ms); if (i % 4 === 0) out.push(window.__world.state().scroll); } return out; }, ms);
+    const end = trace.at(-1); const glide = end - yLift; const drag = yLift - y0;
+    // time to come (nearly) to rest
+    let stopI = trace.findIndex((sy) => Math.abs(end - sy) < 2); const stopMs = stopI * 4 * ms;
+    rows.push({ hz, drag: Math.round(drag), glide: Math.round(glide), stopMs: Math.round(stopMs) });
+    I('inertia', dn, `${hz} Hz: finger ${Math.round(drag)} px at 3000 px/s, then glides ${Math.round(glide)} px and rests after ~${Math.round(stopMs)} ms (native iOS: ~1500 px, ~2.5 s)`);
+  }
+  fs.writeFileSync(path.join(OUT, `inertia-${dn}.json`), JSON.stringify(rows));
+  const g60 = rows.find((r) => r.hz === 60)?.glide ?? 0;
+  if (g60 < 600) F('P1', 'inertia', dn, `a 3000 px/s flick glides only ${g60} px at 60 Hz after lift (native iOS ~1500 px): momentum feels killed`);
+  const gs = rows.map((r) => r.glide); const spread = Math.max(...gs) / Math.max(1, Math.min(...gs));
+  if (spread > 1.6) F('P1', 'inertia', dn, `fling length depends on frame rate: ${rows.map((r) => `${r.hz} Hz ${r.glide} px`).join(', ')} (Low Power Mode = 30 Hz, ProMotion/Android = 120 Hz)`);
+  await ctx.close();
+}
+
 // ---------------------------------------------------------------- rules: Jacob's copy/brand failure modes over the whole page
 async function rules(device) {
   const dn = devName(device);
@@ -656,7 +706,7 @@ async function rules(device) {
 
 // ---------------------------------------------------------------- run
 const t0 = Date.now();
-const per = { rules, walk, film, loop, touch, rm, nojs, nowebgl, frame, dead, contrast: contrastCheck };
+const per = { rules, inertia, walk, film, loop, touch, rm, nojs, nowebgl, frame, dead, contrast: contrastCheck };
 const once = { overflow, perf, memory };
 for (const ch of CHECKS) {
   if (ch === 'keys') continue; // part of loop

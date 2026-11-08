@@ -22,5 +22,29 @@
   best: real phones also pay bandwidth, tile memory and thermal limits. It ranks the quality steps; it does not certify
   60 fps.
 
-## iOS research
-(see below, filled from the research pass)
+## iOS research: programmatic scroll during momentum, Lenis `infinite` + `syncTouch` (07:40 UTC)
+Sources: WebKit source on GitHub (WKWebViewIOS.mm, ScrollingTreeScrollingNodeDelegateIOS.mm), commit 310169@main,
+TanStack Virtual #1307/#1332/#1346, Lenis issues #26 #341 #454 #495 #496 #499 #535, Lenis 1.3.26 dist (lenis.mjs).
+- **A JS scroll write during an iOS fling stops the fling dead (iOS 17, 18 and 26), for the root and for overflow
+  scrollers.** Under a finger the write is ignored. iOS 27 no longer stops momentum, but a write can be overridden by
+  the fling that is still running. Android Chrome (and our Playwright Chromium) keeps the fling going from the written
+  position, **so a naive mid-fling wrap passes our tests and fails on an iPhone.**
+- Writes are clamped to the content and stop the bounce, so a wrap exactly at the end snaps. The content past the
+  seam must continue (the loop copy).
+- `-webkit-overflow-scrolling` does nothing since iOS 13. `overscroll-behavior-y: none` kills the bounce but does not
+  reliably block pull-to-refresh. Never set `overscroll-behavior: none` (both axes) on html/body: it kills back-swipe.
+- **Lenis 1.3.26:** without `syncTouch`, touch scrolls natively and never loops. With it, a non-passive `touchmove`
+  calls `preventDefault` and Lenis moves the page itself. Native momentum, bounce, pull-to-refresh and toolbar collapse
+  are gone, and touch scrolling runs at the main thread's frame rate (where the world renders). The wrap is
+  `modulo(animatedScroll, limit)` written with `scrollTo` every frame, which is fine because no native fling is running.
+- **Lenis' release inertia is per frame:** `delta = sign * |velocity|^touchInertiaExponent`, where `velocity` is px moved
+  in the last frame (L630/L833). Fling length depends on the frame rate: Low Power Mode (30 fps) goes ~3x further,
+  120 Hz ~3x shorter. Native iOS decays by 0.998/ms, so a 3000 px/s flick glides ~1500 px over ~2.5 s.
+- Lenis #496: iOS 26 broke vh units at the wrap with 100lvh panels. The maintainer recommends an element scroller.
+  Our loop copy is `--world-vh = innerHeight` px, re-set on resize; toolbar changes are suppressed by syncTouch.
+- igloo.inc: no teardown found. Its scene and text are all WebGL, so it is likely a virtual scroll.
+- **What only a real phone shows:** the iOS write behaviour, fling catch (it fires no events), bounce and
+  pull-to-refresh, toolbar/innerHeight changes, the 30/60 fps caps, main-thread lag, and the real fling feel.
+- **Harness consequences:** `inertia` measures the glide at exactly 30, 60 and 120 Hz (held clock, one frame per touch
+  event). `loop` flicks across the seam. Next: a write guard that patches `scrollTo` etc. and fails any write while a
+  finger is down when the loop runs natively.
