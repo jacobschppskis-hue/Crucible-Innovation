@@ -48,7 +48,8 @@ float look_line(float f, float w, float fpu, float wTrue) {
   float band = (1.0 - smoothstep(we - e, we + e, af)) * (w / we);
   // capped at a true width (distance to the zero set ~ |f| / |grad f|) where the field goes flat, so no blobs; filtered
   // wide, since |grad f| from fwidth is constant per 2x2 quad
-  float d = af / max(fw / max(fpu, 1e-6), 1e-6);
+  // |grad f| floored: where the field is momentarily flat inside a current, a raw ratio punched black holes in it
+  float d = af / max(fw / max(fpu, 1e-6), 0.35);
   float cap = 1.0 - smoothstep(wTrue, wTrue * 2.5 + fpu * 3.0, d);
   return band * cap;
 }
@@ -94,6 +95,9 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   // s.fw is the footprint's long (grazing) axis; isotropic noise filtered by it blurs a far sea to mush. Use the
   // geometric mean of the two axes (what anisotropic filtering approximates), so detail survives toward the horizon.
   float fp = s.fw * sqrt(s.graz) / look_uK;
+  // toward the limb the footprint gets very long: there the fields use the long axis (blurrier, never blocky)
+  float limb = 1.0 - smoothstep(0.08, 0.35, s.graz);
+  fp = mix(fp, s.fw / look_uK, limb);
   vec3 p = q * look_uRg;
   float lf = look_land(q, fp);
   float land = smoothstep(-max(fp / 520.0 * 1.2, 0.004), max(fp / 520.0 * 1.2, 0.004), lf);
@@ -125,7 +129,7 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   emit = max(emit, vec3(0.034, 0.0062, 0.0011) * (look_uLavaGain / 3.0) * (1.0 - land));
   // lava lakes inland: small, sparse, very hot pools, like a city's lights on Earth's night side (they tell you how big
   // the continent is). Each is a disc ~2-6 km across, energy-averaged into the pixel when smaller than it.
-  if (land > 0.01) {
+  if (land > 0.01 && limb < 0.99) {
     vec3 lc = q * (look_uRg / 40.0);
     vec3 ci = floor(lc);
     vec3 hh = look_h33(ci + 7.3);
@@ -133,8 +137,11 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
       vec3 cp = (ci + 0.25 + 0.5 * hh) * (40.0 / look_uRg);
       float dkm = length(q - normalize(cp)) * look_uRg;
       float rad = mix(0.6, 1.8, hh.y);
-      float wv2 = max(rad, fp * 0.7);
-      float lake = exp(-dkm * dkm / (wv2 * wv2)) * (rad * rad) / (wv2 * wv2);
+      // energy-averaged into the pixel, but never wider than ~a quarter cell (a gaussian cut at its cell's edge reads as a
+      // square block); past that the lake simply fades
+      float wv2 = min(max(rad, fp * 1.2), 9.0);
+      float fade = rad * rad / max(rad * rad, fp * fp * 1.44);
+      float lake = exp(-dkm * dkm / (wv2 * wv2)) * fade * (1.0 - limb);
       emit += look_planck(mix(1250.0, 1420.0, hh.z) + look_uHeat * 300.0) * look_uLavaGain * lake * land * smoothstep(0.05, 0.25, lf);
     }
   }
