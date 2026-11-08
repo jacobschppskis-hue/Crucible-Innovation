@@ -60,3 +60,15 @@ All of it, in one WebGL2 fragment shader over one fixed full-screen canvas plus 
 - Awwwards: "Into the Amazon" (SOTD Apr 2025, a drop of water's journey told by scroll) and "The Spark" (SOTD Dec 2025,
   scroll-driven 3D story). Took: one continuous world, scroll as the camera.
 - TDM "Seascape" (Shadertoy): sky reflection on a dark sea is what makes water read. Took: the sky only in reflection.
+
+## How it was tested
+Playwright Chromium on software GL (SwiftShader), frames stepped exactly with `?paused&shot` + `window.__step(dt, n)`:
+hero idle (9 frames over ~6 s: the nucleus breathes a ring every 1.9 s), the hero story at 7 scroll positions, cursor
+paths at 220 / 700 / 1400 / 2200 px/s plus a mouse drag (and a debug view of the raw wave grid, `?dbg=1|2`, to confirm a
+clean two-armed V rather than a trough), the phone view (iPhone 15) with a finger drag and a finger held while the page
+scrolls under it (the cleanest V wake of all), every section at 1440x900 and 393 wide, 2x crops (ring, bar, pool),
+venture hover, reduced motion (stills per scroll position), and 360 px (no horizontal scroll anywhere).
+Not tested: a real GPU frame time (no GPU here). The shader is one full-screen pass with two Voronoi levels and ~8 noise
+lookups; the render scale steps down on slow frames, so a MacBook should hold 60 fps at a lower step if needed, but this
+is the first thing to measure on hardware. Shots in `shots/` (07 still shows the PayPal rivers crossing, fixed since).
+Known: faint 1-cell column stripes can show in the pool at 2x under strong ripple light (half-float grid sampling).
