@@ -15,7 +15,7 @@ const errs = [];
 page.on('console', (m) => (m.type() === 'error' || m.type() === 'warning') && errs.push(m.text()));
 page.on('pageerror', (e) => errs.push(String(e)));
 const qs = new URLSearchParams({ t: A.t || '6', ...(A.lookfar ? { lookfar: '1' } : {}), ...(A.q ? { q: A.q } : {}), ...(A.full ? { world: 'full' } : {}) });
-await page.goto((A.url || 'http://localhost:3000/') + '?' + qs, { waitUntil: 'load', timeout: 120000 });
+await page.goto((A.url || 'http://localhost:3000/') + '?' + qs + (A.extra ? '&' + A.extra : ''), { waitUntil: 'load', timeout: 120000 });
 await page.mouse.move(5, 5).catch(() => {});
 await page.waitForFunction(() => window.__world || document.documentElement.dataset.worldFail, null, { timeout: 120000 }).catch(() => {});
 const fail = await page.evaluate(() => document.documentElement.dataset.worldFail);

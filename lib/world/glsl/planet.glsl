@@ -86,8 +86,9 @@ float look_ggx(float nh, float a) {
 }
 
 // 0 where the near sea (lava) shades, 1 where the far field takes over: by distance, so the hero and the low swoops
-// (horizon < ~150 units) are all lava and everything seen from orbit is the planet
-float look_farMix(Sea s) { return smoothstep(250.0, 1400.0, s.t); }
+// (horizon < ~150 units) are all lava and everything seen from orbit is the planet; from a camera above ~200 units the
+// whole sea is the far field (the near swell, fading out up there, otherwise draws radial streaks at grazing views)
+float look_farMix(Sea s) { return max(smoothstep(250.0, 1400.0, s.t), smoothstep(60.0, 200.0, uCamH)); }
 
 // Radiance leaving the planet's surface at s toward the camera (before the air in between: look_atmo adds that).
 vec3 look_planetFarT(Ray r, Sea s, float dT) {

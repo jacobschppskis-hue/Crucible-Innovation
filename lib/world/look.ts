@@ -79,14 +79,20 @@ function skyLight(f: Frame): number[] {
   const d = f.sun.dir,
     up = f.cam.up;
   let dusk = f.ch['look.dusk'] ?? -1;
-  if (dusk < 0) dusk = 1 - sstep(Math.log(3e3), Math.log(3e5), Math.log(Math.max(f.sun.dist, 1)));
+  if (dusk < 0) {
+    dusk = 1 - sstep(Math.log(3e3), Math.log(3e5), Math.log(Math.max(f.sun.dist, 1)));
+    // low over the sea the world is always at its evening hour: a sun higher than dusk would turn the whole sky a
+    // saturated day blue (far more Quench than the ~5% the brand allows)
+    dusk = Math.max(dusk, 1 - sstep(80, 300, f.cam.h));
+  }
   if (dusk <= 0) return [...d];
   const e = d[0] * up[0] + d[1] * up[1] + d[2] * up[2];
   const h = [d[0] - up[0] * e, d[1] - up[1] * e, d[2] - up[2] * e];
   const hl = Math.hypot(h[0], h[1], h[2]) || 1;
   const el = Math.asin(Math.max(-1, Math.min(1, e)));
   // the horizon from the camera's height dips a little; put the light just above the geometric horizon
-  const el1 = el + (DUSK_EL - el) * dusk;
+  // only ever lowered (a night-side sun below the horizon stays where it is)
+  const el1 = Math.min(el, el + (DUSK_EL - el) * dusk);
   const c = Math.cos(el1), sn = Math.sin(el1);
   return [(h[0] / hl) * c + up[0] * sn, (h[1] / hl) * c + up[1] * sn, (h[2] / hl) * c + up[2] * sn];
 }
