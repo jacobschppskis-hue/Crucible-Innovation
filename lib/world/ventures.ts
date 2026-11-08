@@ -11,19 +11,20 @@ import { V, clamp } from './frame';
 import type { Uniforms } from './gl';
 import { haptic } from '@/lib/haptic';
 import monolithGlsl from './glsl/monolith.glsl';
+import { keys } from './journey';
 
 export type Vec3 = V3;
 
 /** Half width, half height, half depth, fillet radius: a monolith is 10 units tall, times SCALE world units. */
 export const MONO_E: [number, number, number, number] = [1.6, 5.0, 0.42, 0.12];
-/** World units (~m) per monolith unit: 14 makes them 140 m tall, against a camera 3 m above the sea. */
-const SCALE = 14;
-/** Where they stand: this far along the circle past the ventures place's first key (s = 160 deg), and the layouts in
+/** World units (~m) per monolith unit: 11 makes them 110 m tall, against a camera 3 m above the sea. */
+const SCALE = 11;
+/** Where they stand: this far along the circle past the ventures place's first key, and the layouts in
  * monolith units in the place's frame (x right, z toward the camera), yaw offsets from the hero angle (rad). */
-const AHEAD = 30 + 300;
+const AHEAD = 30 + 420;
 const LAYOUT = {
   // desktop: right of the heading, at about 42%, 62% and 82% of the width, the two still forging a little further back
-  wide: { pos: [[-2.6, 0], [3.9, -3], [10.6, -1]] as const, aim: [-0.075, 0.075, -0.11] },
+  wide: { pos: [[-3.4, 0], [5.6, -3], [14.6, -1]] as const, aim: [-0.075, 0.075, -0.11] },
   // phones: the live one in front, centred; the two forging ones behind it to either side
   narrow: { pos: [[0, 0], [-6, -15], [5.5, -28]] as const, aim: [-0.06, 0.08, -0.1] },
 };
@@ -88,12 +89,19 @@ const U = {
   E: new Float32Array(4),
 };
 
+// the ventures place's first key along the circle (journey.ts), so the monoliths follow wherever the lead puts it
+let s0: number | null = null;
+function placeS() {
+  if (s0 === null) s0 = (keys().find((k) => k.at[0] === 'ventures' && k.at[1] === 0)?.s as number | undefined) ?? (150 * Math.PI) / 180 * 6000;
+  return s0;
+}
+
 function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;
   const H = 2 * MONO_E[1];
-  const v0 = (160 * Math.PI) / 180 * f.R + AHEAD;
+  const v0 = placeS() + AHEAD;
   const origin = f.surf(0, v0, 0);
   const up = V.norm(origin);
   // the place's frame: z toward the camera's side (back along the circle), x to the right as seen from the camera
@@ -178,7 +186,7 @@ function frameUpdate(f: Frame, u: Uniforms) {
   u.set('ventures_uZen', [0.0025, 0.003, 0.0055]);
   u.set('ventures_uHorW', [0.5, 0.13, 0.035]);
   u.set('ventures_uHorC', [0.42, 0.11, 0.03]);
-  u.set('ventures_uSea', V.mul(bb(980), 14 * 0.96));
+  u.set('ventures_uSea', V.mul(bb(900), 14 * 0.96));
   u.set('ventures_uPool', V.mul(bb(1320), 14));
 }
 

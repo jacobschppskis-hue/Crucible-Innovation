@@ -190,7 +190,9 @@ vec3 ventures_envA(int i, vec3 p, vec3 d, float w) {
   float dy = dot(d, up);
   // fraction of the lobe below the horizon (a step blurred by the lobe)
   float below = smoothstep(w + 0.004, -w - 0.004, dy);
-  vec3 sky = ventures_skyA(d, up, w);
+  // the sky is look's own (stars filtered by the cone, the air's glow at the horizon), seen from the metal
+  Ray sr; sr.ro = p; sr.rd = d; sr.pa = max(w, 0.002); sr.depth = 1;
+  vec3 sky = look_sky(sr);
   vec3 sea = ventures_uSea;
   if (below > 0.0) {
     float sd = max(-dy, 0.0) + w * 0.5;
@@ -199,10 +201,10 @@ vec3 ventures_envA(int i, vec3 p, vec3 d, float w) {
     // distance of the reflected sea point from the foot's outline (roughly), in half widths
     vec3 lc = (hit - foot) * ventures_uM[i];
     float rr = length(max(abs(lc.xz) - ventures_uE.xz, 0.0)) / ventures_uE.x;
-    float pool = exp(-rr * 1.6) * (1.0 + ventures_uK[i].y * 0.8);
+    float pool = exp(-rr * 4.0) * (1.0 + ventures_uK[i].y * 0.8);
     // the sea's own grazing reflection of the horizon band: brighter toward the horizon
     float graze = exp(-sd * 9.0);
-    sea = ventures_uSea * (0.35 + 0.65 * graze) + ventures_uPool * pool * (0.35 + 0.65 * ventures_uK[i].z * 0.6 + 0.35);
+    sea = ventures_uSea * (0.35 + 0.65 * graze) + ventures_uPool * pool * (0.4 + 0.3 * ventures_uK[i].z);
   }
   return mix(sky, sea, below);
 }
@@ -260,7 +262,7 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   // smoother (as on any metal object that is handled or dressed); never patchy.
   vec3 F0 = kind < 0.5 ? vec3(0.80, 0.76, 0.68) : vec3(0.56, 0.57, 0.58);
   vec3 tint = kind < 0.5 ? vec3(0.95, 0.93, 0.88) : vec3(0.92, 0.93, 0.95);
-  float rough = kind < 0.5 ? 0.30 : 0.2;
+  float rough = kind < 0.5 ? 0.22 : 0.13;
   float edgeL = smoothstep(0.92, 0.6, max(abs(nl.x), max(abs(nl.y), abs(nl.z))));
   rough += 0.04 * n1.x - 0.08 * edgeL;
   // the draw: grooves run vertically, so highlights stretch across them (horizontally); seen from afar they become
@@ -332,7 +334,7 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
   float tl = length(Tg);
   Tg = tl > 1e-3 ? Tg / tl : M[0];
   vec3 Bg = cross(n, Tg);
-  float an = 0.62 * face * (1.0 - markIn);              // anisotropy
+  float an = 0.45 * face * (1.0 - markIn);              // anisotropy
   float aT = clamp(a * (1.0 + an * 2.6), 0.002, 1.0), aB = clamp(a * (1.0 - an * 1.05), 0.002, 1.0);
   vec3 r = reflect(rd, n);
   vec3 F = ventures_fresnel(F0, tint, NoV);
@@ -355,8 +357,8 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng) {
     float D = 1.0 / (VENTURES_PI * aT2 * aB2 * dd * dd);
     float norm = (aT * aB) / (aT2 * aB2);
     vec3 Fs = ventures_fresnel(F0, tint, VoH);
-    float solid = VENTURES_PI * uSunRad * uSunRad;
-    spec += Fs * D * norm * ventures_vis(NoV, NoL, sqrt(aT2 * aB2)) * NoL * ventures_uSunL * solid;
+    // look's sun light at this point: coloured and dimmed by the air, out at night
+    spec += Fs * D * norm * ventures_vis(NoV, NoL, sqrt(aT2 * aB2)) * NoL * look_sunLight(h.wp);
   }
   // the pool's light on the metal's lower faces, as a broad area light below (it is in the environment too, but the
   // blurred env underestimates a large bright source at close range): only on faces turned down or out
