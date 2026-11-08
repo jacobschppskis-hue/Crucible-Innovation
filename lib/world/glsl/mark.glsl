@@ -324,7 +324,10 @@ void mark_hit(Ray r, inout Hit h) {
   if (r.depth == 0 || mark_uLook.x <= 0.002) return;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, 0.);
-  vec4 m = mark_march(ro, rd, r.pa * 4., 24, pL);
+  // a reflected ray's cone (pa) is widened by the sea's roughness; never let that grow the hit test, or every ray inside
+  // the mark's box counts as a hit and the reflection shows the box. A fixed, small footprint: the sea's own normals
+  // and the roughness break the reflection up.
+  vec4 m = mark_march(ro, rd, min(r.pa, 0.002), 32, pL);
   if (c.x > 0. && (m.z < 0.5 || c.x < m.x)) {
     float t = c.x * mark_uC.w;
     if (t < h.t) { h.t = t; h.id = MARK_ID + 1; h.p = r.ro + r.rd * t; h.n = vec3(0.); h.data = vec4(ro + rd * c.x, -1.); }
