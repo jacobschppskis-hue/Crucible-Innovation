@@ -189,16 +189,23 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   float up = dot(rd, s.up);
   if (up < 0.002) rd = normalize(rd + s.up * (0.002 - up));
   Ray rr; rr.ro = s.p + s.up * 0.02; rr.rd = rd; rr.pa = r.pa / s.graz + sqrt(a2); rr.depth = 1;
-  // two taps spread up and down the reflection by the skin's roughness: a tall bright thing (a monolith) is then a soft
-  // broken streak, not hard strips with black gaps where single rays hit or miss it
-  float spread = clamp(sqrt(a2) * 0.6, 0.004, 0.12);
+  // three taps spread along the reflection (and a little sideways) by the skin's roughness, weighted 1:2:1: a tall bright
+  // thing (a monolith) reflects as a soft, swell-broken streak, never stacked slabs or hard strips where single rays hit
+  // or miss it (V2: a crisp mirror would read as glass, a stepped one as pixels)
+  float spread = clamp(sqrt(a2) * 1.2, 0.01, 0.2);
   vec3 side = normalize(cross(rd, s.up) + 1e-6);
   vec3 vup = normalize(cross(side, rd));
-  Ray r2 = rr;
-  rr.rd = normalize(rd + vup * spread);
-  r2.rd = normalize(rd - vup * spread);
-  if (dot(r2.rd, s.up) < 0.002) r2.rd = normalize(r2.rd + s.up * (0.002 - dot(r2.rd, s.up)));
-  col += 0.5 * (world_env(rr) + world_env(r2)) * F * lava_uLook.w;
+  vec3 acc = world_env(rr) * 0.5;
+  for (int i = 0; i < 2; i++) {
+    float sg = i == 0 ? 1. : -1.;
+    Ray r2 = rr;
+    r2.rd = normalize(rd + vup * spread * sg + side * spread * 0.5 * sg);
+    float u2 = dot(r2.rd, s.up);
+    if (u2 < 0.002) r2.rd = normalize(r2.rd + s.up * (0.002 - u2));
+    r2.pa = rr.pa + spread;
+    acc += world_env(r2) * 0.25;
+  }
+  col += acc * F * lava_uLook.w;
 
   // the sun as a light (look's, after the air): GGX widened by the unresolved slopes and the sun's own disc, so it is a
   // glitter path, never a dot
