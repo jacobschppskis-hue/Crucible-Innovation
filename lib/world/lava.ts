@@ -53,7 +53,8 @@ function spectrum(R: number): Wave[] {
     // a Gaussian-ish spread about the heading, wider for short waves (as wind seas are); never mirrored pairs, which
     // make a lattice
     const gs = rnd() + rnd() - 1;
-    const dir = LAVA.heading + gs * LAVA.spread * 2 * (0.25 + 1.6 * f * f);
+    // (at most ~+-70 deg: near-orthogonal trains of similar k cross into a lattice in the glint)
+    const dir = LAVA.heading + gs * LAVA.spread * 2 * (0.25 + 0.85 * f * f);
     // seamless round the lap: v wraps every 2 PI R, so the wave's v component must be a whole number of cycles
     let ku = Math.cos(dir) * k;
     let kv = Math.sin(dir) * k;
@@ -90,7 +91,7 @@ export function lavaSample(u: number, v: number, fp = 0): [number, number, numbe
     const k = (Math.PI * 2) / w.lam;
     const ku = Math.cos(w.dir) * k;
     const kv = Math.sin(w.dir) * k;
-    const at = Math.exp(-0.25 * k * k * fp * fp);
+    const at = Math.exp(-0.7 * k * k * fp * fp);
     const ph = ku * u + kv * v - Math.sqrt(LAVA.g * k) * tNow + w.ph;
     const a = w.a * swellGain * at;
     h += a * Math.sin(ph);

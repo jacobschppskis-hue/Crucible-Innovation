@@ -49,7 +49,9 @@ void lava_swell(vec2 P, vec2 dPx, vec2 dPy, float gain, inout LavaSurf s) {
     float k = length(w.xy);
     float a = w.z * gain;
     vec2 pp = vec2(dot(w.xy, dPx), dot(w.xy, dPy));   // this wave's phase step per pixel
-    float at = exp(-0.25 * dot(pp, pp));                // the pixel's box, as a Gaussian, applied to this wave
+    // the pixel's box as a Gaussian, applied to this wave; cut well before Nyquist (pi per px): the glint is so non-linear
+    // in slope that even a few % of a half-resolved wave shows as a crossed lattice in the glitter path
+    float at = exp(-0.7 * dot(pp, pp));
     if (at < 0.003) { s.var += 0.5 * a * a * k * k; continue; }
     float ph = dot(w.xy, P) + w.w;
     float sn = sin(ph), cs = cos(ph);

@@ -43,7 +43,7 @@ for (const [name, prof] of Object.entries(profiles)) {
   const vp = page.viewportSize();
   const cdp = await ctx.newCDPSession(page);
   for (const [pl, f] of places) {
-    await page.evaluate(([pl, f]) => window.__world.goPlace(pl, +f), [pl, f]);
+    await page.evaluate(([pl, f]) => (pl === 'go' ? window.__world.go(+f) : window.__world.goPlace(pl, +f)), [pl, f]);
     await page.waitForTimeout(300);
     await page.evaluate(() => window.__world.hold());
     await step(page, 2);
