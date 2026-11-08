@@ -111,8 +111,8 @@ export function keys(): Key[] {
     // story: the core recedes into the sky and sets as the camera turns to the night and climbs
     // ... and swoops low over the night sea while Jacob's first paragraphs are read: the visitor's cursor and finger
     // make wakes here (lava: full wakes below h 14); the horizon sits low, the type has the dark sky
-    { at: ['story', 0], s: 90, h: 7, yaw: 62, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 11 } },
-    { at: ['story', 0.55], s: 440, h: 6, yaw: 22, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 11 } },
+    { at: ['story', 0], s: 90, h: 7, yaw: 62, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
+    { at: ['story', 0.55], s: 440, h: 6, yaw: 22, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
     { at: ['story', 1], s: deg(12), h: 420, yaw: 15, pitch: -8, fov: 50, ...FAR, ph: { fov: 64, pitch: 0 } },
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
