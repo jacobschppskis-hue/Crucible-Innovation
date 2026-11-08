@@ -224,7 +224,7 @@ html:not(.js) .th-b { opacity: 1 !important; }
 
 <nav class="nav" aria-label="Main">
   <a class="wm" href="#top" aria-label="Crucible home">
-    <svg viewBox="0 0 64 64" aria-hidden="true" id="nav-mark"></svg>
+    <svg viewBox="0 0 48 48" aria-hidden="true" id="nav-mark"></svg>
     <b aria-hidden="true">cruc<span class="spark-i">ı</span>ble</b>
   </a>
   <ul>
@@ -397,7 +397,7 @@ uniform float uQ;        // render px per css px
 uniform float uT;        // clock seconds
 uniform vec4 uCam;       // world x, height, z, pitch (0 = horizon, pi/2 = straight down)
 uniform float uF;        // focal length, css px
-uniform vec4 uSun;       // core centre (world xyz), outer ring radius (world)
+uniform vec4 uSun;       // core centre (world xyz), outer ring radius (world); the mark is Jacob's logo family in the 64 box
 uniform vec4 uSunX;      // foot distance from camera, core visibility, 0, 0
 uniform vec4 uArc[2];    // mark pieces: dx, dy, rotation, alpha (mark units, y down)
 uniform vec4 uCell[14];  // cell centre x, y, rotation, alpha
@@ -639,8 +639,8 @@ vec3 sky(vec3 ro, vec3 d, bool full) {
 
 // ---------- the mark around the sun (mark units: 64 box, centred, y down) ----------
 float sdArcL(vec2 p, float r) {
-  if (p.x < 0.) return abs(length(p) - r) - 1.8;
-  float ey = abs(abs(p.y) - r) - 1.8;
+  if (p.x < 0.) return abs(length(p) - r) - 1.7333;
+  float ey = abs(abs(p.y) - r) - 1.7333;
   return length(max(vec2(p.x, ey), 0.)) + min(max(p.x, ey), 0.);
 }
 vec3 markSD(vec2 m) {
@@ -648,16 +648,16 @@ vec3 markSD(vec2 m) {
   for (int j = 0; j < 2; j++) {
     vec4 a = uArc[j];
     if (a.w <= 0.002) continue;
-    float d = sdArcL(rot(-a.z) * (m - a.xy), j == 0 ? 27. : 15.);
+    float d = sdArcL(rot(-a.z) * (m - a.xy), j == 0 ? 26.6667 : 16.);
     if (d < best.x) best = vec3(d, a.w, 0.);
   }
   for (int i = 0; i < 14; i++) {
     vec4 c = uCell[i];
     if (c.w <= 0.002) continue;
-    float d = sdBox(rot(-c.z) * (m - c.xy), vec2(1.8)) ;
+    float d = sdBox(rot(-c.z) * (m - c.xy), vec2(2.1333));
     if (d < best.x) best = vec3(d, c.w, 1.);
   }
-  float dc = length(m) - 4.5;
+  float dc = length(m) - 4.8;
   if (dc < best.x) best = vec3(dc, 1., 2.);
   return best;
 }
@@ -668,7 +668,7 @@ vec4 markShade(vec2 m, float px) {
   float cov = smoothstep(px * 0.8, -px * 0.8, b.x) * b.y;
   if (cov <= 0.) return vec4(0.);
   if (b.z > 1.5) {
-    float r = length(m) / 4.5;
+    float r = length(m) / 4.8;
     float gran = vnoise(m * 2.2 + uT * 0.6) * 0.12;
     vec3 core = mix(vec3(7.0, 5.2, 3.6), vec3(3.6, 0.95, 0.26), smoothstep(0.05, 1.0, r * r + gran));
     return vec4(core * (1. + 1.4 * uMark.x) * uSunX.y, cov);
@@ -859,9 +859,9 @@ void main() {
     if (uMark.y > 0.01 && rd.z > 0.) {
       float tm = (uSun.z - P.z) / rd.z;
       vec3 Pm = P + rd * tm;
-      vec2 m = vec2(Pm.x - uSun.x, uSun.y - Pm.y) / uSun.w * 27.;
+      vec2 m = vec2(Pm.x - uSun.x, uSun.y - Pm.y) / uSun.w * 26.6667;
       if (dot(m, m) < 1300.) {
-        float px = (tm / (dl * uQ)) / uSun.w * 27. + rough * 40.;
+        float px = (tm / (dl * uQ)) / uSun.w * 26.6667 + rough * 40.;
         vec4 mc = markShade(m, px);
         refl = mix(refl, mc.rgb, mc.a * uMark.y);
       }
@@ -938,9 +938,9 @@ void main() {
     float tm = (uSun.z - ro.z) / d.z;
     if (tm < tw) {
       vec3 Pm = ro + d * tm;
-      vec2 m = vec2(Pm.x - uSun.x, uSun.y - Pm.y) / uSun.w * 27.;
+      vec2 m = vec2(Pm.x - uSun.x, uSun.y - Pm.y) / uSun.w * 26.6667;
       if (dot(m, m) < 1300.) {
-        float px = (tm / (dl * uQ)) / uSun.w * 27.;
+        float px = (tm / (dl * uQ)) / uSun.w * 26.6667;
         vec4 mc = markShade(m, px);
         col = mix(col, mc.rgb, mc.a * uMark.y);
       }
@@ -972,22 +972,31 @@ const seg = (x, a, b) => clamp((x - a) / (b - a), 0, 1);
 const bell = (x, a, b, c, d) => sstep(a, b, x) * (1 - sstep(c, d, x));
 
 // ---------- the mark (lib/splitRing.ts geometry) ----------
-const RING = { c: 32, px: 3.6, core: 4.5, rings: [{ r: 27, n: 9 }, { r: 15, n: 5 }] };
+// Jacob's logo family (Nov 2026): 48-unit grid, carried into the 64 box (x 4/3): outer r 20, inner 12, stroke 2.6,
+// squares 3.2, core 3.6; 7 squares on the outer ring, 4 on the inner, after a one-step break (lib/splitRing.ts)
+const UU = 4 / 3;
+const RING = { c: 32, px: 3.2 * UU, stroke: 2.6 * UU, core: 3.6 * UU, rings: [{ r: 20 * UU, n: 7 }, { r: 12 * UU, n: 4 }] };
 const CELLS = RING.rings.flatMap(({ r, n }, ring) => Array.from({ length: n }, (_, i) => {
   const a = -Math.PI / 2 + (i + 1) * Math.PI / (n + 1);
   return { x: r * Math.cos(a), y: r * Math.sin(a), ring, a };
 }));
 const f3 = (n) => +n.toFixed(3);
 function arcOutline(r, c = 32) {
-  const ro = r + 1.8, ri = r - 1.8;
+  const h = RING.stroke / 2, ro = f3(r + h), ri = f3(r - h);
   return `M${c} ${f3(c - ro)}A${ro} ${ro} 0 0 0 ${c} ${f3(c + ro)}V${f3(c + ri)}A${ri} ${ri} 0 0 1 ${c} ${f3(c - ri)}Z`;
 }
 function markSvg(fg = '#E8E4D8') {
+  const h = RING.px / 2;
   const arcs = RING.rings.map(({ r }) => `<path d="${arcOutline(r)}" fill="${fg}"/>`).join('');
-  const sq = CELLS.map(({ x, y }) => `<rect x="${f3(32 + x - 1.8)}" y="${f3(32 + y - 1.8)}" width="3.6" height="3.6" fill="${fg}"/>`).join('');
-  return arcs + sq + `<circle cx="32" cy="32" r="4.5" fill="#FF5B1F"/>`;
+  const sq = CELLS.map(({ x, y }) => `<rect x="${f3(32 + x - h)}" y="${f3(32 + y - h)}" width="${f3(RING.px)}" height="${f3(RING.px)}" fill="${fg}"/>`).join('');
+  return arcs + sq + `<circle cx="32" cy="32" r="${f3(RING.core)}" fill="#FF5B1F"/>`;
 }
-$('#nav-mark').innerHTML = markSvg();
+// the brand mark, for small sizes: one ring (r 15, stroke 5), four squares (5.6), the core (4.8), 48 box
+function brandMarkSvg(ink = '#E8E4D8') {
+  const sq = Array.from({ length: 4 }, (_, i) => { const a = -Math.PI / 2 + (i + 1) * Math.PI / 5; return `<rect x="${f3(24 + 15 * Math.cos(a) - 2.8)}" y="${f3(24 + 15 * Math.sin(a) - 2.8)}" width="5.6" height="5.6"/>`; }).join('');
+  return `<path d="M24 9A15 15 0 0 0 24 39" fill="none" stroke="${ink}" stroke-width="5"/><g fill="${ink}">${sq}</g><circle cx="24" cy="24" r="4.8" fill="#FF5B1F"/>`;
+}
+$('#nav-mark').innerHTML = brandMarkSvg();
 $('#mark-still').innerHTML = markSvg();
 
 // ---------- one clock ----------
@@ -1327,7 +1336,7 @@ function updRings() {
 // ---------- the hero: the mark hangs around the sun and comes apart; then the camera looks down ----------
 const rnd = (() => { let s = 7; return () => ((s = Math.imul(s ^ (s >>> 15), 2246822519) ^ Math.imul(s ^ (s >>> 13), 3266489917)) >>> 0) / 4294967296; })();
 const cellR = CELLS.map(() => [rnd() - 0.5, rnd(), rnd() - 0.5, rnd() * 6.28]);
-const arcU = new Float32Array(8), cellU = new Float32Array(56);
+const arcU = new Float32Array(8), cellU = new Float32Array(56); // 14 slots, unused ones stay at alpha 0
 let heroP = 0, heroPs = 0, fuseT = -99, fuseArmed = true, lastFootRing = -1, tiltS = 0;
 const heroCopy = $('#hero-copy'), beats = [$('#b1'), $('#b2'), $('#b3')];
 function tiltCurve(s, m1) {
@@ -1350,7 +1359,7 @@ function updHero(dt) {
     cellU[i * 4 + 2] = rr * 1.6 * s1 + 0.1 * s1 * Math.sin(now * 0.6 + ph);
     cellU[i * 4 + 3] = 1;
   });
-  arcU.set([-30 * s2, 2 * s2, -0.22 * s2, 1 - 0.88 * s2, -22 * s2, -1 * s2, -0.32 * s2, 1 - 0.88 * s2]);
+  arcU.set([-30 * s2, 2 * s2, -0.22 * s2, 1 - 0.88 * s2, -23 * s2, -1 * s2, -0.32 * s2, 1 - 0.88 * s2]);
   // fuse: "Neither, alone": the pieces snap back, the core flares, a ring runs out across the sea
   if (heroP > 0.505 && fuseArmed) {
     fuseArmed = false; fuseT = now;
@@ -1664,7 +1673,7 @@ async function buildRelief() {
     const oy = 0, sc = 3.6, mx = 70, my = oy + H / 2 - 32 * sc;
     x.save(); x.translate(mx, my); x.scale(sc, sc);
     for (const { r } of RING.rings) x.fill(new Path2D(arcOutline(r)));
-    for (const c of CELLS) x.fillRect(32 + c.x - 1.8, 32 + c.y - 1.8, 3.6, 3.6);
+    for (const c of CELLS) x.fillRect(32 + c.x - RING.px / 2, 32 + c.y - RING.px / 2, RING.px, RING.px);
     x.restore();
     x.textBaseline = 'alphabetic'; x.textAlign = 'left';
     fit('Crucible', 150, 560);
@@ -1687,7 +1696,7 @@ async function buildRelief() {
   y.drawImage(cv, 0, 0);
   const soft = y.getImageData(0, 0, W, H * 3);
   const out = new Uint8Array(W * H * 3 * 4);
-  const coreR = 4.5 * 3.6, ccx = 70 + 32 * 3.6, ccy = H / 2;
+  const coreR = RING.core * 3.6, ccx = 70 + 32 * 3.6, ccy = H / 2;
   for (let j = 0; j < H * 3; j++) for (let i = 0; i < W; i++) {
     const k = (j * W + i) * 4;
     out[k] = sharp.data[k]; out[k + 1] = soft.data[k];

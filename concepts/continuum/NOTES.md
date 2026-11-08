@@ -8,6 +8,12 @@ below in the thesis, and the page ends where the camera reaches land: the same m
 the wordmark. The visitor's cursor (or finger) is a boat everywhere on it: one wake model from the horizon to the
 shore, and the type itself warms, widening and gaining weight, when a wake passes under it.
 
+## The mark
+Jacob's logo family (Nov 2026, per the coordinator, `lib/splitRing.ts` at e480844): two rings (outer 20, inner 12, stroke
+2.6 on a 48 grid), 7 + 4 upright squares (3.2) after a one-step break, Ember core (3.6). The hero's 3D mark, the castings'
+relief and the no-WebGL SVG use it; the nav uses the brand mark (one ring, four squares) for its small size.
+(Shots `02-beat` and `03-tilt` were removed: they showed the old mark; the rest of the frames are unaffected.)
+
 ## How Quench (the cool contrast colour) is used
 Quench is `#8DB6F2`, a dusk steel blue, kept to cold things only (well under 5% of any screen):
 - the cool band of afterglow in the hero sky between the warm horizon and the night, and the starlight;
