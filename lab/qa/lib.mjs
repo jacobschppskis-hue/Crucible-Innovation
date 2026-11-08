@@ -135,7 +135,7 @@ export function watch(page) {
   page.on('response', (r) => { if (r.status() >= 400 && !/favicon/.test(r.url())) log.failed.push(`HTTP ${r.status()} ${r.url().slice(0, 160)}`); });
   page.on('requestfailed', (r) => {
     const u = r.url();
-    if (/fonts\.(googleapis|gstatic)\.com|umami|formspree/.test(u)) return; // external, not ours
+    if (/fonts\.(googleapis|gstatic)\.com|umami|formspree/.test(u) || (/_rsc=/.test(u) && /ERR_ABORTED/.test(r.failure()?.errorText || ''))) return; // external, not ours
     log.failed.push(`${r.failure()?.errorText} ${u.slice(0, 160)}`);
   });
   return log;

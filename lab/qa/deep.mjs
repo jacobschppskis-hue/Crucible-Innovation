@@ -521,7 +521,8 @@ async function contrastCheck(device) {
     if (worst.some((x) => x.y === y)) {
       // overlay the failing boxes for the report
       const fails = worst.filter((x) => x.y === y);
-      const svg = `<svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${fails.flatMap((x) => x.rects.map(([a, b2, c, d]) => `<rect x="${a}" y="${b2}" width="${c}" height="${d}" fill="none" stroke="#0ff" stroke-width="2"/>`)).join('')}</svg>`;
+      const fm = await sharp(fg).metadata();
+      const svg = `<svg width="${fm.width}" height="${fm.height}" xmlns="http://www.w3.org/2000/svg">${fails.flatMap((x) => x.rects.map(([a, b2, c, d]) => `<rect x="${a}" y="${b2}" width="${c}" height="${d}" fill="none" stroke="#0ff" stroke-width="2"/>`)).join('')}</svg>`;
       const f = path.join(OUT, 'contrast', `${dn}-y${y}.webp`); fs.mkdirSync(path.dirname(f), { recursive: true });
       await sharp(fg).composite([{ input: Buffer.from(svg) }]).resize({ width: Math.min(w, 720) }).webp({ quality: 70 }).toFile(f);
       for (const x of fails) x.frame = f;

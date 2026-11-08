@@ -60,17 +60,20 @@ async function run(device) {
     if (ov > 0) fail(device, `p=${p}: horizontal overflow ${ov}px`);
     if (A.shots) await saveWebp(png, path.join(QA, 'out/smoke', `${A.target}-${device}-${String(p * 100).padStart(2, '0')}.webp`), { width: 600 });
   }
-  // the loop: progress 0 and progress 1 are the same frame
+  // the loop seam, at a fixed scene clock (?t): crossing the seam (1-e -> e) must change the frame no more than the
+  // same scroll distance inside the page does (e -> 3e)
   if (kind === 'world') {
-    await page.evaluate(() => window.__qa.go(1)); await settle(page, 18, 40);
-    const end = await shot(page);
-    await page.evaluate(() => window.__qa.go(0)); await settle(page, 18, 40);
-    const start = await shot(page);
-    const d = await diff(end, start);
-    if (d.mad > 6) fail(device, `loop: go(1) and go(0) frames differ (mean |Δ| ${d.mad.toFixed(1)}/255, p99 ${d.p99})`);
-    else notes.push(`[${device}] loop ends match (mean |Δ| ${d.mad.toFixed(2)})`);
     const st = await page.evaluate(() => window.__qa.state());
-    notes.push(`[${device}] state ${JSON.stringify(st).slice(0, 220)}`);
+    notes.push(`[${device}] state ${JSON.stringify(st).slice(0, 160)}`);
+    await page.goto(tg.url + tg.path + (tg.path.includes('?') ? '&' : '?') + 't=8', { waitUntil: 'load' });
+    await waitWorld(page, 15000); await page.evaluate(() => window.__qa.hold());
+    const at = async (p) => { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 24, 40); return shot(page); };
+    const e = 0.0001;
+    const a0 = await at(1 - 3 * e), a = await at(1 - e), b2 = await at(e), c = await at(3 * e);
+    const seam = await diff(a, b2), r1 = await diff(b2, c), r2 = await diff(a0, a);
+    const ref = { mad: Math.max(r1.mad, r2.mad) };
+    if (seam.mad > ref.mad * 2 + 1) fail(device, `loop seam: crossing it changes the frame by ${seam.mad.toFixed(2)} vs ${ref.mad.toFixed(2)} for the same scroll inside the page`);
+    else notes.push(`[${device}] loop seam ok (Δ ${seam.mad.toFixed(2)} vs in-page ${ref.mad.toFixed(2)})`);
   }
   const errs = log.errors.filter((e) => !benignError(e));
   for (const e of errs.slice(0, 8)) fail(device, e);
