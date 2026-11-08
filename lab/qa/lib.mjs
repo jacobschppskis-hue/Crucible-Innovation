@@ -191,6 +191,8 @@ export async function waitWorld(page, ms = 15000) {
     const k = await page.evaluate(() => (window.__world ? 'world' : window.__state ? 'concept' : 'none')).catch(() => 'none');
     if (k !== 'none') { await adapter(page); return k; }
     // the engine says why it could not start (a module that fails to compile, no WebGL2): stop waiting
+    // keep giving input: one that lands before hydration is lost (software GL starts only on real first use)
+    try { await page.mouse.move(200 + Math.random() * 30, 300 + Math.random() * 30); } catch {}
     const fail = await page.evaluate(() => document.documentElement.dataset.worldFail).catch(() => undefined);
     if (fail !== undefined) { await adapter(page); return 'fail: ' + (fail || 'html[data-world-fail] set'); }
     await page.waitForTimeout(250);

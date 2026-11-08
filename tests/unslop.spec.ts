@@ -57,8 +57,14 @@ for (const path of PAGES) {
 test('home: the world answers the scroll at every position', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/?loop=0&q=8', { waitUntil: 'load' });
-  await page.mouse.move(200, 300);
-  await expect.poll(() => page.evaluate(() => !!(window as unknown as { __world?: unknown }).__world), { timeout: 20_000 }).toBe(true);
+  let i = 0;
+  await expect
+    .poll(async () => {
+      i++;
+      await page.mouse.move(200 + (i % 7) * 9, 300).catch(() => {});
+      return page.evaluate(() => !!(window as unknown as { __world?: unknown }).__world);
+    }, { timeout: 30_000 })
+    .toBe(true);
   const vh = page.viewportSize()!.height;
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
   const dead: number[] = [];

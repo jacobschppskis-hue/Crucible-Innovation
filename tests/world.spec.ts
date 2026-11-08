@@ -7,8 +7,16 @@ type W = { state(): { progress: number; y: number; looping: boolean; place: { na
 const world = (page: Page) => page.evaluate(() => !!(window as unknown as { __world?: W }).__world);
 async function start(page: Page, path = '/') {
   await page.goto(path, { waitUntil: 'load' });
-  await page.mouse.move(200, 300).catch(() => {});
-  await expect.poll(() => world(page), { timeout: 20_000 }).toBe(true);
+  // software GL starts the world only on real first use: keep giving input until it is up (an input that lands before
+  // React hydrates WorldMount's listeners is lost)
+  let i = 0;
+  await expect
+    .poll(async () => {
+      i++;
+      await page.mouse.move(200 + (i % 7) * 9, 300 + (i % 3) * 7).catch(() => {});
+      return world(page);
+    }, { timeout: 30_000 })
+    .toBe(true);
 }
 const state = (page: Page) => page.evaluate(() => (window as unknown as { __world: W }).__world.state());
 
