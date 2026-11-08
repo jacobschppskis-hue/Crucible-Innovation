@@ -59,9 +59,8 @@
   border: 1px solid var(--line-strong);
   border-radius: 1rem;
   background: var(--ground-2);
-  box-shadow:
-    0 40px 80px -30px rgba(0, 0, 0, 0.9),
-    0 0 0 1px rgba(0, 0, 0, 0.4);
+  /* a soft shadow on the liquid under it, no black ring: the liquid's waves read right up to its edge */
+  box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.45);
 }
 .bs-chrome {
   position: relative;

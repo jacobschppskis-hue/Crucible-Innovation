@@ -7,7 +7,7 @@ import { createEngine, type Engine, type GridMeta } from './engine';
 type Msg =
   | { type: 'init'; canvas: OffscreenCanvas; full: boolean; w: number; h: number; dpr: number }
   | { type: 'view'; w: number; h: number; dpr: number }
-  | { type: 'frame'; t: number; sy: number; late: number; hold: boolean; meta: GridMeta; heights: Float32Array | null; mask: Uint8Array | null };
+  | { type: 'frame'; t: number; sy: number; late: number; hold: boolean; meta: GridMeta; heights: Float32Array | null };
 
 const ctx = self as unknown as {
   postMessage(m: unknown, transfer?: Transferable[]): void;
@@ -43,7 +43,7 @@ ctx.onmessage = (e) => {
   }
   else if (m.type === 'frame') {
     if (!engine) return;
-    engine.upload(m.meta, m.heights, m.mask);
+    engine.upload(m.meta, m.heights);
     const drew = engine.draw(m.t, m.sy, m.late, m.hold);
     if (drew) {
       frames++;

@@ -1,8 +1,8 @@
 // The liquid's surface: a damped 2D wave equation on a grid of heights (CSS px), stepped on the main thread at a fixed
-// 120 Hz. Everything that touches the page (the cursor's path, taps, finger drags, scrolling past a resting cursor,
-// floating things) adds smooth Gaussian impulses here; rings, wakes and the V behind a fast flick come out of the
-// physics, with interference for free. The renderer draws this grid as a shaded surface (B-spline upsampled) and the
-// floaters read the very same numbers, so what you see is what rocks them.
+// 120 Hz. Drops (taps, ripples shed by floating things, the pour landing) add smooth ringing impulses here, and rings
+// with interference come out of the physics. The pointer's wake is its own model (wake.ts), evaluated into the same
+// display grid after each step (`advance(dt, stamps, extra)`). The renderer draws this grid as a shaded surface
+// (B-spline upsampled) and the floaters read the very same numbers, so what you see is what rocks them.
 //
 // The grid is anchored to the PAGE: its rows are page rows, it covers the viewport plus half a viewport above and below,
 // and when the page scrolls it shifts by whole cells (the renderer gets the exact scroll, so motion stays smooth).
@@ -15,22 +15,15 @@ const DT = 1 / HZ;
  *  (per substep). Ripples travel 200-400 px before they fade, so a wake trails the pointer instead of filling the page.
  *  At 8 px cells and 120 Hz the Courant number is capped well inside the 9-point scheme's stability limit (see r2). */
 export const SIM = { speed: 420, damp: 1.2, visc: 0.01 };
-/** The fine band: short ripples that are slower and die out sooner (in real water the shortest waves are slower and
- *  more viscous). Only the page scrolling past a resting pointer feeds it: a pointer resting over a scrolling page moves
- *  through the water at the scroll's speed, usually slower than SIM.speed, where a single wave speed can only make
- *  rings that enclose the pointer (a "sonar tunnel" that stays at the pointer); in the fine band the same speed
- *  outruns its ripples, so they trail behind it in a V and are gone within a few hundred px. Its own grid of the same
- *  layout, summed into the displayed heights, stepped only while it has waves. */
-export const FINE = { speed: 170, damp: 4, visc: 0.01 };
 const SPONGE = 8; // cells of absorbing border
 const MAX_SUB = 8; // substeps per frame at most (a long frame slows the water down instead of stalling the page)
 
-/** An impulse: page px, peak amplitude, sigma px (t: sigma along y if not s), frame fraction, band (1 = FINE). */
-export type Stamp = { x: number; y: number; a: number; s: number; f: number; t?: number; b?: 0 | 1 };
+/** An impulse: page px, peak amplitude, sigma px (t: sigma along y if not s), frame fraction. */
+export type Stamp = { x: number; y: number; a: number; s: number; f: number; t?: number };
 
 export type Sim = ReturnType<typeof createSim>;
 
-// A band's waves live inside a box of cells (i0..i1, j0..j1) that grows faster than they travel, so only that box is
+// The waves live inside a box of cells (i0..i1, j0..j1) that grows faster than they travel, so only that box is
 // stepped (a scroll wake or a cursor's first ripples cost a fraction of the grid); outside it every array is 0.
 type Band = { P: typeof SIM; u: Float32Array; p: Float32Array; n: Float32Array; quiet: boolean; calm: number; peak: number; i0: number; i1: number; j0: number; j1: number; grow: number };
 const band = (P: typeof SIM): Band => ({ P, u: new Float32Array(0), p: new Float32Array(0), n: new Float32Array(0), quiet: true, calm: 0, peak: 0, i0: 0, i1: -1, j0: 0, j1: -1, grow: 0 });
@@ -42,17 +35,15 @@ export function createSim() {
   let x0 = 0; // page px of the left edge of column 0
   let r0 = 0; // page row index of row 0 (y0 = r0 * cell)
   let vh = 0;
-  // two wave fields of the same layout: u = now, p = one substep ago, n = scratch (next)
-  const bands = [band(SIM), band(FINE)];
-  let out = new Float32Array(0); // display state (between p and u, both bands summed)
-  let mask = new Uint8Array(0);
+  // the wave field: u = now, p = one substep ago, n = scratch (next)
+  const bands = [band(SIM)];
+  let out = new Float32Array(0); // display state (between p and u, plus the wake)
+  let extraOn = false; // the wake wrote into out this frame
   let fx = new Float32Array(0);
   let fy = new Float32Array(0);
   let acc = 0;
-  let maskKey = '';
-  let maskDirty = true;
   let version = 0; // bumps when the display state changes
-  const quietAll = () => bands[0].quiet && bands[1].quiet;
+  const quietAll = () => bands[0].quiet && !extraOn;
   // margin below the 0.75 limit (damping, viscosity)
   const r2 = (P: typeof SIM) => Math.min(0.55, ((P.speed * DT) / cell) ** 2);
 
@@ -82,14 +73,12 @@ export function createSim() {
       B.i1 = B.j1 = -1;
     }
     out = new Float32Array(N);
-    mask = new Uint8Array(N);
+    extraOn = false;
     fx = new Float32Array(cols);
     fy = new Float32Array(rows);
     for (let i = 0; i < cols; i++) fx[i] = sponge(i, cols, SPONGE);
     for (let j = 0; j < rows; j++) fy[j] = sponge(j, rows, SPONGE);
     acc = 0;
-    maskKey = '';
-    maskDirty = true;
     version++;
   }
 
@@ -99,7 +88,6 @@ export function createSim() {
     const d = want - r0;
     if (!d) return false;
     r0 = want;
-    maskKey = '';
     if (quietAll()) return true;
     const N = cols * rows;
     const arrays: Float32Array[] = [out];
@@ -130,9 +118,8 @@ export function createSim() {
   // Gaussian weights along one axis, reused
   const wx = new Float32Array(64);
   const wy = new Float32Array(64);
-  /** Add a smooth velocity kick (a Gaussian of `sig` px, `sigY` px along y if different, peak `a`) at page px (x, y),
-   *  to band `b` (0 = the main waves, 1 = FINE). */
-  function impulse(x: number, y: number, a: number, sig: number, sigY = sig, b = 0) {
+  /** Add a smooth velocity kick (a Gaussian of `sig` px, `sigY` px along y if different, peak `a`) at page px (x, y). */
+  function impulse(x: number, y: number, a: number, sig: number, sigY = sig) {
     if (!cols) return;
     const gx = (x - x0) / cell - 0.5;
     const gy = y / cell - r0 - 0.5;
@@ -149,7 +136,7 @@ export function createSim() {
     const ky = (cell * cell) / (2 * sigY * sigY);
     for (let i = i0; i <= i1; i++) wx[i - i0] = Math.exp(-(i - gx) * (i - gx) * kx);
     for (let j = j0; j <= j1; j++) wy[j - j0] = a * Math.exp(-(j - gy) * (j - gy) * ky);
-    const B = bands[b];
+    const B = bands[0];
     const u = B.u;
     for (let j = j0; j <= j1; j++) {
       const row = j * cols;
@@ -170,7 +157,7 @@ export function createSim() {
     B.quiet = false;
     B.calm = 0;
   }
-  const apply = (s: Stamp) => impulse(s.x, s.y, s.a, s.s, s.t, s.b ?? 0);
+  const apply = (s: Stamp) => impulse(s.x, s.y, s.a, s.s, s.t);
 
   /** One substep of u_tt = c^2 lap u - damping, with a 9-point (isotropic) Laplacian, for one band. */
   function step(B: Band) {
@@ -226,82 +213,55 @@ export function createSim() {
     } else B.calm = 0;
   }
 
+  /** Extra heights added into the display state after each step (the wake): writes into `out` (cols x rows, cell
+   *  centres at x0 + (i + 0.5) cell, y0 + (j + 0.5) cell, page px) and says whether it wrote anything. */
+  type Extra = (out: Float32Array, cols: number, rows: number, x0: number, y0: number, cell: number) => boolean;
+
   /**
-   * Advance by dt seconds of real time: the stamps (taps, path impulses; `f` = when in the frame, 0..1) are applied in
-   * the substep they belong to. Then the display state is interpolated between the last two substeps.
+   * Advance by dt seconds of real time: the stamps (drops; `f` = when in the frame, 0..1) are applied in the substep
+   * they belong to. Then the display state is interpolated between the last two substeps, and `extra` adds the wake.
    */
-  function advance(dt: number, stamps: Stamp[]) {
+  function advance(dt: number, stamps: Stamp[], extra?: Extra, extraLive = false) {
     if (!cols) return;
-    if (quietAll() && !stamps.length) {
+    const B = bands[0];
+    if (B.quiet && !stamps.length && !extraOn && !extraLive) {
       acc = 0;
       return;
     }
-    acc += dt;
-    let ns = Math.floor(acc / DT);
-    if (ns > MAX_SUB) {
-      ns = MAX_SUB;
-      acc = ns * DT;
-    }
-    let si = 0;
-    if (ns === 0 && stamps.length) {
-      // a fast display (or a tiny dt): apply now, they are drawn after the next substep
-      for (const s of stamps) apply(s);
-      si = stamps.length;
-    }
-    for (let k = 0; k < ns; k++) {
-      const until = (k + 1) / ns;
-      while (si < stamps.length && stamps[si].f <= until + 1e-9) apply(stamps[si++]);
-      for (const B of bands) if (!B.quiet) step(B);
-      if (quietAll() && si >= stamps.length) {
-        out.fill(0);
-        acc = 0;
-        version++;
-        return;
+    if (!B.quiet || stamps.length) {
+      acc += dt;
+      let ns = Math.floor(acc / DT);
+      if (ns > MAX_SUB) {
+        ns = MAX_SUB;
+        acc = ns * DT;
       }
-    }
-    acc -= ns * DT;
-    while (si < stamps.length) apply(stamps[si++]);
-    // display: where the surface is now, between the last two substeps (smooth on any refresh rate)
+      let si = 0;
+      if (ns === 0 && stamps.length) {
+        // a fast display (or a tiny dt): apply now, they are drawn after the next substep
+        for (const s of stamps) apply(s);
+        si = stamps.length;
+      }
+      for (let k = 0; k < ns; k++) {
+        const until = (k + 1) / ns;
+        while (si < stamps.length && stamps[si].f <= until + 1e-9) apply(stamps[si++]);
+        if (!B.quiet) step(B);
+      }
+      acc -= ns * DT;
+      while (si < stamps.length) apply(stamps[si++]);
+    } else acc = 0;
+    // display: where the surface is now, between the last two substeps (smooth on any refresh rate), plus the wake
     const al = Math.min(1, acc / DT);
-    const N = out.length;
-    const [A, F] = bands;
-    out.fill(0, 0, N);
-    for (const B of [A, F]) {
-      if (B.quiet) continue;
+    out.fill(0);
+    if (!B.quiet) {
       const bu = B.u;
       const bp = B.p;
       for (let j = B.j0; j <= B.j1; j++) {
         const k1 = j * cols + B.i1;
-        for (let k = j * cols + B.i0; k <= k1; k++) out[k] += bp[k] + al * (bu[k] - bp[k]);
+        for (let k = j * cols + B.i0; k <= k1; k++) out[k] = bp[k] + al * (bu[k] - bp[k]);
       }
     }
+    extraOn = !!extra && extra(out, cols, rows, x0, r0 * cell, cell);
     version++;
-  }
-
-  /** Text and portraits: page px rects [x, y, w, h, level 0..255] (glints are capped behind them). */
-  function setMask(rects: number[]) {
-    const pad = cell * 0.75;
-    // only rebuild when the cells covered change
-    let key = r0 + ':';
-    for (let q = 0; q < rects.length; q += 5) {
-      key += `${Math.floor((rects[q] - pad - x0) / cell)},${Math.floor((rects[q + 1] - pad) / cell)},${Math.ceil((rects[q] + rects[q + 2] + pad - x0) / cell)},${Math.ceil((rects[q + 1] + rects[q + 3] + pad) / cell)},${rects[q + 4]};`;
-    }
-    if (key === maskKey) return false;
-    maskKey = key;
-    mask.fill(0);
-    for (let q = 0; q < rects.length; q += 5) {
-      const i0 = Math.max(0, Math.floor((rects[q] - pad - x0) / cell));
-      const i1 = Math.min(cols - 1, Math.ceil((rects[q] + rects[q + 2] + pad - x0) / cell) - 1);
-      const j0 = Math.max(0, Math.floor((rects[q + 1] - pad) / cell) - r0);
-      const j1 = Math.min(rows - 1, Math.ceil((rects[q + 1] + rects[q + 3] + pad) / cell) - 1 - r0);
-      const lv = rects[q + 4];
-      for (let j = j0; j <= j1; j++) {
-        const row = j * cols;
-        for (let i = i0; i <= i1; i++) if (mask[row + i] < lv) mask[row + i] = lv;
-      }
-    }
-    maskDirty = true;
-    return true;
   }
 
   // cubic B-spline weights (the renderer uses the same reconstruction)
@@ -390,20 +350,11 @@ export function createSim() {
     follow,
     impulse,
     advance,
-    setMask,
     sample,
     near,
     /** The display state (heights, px) and its layout; `version` bumps whenever it changes. */
     get out() {
       return out;
-    },
-    get mask() {
-      return mask;
-    },
-    takeMaskDirty() {
-      const d = maskDirty;
-      maskDirty = false;
-      return d;
     },
     get cell() {
       return cell;
@@ -424,7 +375,7 @@ export function createSim() {
       return quietAll();
     },
     get peak() {
-      return Math.max(bands[0].quiet ? 0 : bands[0].peak, bands[1].quiet ? 0 : bands[1].peak);
+      return bands[0].quiet ? 0 : bands[0].peak;
     },
     get version() {
       return version;
