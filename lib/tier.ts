@@ -7,8 +7,8 @@
 // `light` (CSS, SVG and the films' posters) is what's left for visitors who ask for reduced motion, without JS, and for
 // a scene that can't start at all (no WebGL, a lost context). `?tier=rich|light` forces one (tests and demos).
 
-/** Runs inline in <head>: sets html.js, data-tier and data-intro before first paint. Keep it tiny and ES5. */
-export const TIER_SCRIPT = `(function(d,w){d.classList.add('js');var q=/[?&]tier=(rich|light)/.exec(location.search);d.setAttribute('data-tier',q?q[1]:w.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'light':'rich');try{if(/^\\/(index\\.html)?$/.test(location.pathname)){if(sessionStorage.getItem('crucible:lit'))d.setAttribute('data-intro','quick');else sessionStorage.setItem('crucible:lit','1');d.setAttribute('data-pour','');setTimeout(function(){d.setAttribute('data-go','')},3500)}}catch(e){}})(document.documentElement,window)`;
+/** Runs inline in <head>: sets html.js and data-tier before first paint. Keep it tiny and ES5. */
+export const TIER_SCRIPT = `(function(d,w){d.classList.add('js');var q=/[?&]tier=(rich|light)/.exec(location.search);d.setAttribute('data-tier',q?q[1]:w.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches?'light':'rich');})(document.documentElement,window)`;
 
 let verdict: Promise<boolean> | undefined;
 
