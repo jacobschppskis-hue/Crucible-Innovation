@@ -456,6 +456,8 @@ float ventures_seaGlow(vec3 p) {
 /* ---------- the world's hooks (lib/world/ARCHITECTURE.md) ---------- */
 void ventures_hit(Ray r, inout Hit h) {
   if (ventures_uOn < 0.5) return;
+  // the primary view is drawn by the crisp pass (canvas resolution) when it runs; reflections stay here
+  if (r.depth == 0 && uCrispOn > 0.5) return;
   VenturesHit vh;
   if (ventures_trace(r.ro, r.rd, h.t, max(r.pa, 1e-4), r.depth == 0 ? 24 : 10, vh)) {
     h.t = vh.t; h.id = VENTURES_ID + vh.id; h.p = vh.wp; h.n = ventures_uM[vh.id][1]; h.data = vec4(vh.lp, 0.0);
@@ -488,4 +490,49 @@ void ventures_sea(Ray r, Sea s, inout SeaMod m) {
   // the near sea is cooler here (a skin has set between the currents): the glow gathers at the monoliths' feet and
   // the foreground, where the words stand, stays dark; a property of the place, not a shape behind the text
   m.heat -= ventures_uCool * (1.0 - smoothstep(120.0, 520.0, s.t));
+}
+
+/* ---------- the crisp pass (V2): the monoliths at the canvas's own resolution ---------- */
+// A march that also keeps the closest approach (in pixels) for the silhouettes' analytic coverage.
+float ventures_traceCov(vec3 ro, vec3 rd, float tMax, float pa, out VenturesHit h) {
+  h.id = -1; h.t = tMax; h.lp = vec3(0.0); h.wp = vec3(0.0);
+  float best = 1e9; int bi = -1; float bt = 0.0; vec3 blp = vec3(0.0);
+  for (int i = 0; i < VENTURES_N; i++) {
+    if (ventures_uP[i].w < 0.5) continue;
+    mat3 M = ventures_uM[i];
+    vec3 o = (ro - ventures_origin(i)) * M, d = rd * M;
+    vec2 tb = ventures_bound(o, d);
+    // widen the bound by a pixel or two so the closest approach is seen just outside the box too
+    if (tb.x > tb.y + 4.0 * pa * max(tb.y, 1.0) || tb.y < 0.0 || tb.x > h.t) continue;
+    float t = max(tb.x, 0.0), tEnd = min(tb.y, h.t);
+    for (int s = 0; s < 32; s++) {
+      float dist = ventures_sdf(o + d * t);
+      float pxd = dist / max(t * pa, 1e-6);
+      if (pxd < best) { best = pxd; bi = i; bt = t; blp = o + d * t; }
+      if (dist < max(ventures_uE.x * 2e-4, t * pa * 0.05)) { h.id = i; h.t = t; h.lp = o + d * t; h.wp = ro + rd * t; break; }
+      t += max(dist, t * pa * 0.25);
+      if (t > tEnd) break;
+    }
+  }
+  if (h.id >= 0) return 1.0;
+  if (bi >= 0 && best < 1.5) {                       // a silhouette pixel: shade the nearest point, partial coverage
+    h.id = bi; h.t = bt; h.lp = blp; h.wp = ro + rd * bt;
+    return clamp(0.5 - best, 0.0, 1.0);
+  }
+  return 0.0;
+}
+vec4 ventures_crisp(Ray r, float tScene) {
+  if (ventures_uOn < 0.5) return vec4(0.0);
+  float tSea = world_seaT(r);
+  VenturesHit vh;
+  float cov = ventures_traceCov(r.ro, r.rd, tSea > 0.0 ? tSea + 1e-3 : 1e30, max(r.pa, 1e-6), vh);
+  if (cov <= 0.0) return vec4(0.0);
+  // the waterline, sharp: the part under the sea is the sea's (lp.y + lift is the height above it)
+  float hs = vh.lp.y + ventures_uK[vh.id].x;
+  cov *= clamp(hs / max(vh.t * r.pa, 1e-6) + 0.5, 0.0, 1.0);
+  if (cov <= 0.0) return vec4(0.0);
+  Hit h; h.t = vh.t; h.id = VENTURES_ID + vh.id; h.p = vh.wp; h.n = ventures_uM[vh.id][1]; h.data = vec4(vh.lp, 0.0);
+  vec3 col = ventures_shade(r, h);
+  col = look_atmo(col, r, h);
+  return vec4(col * cov, cov);
 }

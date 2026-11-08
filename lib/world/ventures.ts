@@ -274,7 +274,16 @@ export const ventures: WorldModule = {
   id: 'ventures',
   keys: venturesKeys,
   glsl: monolithGlsl,
-  hooks: ['hit', 'shade', 'env', 'sea'],
+  hooks: ['hit', 'shade', 'env', 'sea', 'crisp'],
+  // the crisp pass's box: the union of the monoliths' screen boxes, a few px wider for the anti-aliased edges
+  crispBox() {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    for (const b of ventureBoxes) {
+      if (!b.vis) continue;
+      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+    }
+    return x1 > x0 ? [x0 - 4, y0 - 4, x1 + 4, y1 + 4] : null;
+  },
   init({ root }) {
     bindDom(root);
   },
