@@ -186,7 +186,7 @@ function touch(L: LenisLike): () => void {
     axis = null;
     gliding = false; // a finger catches the glide, as on iOS
     v = 0;
-    samples = [{ t: now(), y: t.clientY }];
+    samples = [{ t: e.timeStamp || now(), y: t.clientY }];
   };
   const onMove = (e: TouchEvent) => {
     if (id == null) return;
@@ -203,7 +203,8 @@ function touch(L: LenisLike): () => void {
     const dy = lastY - t.clientY;
     lastY = t.clientY;
     if (dy) move(dy);
-    const tm = now();
+    // event time, not handler time: after a slow frame the handler runs late but the timestamp stays true
+    const tm = e.timeStamp || now();
     samples.push({ t: tm, y: t.clientY });
     while (samples.length > 2 && tm - samples[0].t > 100) samples.shift();
   };
@@ -211,7 +212,7 @@ function touch(L: LenisLike): () => void {
     if (id == null || [...e.touches].some((k) => k.identifier === id)) return;
     id = null;
     if (axis !== 'y') return;
-    const tm = now();
+    const tm = e.timeStamp || now();
     // release velocity: the last ~100 ms of the stroke (a finger that stopped before lifting does not glide)
     const a = samples[0],
       b = samples[samples.length - 1];

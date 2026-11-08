@@ -39,6 +39,10 @@ html:has([data-world-root]) {
 html[data-world-on] .w-root::before {
   display: none;
 }
+/* a sideways finger drag makes waves, never Chrome's swipe-back (x only: iOS's own edge swipe stays) */
+html:has([data-world-root]) {
+  overscroll-behavior-x: none;
+}
 html:has([data-world-root]) body {
   background: transparent;
 }

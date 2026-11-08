@@ -103,8 +103,8 @@ export function keys(): Key[] {
   const FAR2 = { ...FAR, sunV: deg(280) }; // the same place, written one lap on, for the run home
   return [
     // hero: low over the molten sea at sunset, the mark floating over its reflection, its core the sun; stars above
-    { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 169 } }, // mark: phone core right of the type, so the glitter column never crosses it
-    { at: ['hero', 1], s: 4, h: 1.8, yaw: 162, pitch: 0, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4, yaw: 169 } },
+    { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } }, // mark: phone core right of the type, so the glitter column never crosses it
+    { at: ['hero', 1], s: 4, h: 1.8, yaw: 162, pitch: 0, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4, yaw: 169.7 } },
     // stronger together: still on the sunset, a slow rise so the mark has the sky
     { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2 } },
     { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 1, fov: 46, ...NEAR, ph: { fov: 62, pitch: 0 } },
@@ -141,7 +141,7 @@ export function keys(): Key[] {
     { at: ['dawn', 0], s: deg(235), h: 4600, yaw: 25, pitch: -38, fov: 46, ...FAR2, ph: { fov: 60 } },
     { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: -1.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -3, yaw: 172 } },
     // loop: exactly the hero's first key, one lap on
-    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 169 } },
+    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } },
   ];
 }
 
