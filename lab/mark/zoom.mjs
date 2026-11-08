@@ -27,6 +27,7 @@ page.on('console', (m) => { if (m.type() === 'error') console.log('console', m.t
 await page.goto(`http://localhost:${srv.address().port}/?${query}`, { waitUntil: 'load' });
 await page.mouse.move(5, 5).catch(() => {});
 await page.waitForFunction(() => window.__world || document.documentElement.dataset.worldFail, null, { timeout: 60000 });
+console.log('crispFail', await page.evaluate(() => document.documentElement.dataset.worldCrispFail || 'no'));
 for (const f of fs_.split(',')) {
   await page.evaluate(([pl, f]) => window.__world.goPlace(pl, +f), [place, f]);
   await page.waitForTimeout(300);

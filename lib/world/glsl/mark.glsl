@@ -33,6 +33,7 @@ uniform vec3 mark_uCoreL; // the core's radiance as a light on the pieces
 uniform vec4 mark_uRiv;   // the confluence: x the along-coord origin (world v at the together start), y source rivers' front
                           // 0..1, z joined river's front 0..1, w the meeting flash 0..1
 uniform vec2 mark_uRivT;  // x: clock (s), y: on (0/1)
+uniform float mark_uBrand; // 0..1: the Split Ring -> the brand mark (small on screen)
 
 vec3 mark_envDir(vec3 d);
 
@@ -81,8 +82,27 @@ vec2 mark_sd2(vec2 p) {
   }
   return b;
 }
+// The brand mark (lib/splitRing.ts brandMarkSvg, 48 box with the core at the same 4.8 so it is still the sun): one
+// ring r 15, stroke 5, its left half a half circle ending on the core's centre line; four upright squares 5.6 at 36 deg
+// steps after one empty step. Used wherever the Split Ring's squares would be under ~3 CSS px (they merge into a blob).
+vec2 mark_sd2B(vec2 p) {
+  float d;
+  if (p.x < 0.) d = abs(length(p) - 15.) - 2.5;
+  else { float ey = abs(abs(p.y) - 15.) - 2.5; d = length(max(vec2(p.x, ey), 0.)) + min(max(p.x, ey), 0.); }
+  vec2 b = vec2(d, 20.);
+  if (p.x > -4.) {
+    float st = PI / 5.;
+    float k0 = clamp(floor(atan(p.x, p.y) / st), 1., 4.), k1 = clamp(k0 + 1., 1., 4.);
+    vec2 c0 = vec2(sin(k0 * st), cos(k0 * st)) * 15., c1 = vec2(sin(k1 * st), cos(k1 * st)) * 15.;
+    float d0 = mark_box(p - c0, vec2(2.8)), d1 = mark_box(p - c1, vec2(2.8));
+    if (d0 < b.x) b = vec2(d0, 20. + k0);
+    if (d1 < b.x) b = vec2(d1, 20. + k1);
+  }
+  return b;
+}
+int mark_gGeom = 0; // 0: the Split Ring, 1: the brand mark (set before marching)
 vec2 mark_sdf(vec3 p) { // rounded extrusion
-  vec2 b = mark_sd2(p.xy);
+  vec2 b = mark_gGeom == 1 ? mark_sd2B(p.xy) : mark_sd2(p.xy);
   vec2 w = vec2(b.x + MARK_BEV, abs(p.z) - MARK_HD + MARK_BEV);
   return vec2(min(max(w.x, w.y), 0.) + length(max(w, 0.)) - MARK_BEV, b.y);
 }
@@ -229,8 +249,8 @@ float mark_silCov(vec3 ro, vec3 rd, float pa, float aa) {
   float rz = abs(rd.z) < 1e-4 ? 1e-4 : rd.z;
   float tf = (zp - ro.z) / rz, tb = (-zp - ro.z) / rz;
   float d = 1e9, tw = 1e9;
-  if (tf > 0.) { d = min(d, mark_sd2((ro + rd * tf).xy).x); tw = tf; }
-  if (tb > 0.) { d = min(d, mark_sd2((ro + rd * tb).xy).x); tw = min(tw, tb); }
+  if (tf > 0.) { vec2 q = (ro + rd * tf).xy; d = min(d, (mark_gGeom == 1 ? mark_sd2B(q) : mark_sd2(q)).x); tw = tf; }
+  if (tb > 0.) { vec2 q = (ro + rd * tb).xy; d = min(d, (mark_gGeom == 1 ? mark_sd2B(q) : mark_sd2(q)).x); tw = min(tw, tb); }
   if (tw > 1e8) return 0.;
   return clamp(0.5 - d / max(aa * tw * pa, 1e-5), 0., 1.);
 }
@@ -271,6 +291,7 @@ void mark_local(Ray r, out vec3 ro, out vec3 rd) {
 // Secondary rays (the sea's reflections): a plain hit, shaded cheaply in mark_env.
 void mark_hit(Ray r, inout Hit h) {
   if (r.depth == 0 || mark_uLook.x <= 0.002) return;
+  mark_gGeom = mark_uBrand > 0.5 ? 1 : 0;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, 0.);
   // a reflected ray's cone (pa) is widened by the sea's roughness; never let that grow the hit test, or every ray inside
@@ -289,6 +310,7 @@ void mark_hit(Ray r, inout Hit h) {
 }
 vec3 mark_shade(Ray r, Hit h) { return vec3(0.); } // never: camera rays are composited in mark_over
 vec3 mark_env(Ray r, Hit h) {
+  mark_gGeom = mark_uBrand > 0.5 ? 1 : 0;
   vec3 ro, rd; mark_local(r, ro, rd);
   if (h.id == MARK_ID + 1) return mark_coreShade(h.data.xyz, rd) * mark_uLook.x;
   return mark_shadeL(h.data.xyz, rd, h.data.w, 0.05, true) * mark_uLook.x;
@@ -296,7 +318,8 @@ vec3 mark_env(Ray r, Hit h) {
 
 // Camera rays: composited over whatever is behind (the sky; the sea where it is nearer wins), anti-aliased, fading.
 void mark_over(Ray r, Hit h, inout vec3 col) {
-  if (mark_uLook.x <= 0.002) return;
+  if (mark_uLook.x <= 0.002 || uCrispOn > 0.5) return; // the crisp pass draws it at the screen's resolution
+  mark_gGeom = mark_uBrand > 0.5 ? 1 : 0;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, r.pa);
   if (c.y > 0. && c.x * mark_uC.w < h.t) col = mix(col, mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd), c.y * mark_uLook.x);
@@ -388,4 +411,29 @@ void mark_sea(Ray r, Sea s, inout SeaMod m) {
   h *= 0.93 + 0.12 * flow;
   m.heat = max(m.heat, h);
   m.calm = max(m.calm, 0.5 * smoothstep(0., 0.3, h));
+}
+
+// ---------------------------------------------------------------- the crisp pass (V2): the mark at the screen's resolution
+// The core and the pieces, anti-aliased analytically at canvas px (r.pa), depth-tested against the scene (the sea in
+// front below the horizon). Premultiplied linear radiance. Between the Split Ring and the brand mark (small on screen)
+// both are drawn and crossfaded, so the switch never pops.
+vec4 mark_crispGeom(vec3 ro, vec3 rd, float pa, float tS, int geom) {
+  mark_gGeom = geom;
+  vec3 pL;
+  vec4 m = mark_march(ro, rd, pa, 24 + int(24. * uQ), pL, 1.25);
+  if (m.w <= 0. || m.x * mark_uC.w >= tS) return vec4(0.);
+  return vec4(mark_shadeL(pL, rd, m.y, m.x * pa, false) * m.w, m.w);
+}
+vec4 mark_crisp(Ray r, float tS) {
+  if (mark_uLook.x <= 0.002) return vec4(0.);
+  vec3 ro, rd; mark_local(r, ro, rd);
+  vec4 acc = vec4(0.);
+  vec2 c = mark_coreHit(ro, rd, r.pa * 0.8);
+  if (c.y > 0. && c.x * mark_uC.w < tS) acc = vec4(mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd) * c.y, c.y);
+  float k = mark_uBrand;
+  vec4 m = vec4(0.);
+  if (k < 0.999) m += mark_crispGeom(ro, rd, r.pa, tS, 0) * (1. - k);
+  if (k > 0.001) m += mark_crispGeom(ro, rd, r.pa, tS, 1) * k;
+  acc = m + acc * (1. - m.a);
+  return acc * mark_uLook.x;
 }

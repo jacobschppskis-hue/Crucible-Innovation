@@ -53,7 +53,15 @@ const markBox = { x: 0, y: 0, r: 0, ok: false };
 export const mark: WorldModule = {
   id: 'mark',
   glsl: markGlsl,
-  hooks: ['hit', 'shade', 'env', 'over', 'sky', 'sea'],
+  hooks: ['hit', 'shade', 'env', 'over', 'sky', 'sea', 'crisp'],
+  // the crisp pass draws the mark at the screen's own resolution (up to dpr 3 on phones) inside this box
+  crispBox(f: Frame) {
+    const b = screenBox(f);
+    if (!b || (f.ch['mark.vis'] ?? 1) <= 0.002) return null;
+    const r = b.r * 1.08 + 6;
+    if (b.x + r < 0 || b.x - r > f.w || b.y + r < 0 || b.y - r > f.h) return null;
+    return [b.x - r, b.y - r, b.x + r, b.y + r];
+  },
   keys: togetherKeys,
   channels: { 'mark.vis': 1, 'mark.size': 1, 'mark.light': 1, 'mark.fill': 1 },
   init({ root }) {
@@ -86,15 +94,15 @@ export const mark: WorldModule = {
     u.set('mark_uSea', [0.95 * fill, 0.66 * fill, 0.44 * fill]);
     u.set('mark_uCoreL', [CORE_L[0] * k, CORE_L[1] * k, CORE_L[2] * k]);
 
-    // the mark's screen box (centre, outer radius incl. the squares) for the captions
-    const c = f.project(centre);
-    if (c) {
-      const edge = f.project(add(centre, mul(B.up, scale * 30.4)));
-      markBox.x = c[0];
-      markBox.y = c[1];
-      markBox.r = edge ? Math.hypot(edge[0] - c[0], edge[1] - c[1]) : 0;
-      markBox.ok = true;
-    } else markBox.ok = false;
+    // the mark's screen box (centre, outer radius incl. the squares)
+    const sb = screenBox(f);
+    markBox.ok = !!sb;
+    if (sb) Object.assign(markBox, { x: sb.x, y: sb.y, r: sb.r });
+    // small on screen: the brand mark (its squares are 5.6 units, the Split Ring's 4.27 of 30.4 radius). Crossfade
+    // while the Split Ring's squares are 2.6..3.6 CSS px, never a pop.
+    const sq = sb ? (sb.r * 4.27) / 30.4 : 99;
+    const t = Math.min(1, Math.max(0, (sq - 2.6) / 1.0));
+    u.set('mark_uBrand', 1 - t * t * (3 - 2 * t));
 
     markState.beat = b;
     markState.core.pos = centre;
@@ -134,6 +142,17 @@ export const mark: WorldModule = {
     box = '';
   },
 };
+
+/** The mark's centre and outer radius (incl. the squares) on screen, CSS px, or null behind the camera. */
+function screenBox(f: Frame) {
+  const centre = f.sun.pos;
+  const c = f.project(centre);
+  if (!c) return null;
+  const B = facing(centre, f.cam.pos, f.cam.r, norm(centre));
+  const scale = (f.sun.R * (f.ch['mark.size'] ?? 1)) / CORE_R;
+  const edge = f.project(add(centre, mul(B.up, scale * 30.4)));
+  return { x: c[0], y: c[1], r: edge ? Math.hypot(edge[0] - c[0], edge[1] - c[1]) : 0 };
+}
 
 /** The mark's frame facing the camera: square to the line of sight, upright (its up is the planet's up under the
  *  camera, made square to the line of sight), reading left to right on screen (`screenRight` = the camera's right). */
