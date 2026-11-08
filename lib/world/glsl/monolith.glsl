@@ -131,6 +131,25 @@ vec2 ventures_markD(vec2 q) {
   return vec2(d, length(q) - 3.6);
 }
 
+// The brand mark (lib/splitRing.ts brandMarkSvg: one ring r 15, stroke 5, four squares 5.6 at 36 deg steps after one
+// empty step, the core 4.8, on a 48 box), scaled so its outer edge matches the family mark's (35 -> 42.6 units).
+vec2 ventures_brandD(vec2 q) {
+  const float S = 42.6 / 35.0;
+  vec2 b = q / S;
+  float d = max(abs(length(b) - 15.0) - 2.5, b.x);
+  for (int k = 1; k <= 4; k++) {
+    float a = -VENTURES_PI * 0.5 + float(k) * VENTURES_PI / 5.0;
+    vec2 e = abs(b - 15.0 * vec2(cos(a), sin(a))) - 2.8;
+    d = min(d, length(max(e, 0.0)) + min(max(e.x, e.y), 0.0));
+  }
+  return vec2(d, length(b) - 4.8) * S;
+}
+vec2 ventures_markMix(vec2 q, float kb) {
+  if (kb <= 0.0) return ventures_markD(q);
+  if (kb >= 1.0) return ventures_brandD(q);
+  return mix(ventures_markD(q), ventures_brandD(q), kb);
+}
+
 /* ---------- light ---------- */
 // Planck at three wavelengths (R 610, G 550, B 465 nm) for the chromaticity; the brightness is compressed (T^6
 // instead of the eye's ~T^20 near 1000 K) so the fade from the waterline up reads over a long stretch, not a step.
@@ -293,20 +312,27 @@ VenturesS ventures_prep(VenturesHit h, vec3 rd, float pixAng, bool cheap) {
     if (dot(q, q) < 26.0 * 26.0) {
       float fw = max(px / ms, 0.02);                   // a pixel in grid units
       float wch = max(0.45, fw);                       // the chamfer of the cut
-      vec2 d0 = ventures_markD(q);
-      float e = 0.12;
-      float dx = ventures_markD(q + vec2(e, 0.0)).x - ventures_markD(q - vec2(e, 0.0)).x;
-      float dy = ventures_markD(q + vec2(0.0, e)).x - ventures_markD(q - vec2(0.0, e)).x;
+      // small on screen (a phone, far away, a low render scale) the mark becomes the brand mark (one ring, four
+      // squares, the core), so the 7 + 4 squares never merge into a blob; blended over a range of sizes, no pop
+      float ringPx = 42.6 / fw;                        // the mark's diameter in render px
+      float kb = smoothstep(110.0, 70.0, ringPx);
+      vec2 d0 = ventures_markMix(q, kb);
+      float e = max(0.12, fw * 0.5);                   // the gradient's step grows with the pixel: no aliased normals
+      float dx = ventures_markMix(q + vec2(e, 0.0), kb).x - ventures_markMix(q - vec2(e, 0.0), kb).x;
+      float dy = ventures_markMix(q + vec2(0.0, e), kb).x - ventures_markMix(q - vec2(0.0, e), kb).x;
       vec2 gd = vec2(dx, dy) / (2.0 * e);
-      // groove: height drops across the chamfer; its slope tilts the normal toward the cut's centre
+      // groove: height drops across the chamfer; its slope tilts the normal toward the cut's centre. Once the chamfer
+      // is narrower than about a pixel its tilt is fading out (a sub-pixel wall flips the shading from pixel to pixel
+      // as the monolith rises: the crawl on its edges), and the cut reads by its darker, rougher floor alone
+      float tiltK = 1.0 - smoothstep(0.3, 0.9, fw);
       float wall = 1.0 - abs(clamp(d0.x / wch, -1.0, 1.0));
       wall = smoothstep(0.0, 1.0, wall);
-      nMark = vec3(gd * wall * 0.9, 0.0);
+      nMark = vec3(gd * wall * 0.9 * tiltK, 0.0);
       markIn = smoothstep(fw, -fw, d0.x);
       coreIn = smoothstep(fw, -fw, d0.y + 0.15);
       coreR = length(q) / 3.6;
       float coreWall = 1.0 - abs(clamp((d0.y + 0.6) / max(0.6, fw), -1.0, 1.0));
-      nMark += vec3(normalize(q + 1e-4) * coreWall * 0.8, 0.0) * step(d0.y, 1.0);
+      nMark += vec3(normalize(q + 1e-4) * coreWall * 0.8 * tiltK, 0.0) * step(d0.y, 1.0);
     }
   }
   nlp = normalize(nlp + nMark);
