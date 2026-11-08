@@ -28,3 +28,21 @@ how every piece of text sits in the world (no scrims), and the footer/shore that
 6. **The shore/footer ends on the hero.** Contact and links read over the dark sky as the camera climbs toward the limb;
    the giant wordmark sits over the horizon as dawn starts, its reflection in the sea; then it scrolls off and the sun
    (the core) and the mark rise into exactly the hero frame: the loop point.
+
+## Built so far (07:20-07:40 UTC)
+- `components/world/{Story,Chapter,Thesis,Footer}.tsx` + `Story.css`, `Thesis.css`, `Footer.css`. Body copy is solid
+  bone (88%), no dim reading state: the reading heat's dim words would fail AA wherever the glowing sea passes under
+  them (the dim front sits in the bottom 15% of the screen, exactly where the horizon is). Progress is shown by the
+  chapter's reading line instead (Ember while read, bone after).
+- `lib/world/thesis.ts`: `setThesisHeat(k)` (the component) → `thesisHeat.k` (the world), and `THESIS_GLSL`
+  `thesisEmission(p, dist, fp, k, t)`. Lab frames: `shots/thesis-heat-phone-proto.webp`, `shots/thesis-1811K-desk-proto.webp`.
+  Cold metal is a mirror (F0 ~0.32 at 293 K → 0.04 molten) — to agree with `lava`.
+- `lib/world/type.ts`: `[data-reflect]` lines → atlas (once) + live rects (per frame) → `typeAt(px, lod)`, with
+  `typeProject(R, cam…)` for the sea's reflected ray. Verified in `lab/story/thesis.html` (cold sea mirrors the line).
+  A reflection mirrors about the horizon, so it shows only for type standing close above the horizon: the footer
+  wordmark (by design), the readout, the break-out when it crosses low. Type high in the sky reflects off screen.
+- Lab tooling: `node lab/story/shoot.mjs <page> <out> k=…` (serves the repo, transpiles .ts on the fly, iPhone 15 + 1440).
+
+## Open
+- PayPal captions paraphrase Jacob's paragraph 2, which the scene follows. Accepted: Jacob asked for the beat to be
+  explained more; the captions are short steps, the paragraph is his account (kept word for word).
