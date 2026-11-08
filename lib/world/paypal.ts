@@ -94,8 +94,8 @@ export const SITES: Site[] = [
   site('Yelp', [0.84, 0.575], [0.76, 0.55], 0.243, 0.9, 0.37),
   site('Palantir', [0.74, 0.765], [0.79, 0.76], 0.25, 1.1, 0.99),
   // Elon's share: SpaceX first and highest (it clears the atmosphere); Tesla later and short
-  site('SpaceX', [0.15, 0.475], [0.9, 0.62], 0.468, 2.6, 0.61),
-  site('Tesla', [0.24, 0.8], [0.3, 0.8], 0.61, 0.9, 0.23),
+  site('SpaceX', [0.15, 0.475], [0.9, 0.62], 0.492, 2.6, 0.61),
+  site('Tesla', [0.24, 0.8], [0.3, 0.8], 0.62, 0.9, 0.23),
 ];
 export const END_P = 0.78;
 export const ERUPT_P = 0.236;
@@ -107,8 +107,8 @@ export function vent(p: number) {
   const swell = smooth(0.08, 0.228, p);
   const flash =
     0.5 * Math.exp(-(((p - ERUPT_P) / 0.008) ** 2)) +
-    0.7 * Math.exp(-(((p - 0.47) / 0.01) ** 2)) +
-    0.45 * Math.exp(-(((p - 0.612) / 0.01) ** 2));
+    0.7 * Math.exp(-(((p - 0.494) / 0.01) ** 2)) +
+    0.45 * Math.exp(-(((p - 0.622) / 0.01) ** 2));
   const cool = smooth(0.8, 0.97, p);
   return { heat: mix(0.55 + 0.45 * swell, 0.12, cool), flash };
 }
@@ -384,7 +384,7 @@ vec3 paypal_places(vec3 q){
     float lobes = 0.;
     for (int k=0;k<4;k++){
       float fk = float(k);
-      float L = (0.03 + 0.05*fract(seed*7.3+fk*.37)) * grow;
+      float L = (0.035 + 0.06*fract(seed*7.3+fk*.37)) * grow;
       if (L < 1e-4) continue;
       float along = ang / L;
       float a0 = seed*6.283 + fk*1.9 + 0.5*sin(seed*31.+fk) + 0.9*(fract(seed*3.1+fk*.71)-.5)*along;
@@ -394,10 +394,10 @@ vec3 paypal_places(vec3 q){
              * (0.6 + 0.4*paypal_noise(q*960. + fk*3.));
     }
     float core = exp(-pow(ang/0.005, 2.));
-    float mid = exp(-pow(ang/0.016, 2.));
+    float mid = exp(-pow(ang/0.022, 2.));
     float halo = exp(-ang/0.05);
     float Ks = mix(900., 1650., core) + 250.*mid;
-    emit += paypal_bb(Ks) * heat * (2.2*core + 0.45*mid + 0.08*halo + 0.30*lobes);
+    emit += paypal_bb(Ks) * heat * (2.2*core + 0.55*mid + 0.1*halo + 0.5*lobes);
     emit += vec3(1.,.93,.82) * flash * 1.5 * exp(-pow(ang/0.005, 2.));
     float ra = paypal_uSpotB[i].y; // a faint heat ripple running out from a landing, gone fast
     if (ra > 0. && ra < 0.12) ripple += exp(-pow((ang - ra*0.55)/(0.004 + ra*0.05), 2.)) * exp(-ra*60.) * 0.12;
