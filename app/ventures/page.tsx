@@ -4,7 +4,7 @@ import { Footer } from '@/components/Footer';
 import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
 import { Reveal } from '@/components/Reveal';
-import { VentureObject } from '@/components/Ventures';
+import { VentureObject, cueFor } from '@/components/Ventures';
 import { WordReveal } from '@/components/WordReveal';
 import { ventures, ventureHref, type Venture } from '@/data/ventures';
 import '@/components/VenturePages.css';
@@ -50,7 +50,7 @@ export default function VenturesPage() {
           {live.map((v) => (
             <article key={v.slug} aria-labelledby={`v-${v.slug}`} className="vx-live group">
               <Link href={ventureHref(v)} tabIndex={-1} aria-hidden className="vx-visual">
-                <VentureObject v={v} sizes="(min-width: 1024px) 56vw, 92vw" />
+                <VentureObject v={v} sizes="(min-width: 1024px) 56vw, 92vw" cue={cueFor(v)} />
               </Link>
               {/* In the first screen, so not held back for a reveal. */}
               <div className="vx-text">
@@ -74,7 +74,7 @@ export default function VenturesPage() {
               {forging.map((v, i) => (
                 <article key={v.slug} aria-labelledby={`v-${v.slug}`} data-hot="" className="vx-forging group">
                   <Link href={ventureHref(v)} tabIndex={-1} aria-hidden className="vx-visual">
-                    <VentureObject v={v} sizes="(min-width: 1024px) 44vw, 92vw" />
+                    <VentureObject v={v} sizes="(min-width: 1024px) 44vw, 92vw" cue={cueFor(v)} />
                   </Link>
                   <Reveal className="vx-text" delay={i * 0.08}>
                     <p className="label">Coming soon</p>

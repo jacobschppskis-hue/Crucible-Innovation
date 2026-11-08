@@ -44,14 +44,16 @@ export function Ventures() {
 }
 
 const cap = (w: string) => w[0].toUpperCase() + w.slice(1);
+/** What opening a venture says: on its link and on the label its bar shows. */
+export const cueFor = (v: Venture) => (v.status === 'live' ? `See ${v.name}` : `About ${v.name}`);
 
 function VentureCast({ v }: { v: Venture }) {
   const live = v.status === 'live';
   const href = ventureHref(v);
   return (
     <article className="vf-panel group" data-hot={live ? undefined : ''} aria-labelledby={`v-${v.slug}`}>
-      <Link href={href} tabIndex={-1} aria-hidden className="vf-visual" data-pull="14">
-        <VentureObject v={v} />
+      <Link href={href} tabIndex={-1} aria-hidden className="vf-visual" data-pull="10">
+        <VentureObject v={v} cue={cueFor(v)} />
       </Link>
       <div className="vf-text">
         <p className={`label flex items-center gap-2 ${live ? 'text-ember' : ''}`}>
@@ -61,9 +63,10 @@ function VentureCast({ v }: { v: Venture }) {
         <h3 id={`v-${v.slug}`} className="vf-name">
           {v.name}
         </h3>
-        <p className="mt-4 max-w-sm text-lg leading-relaxed text-bone-dim">{v.tagline ? `${v.tagline}. ${v.blurb}` : v.blurb}</p>
+        {v.tagline && <p className="vf-tag">{v.tagline}</p>}
+        <p className="vf-blurb">{v.blurb}</p>
         <Link href={href} className="vf-link mt-8">
-          {live ? `See ${v.name}` : `About ${v.name}`} <ArrowRight />
+          {cueFor(v)} <ArrowRight />
         </Link>
       </div>
     </article>
@@ -75,8 +78,8 @@ function VentureCast({ v }: { v: Venture }) {
  * the temperature (`data-hot` on an ancestor while the venture is still forging) and the frame's size. Also used by
  * the /ventures pages.
  */
-export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager }: { v: Venture; sizes?: string; eager?: boolean }) {
-  return hasIngot(v.ingot) ? <IngotScene slug={v.ingot!} sizes={sizes} eager={eager} /> : <MarkCast v={v} />;
+export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager, cue }: { v: Venture; sizes?: string; eager?: boolean; cue?: string }) {
+  return hasIngot(v.ingot) ? <IngotScene slug={v.ingot!} sizes={sizes} eager={eager} cue={cue} /> : <MarkCast v={v} />;
 }
 
 /** The fallback visual (a venture without an ingot still): its mark, cool when live, glowing while it's forging. Verge's V is the

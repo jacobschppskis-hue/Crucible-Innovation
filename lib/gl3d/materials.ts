@@ -9,7 +9,7 @@
 // The stamp is cut in darker and rougher.
 import { BAR } from './geometry';
 
-export const MATERIALS = { cast: 0, core: 1, hot: 2, ingot: 4, bar: 5 } as const;
+export const MATERIALS = { cast: 0, core: 1, hot: 2, ingot: 4, bar: 5, pool: 6 } as const;
 export type MaterialName = keyof typeof MATERIALS;
 
 const g = (n: number) => n.toFixed(4);
@@ -24,7 +24,7 @@ export const FS = `#version 300 es
 precision highp float;
 in vec3 vP;in vec3 vW;in vec3 vO;out vec4 o;
 uniform int uMat;uniform float uTone,uTemp,uGlow,uSeed,uGrain,uExp,uRel;uniform vec2 uTemper;
-uniform vec3 uEye;uniform vec4 uRelP,uClip,uCore;uniform float uTy,uEdge,uTime;uniform mat3 uNM;uniform sampler2D uRelT;
+uniform vec3 uEye;uniform vec4 uRelP,uClip,uCore,uPoke;uniform float uTy,uEdge,uTime,uRefl;uniform vec2 uVp;uniform mat3 uNM;uniform sampler2D uRelT;
 ${BARS}
 float h3(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
 float vn(vec3 x){vec3 i=floor(x),f=fract(x);f=f*f*(3.-2.*f);
@@ -92,12 +92,12 @@ vec3 g=vec3(0.);
 #else
 vec3 g=vec3(ht(p+vec3(e,0,0))-h0,ht(p+vec3(0,e,0))-h0,ht(p+vec3(0,0,e))-h0)/e;
 #endif
-float k=uMat==2?.5:uMat==1?.9:uMat==4?.3:uMat==5?.08:.55;
+float k=uMat==2?.5:uMat==1?.9:uMat==4?.06:uMat==5?.08:.55;
 g-=dot(g,nO)*nO;
 float rl=0.,ao=.6+.8*h0;
 vec3 n0=nO;
 vec3 nn=normalize(nO-g*k/uGrain*.05),nb=nn;
-if(uRel!=0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.55,vec2(.0004),vec2(.0011));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
+if(uRel!=0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.7,vec2(.0007),vec2(.0014));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
 rl=texture(uRelT,uv,-1.5).r*w;
 vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0),-1.5).r-texture(uRelT,uv-vec2(d.x,0),-1.5).r,texture(uRelT,uv+vec2(0,d.y),-1.5).r-texture(uRelT,uv-vec2(0,d.y),-1.5).r)*w*(.0011/d);
 nn=normalize(mix(nn,nO,.6*rl)-vec3(gr,0.)*uRel);}
@@ -134,19 +134,19 @@ vec3 crust=boneLit(p,nO,v,0.,0.)+ramp(Tl*.9)*.3*smoothstep(.0,.6,Tl);
 col=mix(liq,crust,cv)+ramp(T)*smoothstep(.0,.5,cv)*(1.-smoothstep(.5,1.,cv))*.5*Tl;
 }else if(uMat==4){
 float az=clamp((p.z+HZ)/(2.*HZ),0.,1.),dr=(p.z+HZ)*TD;
-float es=clamp(min(HA-dr-abs(p.x),HB-dr-abs(p.y))/13.,0.,1.);
-float tp=smoothstep(.72,1.,az)*smoothstep(.2,.7,nO.z),hc=tp*pow(es,.75);
-vec3 dq=p*.16+vec3(uTime*.02,-uTime*.013,uTime*.009)+uSeed;
-float cn=.5*vn(dq)+.3*vn(dq*2.1+5.)+.2*vn(dq*4.3+9.);
-float T=.19+.1*az*az+.42*hc;
-float dn=.2*(1.-hc)+.1*(1.-az)-.24;
-float sc=smoothstep(.5,.55,cn+dn);
-float fc=.6*vn(dq*2.3+2.)+.4*vn(dq*4.1+7.),ck=1.-smoothstep(.0,.022,abs(fc-.5));
-T=clamp(T+(h0-.5)*.04-.14*rl,0.,1.);
-vec3 em=bb(T)*(1.-.5*rl)*(.9+.2*h0);
-vec3 skin=bb(T*.72)*(.12+.1*h0)+bb(T)*ck*.8+vec3(.5,.1,.03)*pow(max(dot(n,normalize(normalize(vec3(-.55,.65,.72))+v)),0.),24.)*.12;
-vec3 sp=vec3(1.,.82,.6)*pow(max(dot(n,normalize(normalize(vec3(-.55,.65,.72))+v)),0.),60.)*.3;
-col=mix(em,skin,sc)+sp*(1.-.7*sc);
+float es=clamp(min(HA-dr-abs(p.x),HB-dr-abs(p.y))/16.,0.,1.);
+float hc=smoothstep(.7,1.,az)*smoothstep(.25,.85,nO.z)*pow(es,.6);
+vec3 dq=p*.045+vec3(uTime*.018,-uTime*.011,-uTime*.03)+uSeed;
+dq+=.9*vec3(vn(dq*1.4+vec3(0.,0.,uTime*.05)),vn(dq*1.4+4.3),vn(dq*1.4+8.1));
+float cv=.65*vn(dq)+.35*vn(dq*2.3+3.7);
+float sh=vn(vec3(p.x*.22+uTime*.35,p.y*.5,uTime*.7+uSeed))-.5;
+float T=.24+.13*az*az+.4*hc+.11*(cv-.5)*(1.-.4*hc)+.015*sh-.21*rl;
+vec3 em=bb(T)*(.93+.14*h0);
+vec3 K=normalize(vec3(-.55,.65,.72)),S=normalize(vec3(-.3,.9,.3));
+float nv=max(dot(n,v),1e-3);vec3 rr=reflect(-v,n);
+float F=.05+.95*pow(1.-nv,5.);
+vec3 sp=vec3(1.,.9,.74)*(pow(max(dot(n,normalize(K+v)),0.),140.)*1.4+pow(max(dot(rr,S),0.),14.)*.1);
+col=em*(1.-.3*rl)+sp*(.3+F)+bb(min(T+.14,1.))*pow(1.-nv,3.)*.4;
 }else if(uMat==5){
 float dr=(p.z+HZ)*TD;
 float ds=max(0.,min(HA-dr-abs(p.x),HB-dr-abs(p.y)));
@@ -178,10 +178,26 @@ vec3 h=normalize(K+v);float nh=max(dot(n,h),0.),nl=max(dot(n,K),0.);
 vec3 sp=F*env+F*vec3(1.,.84,.6)*nl*(pow(nh,mix(70.,12.,w))*.4+pow(nh,400.)*2.5*(1.-pit)*(1.-rl));
 vec3 df=F0*(vec3(1.,.88,.7)*.14*nl+vec3(.3,.33,.38)*.12*max(dot(n,L2),0.)+vec3(.13,.125,.115)*(.7+.3*n.y));
 col=(df+sp)*ab;
+float az=clamp((p.z+HZ)/(2.*HZ),0.,1.),br=.88+.12*sin(uTime*.7+uSeed)*(.6+.4*vn(vec3(p.xy*.08,uTime*.2)));
+col+=bb(.33)*uTemp*br*(rl*rl*.13+exp(-de/1.2)*.05*(1.-rl)+smoothstep(.3,0.,az)*.1)*(1.-.5*pit);
+}else if(uMat==6){
+vec2 q=abs(p.xy)-vec2(HA,HB)+4.;float d=max(length(max(q,0.))+min(max(q.x,q.y),0.)-4.,0.);
+vec2 wq=p.xy*vec2(.05,.11);
+float lq=vn(vec3(wq+vec2(uTime*.04,-uTime*.03),uTime*.12+uSeed));
+float st=.8+.4*vn(vec3(p.x*.05,p.y*.22+uTime*.25,uTime*.3+uSeed));
+float gl=(exp(-d/3.2)*.6+exp(-d/9.)*.24)*mix(.7,1.25,lq)*st*(1.-smoothstep(12.,26.,d))*(.88+.12*sin(d*.9-uTime*2.2+lq*5.));
+float pr=length(p.xy-uPoke.xy),pa=uPoke.z,pw=pr-4.-pa*30.;
+float ring=uPoke.w*exp(-pa*1.8)*(exp(-pw*pw/10.)-.25*exp(-(pw+4.)*(pw+4.)/10.))*smoothstep(0.,4.,pr);
+col=max(bb(.42)*uTemp*gl*(1.+.6*ring)+bb(.5)*ring*(.06+.16*uTemp)*(.6+.4*st)*exp(-d/14.),0.);
 }
 col*=uExp;
 col=clamp((col*(2.51*col+.03))/(col*(2.43*col+.59)+.14),0.,1.);
 col=pow(col,vec3(1./2.2));
+if(uMat==6||uRefl>0.){
+vec2 sc=gl_FragCoord.xy/uVp;float ef=smoothstep(.01,.12,min(min(sc.x,1.-sc.x),min(sc.y,1.-sc.y)));
+float a=max(col.r,max(col.g,col.b));
+if(uRefl>0.){a=uRefl*exp(-max(p.z+HZ,0.)/8.)*(.55+.6*vn(vec3(vW.x*.04,vW.y*.55-uTime*.4,uTime*.5)));col*=a;}
+o=vec4(col,a)*ef;}else
 o=vec4(col,1.);}`;
 
 /** Draw into a canvas (white = raised) for the relief shader: lettering, lattice, anything flat. Soft edges welcome. */

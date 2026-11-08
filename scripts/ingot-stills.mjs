@@ -16,7 +16,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..');
 const tmp = mkdtempSync(join(tmpdir(), 'ingot-stills-'));
 const tsc = join(root, 'node_modules/.bin/tsc');
 execFileSync(tsc, ['--outDir', tmp, '--module', 'esnext', '--target', 'es2020', '--moduleResolution', 'bundler', '--lib', 'es2020,dom', '--skipLibCheck', '--noCheck', join(root, 'lib/gl3d/ingotStage.ts')], { stdio: 'inherit' });
-writeFileSync(join(tmp, 'index.html'), '<!doctype html><body style="margin:0"><canvas id="c" style="width:2400px;height:1920px;display:block"></canvas>');
+writeFileSync(join(tmp, 'index.html'), '<!doctype html><body style="margin:0"><canvas id="c" style="width:2400px;height:1734px;display:block"></canvas>');
 // Extensionless relative imports → .js
 copyFileSync(join(root, 'film/fonts/Archivo-ExtraBold.ttf'), join(tmp, 'Archivo.ttf'));
 const srv = createServer((q, r) => {
@@ -30,7 +30,7 @@ await new Promise((res) => srv.listen(0, '127.0.0.1', res));
 const base = `http://127.0.0.1:${srv.address().port}`;
 const exe = process.env.PW_CHROMIUM_PATH || (existsSync('/opt/pw-browsers') ? readdirSync('/opt/pw-browsers').filter((d) => /^chromium-/.test(d)).map((d) => `/opt/pw-browsers/${d}/chrome-linux64/chrome`).find(existsSync) : undefined);
 const browser = await chromium.launch({ executablePath: exe, args: ['--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: 2400, height: 1920 } });
+const page = await browser.newPage({ viewport: { width: 2400, height: 1734 } });
 page.on('pageerror', (e) => console.log('page error', e.message));
 await page.goto(base + '/index.html');
 const out = join(root, 'public/film/ingots');
@@ -51,7 +51,7 @@ for (const slug of ['sites', 'verge', 'trellis']) {
   }, slug);
   const buf = Buffer.from(png.split(',')[1], 'base64');
   for (const w of [2400, 1200, 600]) {
-    await sharp(buf).resize(w, Math.round((w * 4) / 5)).webp({ quality: w === 600 ? 88 : 90, alphaQuality: 100, effort: 5 }).toFile(join(out, `${slug}-${w}.webp`));
+    await sharp(buf).resize(w, Math.round((w * 1734) / 2400)).webp({ quality: w === 600 ? 88 : 90, alphaQuality: 100, effort: 5 }).toFile(join(out, `${slug}-${w}.webp`));
   }
   console.log('wrote', slug);
 }

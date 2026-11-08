@@ -21,8 +21,9 @@
   aspect-ratio: 4 / 3;
 }
 /* The ingot is a freestanding object on the page's own liquid: no floor, no box, no backdrop. The host keeps the 8:5
-   layout box; the still (transparent) and the live canvas lie over it and overhang it by 14% above and below (5:4), so
-   the bar can turn, bob and tilt without being clipped. The canvas takes over once it has drawn (data-on). */
+   layout box; the still (transparent) and the live canvas lie over it and overhang it by 14% left and right and 24%
+   above and below (lib/gl3d/ingotPose.ts OVER), so the bar can turn, bob and tilt and the light it casts on the
+   liquid fades out inside the canvas. The canvas takes over once it has drawn (data-on). */
 .ing {
   position: relative;
   display: block;
@@ -32,10 +33,10 @@
 .ing-still,
 .ing-canvas {
   position: absolute;
-  left: 0;
-  top: -14%;
-  width: 100%;
-  height: 128%;
+  left: -14%;
+  top: -24%;
+  width: 128%;
+  height: 148%;
   display: block;
   pointer-events: none;
 }
@@ -56,6 +57,24 @@
   line-height: 0.92;
   letter-spacing: -0.02em;
   font-variation-settings: 'wdth' 125;
+}
+.vf-tag {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.375rem, 1.9vw, 1.875rem);
+  line-height: 1.1;
+  font-variation-settings: 'wdth' 125;
+}
+.vf-blurb {
+  margin-top: 1rem;
+  max-width: 24rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+}
+.vf-tag + .vf-blurb {
+  margin-top: 0.5rem;
 }
 .vf-link {
   display: inline-flex;
@@ -146,9 +165,9 @@
     flex: none;
     width: 68vw;
     height: min(74svh, 44rem);
-    grid-template-columns: 1.3fr 1fr;
-    gap: 3.5vw;
-    align-items: end;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 3vw;
+    align-items: center;
   }
   .js .vf-visual {
     aspect-ratio: auto;
@@ -160,5 +179,72 @@
   .vf-panel {
     grid-template-columns: 1.3fr 1fr;
     align-items: end;
+  }
+}
+
+/* The bar is the way in: the whole visual is the link (the text link is the one screen readers get). A mouse sees the
+   label follow it over the bar; touch screens always show it, at the bar's foot, and a press sinks the bar. */
+.vf-visual,
+.vx-visual[href] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.ing-cue {
+  position: absolute;
+  left: var(--cx, 50%);
+  top: var(--cy, 100%);
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.9rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bone);
+  color: var(--ground);
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  translate: -50% 0;
+  opacity: 0;
+  scale: 0.92;
+  transition:
+    opacity 180ms ease,
+    scale 260ms var(--ease-out);
+}
+.ing-cue[data-follow] {
+  translate: 18px 18px;
+}
+a:hover .ing-cue,
+.group:has(.vf-link:focus-visible) .ing-cue {
+  opacity: 1;
+  scale: 1;
+  background: var(--ember);
+}
+a:active .ing-cue {
+  scale: 0.96;
+  background: var(--ember);
+}
+@media (hover: none), (pointer: coarse) {
+  /* the label on the bar is the way in: the same words again under the text would say it twice (the text link stays
+     for screen readers and keyboards, and shows again when focused) */
+  .group:has(.ing-cue) .vf-link:not(:focus-visible) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .ing-cue,
+  .ing-cue[data-follow] {
+    left: 50%;
+    top: auto;
+    bottom: 0;
+    translate: -50% 40%;
+    opacity: 1;
+    scale: 1;
   }
 }
