@@ -52,7 +52,7 @@ async function run(device) {
   if (kind === 'world' || kind === 'concept') await page.evaluate(() => window.__qa.hold());
   const frames = {};
   for (const p of PLACES) {
-    if (kind === 'world' || kind === 'concept') { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 18, 40); }
+    if (kind === 'world' || kind === 'concept') { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 8, 70); }
     else { await page.evaluate((p) => scrollTo(0, p * (document.documentElement.scrollHeight - innerHeight)), p); await page.waitForTimeout(300); }
     let png = await shot(page);
     let s = await stats(png);
@@ -75,7 +75,7 @@ async function run(device) {
     notes.push(`[${device}] state ${JSON.stringify(st).slice(0, 160)}`);
     await page.goto(tg.url + tg.path + (tg.path.includes('?') ? '&' : '?') + 't=8', { waitUntil: 'load' });
     await waitWorld(page, 15000); await page.evaluate(() => window.__qa.hold());
-    const at = async (p) => { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 24, 40); return shot(page); };
+    const at = async (p) => { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 10, 60); return shot(page); };
     const e = 0.0001;
     const a0 = await at(1 - 3 * e), a = await at(1 - e), b2 = await at(e), c = await at(3 * e);
     const seam = await diff(a, b2), r1 = await diff(b2, c), r2 = await diff(a0, a);
