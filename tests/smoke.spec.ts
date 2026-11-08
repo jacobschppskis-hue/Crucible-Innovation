@@ -34,6 +34,7 @@ for (const { path, h1 } of pages) {
 }
 
 test('no horizontal scroll anywhere down the page, once every effect canvas has been created', async ({ page }) => {
+  test.setTimeout(120_000); // the home page's world draws through software GL here
   for (const { path } of pages) {
     await page.goto(path, { waitUntil: 'networkidle' });
     const H = await page.evaluate(() => document.documentElement.scrollHeight);

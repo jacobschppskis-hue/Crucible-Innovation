@@ -40,8 +40,8 @@ test('the world starts: one fixed canvas behind the page, on the one clock, no e
 
 test('the loop: scrolling past the bottom with the wheel or keys comes back to the top, and progress runs on', async ({ page, isMobile }) => {
   test.skip(isMobile, 'wheel and keyboard');
-  test.setTimeout(120_000); // software GL handles one wheel tick per drawn frame
-  await start(page);
+  test.setTimeout(150_000); // software GL handles one wheel tick per drawn frame: draw at the cheapest step
+  await start(page, '/?q=8');
   expect((await state(page)).looping).toBe(true);
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
   await page.evaluate((y) => scrollTo(0, y), max - 1200);
@@ -59,7 +59,11 @@ test('the loop: scrolling past the bottom with the wheel or keys comes back to t
   await page.evaluate((y) => scrollTo(0, y), max - 600);
   await page.waitForTimeout(500);
   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur?.());
-  for (let i = 0; i < 4; i++) { await page.keyboard.press('PageDown'); await page.waitForTimeout(700); }
+  for (let i = 0; i < 6 && (await page.evaluate(() => scrollY)) > max / 2; i++) {
+    await page.keyboard.press('PageDown');
+    await expect.poll(() => page.evaluate(() => (window as unknown as { __world: W }).__world.state().y), { timeout: 15_000 }).not.toBe(-1);
+    await page.waitForTimeout(1500);
+  }
   expect(await page.evaluate(() => scrollY)).toBeLessThan(max / 2);
 });
 

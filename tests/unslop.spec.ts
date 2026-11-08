@@ -56,7 +56,7 @@ for (const path of PAGES) {
 // every half-viewport of scroll the journey's progress moves on (the world answers the scroll everywhere).
 test('home: the world answers the scroll at every position', async ({ page }) => {
   test.setTimeout(180_000);
-  await page.goto('/?loop=0', { waitUntil: 'load' });
+  await page.goto('/?loop=0&q=8', { waitUntil: 'load' });
   await page.mouse.move(200, 300);
   await expect.poll(() => page.evaluate(() => !!(window as unknown as { __world?: unknown }).__world), { timeout: 20_000 }).toBe(true);
   const vh = page.viewportSize()!.height;
@@ -65,10 +65,13 @@ test('home: the world answers the scroll at every position', async ({ page }) =>
   let last = -1;
   for (let y = 0; y <= max; y += vh / 2) {
     await page.evaluate((t) => scrollTo(0, t), y);
-    // the world reads the scroll on its next frame (software GL draws a few a second)
-    const read = () => page.evaluate(() => (window as unknown as { __world: { state(): { progress: number; scroll: number } } }).__world.state());
-    let p = -1;
-    for (let k = 0; k < 100; k++) { const st = await read(); p = st.progress; if (p > last + 1e-4) break; await page.waitForTimeout(100); }
+    // the clock is held: step frames so the world reads the scroll now (no waiting on software GL)
+    const p = await page.evaluate(() => {
+      const w = (window as unknown as { __world: { hold(): void; step(ms: number): void; state(): { progress: number } } }).__world;
+      w.hold();
+      for (let k = 0; k < 4; k++) w.step(50);
+      return w.state().progress;
+    });
     if (last >= 0 && !(p > last)) dead.push(Math.round((y / vh) * 10) / 10);
     last = p;
   }
