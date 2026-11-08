@@ -44,7 +44,7 @@ export const LOOK = {
   caustic: 0.025,
   crest: [0.16, 0.003, 0.022] as number[], // interaction crests from any direction catch a soft warm light: strength, over
   // the curvature (-laplacian, 1/px) where it fades in (the key alone only lights crests facing the bottom edge)
-  sheen: [0.45, 0.15, 0.05] as number[], // the swell's sheen at its brightest (added to the ground): molten red
+  sheen: [0.3, 0.1, 0.034] as number[], // the swell's sheen at its brightest (added to the ground): molten red
   sheenRelief: 25, // the swell: slope -> normal tilt for its sheen (enough that its steepest faces pass the key)
   sheenExp: 600, // the sheen's lobe: only swell faces turned right to the key strip, so a few thin warm lines, never bands
   // The molten body under a thin cooler skin (lava's model, lib/world/glsl/lava.glsl, seen from straight above): it
@@ -151,7 +151,10 @@ void main() {
   vec3 ns = normalize(vec3(-sw.yz * ${f(LOOK.sheenRelief)}, 1.0));
   float sl = pow(max(dot(ns, HK), 0.0), ${f(LOOK.sheenExp)});
   float s00 = pow(HK.z, ${f(LOOK.sheenExp)});
-  col += ${v3(LOOK.sheen)} * clamp((sl - s00) / (1.0 - s00), -0.35, 1.0);
+  // each line fades in and out along its length: brightest where the swell's waves stack up (its height is high), so
+  // a crest flashes for a stretch and never runs edge to edge like a scratch
+  float along = smoothstep(-0.5, 3.5, sw.x);
+  col += ${v3(LOOK.sheen)} * clamp((sl - s00) / (1.0 - s00), -0.35, 1.0) * along;
 
   // key: interaction waves only (the swell never reaches it)
   vec3 n = normalize(vec3(-gr * ${f(LOOK.relief)}, 1.0));
