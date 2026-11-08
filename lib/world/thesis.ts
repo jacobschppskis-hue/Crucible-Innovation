@@ -50,9 +50,9 @@ export function thesisKeys(R: number): Key[] {
     // leaving the sea where ventures ends: the horizon low in the frame, the glowing sea under it (never a black frame)
     { at: ['thesis', 0], s: deg(151.5), h: 30, yaw: 0, pitch: -2, fov: 50, ...FAR, ph: { fov: 64, pitch: -3 } },
     // climbing: the horizon drops, the sea below opens out
-    { at: ['thesis', 0.4], s: deg(153.8), h: 360, yaw: 0, pitch: -16, fov: 48, ...FAR, ph: { fov: 62, pitch: -5 } },
+    { at: ['thesis', 0.4], s: deg(153.8), h: 360, yaw: 0, pitch: -12, fov: 48, ...FAR, ph: { fov: 62, pitch: -5 } },
     // in orbit: the limb in the lower part of the frame (~73% down), the disk under it, the type in the sky above
-    { at: ['thesis', 1], s: deg(156.5), h: 850, yaw: 0, pitch: -22, fov: 46, ...FAR, ph: { fov: 60, pitch: -10 } },
+    { at: ['thesis', 1], s: deg(156.5), h: 850, yaw: 0, pitch: -19, fov: 46, ...FAR, ph: { fov: 60, pitch: -10 } },
   ];
 }
 
