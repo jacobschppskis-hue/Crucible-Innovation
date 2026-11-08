@@ -3,15 +3,13 @@ import path from 'node:path';
 import Link from 'next/link';
 import { ventures, ventureHref, type Venture } from '@/data/ventures';
 import { ArrowRight } from './Icons';
-import { IngotScene } from './IngotScene';
 import { SplitRing } from './SplitRing';
 import { WordReveal } from './WordReveal';
 import './Ventures.css';
 
-// Ingot stills (scripts/ingot-stills.mjs → public/film/ingots/<slug>-<w>.webp, transparent). Checked at build time, so a venture without a
-// render falls back to its mark drawn in CSS: cool for a live venture, still glowing for one in the mould.
+// Monolith stills (scripts/monolith-stills.mjs → public/film/monoliths/<name>-<w>.webp, transparent). Checked at build
+// time, so a venture without a render falls back to its mark drawn in CSS: cool for a live venture, glowing while forging.
 export const hasMonolith = (name?: string) => !!name && fs.existsSync(path.join(process.cwd(), 'public/film/monoliths', `${name}-1200.webp`));
-export const hasIngot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
 
 /**
  * The foundry floor. Each venture is a cast bar: Crucible Sites has set and cooled; the next ones are still glowing. On wide screens the floor is a pinned horizontal track that scrolls sideways; on phones, with
@@ -75,13 +73,13 @@ function VentureCast({ v }: { v: Venture }) {
 }
 
 /**
- * A venture's cast object, decorative: its freestanding 3D ingot (a transparent still until the scene starts) when one exists, else its mark. The caller sets
+ * A venture's object, decorative: its metal monolith (a still from the home page's world) when one exists, else its
+ * mark. The caller sets
  * the temperature (`data-hot` on an ancestor while the venture is still forging) and the frame's size. Also used by
  * the /ventures pages.
  */
-export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager, cue }: { v: Venture; sizes?: string; eager?: boolean; cue?: string }) {
-  if (hasMonolith(v.monolith)) return <MonolithStill name={v.monolith!} sizes={sizes} eager={eager} />;
-  return hasIngot(v.ingot) ? <IngotScene slug={v.ingot!} sizes={sizes} eager={eager} cue={cue} /> : <MarkCast v={v} />;
+export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager }: { v: Venture; sizes?: string; eager?: boolean; cue?: string }) {
+  return hasMonolith(v.monolith) ? <MonolithStill name={v.monolith!} sizes={sizes} eager={eager} /> : <MarkCast v={v} />;
 }
 
 /**
@@ -112,7 +110,7 @@ function MonolithStill({ name, sizes, eager }: { name: string; sizes: string; ea
   );
 }
 
-/** The fallback visual (a venture without an ingot still): its mark, cool when live, glowing while it's forging. Verge's V is the
+/** The fallback visual (a venture without a monolith still): its mark, cool when live, glowing while it's forging. Verge's V is the
  * display face, as on its 3D bar (TODO(jakob): Verge's real mark). */
 export function MarkCast({ v }: { v: Venture }) {
   return (

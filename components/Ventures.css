@@ -20,35 +20,6 @@
   justify-content: center;
   aspect-ratio: 4 / 3;
 }
-/* The ingot is a freestanding object on the page's own liquid: no floor, no box, no backdrop. The host keeps the 8:5
-   layout box; the still (transparent) and the live canvas lie over it and overhang it by 14% left and right and 24%
-   above and below (lib/gl3d/ingotPose.ts OVER), so the bar can turn, bob and tilt and the light it casts on the
-   liquid fades out inside the canvas. The canvas takes over once it has drawn (data-on). */
-.ing {
-  position: relative;
-  display: block;
-  width: 100%;
-  aspect-ratio: 8 / 5;
-}
-.ing-still,
-.ing-canvas {
-  position: absolute;
-  left: -14%;
-  top: -24%;
-  width: 128%;
-  height: 148%;
-  display: block;
-  pointer-events: none;
-}
-.ing-canvas {
-  visibility: hidden; /* a worker's canvas keeps compositing while hidden; it shows once it has drawn */
-}
-.ing[data-on] .ing-canvas {
-  visibility: visible;
-}
-.ing[data-on] .ing-still {
-  visibility: hidden;
-}
 .vf-name {
   margin-top: 1rem;
   font-family: var(--font-display);
@@ -94,7 +65,7 @@
   text-decoration-color: var(--ember);
 }
 
-/* The fallback (a venture without an ingot still): its mark. A live venture's has cooled; the rest still glow. */
+/* The fallback (a venture without a monolith still): its mark. A live venture's has cooled; the rest still glow. */
 .vf-mould {
   position: absolute;
   inset: 0;
@@ -113,7 +84,7 @@
   filter: drop-shadow(0 0 18px var(--ember)) drop-shadow(0 0 3px var(--ember-hot));
 }
 /* Still hot: the fallback mark breathes, only while the floor is on screen (InView sets data-live on [data-heat]).
-   (A 3D ingot's molten face breathes inside its scene.) */
+*/
 @media (prefers-reduced-motion: no-preference) {
   [data-hot] .vf-mark {
     animation: vf-smoulder 3.6s ease-in-out infinite paused;
@@ -182,71 +153,11 @@
   }
 }
 
-/* The bar is the way in: the whole visual is the link (the text link is the one screen readers get). A mouse sees the
-   label follow it over the bar; touch screens always show it, at the bar's foot, and a press sinks the bar. */
+/* The object is a way in too: the whole visual is a link (the text link is the one screen readers get). */
 .vf-visual,
 .vx-visual[href] {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-}
-.ing-cue {
-  position: absolute;
-  left: var(--cx, 50%);
-  top: var(--cy, 100%);
-  z-index: 1;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.55rem 0.9rem 0.6rem;
-  border-radius: 999px;
-  background: var(--bone);
-  color: var(--ground);
-  font-size: 0.9375rem;
-  font-weight: 600;
-  line-height: 1;
-  white-space: nowrap;
-  pointer-events: none;
-  translate: -50% 0;
-  opacity: 0;
-  scale: 0.92;
-  transition:
-    opacity 180ms ease,
-    scale 260ms var(--ease-out);
-}
-.ing-cue[data-follow] {
-  translate: 18px 18px;
-}
-a:hover .ing-cue,
-.group:has(.vf-link:focus-visible) .ing-cue {
-  opacity: 1;
-  scale: 1;
-  background: var(--ember);
-}
-a:active .ing-cue {
-  scale: 0.96;
-  background: var(--ember);
-}
-@media (hover: none), (pointer: coarse) {
-  /* the label on the bar is the way in: the same words again under the text would say it twice (the text link stays
-     for screen readers and keyboards, and shows again when focused) */
-  .group:has(.ing-cue) .vf-link:not(:focus-visible) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    margin: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .ing-cue,
-  .ing-cue[data-follow] {
-    left: 50%;
-    top: auto;
-    bottom: 0;
-    translate: -50% 40%;
-    opacity: 1;
-    scale: 1;
-  }
 }
 
 /* ---------- The monolith (a still from the home page's world, components/Ventures.tsx MonolithStill) ----------

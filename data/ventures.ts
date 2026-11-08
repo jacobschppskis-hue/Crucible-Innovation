@@ -12,8 +12,6 @@ export type Venture = {
   description?: string;
   /** The venture's mark (public/ventures/<slug>.svg), if it has one. */
   mark?: string;
-  /** Cast-ingot render (public/film/ingots/<slug>-*.webp): the old foundry floor; the monolith wins when both exist. */
-  ingot?: string;
   /** Its metal monolith, rendered by the home page's world (public/film/monoliths/<name>-{600,1200,2400}.webp,
    *  scripts/monolith-stills.mjs): shown on /ventures and its own page. */
   monolith?: string;
@@ -29,7 +27,6 @@ export const ventures = [
     blurb: 'Websites for local businesses, built in days.',
     status: 'live',
     href: '/sites',
-    ingot: 'sites',
     monolith: 'crucible-sites',
   },
   {
@@ -41,7 +38,6 @@ export const ventures = [
     description:
       'Verge is an AI coach for endurance athletes, built on the training data they already have. It tracks training load and recovery, using sleep, heart rate variability and resting heart rate to score how ready the body is each morning, that score deciding how hard the day’s session should be. A run-down day gets a lighter workout. The plan adjusts day by day and every session comes back with written feedback. The algorithms underneath took a long time to get right. It is made for runners, cyclists and triathletes.',
     mark: '/ventures/verge.svg',
-    ingot: 'verge',
     monolith: 'verge',
   },
   {
@@ -53,7 +49,6 @@ export const ventures = [
     description:
       'Trellis is an AI-powered day planner built around how much you know about when something happens. Tell it “at 2pm,” “sometime this afternoon” or “by Friday,” and it works with exactly that much, placing everything into a plan that fits the hours you really have. The AI reads what you write, and a solver that follows fixed rules does the scheduling, so the same input always gives the same plan. A day that falls apart leaves no pile of overdue tasks behind. Unfinished work goes back where it came from, ready for the next try.',
     mark: '/ventures/trellis.svg',
-    ingot: 'trellis',
     monolith: 'trellis',
   },
 ] as const satisfies readonly Venture[];
