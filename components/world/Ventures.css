@@ -23,8 +23,7 @@
   color: var(--bone);
 }
 .wv-list {
-  margin: 3rem 0 0;
-  padding: 0 var(--gutter, 1.25rem);
+  margin-top: 3rem;
   list-style: none;
   display: grid;
   gap: 0.5rem;
@@ -42,6 +41,40 @@
 }
 .wv-hit {
   display: none;
+}
+/* the still (no world): the monolith beside its words; with the world it is the world's own */
+.wv-still {
+  grid-column: 1;
+  grid-row: 1 / span 3;
+  width: 3.75rem;
+  height: auto;
+  margin-right: 1rem;
+  user-select: none;
+}
+.wv-link:has(.wv-still) {
+  grid-template-columns: auto 1fr auto;
+}
+.wv-link:has(.wv-still) > .wv-status,
+.wv-link:has(.wv-still) > .wv-name,
+.wv-link:has(.wv-still) > .wv-line {
+  grid-column: 2;
+}
+.wv-link:has(.wv-still) > .wv-go {
+  grid-column: 3;
+}
+.wv[data-armed] .wv-still {
+  display: none;
+}
+.wv[data-armed] .wv-link {
+  grid-template-columns: 1fr auto;
+}
+.wv[data-armed] .wv-link > .wv-status,
+.wv[data-armed] .wv-link > .wv-name,
+.wv[data-armed] .wv-link > .wv-line {
+  grid-column: 1;
+}
+.wv[data-armed] .wv-link > .wv-go {
+  grid-column: 2;
 }
 .wv-status {
   grid-column: 1;
@@ -190,6 +223,11 @@
   }
   .wv-link {
     display: block;
+  }
+  .wv-still {
+    display: block;
+    width: 9rem;
+    margin: 0 0 1rem;
   }
   .wv-go {
     margin-top: 1rem;

@@ -173,6 +173,10 @@ function frameUpdate(f: Frame, u: Uniforms) {
     x0 = Math.max(x0, 0); y0 = Math.max(y0, 0); x1 = Math.min(x1, f.w); y1 = Math.min(y1, f.h);
     if (x1 > x0 && y1 > y0) Object.assign(b, { x: x0, y: y0, w: x1 - x0, h: y1 - y0, vis: true });
   }
+  // only near the place: elsewhere on the journey they are behind the planet, and every ray would still test them
+  const near = V.len(V.sub(f.cam.pos, origin)) < 8000;
+  if (!near) for (let i = 0; i < 3; i++) U.P[i * 4 + 3] = 0;
+  any &&= near;
   u.set('ventures_uOn', any ? 1 : 0);
   u.set('ventures_uGain', GAIN);
   // the near sea cools through the place (fades in and out at the pin's ends, so the neighbours are untouched)

@@ -13,6 +13,7 @@ import './Ventures.css';
  * sets `data-armed` on the section while it runs. Without it (no JS, no WebGL): a plain list, each item with its arrow.
  */
 const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five'];
+const STILL: Record<string, string> = { sites: 'crucible-sites', verge: 'verge', trellis: 'trellis' };
 const cueFor = (v: Venture) => (v.status === 'live' ? `See ${v.name}` : `About ${v.name}`);
 
 export function WorldVentures() {
@@ -33,12 +34,25 @@ export function WorldVentures() {
               }.`}
             </p>
           </div>
-          <ul className="wv-list" role="list">
+          <ul className="wv-list container-x" role="list">
             {all.map((v, i) => (
               <li key={v.slug} className="wv-item" data-v={i} data-kind={v.status}>
                 <Link className="wv-link" href={ventureHref(v)} data-v={i}>
                   {/* the monolith's own hit area: positioned by the world over the monolith's projection */}
                   <span className="wv-hit" aria-hidden />
+                  {/* without the world (no WebGL): the monolith as a still from the same shader */}
+                  <img
+                    className="wv-still"
+                    src={`/film/monoliths/${STILL[v.slug]}-600.webp`}
+                    srcSet={`/film/monoliths/${STILL[v.slug]}-600.webp 600w, /film/monoliths/${STILL[v.slug]}-1200.webp 1200w`}
+                    sizes="(min-width: 1024px) 10rem, 6rem"
+                    width={600}
+                    height={900}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    draggable={false}
+                  />
                   <span className="wv-status">
                     <i aria-hidden />
                     {v.status === 'live' ? 'Live' : 'Coming soon'}
