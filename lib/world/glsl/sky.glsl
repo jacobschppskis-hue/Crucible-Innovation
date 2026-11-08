@@ -80,8 +80,8 @@ vec3 look_starLayer(vec3 d, float pa, float n, float p, float fmin, float fmax, 
 
 vec3 look_stars(vec3 d, float pa) {
   vec3 c = look_starLayer(d, pa, 128.0, 0.16, 1.2e-8, 6.0e-7, 1.0, 1.8);
-  c += look_starLayer(d, pa, 52.0, 0.22, 4.0e-8, 2.0e-6, 2.0, 0.8);
-  c += look_starLayer(d, pa, 18.0, 0.3, 2.0e-7, 1.0e-5, 3.0, 0.3);
+  c += look_starLayer(d, pa, 52.0, 0.22, 4.0e-8, 9.0e-7, 2.0, 0.8);
+  c += look_starLayer(d, pa, 18.0, 0.3, 1.5e-7, 3.0e-6, 3.0, 0.3);
   float band = look_band(d);
   if (band > 0.002) {
     vec3 q = d * 6.0;
