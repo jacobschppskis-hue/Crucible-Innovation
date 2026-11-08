@@ -36,8 +36,28 @@ vec3 look_srgb(vec3 c) {
 
 float look_ph(vec3 p) { p = fract(p * 0.1031); p += dot(p, p.zyx + 31.32); return fract((p.x + p.y) * p.z); }
 
+// The scene is rendered at the quality step's scale (an iPhone settles at 0.75-0.9 render px per CSS px, shown on a
+// 2x canvas): a bilinear upscale of 2-2.7x reads soft and magnifies stair-steps. Catmull-Rom (bicubic, 9 bilinear taps,
+// the Filmic SMAA / TAA resolve kernel) keeps edges and point lights crisp without ringing worth noticing.
+vec3 look_sceneCR(vec2 uv) {
+  vec2 res = vec2(textureSize(uScene, 0));
+  if (res.x >= uCanvas.x - 0.5) return world_scene(uv);   // no upscale: plain sample
+  vec2 sp = uv * res, tp = floor(sp - 0.5) + 0.5, f = sp - tp;
+  vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+  vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+  vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+  vec2 w3 = f * f * (-0.5 + 0.5 * f);
+  vec2 w12 = w1 + w2, o12 = w2 / w12;
+  vec2 t0 = (tp - 1.0) / res, t3 = (tp + 2.0) / res, t12 = (tp + o12) / res;
+  vec3 c = vec3(0.0);
+  c += world_scene(vec2(t0.x, t0.y)) * w0.x * w0.y + world_scene(vec2(t12.x, t0.y)) * w12.x * w0.y + world_scene(vec2(t3.x, t0.y)) * w3.x * w0.y;
+  c += world_scene(vec2(t0.x, t12.y)) * w0.x * w12.y + world_scene(vec2(t12.x, t12.y)) * w12.x * w12.y + world_scene(vec2(t3.x, t12.y)) * w3.x * w12.y;
+  c += world_scene(vec2(t0.x, t3.y)) * w0.x * w3.y + world_scene(vec2(t12.x, t3.y)) * w12.x * w3.y + world_scene(vec2(t3.x, t3.y)) * w3.x * w3.y;
+  return max(c, vec3(0.0));
+}
+
 vec3 look_post(vec2 uv, vec2 fc) {
-  vec3 c = world_scene(uv);
+  vec3 c = look_sceneCR(uv);
   if (uBloomOn > 0.5) c = mix(c, texture(uBloom, uv).rgb * 0.2, look_uBloomAmt); // 5 levels summed -> mean
   vec2 d = (uv - 0.5) * vec2(uCanvas.x / uCanvas.y, 1.0);
   float r2 = dot(d, d) / (0.25 * (uCanvas.x * uCanvas.x / (uCanvas.y * uCanvas.y) + 1.0));
