@@ -227,7 +227,9 @@ function makeLook(): WorldModule {
       u.set('look_uHeat', ch['look.heat'] ?? 0);
       u.set('look_uLandAmt', ch['look.land'] ?? 0.6);
       u.set('look_uLimb', 0);
-      // the moon: placed relative to the camera (az from its forward direction round the local up, el above the horizon)
+      // the moon: placed relative to the camera (az from its forward direction round the local up, positive toward the
+      // camera's LEFT (side = up x forward): az 150 = behind the left shoulder; el above the horizon). ventures mirrors
+      // this on the CPU to aim the monoliths' faces: keep the convention.
       {
         const up = f.cam.up, fw = f.cam.f;
         const e = fw[0] * up[0] + fw[1] * up[1] + fw[2] * up[2];
