@@ -260,8 +260,8 @@ export function venturesKeys(R: number): Key[] {
   // look's cold moon, low behind the camera's shoulder (fades in from story-3 and out into the thesis)
   const MOON = { 'look.moon': 1.2, 'look.moonAz': 150, 'look.moonEl': 12 };
   return [
-    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 5 } },
-    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 5 } },
+    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 8 } },
+    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: 8 } },
   ];
 }
 
