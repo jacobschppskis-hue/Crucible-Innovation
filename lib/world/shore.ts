@@ -67,7 +67,10 @@ float shore_age(float ph, float x, float L){
 void shore_sea(Ray r, Sea s, inout SeaMod m){
   if (shore_uOn <= 0.0) return;
   float d = s.w.y - shore_line(s.w.x); // seaward distance from the waterline
-  if (d < -2.0 || d > 420.0) return;
+  // landward of the line the sea still shows over the submerged foot of the beach (sand below sea level up to
+  // x = 0.25 / 0.055): that shallow strip is the swash zone, as bright as the edge (else it read as a dark line)
+  if (d < -12.0 || d > 420.0) return;
+  d = max(d, 0.0);
   float ph = shore_phase(s.w.x);
   float lam = SHORE_C * SHORE_PER;     // crest spacing
   float cph = fract(ph + max(d, 0.0) / lam);
@@ -178,13 +181,30 @@ vec3 shore_sandCol(Ray r, Hit h, out vec3 rdir, out float rw){
   if (x < xf) {
     // under the swash: a thin molten sheet running up (or draining), its leading lip brightest
     float lipd = xf - x;
-    float lip = exp(-lipd * lipd / (2.0 * 0.8 * 0.8));
+    // the lip is at least ~1.5 px wide where the sand is seen at a grazing angle (no stair-steps), its energy kept
+    float graz = max(dot(-r.rd, normalize(h.p)), 0.05);
+    float fpx = r.pa * h.t / graz;
+    float ls = max(0.8, fpx * 1.5);
+    float lip = exp(-lipd * lipd / (2.0 * ls * ls)) * (0.8 / ls);
     float up = ph < 0.28 ? 1.0 : 0.55;           // brighter while it surges up
-    float T = 1130.0 + 300.0 * lip * up + 60.0 * smoothstep(L, 0.0, x);
-    float F = 0.04 + 0.96 * pow(1.0 - NoV, 5.0);
+    float T = 1190.0 + 300.0 * lip * up + 60.0 * smoothstep(L, 0.0, x);
+    // a thin, rippled sheet: rough-surface Fresnel (it never turns into a mirror at grazing, which read as a dark line)
+    float F = min(0.04 + 0.96 * pow(1.0 - NoV, 5.0), 0.3);
     col = shore_planck(T) * (1.0 - F) * (0.55 + 0.45 * smoothstep(0.0, 0.6, lipd + lip));
     rdir = reflect(r.rd, normalize(h.p)); rw = F * 0.8;
     return col;
+  }
+  // the front's glow spills a little past it onto the dry sand, so the edge of the sheet is soft at any footprint
+  {
+    float graz = max(dot(-r.rd, normalize(h.p)), 0.05);
+    float ls = max(0.8, r.pa * h.t / graz * 1.5);
+    float dd = x - xf;
+    col += shore_planck(1350.0) * 0.5 * exp(-dd * dd / (2.0 * ls * ls)) * (0.8 / ls);
+    // the waterline itself (where the beach leaves the sea, sand height 0): always wet and lit by the molten edge
+    // beside it, so the sea never meets the sand in a dark line
+    float xw = 0.25 / 0.055;
+    float dw = max(x - xw, 0.0);
+    col += shore_planck(1280.0) * 0.6 * exp(-dw / max(1.2, ls));
   }
   // the wet sand the drain just left: it glows and cools to black, mirroring the sky while wet
   float age = shore_age(ph, x, L);
