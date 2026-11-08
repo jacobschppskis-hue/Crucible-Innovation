@@ -54,3 +54,17 @@ phone, and the mark itself is not part of the beat).
 Recommendation: A. It is the only one where the logo's own construction (continuous half, stepped half, one empty step
 at the top and the meeting at the bottom) is the explanation, it needs nothing to move, and every frame is a lit, rigid
 cast object, which we can make look like film.
+
+## Lab prototype of A (07:12 UTC): `lab/mark/proto.html`
+- `node lab/mark/shoot.mjs <out> "<query>" <beats> iphone|desk` renders frames (SwiftShader, ~1 s per frame).
+- The mark is a real 3D object: Jacob's 2D geometry (exact `lib/splitRing.ts` numbers) extruded by an SDF with a rounded
+  bevel (depth 2.4, bevel 0.5 mark units, as `lib/gl3d` `logoPieces`), ray-marched inside its slab box only (~10 steps
+  for most rays). The core is a sphere emitter (heart, orange skin, deep limb, a slow large-cell boil) and a sphere
+  light: GGX with the representative-point trick for the specular, soft shadows of the pieces toward it (the inner arc
+  shades the outer arc's inner wall, with a penumbra from the core's size), the dusk and the lava's glow mirrored by
+  the metal. Silhouettes are anti-aliased from the ray's closest approach.
+- The heat front: temperature 0..1 from the angle since the front passed (arcs: per pixel; squares: from their centre
+  out over 0.05 rad, so each lights whole, quickly). Colour = Planck at three wavelengths from 800 K to 3200 K, on a
+  perceptual brightness curve. A hot face mirrors less of the cool sky (a glowing face that kept the blue reflection
+  read pink).
+- Shots: `shots/A-sequence-desk.webp` (beat .3 .55 .73 .82 .92), `shots/A-iphone.webp` (0, .45, .73, .82).
