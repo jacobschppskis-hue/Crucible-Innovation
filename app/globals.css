@@ -1103,7 +1103,7 @@ html.lenis body {
 }
 
 /* Thesis: --k is temperature (293 K → 1811 K); --xa moves the first line out, then --xb brings the second in. --gl is
-   how far the GL flames have faded in over the CSS furnace (0 → 1 over their first 0.8 s, written by lib/gl/molten.ts
+   how far the GL metal has faded in over the CSS furnace (0 → 1 over their first 0.8 s, written by lib/gl/molten.ts
    on the one clock). */
 .thesis {
   --k: 1;
@@ -1118,27 +1118,24 @@ html.lenis body {
   opacity: var(--xb);
   transform: translateY(calc((1 - var(--xb)) * 36px));
 }
-/* the furnace: a low glow along the floor that widens and brightens as the temperature climbs (nothing glows below
-   ~800 K, --k 0.32, where the GL fire starts too). It is the whole fire without GL, and stays faintly under the GL
-   flames as their light on the liquid. Same temperatures as the flames (lib/gl/molten.ts heatRamp): an ember-hot core
-   only at the hottest spot on the floor, Ember around it, deep red at the reach of the light. */
+/* the furnace: heat rises from the floor as the temperature climbs. The whole fire without GL; under the GL metal it
+   stays at 30% (as in the Nov 2 build), faded down by --gl as the GL fades in. */
 .thesis-furnace {
   position: absolute;
   inset: auto 0 0 0;
-  height: 26%;
-  background: radial-gradient(58% 100% at 50% 100%, rgba(255, 179, 71, 0.4), rgba(255, 91, 31, 0.26) 22%, rgba(168, 40, 4, 0.13) 50%, rgba(107, 11, 0, 0.05) 76%, rgba(107, 11, 0, 0) 100%);
-  opacity: calc(clamp(0, (var(--k) - 0.3) * 1.6, 1) * (1 - 0.65 * var(--gl, 0)));
+  height: 80%;
+  background: radial-gradient(85% 80% at 50% 118%, rgba(255, 150, 70, 0.34), rgba(255, 91, 31, 0.15) 36%, rgba(130, 22, 0, 0.07) 60%, rgba(130, 22, 0, 0) 80%);
+  opacity: calc(var(--k) * (1 - 0.7 * var(--gl, 0)));
   transform-origin: 50% 100%;
-  transform: scale(calc(0.4 + var(--k) * 0.6), calc(0.6 + var(--k) * 0.4));
+  transform: scaleY(calc(0.55 + var(--k) * 0.45));
   pointer-events: none;
 }
-/* rich tier: the flames (lib/gl/molten.ts) draw on the bottom of the scene only (FLAME_SPAN 0.3; at 1811 K the
-   tallest clusters reach about 20%), transparent around and between the tongues */
+/* rich tier: molten iron (lib/gl/molten.ts) over the whole scene, pooled low; transparent where the metal is cold */
 .thesis-gl {
   position: absolute;
-  inset: auto 0 0 0;
+  inset: 0;
   width: 100%;
-  height: 30%;
+  height: 100%;
   opacity: var(--gl, 0);
   pointer-events: none;
 }
@@ -1161,8 +1158,9 @@ html.lenis body {
   aspect-ratio: 1;
   border-radius: 50%;
   translate: 0 -50%;
-  background: radial-gradient(circle, rgba(255, 91, 31, 0.13) 0%, rgba(255, 179, 71, 0.035) 32%, rgba(255, 91, 31, 0) 64%);
-  opacity: clamp(0, (var(--k) - 0.2) * 1.4, 1);
+  background: radial-gradient(circle, rgba(255, 91, 31, 0.2) 0%, rgba(255, 179, 71, 0.05) 32%, rgba(255, 91, 31, 0) 64%);
+  opacity: var(--k);
+  transform: scale(calc(0.6 + var(--k) * 0.5));
   transform: scale(calc(0.6 + var(--k) * 0.5));
   pointer-events: none;
 }

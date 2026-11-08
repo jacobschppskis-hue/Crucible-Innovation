@@ -293,6 +293,46 @@ test.describe('rich tier', () => {
     await expect(page.locator('section.thesis')).toHaveAttribute('data-gl', '', { timeout: 15000 });
   });
 
+  test('forced rich: the Thesis iron is dark when cold, molten at the floor at 1811 K, and the type stays clear', async ({ page }) => {
+    await page.goto('/?tier=rich&liquid=full', { waitUntil: 'networkidle' });
+    const scene = page.locator('section.thesis');
+    const box = await scene.evaluate((el) => ({ top: el.getBoundingClientRect().top + scrollY, h: (el as HTMLElement).offsetHeight }));
+    const vh = page.viewportSize()!.height;
+    // the canvas covers the whole pinned scene (the metal pools low inside it)
+    const at = async (p: number) => {
+      await page.evaluate((y) => scrollTo(0, y), box.top + p * (box.h - vh));
+      await expect(scene).toHaveAttribute('data-gl', '', { timeout: 15000 });
+      await expect.poll(() => scene.locator('.thesis-gl').evaluate((el) => Number(getComputedStyle(el).getPropertyValue('--gl')))).toBeGreaterThan(0.99);
+      await page.waitForTimeout(1500);
+      const png = (await page.screenshot()).toString('base64');
+      // mean red of the bottom tenth and of the band at 25-40% height (where the type sits)
+      return page.evaluate(async (src) => {
+        const img = new Image();
+        img.src = `data:image/png;base64,${src}`;
+        await img.decode();
+        const c = document.createElement('canvas');
+        c.width = img.width;
+        c.height = img.height;
+        const g = c.getContext('2d')!;
+        g.drawImage(img, 0, 0);
+        const red = (y0: number, y1: number) => {
+          const d = g.getImageData(0, Math.round(y0 * c.height), c.width, Math.round((y1 - y0) * c.height)).data;
+          let s = 0;
+          for (let i = 0; i < d.length; i += 4) s += d[i];
+          return s / (d.length / 4);
+        };
+        return { floor: red(0.9, 1), high: red(0.25, 0.4) };
+      }, png);
+    };
+    const gl = await scene.locator('.thesis-gl').evaluate((c) => [c.clientHeight, c.parentElement!.clientHeight]);
+    expect(gl[0]).toBe(gl[1]);
+    const cold = await at(0);
+    expect(cold.floor, 'cold: no glow at the floor').toBeLessThan(30);
+    const hot = await at(0.95);
+    expect(hot.floor, '1811 K: molten metal at the floor').toBeGreaterThan(150);
+    expect(hot.high, '1811 K: the type band stays dark').toBeLessThan(80);
+  });
+
   test('light tier: the Thesis shows the static version and no film frames are downloaded', async ({ page }) => {
     const frames: string[] = [];
     page.on('request', (r) => /\/film\/(iron|ring)\/\d+\//.test(r.url()) && frames.push(r.url()));
