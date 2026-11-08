@@ -106,6 +106,8 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
 - (14:25) Removed the ingots entirely (5bd4d63); CLAUDE.md and README rewritten for the new architecture (first pass;
   re-check at 19:00 against what world/look/lava/mark/paypal/ventures/story ship).
 
+- (14:35) Full `npm test` on the trunk (qa's retargeted specs + the ingot removal): 96 passed, 6 skipped, 0 failed.
+
 ## Decisions
 - (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
