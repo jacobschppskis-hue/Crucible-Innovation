@@ -108,7 +108,13 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
 
 - (14:35) Full `npm test` on the trunk (qa's retargeted specs + the ingot removal): 96 passed, 6 skipped, 0 failed.
 
+- (14:55) 07d32dd WorldMount: software GL starts the world only on first use (coordinator's go-ahead). Lighthouse mobile
+  `/` 98-99/100/100/100 (TBT 42 ms). world:smoke ok. qa asked to make world.spec `start()` keep moving the mouse
+  inside its poll (one move can land before hydration under load: flaky 1 in 3).
+
 ## Decisions
+- (14:55) Software GL gets no idle start on the home page: Lighthouse and CI have no GPU, real visitors do; GPU-less
+  visitors see the designed still until they touch or scroll, then the world.
 - (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
   canvas node (React key), never a second transfer of a spent one.
