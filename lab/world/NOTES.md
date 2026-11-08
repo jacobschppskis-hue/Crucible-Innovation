@@ -32,7 +32,8 @@
   camera with a 3000 m orbit; log-space altitude interpolation keeps the zoom even.
 
 ## 13:40-14:00 (after a worker restart lost ~6 h)
-- The mark is in: `lib/world/markModule.ts` (world integrates mark's markTrace/markFrame) hangs the whole Split Ring
+- The mark is in (my adapter was superseded within minutes by mark's own registered module, 50763cf, with sea
+  reflections; my adapter and its caption CSS were dropped). It hangs the whole Split Ring
   around the sun at every distance (scale = sun.R / 4.8, facing the camera, upright to the planet), drawn in `over`,
   depth-tested; the stronger-together beat runs on the `together` pin, its three captions (together.ts LINES) are
   set from it: the two halves stacked low over the sea, then "Stronger together" in their place.
@@ -42,5 +43,4 @@
 - Story/thesis horizons lowered so type sits over sky; `state().seaP` added.
 - Verified: `npm run world:smoke` ok (seam iPhone Δ 5.6 vs in-page 8.6, desktop 3.2 vs 3.9); frames
   `lab/world/shots/v5-{phone,desk}.webp`.
-- Open: the mark is not reflected in the sea (over hook only; an `env`/`hit` integration would give the reflection);
-  the shore shot puts the rising far sun + mark behind the footer links on phones; worker rendering for TBT.
+- Open: the shore shot puts the rising far sun + mark behind the footer links on phones; worker rendering for TBT.
