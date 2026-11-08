@@ -666,14 +666,17 @@ async function inertia(device) {
     let ts = Date.now() / 1000, x = 195, y = 700;
     await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }], timestamp: ts });
     await page.evaluate((ms) => window.__qa.step(ms), ms);
+    // the finger moves in real time (the clock is held, so no frame is drawn between moves): a touch handler that
+    // times its samples with performance.now() or event.timeStamp sees the same 3000 px/s
     for (let i = 0; i < moves; i++) {
       ts += ms / 1000; y -= per;
       await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y, id: 1 }], timestamp: ts });
-      await page.evaluate((ms) => window.__qa.step(ms), ms);
+      await sleep(ms);
     }
-    const yLift = await page.evaluate(() => window.__world.state().scroll);
     ts += ms / 1000;
     await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: ts });
+    await page.evaluate((ms) => window.__qa.step(ms), ms);
+    const yLift = await page.evaluate(() => window.__world.state().scroll);
     const trace = await page.evaluate(async (ms) => { const out = []; for (let i = 0; i < 360 * (ms / 16.67); i++) { window.__qa.step(ms); if (i % 4 === 0) out.push(window.__world.state().scroll); } return out; }, ms);
     const end = trace.at(-1); const glide = end - yLift; const drag = yLift - y0;
     // time to come (nearly) to rest
