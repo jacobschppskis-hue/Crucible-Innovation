@@ -65,9 +65,11 @@ float look_ggx(float nh, float a) {
 float look_farMix(Sea s) { return smoothstep(1.5, 12.0, s.fw); }
 
 // Radiance leaving the planet's surface at s toward the camera (before the air in between: look_atmo adds that).
-vec3 look_planetFar(Ray r, Sea s) {
+vec3 look_planetFarT(Ray r, Sea s, float dT) {
   vec3 q = s.q;
-  float fp = s.fw / look_uK;
+  // s.fw is the footprint's long (grazing) axis; isotropic noise filtered by it blurs a far sea to mush. Use the
+  // geometric mean of the two axes (what anisotropic filtering approximates), so detail survives toward the horizon.
+  float fp = s.fw * sqrt(s.graz) / look_uK;
   vec3 p = q * look_uRg;
   float lf = look_land(q, fp);
   float land = smoothstep(-max(fp / 520.0 * 1.2, 0.004), max(fp / 520.0 * 1.2, 0.004), lf);
@@ -87,7 +89,7 @@ vec3 look_planetFar(Ray r, Sea s) {
     n = normalize(mix(q, normalize(q - (tA * (h1 - h0) + tB * (h2 - h0)) / e * amp * 0.5), land));
   }
   // the sea
-  float T = look_seaTemp(q, fp, lf);
+  float T = look_seaTemp(q, fp, lf) + dT;
   vec3 seaE = look_planck(T) * look_uLavaGain;
   // shore: a ~0.5 km line of hot surf, energy-averaged into the pixel when the footprint is wider, so from orbit it is
   // a fine continuous thread, never a jagged one
@@ -107,3 +109,7 @@ vec3 look_planetFar(Ray r, Sea s) {
   col += mix(vec3(0.02, 0.016, 0.014), sand, land) / LOOK_PI * (E * ndl + skyAmb * LOOK_PI * 0.5);
   return col;
 }
+
+vec3 look_planetFar(Ray r, Sea s) { return look_planetFarT(r, s, 0.0); }
+// with the sea hooks' modifications: heat (lava's 0..1 scale, ~400 K per unit) and emitted radiance
+vec3 look_planetFarMod(Ray r, Sea s, SeaMod m) { return look_planetFarT(r, s, m.heat * 400.0) + m.emit; }

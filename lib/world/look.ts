@@ -39,7 +39,7 @@ export const AIR = {
   ozW: 14,
   groundAlb: [0.03, 0.03, 0.03],
   glow: [0.004, 0.0012, 0.0003],
-  airglow: [6e-5, 1.1e-4, 1.8e-4],
+  airglow: [1.5e-5, 2.8e-5, 4.5e-5],
   airglowH: 9,
 };
 
@@ -252,7 +252,7 @@ export const look: WorldModule = makeLook();
 const LOOKFAR = /* glsl */ `
 vec3 lava_env(Ray r, Sea s) { return look_planetFar(r, s); }
 vec3 lava_shade(Ray r, Sea s, SeaMod m) {
-  vec3 far = look_planetFar(r, s);
+  vec3 far = look_planetFarMod(r, s, m);
   float k = look_farMix(s);
   if (k >= 1.0) return far;
   // near: a smooth glossy molten skin at the same temperature, a few long swells, the sky in it
@@ -265,7 +265,7 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
     g += vec3(a * sin(x), a * kk * cos(x) * d) * att;
   }
   vec3 n = normalize(s.up - g.y * s.eU - g.z * s.eV);
-  float T = look_seaTemp(s.q, s.fw / look_uK, 1.0) + m.heat * 400.0;
+  float T = look_seaTemp(s.q, s.fw * sqrt(s.graz) / look_uK, 1.0) + m.heat * 400.0;
   float F = 0.04 + 0.96 * pow(1.0 - max(dot(-r.rd, n), 0.0), 5.0);
   vec3 rd = reflect(r.rd, n); if (dot(rd, s.up) < 0.0) rd = reflect(rd, s.up);
   Ray rr; rr.ro = s.p + s.up * 0.01; rr.rd = rd; rr.pa = r.pa * 2.0 + 0.02; rr.depth = 1;
