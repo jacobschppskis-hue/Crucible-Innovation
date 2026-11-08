@@ -38,7 +38,7 @@
   - A press is drained from `ventureRipples` into a ring.
 
 ## Open (not done by the deadline)
-- The wake is real (CDP touch gave 24 samples) but faint on the dark night sea at low quality steps. It needs a stronger fresh-heat term or a crest light once checked on a real GPU.
+- The wake: fresh heat raised to +110 K; it reads as a smooth V of warm ridges at ventures (`shots/engine-ventures-stroke1200.webp`). On the hero it is still subtle at low quality steps.
 - There is no dedicated `lava.night` channel. `lava.heat < 0` does the same.
 - The `lib/liquid/shader.ts` port (the other pages' liquid) was not started.
 - Real-GPU timing was not measured. The wake loop is bounded (<= 128 samples, box test); the swell is 24 sin/cos per pixel.

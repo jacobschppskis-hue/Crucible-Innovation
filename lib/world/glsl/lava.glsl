@@ -168,7 +168,7 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   float T = look_seaTemp(s.q, fpA, land) + lava_uTone.x + 850. * m.heat;
   T += 300. * clamp(L.stretch, -0.12, 0.12);         // (true Planck: +-36 K is already ~2x in brightness)
   float fresh = 1. - exp(-1.6 * max(L.energy, 0.));
-  T += 60. * fresh + 35. * clamp(L.crest, -0.6, 1.);
+  T += 110. * fresh + 60. * clamp(L.crest, -0.6, 1.);
   float skin = lava_uTone.z * (1. - 0.7 * fresh);
   float Tseen = T - skin * (1. - exp(-lava_uTone.w / NoV));
   vec3 col = look_planck(Tseen) * look_uLavaGain * (1. - F);

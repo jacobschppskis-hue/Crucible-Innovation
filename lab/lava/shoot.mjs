@@ -82,7 +82,7 @@ for (const [name, prof] of Object.entries(profiles)) {
     const st = await page.evaluate(() => ({ w: window.__world.state(), lava: window.__lava ? { n: window.__lava.wake.U.n, live: window.__lava.live } : null }));
     const file = path.join(OUT, `${name}-${pl}-${String(f).replace('.', '')}${tag}.png`);
     const clip = args.crop ? (([x, y, w, h]) => ({ x, y, width: w, height: h }))(args.crop.split(',').map(Number)) : undefined;
-    await page.screenshot({ path: file, clip });
+    await page.screenshot({ path: file, clip, timeout: 180000 });
     console.log(file, JSON.stringify({ h: st.w.cam.h.toFixed(1), lava: st.lava }));
     await page.evaluate(() => window.__world.resume());
   }
