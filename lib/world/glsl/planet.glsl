@@ -61,8 +61,9 @@ float look_ggx(float nh, float a) {
   return a2 / (LOOK_PI * d * d);
 }
 
-// 0 where the near sea (lava) should shade, 1 where the far field takes over (footprint in world units per px)
-float look_farMix(Sea s) { return smoothstep(1.5, 12.0, s.fw); }
+// 0 where the near sea (lava) shades, 1 where the far field takes over: by distance, so the hero and the low swoops
+// (horizon < ~150 units) are all lava and everything seen from orbit is the planet
+float look_farMix(Sea s) { return smoothstep(250.0, 1400.0, s.t); }
 
 // Radiance leaving the planet's surface at s toward the camera (before the air in between: look_atmo adds that).
 vec3 look_planetFarT(Ray r, Sea s, float dT) {
@@ -96,6 +97,21 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   float sw = 0.5 / 520.0, wv = max(sw, fp / 520.0);
   float shore = exp(-lf * lf / (wv * wv)) * (sw / wv);
   vec3 emit = seaE * (1.0 - land) + look_planck(1350.0 + look_uHeat * 400.0) * look_uLavaGain * shore;
+  // lava lakes inland: small, sparse, very hot pools, like a city's lights on Earth's night side (they tell you how big
+  // the continent is). Each is a disc ~2-6 km across, energy-averaged into the pixel when smaller than it.
+  if (land > 0.01) {
+    vec3 lc = q * (look_uRg / 40.0);
+    vec3 ci = floor(lc);
+    vec3 hh = look_h33(ci + 7.3);
+    if (hh.x < 0.18) {
+      vec3 cp = (ci + 0.25 + 0.5 * hh) * (40.0 / look_uRg);
+      float dkm = length(q - normalize(cp)) * look_uRg;
+      float rad = mix(1.0, 3.0, hh.y);
+      float wv2 = max(rad, fp * 0.7);
+      float lake = exp(-dkm * dkm / (wv2 * wv2)) * (rad * rad) / (wv2 * wv2);
+      emit += look_planck(mix(1250.0, 1420.0, hh.z) + look_uHeat * 300.0) * look_uLavaGain * lake * land * smoothstep(0.05, 0.25, lf);
+    }
+  }
   // light
   vec3 v = -r.rd;
   vec3 E = look_uSunE * look_sunT(p);
