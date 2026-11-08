@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { reducedMotion } from '@/lib/scroll';
 import { firstUse, richTier } from '@/lib/tier';
 
@@ -51,9 +52,19 @@ function keepDragsForWaves() {
  */
 export function Liquid() {
   const ref = useRef<HTMLCanvasElement>(null);
+  const pathname = usePathname();
+  // A page that paints its own world (the home page: lib/world, mounted under an element with data-world) gets no
+  // page liquid: two full-screen canvases would double the GPU work and paint over each other. Checked on every route
+  // change, since this layout component survives client-side navigation.
+  // A canvas handed to the worker is spent: every (re)start renders a fresh node (key), never a second transfer.
+  const [{ off, run }, setState] = useState({ off: false, run: 0 });
+  useEffect(() => {
+    const world = !!document.querySelector('[data-world]');
+    setState((s) => (s.off === world ? s : { off: world, run: world ? s.run : s.run + 1 }));
+  }, [pathname]);
 
   useEffect(() => {
-    if (reducedMotion()) return;
+    if (off || reducedMotion()) return;
     let stop: (() => void) | null = null;
     let stopFloat: (() => void) | null = null;
     let stopGuard: (() => void) | null = null;
@@ -89,7 +100,8 @@ export function Liquid() {
       stopGuard?.();
       stop?.();
     };
-  }, []);
+  }, [off, run]);
 
-  return <canvas ref={ref} aria-hidden className="liquid" />;
+  if (off) return null;
+  return <canvas key={run} ref={ref} aria-hidden className="liquid" />;
 }
