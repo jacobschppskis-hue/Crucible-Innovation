@@ -244,6 +244,18 @@ html.lenis body {
   background: var(--ground);
   border-bottom: 1px solid var(--line);
 }
+/* Small phones (360-375 px): "crucible sites", Menu and the CTA must fit inside the gutters. */
+@media (max-width: 389px) {
+  .nav-brand {
+    font-size: 1.2rem;
+  }
+  .nav .menu-btn {
+    padding-inline: 0.5rem;
+  }
+  .nav-cta.btn-sm {
+    padding-inline: 0.75rem;
+  }
+}
 
 /* ---------- Buttons ---------- */
 .btn {
