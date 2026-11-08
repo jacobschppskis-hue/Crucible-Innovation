@@ -836,7 +836,7 @@ void main() {
     float zt = uHeat.y;
     float zb = zt - uView.y;
     float Mk = uHeat.x;
-    float M = step(0.005, Mk) * (1. - smoothstep(zb, zb + uView.y * (0.12 + 0.30 * Mk), P.z)) * smoothstep(zb - uView.y * 0.04, zb, P.z);
+    float M = step(0.005, Mk) * (1. - smoothstep(zb, zb + uView.y * (0.12 + 0.30 * Mk), P.z)) * smoothstep(zb - uView.y * 0.28, zb + uView.y * 0.02, P.z);   // below the stage the metal sinks into the dark
     float pool = M;
     float glow = 0.;
     for (int i = 0; i < 8; i++) {
