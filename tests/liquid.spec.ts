@@ -122,6 +122,8 @@ test('a slow cursor leaves a boat wake: one continuous V behind it, no beads, no
 
 test('dragging with the button held makes a more marked wake than hovering', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
+  // 360 stepped frames, each drawn by every renderer under software GL: on CI's shared two-core runner that can pass 30 s.
+  test.slow();
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await page.mouse.move(5, 5);
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });

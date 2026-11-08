@@ -311,7 +311,10 @@ test.describe('rich tier', () => {
   });
 
   test('forced rich: the Thesis iron is dark when cold, molten at the floor at 1811 K, and the type stays clear', async ({ page }) => {
-    await page.goto('/?tier=rich&liquid=full', { waitUntil: 'networkidle' });
+    // Two WebGL screenshots under software GL; on CI's two-core runner, shared by two workers, that can pass 30 s.
+    // The default quality path (no ?liquid=full) is what software-GL visitors and Lighthouse get, and it is cheaper.
+    test.slow();
+    await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
     const scene = page.locator('section.thesis');
     const box = await scene.evaluate((el) => ({ top: el.getBoundingClientRect().top + scrollY, h: (el as HTMLElement).offsetHeight }));
     const vh = page.viewportSize()!.height;
