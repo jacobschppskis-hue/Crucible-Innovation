@@ -187,7 +187,7 @@ Output of the scene pass: linear HDR radiance (exposure applied by the engine: c
 ## Quality
 
 `SCALES` (render px per CSS px) `[2, 1.6, 1.33, 1.1, 0.9, 0.75, 0.62, 0.5, 0.4]`, never above the device's DPR (cap 2).
-Real GPUs start one step below their top; software GL starts at 0.5. Slow frames (EMA > 1/45 s for 0.8 s) step down;
+Real GPUs start at the best step whose scene fits a pixel budget (~0.5 MP on phones, ~1.6 MP larger: iPhone 1.33, a dpr-1 laptop 0.9, dpr 2 1.1); software GL starts at 0.5. Slow frames (EMA > 1/45 s for 0.8 s) step down;
 fast (< 1/57 s for 4 s) climb, at most twice. `uQ` / `frame.quality.q` is the 0..1 knob for your own work (octaves,
 march steps). Nothing adapts while a harness holds the clock. `?q=<step>` pins, `?world=full` pins the top at full
 fidelity. The canvas itself is CSS px x min(DPR, 2) and only resizes with the viewport.

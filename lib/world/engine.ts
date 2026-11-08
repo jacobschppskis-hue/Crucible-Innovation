@@ -61,7 +61,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
   gl.getExtension('OES_texture_float_linear');
   const software = isSoftware(gl);
   const dpr = Math.min(window.devicePixelRatio || 1, 3);
-  const quality: QualityCtl = createQuality({ dpr, software, pinned: opts.q ?? null, full: opts.full });
+  const quality: QualityCtl = createQuality({ dpr, software, pinned: opts.q ?? null, full: opts.full, w: window.innerWidth, h: window.innerHeight });
 
   const defines: Record<string, string | number> = { WORLD_R: R.toFixed(1) };
   if (!floatOk) defines.WORLD_LDR = 1;

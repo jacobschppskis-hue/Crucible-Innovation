@@ -19,11 +19,17 @@ export type QualityCtl = Quality & {
   size(w: number, h: number): [number, number];
 };
 
-export function createQuality(opts: { dpr: number; software: boolean; pinned?: number | null; full?: boolean }): QualityCtl {
+export function createQuality(opts: { dpr: number; software: boolean; pinned?: number | null; full?: boolean; w?: number; h?: number }): QualityCtl {
   const cap = Math.min(opts.dpr, MAX_SCALE);
   // the best step this device can use (nothing above its own pixel ratio)
   const top = Math.max(0, SCALES.findIndex((s) => s <= cap + 1e-3));
-  const start = opts.full ? top : opts.pinned != null ? Math.min(SCALES.length - 1, Math.max(top, opts.pinned)) : opts.software ? SCALES.length - 1 : Math.min(SCALES.length - 1, top + 1);
+  // a real GPU starts at the best step whose scene fits a pixel budget (phones ~0.5 MP, larger screens ~1.6 MP): an
+  // iPhone starts at 1.33, a 1440x900 laptop at 0.9 (dpr 1) or 1.1 (dpr 2); it climbs from there if frames are fast
+  const area = (opts.w ?? 1440) * (opts.h ?? 900);
+  const budget = Math.min(opts.w ?? 1440, opts.h ?? 900) < 600 ? 0.5e6 : 1.6e6;
+  let fit = top;
+  while (fit < SCALES.length - 1 && area * SCALES[fit] ** 2 > budget) fit++;
+  const start = opts.full ? top : opts.pinned != null ? Math.min(SCALES.length - 1, Math.max(top, opts.pinned)) : opts.software ? SCALES.length - 1 : fit;
   let slow = 0,
     fast = 0,
     climbs = 0,
