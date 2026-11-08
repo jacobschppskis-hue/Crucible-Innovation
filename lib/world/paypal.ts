@@ -139,11 +139,11 @@ export function arcPos(R: number, th: Throw, u: number): V3 {
  * scale), aimed so PayPal holds its height in the frame all the way up. */
 export function beatCamera(p: number, narrow: boolean, pl: Planet) {
   const pull = smooth(0.1, 0.4, p);
-  const alt = mix(narrow ? 0.075 : 0.06, narrow ? 0.62 : 0.46, pull);
-  const back = mix(0.15, 0.3, pull);
+  const alt = mix(narrow ? 0.075 : 0.06, narrow ? 0.62 : 0.34, pull);
+  const back = mix(0.15, narrow ? 0.3 : 0.36, pull);
   const R = pl.R;
   const pos = add(mul(pl.up, R * (1 + alt)), mul(pl.fwd, -back * R));
-  const fov = narrow ? 64 : 42;
+  const fov = narrow ? 64 : 48;
   const vy = narrow ? -0.34 : -0.42; // PayPal's height in the frame (NDC, below the centre)
   const dv = norm(sub(mul(pl.up, R), pos));
   const camUp = norm(pos);
@@ -237,6 +237,7 @@ export const CH_PTS = 9; // points per chunk (8 segments)
 export const TW = 2 + 2 * CH_PTS;
 export const ROWS = 64;
 const trail = new Float32Array(TW * ROWS * 4);
+const boxes = new Float32Array(ROWS * 4);
 type Pt = { P: V3; K: number; I: number; w: number };
 
 export interface Cam {
@@ -311,10 +312,10 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
       }
       if (!any) continue;
       // CSS px (y down) -> NDC (y up)
-      trail[base] = (x0 / cam.w) * 2 - 1;
-      trail[base + 1] = 1 - (y1 / cam.h) * 2;
-      trail[base + 2] = (x1 / cam.w) * 2 - 1;
-      trail[base + 3] = 1 - (y0 / cam.h) * 2;
+      boxes[row * 4] = trail[base] = (x0 / cam.w) * 2 - 1;
+      boxes[row * 4 + 1] = trail[base + 1] = 1 - (y1 / cam.h) * 2;
+      boxes[row * 4 + 2] = trail[base + 2] = (x1 / cam.w) * 2 - 1;
+      boxes[row * 4 + 3] = trail[base + 3] = 1 - (y0 / cam.h) * 2;
       trail[base + 4] = c1 - c0;
       trail[base + 5] = id;
       trail[base + 6] = c0 === 0 && uHead <= 1 ? flick : 0;
@@ -332,6 +333,7 @@ uniform vec4 paypal_uSpotB[7];  // x age since landing (p), y ripple age (p), z 
 uniform float paypal_uRows;     // rows used in the trails texture
 uniform float paypal_uMinPx;    // thinnest line (render px)
 uniform highp sampler2D paypal_uTrail;
+uniform vec4 paypal_uBox[${ROWS}]; // each row's screen box (NDC x0, y0, x1, y1), so a pixel only reads rows it is inside
 #define PAYPAL_ROWS ${ROWS}
 
 // blackbody: linear sRGB chroma (unit luminance) x a compressed power curve relative to 1500 K
@@ -407,10 +409,11 @@ void paypal_over(Ray r, Hit h, inout vec3 col){
   float curId = -1.; float bestV = 0.; float bestK = 1000.;
   for (int i = 0; i < PAYPAL_ROWS; i++){
     if (i >= rows) break;
-    vec4 box = texelFetch(paypal_uTrail, ivec2(0, i), 0);
-    vec4 info = texelFetch(paypal_uTrail, ivec2(1, i), 0);
-    if (info.y != curId){ acc += paypal_bb(bestK) * bestV; bestV = 0.; curId = info.y; }
+    vec4 box = paypal_uBox[i];
     if (ndc.x < box.x || ndc.x > box.z || ndc.y < box.y || ndc.y > box.w) continue;
+    vec4 info = texelFetch(paypal_uTrail, ivec2(1, i), 0);
+    // rows of one throw are contiguous: one contribution per throw (its brightest point here)
+    if (info.y != curId){ acc += paypal_bb(bestK) * bestV; bestV = 0.; curId = info.y; }
     int n = int(info.x + 0.5);
     vec4 a0 = texelFetch(paypal_uTrail, ivec2(2, i), 0);
     vec4 a1 = texelFetch(paypal_uTrail, ivec2(3, i), 0);
@@ -498,6 +501,7 @@ export const paypal: WorldModule = {
     else u.tex('paypal_uTrail', { w: TW, h: ROWS, data: trail, format: 'rgba32f' }, S.ver);
     S.rows = rows;
     u.set('paypal_uRows', rows);
+    if (rows || S.rows) u.set('paypal_uBox', boxes);
     u.set('paypal_uMinPx', Math.max(1.2, 0.75 * f.quality.scale));
     // captions and names
     S.caps01 = S.caps01.map((_, i) => captionOpacity(i, p));

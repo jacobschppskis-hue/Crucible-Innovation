@@ -65,6 +65,7 @@
   }
   .w-pp-big {
     font-size: 4.75rem;
+    max-width: 16ch;
   }
   .w-pp-names li {
     font-size: 1.125rem;
