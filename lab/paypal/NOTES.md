@@ -44,6 +44,20 @@ another long after PayPal itself was gone"). The last line sets up his breakout 
 - Trail cores still a little fat when near the camera: hairline core in px, train width in world units.
 - The planet, atmosphere, stars and tone curve here are stand-ins; in the build they come from `look`/`lava`.
 
+## v3 (13:50 UTC, on the real lava and look) — current
+Frames: `shots/v3-engine-phone.webp`, `shots/v3-engine-desk.webp` (the real engine, `lab/paypal/stage.html`).
+- Opens low and far by the vent (the Stromboli viewpoint) with the caption in the sky: the sea over the vent swells
+  into a smooth dome (`SeaMod.g`, shading only, no glowing ring), the burst sends one wave across the sea, and four
+  hair-thin throws tower into the stars. Then the camera climbs to orbit (log-even) while they cross the planet; the
+  rise ends (f 0.37) before the first landing, so the names never appear at a moving frame edge.
+- The module owns its camera (`keys: paypalKeys`, WorldModule.keys). The journey's `s` must never run backwards, so the
+  camera keeps a fixed distance behind the vent and only climbs; PayPal is at 34 deg so the first key follows story's
+  last (deg 12). A cooler night sea under the beat via `lava.heat` 0.16 → 0.07 in these keys.
+- Bombs ~2 m, trains widen to ~10 m: thin and clean up close, held at >= ~1.2 render px from orbit (energy kept).
+- Decided: the coordinator's 07:13 notes (planetary scale, long thin arcs, staggered launches, SpaceX the one high
+  throw that curves back, places that grow and stay, readable names, PayPal cooling) are all in v3.
+- Open: the night limb is nearly invisible from orbit (look's); places are kept small on purpose.
+
 ## How it is built (in the world engine, lib/world/ARCHITECTURE.md)
 - `lib/world/paypal.ts` is the module (registered in `modules.ts`). Everything is a pure function of
   `p = frame.at('paypal')`; the clock only adds the heads' flicker and the trains' drift.
