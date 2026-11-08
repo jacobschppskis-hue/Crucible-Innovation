@@ -35,9 +35,13 @@ for (const dev of A.devices.split(',')) {
     let lit = 0, sum = 0; for (let i = 0; i < data.length; i += 3) { const v = data[i] + data[i + 1] + data[i + 2]; sum += v; if (v > 3 * 18) lit++; }
     const litFrac = lit / (info.width * info.height), mean = (await stats(png)).mean;
     const place = await page.evaluate(() => window.__world.state().place.name);
-    if (mean < floor.mean || litFrac < floor.lit) {
+    // look's physical floor for the disk (relative luminance, sRGB after post): >= 0.03; the lower quarter of a phone
+    // frame is planet at every place of the journey (sea level or orbit)
+    const m = await sharp(png).metadata();
+    const disk = (await stats(png, { x: 0, y: Math.round(m.height * 0.75), w: m.width, h: Math.round(m.height * 0.24) })).mean;
+    if (mean < floor.mean || litFrac < floor.lit || disk < +(A.disk ?? 0.03)) {
       const f = path.join(OUT, `black-${dev}-p${p.toFixed(2)}.webp`); await saveWebp(png, f, { width: 390 });
-      black.push(`${p.toFixed(2)} (${place}: mean ${mean.toFixed(4)}, lit ${(litFrac * 100).toFixed(1)}%)`);
+      black.push(`${p.toFixed(2)} (${place}: mean ${mean.toFixed(4)}, lit ${(litFrac * 100).toFixed(1)}%, disk ${disk.toFixed(4)})`);
     }
   }
   (black.length ? fails : lines).push(`[${dev}] never-black: ${black.length ? 'FAIL at ' + black.join(', ') : 'ok at every ' + A.step + ' of the journey'}`);
