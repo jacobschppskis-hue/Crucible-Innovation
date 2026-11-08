@@ -66,3 +66,13 @@ how every piece of text sits in the world (no scrims), and the footer/shore that
   shows (type.ts, below 500 m). Then the loop copy of the hero comes up from below.
 - Phones: links in two columns (Pages | Ventures, status under the name), founders full width, so the pinned block fits
   844 px. Frames: `shots/footer-phone-v1.webp`.
+
+## Type reflections: off (07:45 UTC)
+The coordinator's walk found the reflections reading as scrambled glyph noise (under the 293 K line, the story heading).
+A softened version (coarser mip, five vertical taps, dimmer) turned the footer wordmark's reflection into a grey haze
+band. Neither reads as a real reflection, and "off is better than glitchy", so the `type` module is unregistered and no
+element carries `data-reflect` in my components. `lib/world/type.ts` stays (the atlas + sky-hook approach works
+technically) in case a real-looking version is wanted later: it would need the lava's calm-surface normal and an
+anisotropic (vertical) blur proportional to the wave slope variance, which is the lava module's information.
+
+Wide screens now read at 20 px body / 28 px lead / 44rem measure (the coordinator found 18 px small at 1440).
