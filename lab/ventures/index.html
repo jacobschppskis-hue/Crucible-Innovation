@@ -38,6 +38,7 @@ float seaH(vec2 x, float t){
   h += 0.06 * sin(dot(x, vec2(-0.07, 0.19)) - t * 0.71 + 1.3);
   h += 0.03 * sin(dot(x, vec2(0.31, 0.22)) - t * 1.05 + 2.1);
   h += 0.015 * sin(dot(x, vec2(-0.45, 0.38)) - t * 1.3 + 0.4);
+  h += 0.006 * sin(dot(x, vec2(1.3, 0.9)) - t * 2.1 + 1.0) + 0.004 * sin(dot(x, vec2(-1.1, 1.7)) - t * 2.6);
   return h;
 }
 vec3 seaN(vec2 x, float t, float fw){
@@ -70,6 +71,9 @@ void main(){
   vec3 col;
   if (hit) {
     col = monoShade(mh, rd, pixAng);
+    // stand-in atmospheric perspective (the world applies its own): far things lift toward the dusk and cool
+    float fogk = 1.0 - exp(-mh.t * 0.004);
+    col = mix(col, monoSky(normalize(vec3(rd.x, 0.02, rd.z)), up, 0.3) * 0.6, fogk);
   } else if (rd.y < 0.0) {
     vec3 p = ro + rd * tSea;
     float fw = tSea * pixAng;
@@ -119,7 +123,7 @@ function bb(T) {
 }
 const view = P.get('view') || (innerWidth < innerHeight ? 'phone' : 'desk');
 const sunMode = P.get('sun') || 'back';
-const sunDir = v3.n(sunMode === 'back' ? [0.35, 0.07, -1] : sunMode === 'side' ? [1, 0.12, -0.3] : [0.3, 0.15, 1]);
+const sunDir = v3.n(sunMode === 'back' ? [0.35, 0.07, -1] : sunMode === 'side' ? [1, 0.12, -0.3] : sunMode === 'shoulder' ? [0.85, 0.09, 0.55] : [0.3, 0.15, 1]);
 const E = [1.6, 5.0, 0.42, 0.12];
 const kinds = [0, 1, 1];
 const narrow = view === 'phone';
@@ -128,6 +132,9 @@ const yaw = narrow ? [0.18, 0.35, -0.3] : [0.32, 0.0, -0.32];
 const cams = {
   desk: { p: [0, 1.1, 17], at: [0, 4.4, 0], fov: 0.72 },
   phone: { p: [0.4, 1.0, 13.5], at: [-0.2, 5.0, -2], fov: 1.05 },
+  // scale framings: low camera, further back, longer lens, horizon low in frame
+  big: { p: [0, 0.35, 44], at: [0, 5.6, 0], fov: 0.36 },
+  bigphone: { p: [0.6, 0.3, 30], at: [-0.5, 6.4, -4], fov: 0.62 },
   close: { p: [1.4, 3.2, 4.2], at: [-0.3, 5.8, 0], fov: 0.7 },
   low: { p: [0.6, 0.35, 9], at: [-0.2, 3.0, 0], fov: 0.9 },
 };
@@ -160,7 +167,15 @@ function frame() {
   for (let i = 0; i < 3; i++) {
     const rise = num('rise' + i, num('rise', 1));
     Pv.push(...pos[i], rise > 0.001 ? 1 : 0);
-    const a = yaw[i], X = [Math.cos(a), 0, -Math.sin(a)], Y = [0, 1, 0], Z = v3.x(X, Y);
+    // hero angle (as lib/world/ventures.ts): turn the face so its normal sits just off the half vector between the
+    // camera and the sun; the crown of the cast face then carries a vertical highlight band across it
+    let a = yaw[i];
+    if (P.has('aim')) {
+      const vc = v3.n([cam.p[0] - pos[i][0], 0, cam.p[2] - pos[i][2]]);
+      const hh = v3.n([vc[0] + sunDir[0], 0, vc[2] + sunDir[2]]);
+      a = Math.atan2(hh[0], hh[2]) + [-0.075, 0.075, -0.11][i] * num('aim', 1);
+    }
+    const X = [Math.cos(a), 0, -Math.sin(a)], Y = [0, 1, 0], Z = v3.x(X, Y);
     Mv.push(...X, ...Y, ...Z);
     const ease = rise * rise * (3 - 2 * rise);
     const heat = P.has('hov') && +P.get('hov') === i ? num('heat', 1) : 0;

@@ -246,7 +246,7 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   vec2 g = n1.yz * vec2(0.7, 0.22) * 0.006 * wav * face;
   // a cast face is never optically flat: it crowns slightly (a few hundredths of a radian across the face), so the
   // reflected sky changes across its width and the horizon line bends gently near the edges
-  g += vec2(fuv.x * 0.035, (fuv.y * E.x / E.y - 1.0) * 0.012) * face;
+  g += vec2(fuv.x * 0.1, (fuv.y * E.x / E.y - 1.0) * 0.012) * face;
   vec3 nlp = normalize(nl + vec3(g.x, g.y, 0.0) * sign(nl.z) * vec3(1.0, 1.0, 0.0));
 
   // --- materials (measured F0, linear) ---
@@ -254,12 +254,11 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   // smoother (as on any metal object that is handled or dressed); never patchy.
   vec3 F0 = kind < 0.5 ? vec3(0.80, 0.76, 0.68) : vec3(0.56, 0.57, 0.58);
   vec3 tint = kind < 0.5 ? vec3(0.95, 0.93, 0.88) : vec3(0.92, 0.93, 0.95);
-  float rough = kind < 0.5 ? 0.34 : 0.2;
+  float rough = kind < 0.5 ? 0.30 : 0.2;
   float edgeL = smoothstep(0.92, 0.6, max(abs(nl.x), max(abs(nl.y), abs(nl.z))));
   rough += 0.04 * n1.x - 0.08 * edgeL;
   // the draw: grooves run vertically, so highlights stretch across them (horizontally); seen from afar they become
   // plain roughness
-  float draw = face * (1.0 - smoothstep(0.002, 0.02, px * foot));
 
   // --- the mark, cast into the live monolith's front face ---
   float markIn = 0.0, coreIn = 0.0, coreR = 1.0;
@@ -321,30 +320,44 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   rough = mix(rough, 0.08, film * 0.7);                 // the melt is glossy
   a = rough * rough;
 
-  // --- the reflection ---
+  // --- the reflection: anisotropic (the faces were dressed with horizontal strokes, so every highlight and every
+  // reflected light stretches vertically down the face, as on brushed steel; the fillets and the cut are isotropic) ---
+  vec3 Tg = up - n * dot(up, n);                        // along the face, upward
+  float tl = length(Tg);
+  Tg = tl > 1e-3 ? Tg / tl : M[0];
+  vec3 Bg = cross(n, Tg);
+  float an = 0.62 * face * (1.0 - markIn);              // anisotropy
+  float aT = clamp(a * (1.0 + an * 2.6), 0.002, 1.0), aB = clamp(a * (1.0 - an * 1.05), 0.002, 1.0);
   vec3 r = reflect(rd, n);
-  // anisotropic draw: widen the lobe across the grooves only, by bending the reflection toward the face's x
-  float w = a * 0.9 + 0.002;
   vec3 F = monoFresnel(F0, tint, NoV);
   vec2 dfg = monoDFG(rough, NoV);
-  vec3 env = monoEnv(i, h.wp, r, w);
-  if (draw > 0.0) {
-    vec3 X = M[0];
-    env = mix(env, 0.5 * (monoEnv(i, h.wp, normalize(r + X * a * 0.5), w) + monoEnv(i, h.wp, normalize(r - X * a * 0.5), w)), draw * 0.6);
+  float w = aB * 0.9 + 0.002;                           // horizontal blur of the environment
+  vec3 env;
+  if (an > 0.01) {
+    // three taps spread vertically over the stretched lobe (rotations of r about the face's horizontal)
+    float dl = (aT - aB) * 0.75;
+    vec3 rp = normalize(r + Tg * dl), rm = normalize(r - Tg * dl);
+    env = 0.5 * monoEnv(i, h.wp, r, w) + 0.25 * (monoEnv(i, h.wp, rp, w) + monoEnv(i, h.wp, rm, w));
+  } else {
+    env = monoEnv(i, h.wp, r, w);
   }
   vec3 spec = env * (F0 * dfg.x + dfg.y) * mix(vec3(1.0), F / max(F0 + (1.0 - F0) * pow(1.0 - NoV, 5.0), 1e-3), 0.5);
 
-  // the sun, direct (its disc widens the lobe; energy kept)
+  // the sun, direct: anisotropic GGX (Burley), the lobe widened by the sun's disc with its energy kept
   vec3 L = uMonoSun.xyz;
   float NoL = dot(n, L);
   if (NoL > 0.0) {
     vec3 hv = normalize(v + L);
     float NoH = max(dot(n, hv), 0.0), VoH = max(dot(v, hv), 0.0);
-    float a2 = clamp(a + uMonoSun.w * 0.5, 0.0, 1.0);
-    float norm = (a * a) / (a2 * a2);
+    float sw = uMonoSun.w * 0.5;
+    float aT2 = clamp(aT + sw, 0.0, 1.0), aB2 = clamp(aB + sw, 0.0, 1.0);
+    float ToH = dot(Tg, hv), BoH = dot(Bg, hv);
+    float dd = ToH * ToH / (aT2 * aT2) + BoH * BoH / (aB2 * aB2) + NoH * NoH;
+    float D = 1.0 / (MONO_PI * aT2 * aB2 * dd * dd);
+    float norm = (aT * aB) / (aT2 * aB2);
     vec3 Fs = monoFresnel(F0, tint, VoH);
     float solid = MONO_PI * uMonoSun.w * uMonoSun.w;
-    spec += Fs * monoGGX(NoH, a2) * norm * monoVis(NoV, NoL, a2) * NoL * uMonoSunL * solid;
+    spec += Fs * D * norm * monoVis(NoV, NoL, sqrt(aT2 * aB2)) * NoL * uMonoSunL * solid;
   }
   // the pool's light on the metal's lower faces, as a broad area light below (it is in the environment too, but the
   // blurred env underestimates a large bright source at close range): only on faces turned down or out
