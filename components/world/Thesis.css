@@ -1,0 +1,101 @@
+/* The Thesis in the world (components/world/Thesis.tsx). --k is temperature (0 = 293 K, 1 = 1811 K); --xa moves the
+   first line out, then --xb brings the second in. The metal is the world's sea (lib/world/thesis.ts), kept low in
+   frame by the camera; the type sits in the sky above it with nothing behind it. Without JS / reduced motion: hot end,
+   second line. */
+.wthesis {
+  --k: 1;
+  --xa: 1;
+  --xb: 1;
+  position: relative;
+}
+.js .wthesis {
+  height: 260vh;
+}
+.wthesis-pin {
+  min-height: 100svh;
+}
+.js .wthesis-pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+}
+.wthesis-in {
+  display: grid;
+  align-content: start;
+  gap: 2.25rem;
+  /* the type stays in the top of the frame: the camera puts the horizon below it (phones ~66%, desktop ~62%) */
+  padding-top: calc(var(--nav-h) + clamp(2.5rem, 9svh, 6rem));
+}
+@media (min-width: 1024px) {
+  .wthesis-in {
+    grid-template-columns: minmax(0, 1fr) 15rem;
+    column-gap: 4rem;
+    align-items: end;
+    padding-top: calc(var(--nav-h) + clamp(4rem, 13svh, 9rem));
+  }
+}
+.wthesis-lines {
+  display: grid;
+}
+.wthesis-lines > div {
+  grid-area: 1 / 1;
+}
+.wthesis-a {
+  opacity: calc(1 - var(--xa));
+  transform: translateY(calc(var(--xa) * -36px));
+}
+.wthesis-b {
+  opacity: var(--xb);
+  transform: translateY(calc((1 - var(--xb)) * 36px));
+}
+.wthesis-h {
+  max-width: 13em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.6rem, 11vw, 5.5rem);
+  line-height: 0.96;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+.wthesis-s {
+  margin-top: 1.25rem;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--bone);
+  opacity: 0.86;
+}
+/* the readout: real data. Cold it reads Quench, it warms through bone, and it is Ember once iron melts */
+.wthesis-num {
+  margin-top: 0.4rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(3rem, 13vw, 3.75rem);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(
+    in oklab,
+    color-mix(in oklab, var(--quench, #8db6f2) calc((1 - clamp(0, var(--k) / 0.4, 1)) * 100%), var(--bone)) calc((1 - clamp(0, (var(--k) - 0.45) / 0.55, 1)) * 100%),
+    var(--ember)
+  );
+}
+.wthesis-cap {
+  margin-top: 0.5rem;
+}
+.wthesis-ro .label {
+  color: var(--bone);
+  opacity: 0.8;
+}
+@media (prefers-reduced-motion: reduce) {
+  .js .wthesis {
+    height: auto;
+  }
+  .js .wthesis-pin {
+    position: relative;
+    height: auto;
+    min-height: 100svh;
+  }
+  .wthesis-a {
+    display: none;
+  }
+}

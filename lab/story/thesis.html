@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>lab/story: thesis heat</title>
+<style>
+  @font-face { font-family: Archivo; src: url(../../app/fonts/Archivo-latin-wght400-800-wdth100-125.woff2) format('woff2'); font-weight: 400 800; font-stretch: 100% 125%; }
+  html, body { margin: 0; background: #000; color: #e8e4d8; font-family: Archivo, system-ui, sans-serif; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; z-index: -1; display: block; }
+  .t { position: fixed; left: 0; right: 0; top: 0; padding: 15vh 22px 0; max-width: 64rem; margin: 0 auto; box-sizing: border-box; }
+  h2 { font-size: clamp(2.75rem, 7vw, 5.5rem); line-height: 0.98; letter-spacing: -0.02em; font-weight: 650; margin: 0; font-stretch: 112%; text-wrap: balance; }
+  p.s { margin-top: 1.25rem; color: #9a978e; font-size: 1.125rem; }
+  .ro { margin-top: 2rem; }
+  @media (min-width: 900px) { .t { display: grid; grid-template-columns: 1fr 15rem; column-gap: 4rem; align-items: end; padding-top: 22vh; } .t h2, .t p.s { grid-column: 1; } .ro { grid-column: 2; grid-row: 1 / 3; margin: 0; align-self: end; } }
+  .ro .l { color: #9a978e; font-size: 0.9rem; }
+  .ro .n { font-size: 3.5rem; font-weight: 650; font-stretch: 112%; font-variant-numeric: tabular-nums; margin-top: 0.25rem; }
+  body.notext .t { display: none; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="t">
+  <h2 id="h">An alloy is stronger than its metals</h2>
+  <p class="s">Steel is harder than iron. Bronze is harder than copper.</p>
+  <div class="ro"><div class="l">Temperature</div><div class="n" id="n">293 K</div><div class="l" id="cap">Room temperature</div></div>
+</div>
+<script type="module">
+import { THESIS_GLSL } from './thesis-glsl.js';
+const qs = new URLSearchParams(location.search);
+const K = +(qs.get('k') ?? 0), T0 = +(qs.get('t') ?? 3), Q = +(qs.get('q') ?? 1);
+if (qs.has('notext')) document.body.classList.add('notext');
+const ROOM = 293, IRON = 1811;
+const tk = Math.round(ROOM + K * (IRON - ROOM));
+const n = document.getElementById('n');
+n.textContent = tk + ' K';
+// readout colour: Quench cold -> bone -> Ember hot
+const mix = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const Q_ = [141, 182, 242], B_ = [232, 228, 216], E_ = [255, 91, 31];
+const c = K < 0.5 ? mix(Q_, B_, Math.min(1, K / 0.35)) : mix(B_, E_, Math.min(1, (K - 0.5) / 0.5));
+n.style.color = `rgb(${c})`;
+document.getElementById('cap').textContent = tk >= IRON ? 'Iron melts' : tk <= ROOM ? 'Room temperature' : 'Heating';
+
+const cv = document.getElementById('c');
+const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: true });
+const dpr = Math.min(devicePixelRatio, 2) * Q;
+cv.width = Math.round(innerWidth * dpr); cv.height = Math.round(innerHeight * dpr);
+gl.viewport(0, 0, cv.width, cv.height);
+const VS = `#version 300 es
+in vec2 p; void main(){ gl_Position = vec4(p,0.,1.); }`;
+const FS = `#version 300 es
+precision highp float;
+uniform vec2 uRes; uniform float uT, uK, uHorizon;
+out vec4 o;
+${THESIS_GLSL}
+// ---------- stand-ins for the world (look/lava own the real ones) ----------
+float h21(vec2 p){ p = fract(p*vec2(123.34, 456.21)); p += dot(p, p+45.32); return fract(p.x*p.y); }
+vec3 sky(vec3 d){
+  // airless night: black, crisp stars sized to a pixel, a faint band
+  vec3 c = vec3(0.0);
+  float el = d.y;
+  vec2 sp = vec2(atan(d.z, d.x), asin(clamp(d.y,-1.,1.))) * 420.0;
+  vec2 cell = floor(sp), f = fract(sp) - 0.5;
+  float h = h21(cell);
+  if (h > 0.985) { float m = smoothstep(0.5, 0.0, length(f - (vec2(h21(cell+3.1), h21(cell+7.7)) - 0.5)*0.6) * 1.6); c += m * mix(vec3(0.75,0.85,1.0), vec3(1.0,0.9,0.8), h21(cell+1.0)) * pow(h21(cell+9.0), 3.0) * 2.5; }
+  c += vec3(0.010, 0.012, 0.018) * exp(-abs(dot(d, normalize(vec3(0.3, 0.9, -0.3)))) * 6.0);
+  // a thin warm limb band at the horizon (atmosphere stand-in)
+  c += vec3(0.05, 0.018, 0.006) * exp(-max(el, 0.0) * 60.0) * smoothstep(-0.02, 0.0, el);
+  return c;
+}
+float swellH(vec2 p, float t){
+  float h = 0.0;
+  h += 0.060 * sin(dot(p, vec2(0.21, 0.98)) * 0.9 - t * 0.9);
+  h += 0.035 * sin(dot(p, vec2(-0.45, 0.89)) * 1.6 - t * 1.2 + 1.3);
+  h += 0.020 * sin(dot(p, vec2(0.78, 0.62)) * 2.9 - t * 1.7 + 2.1);
+  h += 0.010 * sin(dot(p, vec2(-0.9, 0.42)) * 5.3 - t * 2.3 + 0.4);
+  return h;
+}
+vec3 aces(vec3 x){ return clamp((x*(2.51*x+0.03))/(x*(2.43*x+0.59)+0.14), 0., 1.); }
+void main(){
+  vec2 uv = (gl_FragCoord.xy - 0.5*uRes) / uRes.y;
+  // camera low over the sea, pitched so the horizon sits at uHorizon (fraction from the top)
+  float fov = 1.0 / tan(radians(28.0));
+  float pitch = atan((0.5 - (1.0 - uHorizon)) * (uRes.y/uRes.y) / fov * 2.0 * 0.5);
+  vec3 ro = vec3(0.0, 1.6, 0.0);
+  vec3 fw = normalize(vec3(0.0, sin(-pitch) * -1.0, 1.0));
+  fw = normalize(vec3(0.0, tan(pitch), 1.0));
+  vec3 rt = normalize(cross(vec3(0,1,0), fw)), up = cross(fw, rt);
+  vec3 rd = normalize(uv.x * rt + uv.y * up + fov * 0.5 * fw);
+  vec3 col;
+  if (rd.y < -1e-4) {
+    float d = ro.y / -rd.y; vec3 p = ro + rd * d;
+    float fp = d / (uRes.y * fov * 0.5) ; // world units per pixel (footprint)
+    float e = max(fp, 0.02);
+    vec2 g = vec2(swellH(p.xz + vec2(e,0.), uT) - swellH(p.xz - vec2(e,0.), uT), swellH(p.xz + vec2(0.,e), uT) - swellH(p.xz - vec2(0.,e), uT)) / (2.0*e);
+    g *= 1.0 / (1.0 + fp * 6.0);
+    vec3 nrm = normalize(vec3(-g.x, 1.0, -g.y));
+    vec3 r = reflect(rd, nrm); r.y = abs(r.y);
+    float cosv = clamp(dot(-rd, nrm), 0.0, 1.0);
+    float F = 0.05 + 0.95 * pow(1.0 - cosv, 5.0);
+    col = sky(r) * F;
+    col += thesisEmission(p.xz, d, fp, uK, uT) * (1.0 - F);
+  } else col = sky(rd);
+  // film: exposure, tone curve, grain
+  col *= 1.6;
+  col = aces(col);
+  col = pow(col, vec3(1.0/2.2));
+  col += (h21(gl_FragCoord.xy + fract(uT)*91.0) - 0.5) * 0.012;
+  o = vec4(col, 1.0);
+}`;
+const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) { document.title = 'ERR'; console.error(gl.getShaderInfoLog(x)); } return x; };
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(pr); gl.useProgram(pr);
+const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1,3,-1,-1,3]), gl.STATIC_DRAW);
+gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+const U = (n) => gl.getUniformLocation(pr, n);
+gl.uniform2f(U('uRes'), cv.width, cv.height); gl.uniform1f(U('uT'), T0); gl.uniform1f(U('uK'), K);
+gl.uniform1f(U('uHorizon'), +(qs.get('hz') ?? (innerWidth < 700 ? 0.7 : 0.6)));
+gl.drawArrays(gl.TRIANGLES, 0, 3); gl.finish();
+document.documentElement.dataset.ready = '1';
+</script>
+</body>
+</html>

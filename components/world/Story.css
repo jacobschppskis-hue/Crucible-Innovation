@@ -1,0 +1,161 @@
+/* "Why Crucible" in the world (components/world/Story.tsx, Chapter.tsx). The type sits straight on the world: no
+   background, scrim, mask, halo or text-shadow anywhere in this file. Legibility comes from where the camera puts the
+   sea (low in frame, cooled, at night). Body copy is solid (no dimmed reading state): the glowing sea can pass under
+   any line, and solid bone keeps AA over it. */
+.wstory {
+  position: relative;
+  padding-top: clamp(6rem, 18vh, 12rem);
+}
+.wstory-sub {
+  margin-top: 1.5rem;
+  max-width: 26rem;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  color: var(--bone);
+  opacity: 0.86;
+}
+
+/* ---------- a chapter ---------- */
+.wch {
+  position: relative;
+}
+.wch-part {
+  padding-top: clamp(5rem, 14vh, 9rem);
+}
+.wch-grid {
+  display: grid;
+  gap: 2.5rem;
+}
+@media (min-width: 1024px) {
+  .wch-grid {
+    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
+    gap: 5rem;
+  }
+  .wch-side {
+    position: sticky;
+    top: calc(var(--nav-h) + 3rem);
+    align-self: start;
+  }
+}
+.wch-tube {
+  width: 100%;
+  max-width: 16rem;
+}
+@media (min-width: 1024px) {
+  .wch-tube {
+    max-width: none;
+  }
+}
+.wch-name {
+  margin-top: 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.875rem;
+  line-height: 1;
+  letter-spacing: -0.015em;
+  color: var(--bone);
+}
+.wch-grid-cont .wch-name {
+  margin-top: 0;
+}
+.wch-role {
+  margin-top: 0.5rem;
+  color: var(--bone-dim);
+}
+/* after the interlude the side column only carries the name and the reading line, on wide screens */
+@media (max-width: 1023px) {
+  .wch-grid-cont .wch-side {
+    display: none;
+  }
+}
+
+/* how far this chapter has been read: Ember while it is being read (--p from data-scroll="read" on the grid), bone once
+   it has been read to the end */
+.wch-read {
+  display: block;
+  position: relative;
+  width: 100%;
+  max-width: 16rem;
+  height: 2px;
+  margin-top: 1.5rem;
+  background: var(--line-strong);
+  overflow: hidden;
+}
+.wch-read::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 1));
+  background: color-mix(in oklab, var(--ember) calc((1 - clamp(0, (var(--p, 1) - 0.985) * 70, 1)) * 100%), var(--bone-dim));
+}
+@media (max-width: 1023px) {
+  .wch-read {
+    display: none;
+  }
+}
+
+.wch-text {
+  max-width: 40rem;
+}
+.wch-lead {
+  font-size: 1.375rem;
+  line-height: 1.5;
+  color: var(--bone);
+}
+@media (min-width: 640px) {
+  .wch-lead {
+    font-size: 1.5rem;
+  }
+}
+.wch-p {
+  margin-top: 2rem;
+  font-size: 1.125rem;
+  line-height: 1.7;
+  color: var(--bone);
+  opacity: 0.88;
+}
+.wch-grid-cont .wch-text > :first-child > .wch-p:first-child,
+.wch-grid-cont .wch-text > .wch-p:first-child {
+  margin-top: 0;
+}
+
+/* Jacob's sentence, once, in place: the paragraph runs into it and carries on after it. Display size, bone. On wide
+   screens it reaches left across the side column, so it reads as the question the scene before it asked. */
+.wch-break-line {
+  margin: 2.5rem 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.125rem, 9.2vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+@media (min-width: 1024px) {
+  .wch-break-line {
+    margin: 4rem 0 4rem calc(-20rem - 5rem);
+    max-width: 14.5em;
+  }
+}
+
+/* Charlie's closing line, as he wrote it, given the whole width */
+.wch-statement {
+  margin: 0;
+  padding: clamp(4rem, 12vh, 8rem) 0 clamp(6rem, 18vh, 12rem);
+}
+.wch-statement p {
+  max-width: 15em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2rem, 5.6vw, 5rem);
+  line-height: 1.02;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+@media (min-width: 1024px) {
+  .wch-statement p {
+    margin-left: -0.06em;
+  }
+}
