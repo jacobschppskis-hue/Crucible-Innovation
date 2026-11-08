@@ -13,7 +13,7 @@
 //                thins, so every run drains into its name and nothing is left lying on the page. A bead falls off at
 //                each fork and sinks into the page's liquid.
 //   then         each name cools once its run has drained (red, then a bone front sweeps in from its far end); PayPal
-//                cools from the top. By ~0.92 everything is set, and the names keep a slow, faint warmth.
+//                cools (its bone front sweeps left to right). By ~0.92 everything is set, and the names keep a slow, faint warmth.
 
 /** tau = clamp((p - MAP[0]) / MAP[1]) */
 export const MAP = [0.16, 0.56] as const;
@@ -27,9 +27,9 @@ export const FILL = 0.075; // a name fills
 export const STOP = 0.46; // the tail leaves the spout; it then runs the front's timeline shifted by LAG
 export const LAG = STOP - RUN;
 export const COOL = 0.15; // a drained name: hot -> red
-export const SET = [0.08, 0.12] as const; // after its run has drained: the bone front starts after [0], sweeps over [1]
+export const SET = [0.1, 0.07] as const; // after its run has drained: the bone front starts after [0], sweeps over [1]
 export const PP_COOL = [0.46, 0.24] as const; // PayPal: hot -> red
-export const PP_SET = [0.6, 0.12] as const; // PayPal: the bone front, top down
+export const PP_SET = [0.62, 0.07] as const; // PayPal: the bone front, left to right
 export const DRIP = 0.05; // a bead that falls off a fork sinks over this long
 
 export const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);

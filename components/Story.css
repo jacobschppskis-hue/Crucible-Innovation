@@ -96,8 +96,8 @@
   --glow: color-mix(in oklab, var(--ember) calc(var(--h) * var(--f) * 75%), transparent);
   /* the white-hot front only while it fills */
   --fo: calc(clamp(0, var(--f) * 12, 1) * clamp(0, (1 - var(--f)) * 6, 1));
-  --sf: 0.32em; /* softness of the fill front */
-  --ss: 0.16em; /* the set front: narrower, so the set metal never washes over the red */
+  --sf: 0.1em; /* the fill front: soft enough to read as liquid, too narrow to read as a gradient */
+  --ss: 0.025em; /* the set front: crisp; a thin bright line rides it (::after) */
   --e: calc((1 - var(--f)) * (100% + 2 * var(--sf)) - var(--sf));
   --x: calc(var(--k) * (100% + 2 * var(--ss)) - var(--ss));
   position: absolute;
@@ -120,6 +120,19 @@
 .sp-set {
   color: var(--bone);
 }
+.sp-head .sp-set {
+  mask-image: linear-gradient(var(--dir), #000 calc(var(--x) - var(--ss)), transparent calc(var(--x) + var(--ss)));
+}
+/* the set front: a thin bright line where the metal turns solid, only while it sweeps, so a letter is either cooling
+   red or bone with just this line between */
+.sp-w::after {
+  content: attr(data-w);
+  position: absolute;
+  inset: 0;
+  color: var(--front);
+  opacity: calc(clamp(0, var(--k) * 30, 1) * clamp(0, (1 - var(--k)) * 30, 1));
+  mask-image: linear-gradient(var(--dir), transparent calc(var(--x) - 0.05em), #000 var(--x), transparent calc(var(--x) + 0.05em));
+}
 /* left of the axis: the run enters at the right, so it fills right to left; it sets from its far (left) end */
 .sp-l {
   right: calc(50% + var(--g));
@@ -129,6 +142,10 @@
 }
 .sp-l .sp-fr {
   mask-image: linear-gradient(to right, transparent calc(var(--e) - var(--sf)), #000 var(--e), transparent calc(var(--e) + var(--sf) * 1.6));
+}
+.sp-l .sp-set,
+.sp-l::after {
+  --dir: to right;
 }
 .sp-l .sp-set {
   mask-image: linear-gradient(to right, #000 calc(var(--x) - var(--ss)), transparent calc(var(--x) + var(--ss)));
@@ -143,11 +160,15 @@
 .sp-r .sp-fr {
   mask-image: linear-gradient(to left, transparent calc(var(--e) - var(--sf)), #000 var(--e), transparent calc(var(--e) + var(--sf) * 1.6));
 }
+.sp-r .sp-set,
+.sp-r::after {
+  --dir: to left;
+}
 .sp-r .sp-set {
   mask-image: linear-gradient(to left, #000 calc(var(--x) - var(--ss)), transparent calc(var(--x) + var(--ss)));
 }
 /* PayPal is where the metal comes from: cold bone, it melts from the bottom up, lets the stream go through its y, and
-   cools from the top down. --spout moves it so the tip of the y sits on the figure's axis. */
+   cools, its bone front sweeping left to right like the names. --spout moves it so the tip of the y sits on the figure's axis. */
 .sp-head {
   --row: 0;
   --spout: 0.36em;
@@ -166,8 +187,9 @@
 .sp-head .sp-fr {
   mask-image: linear-gradient(to top, transparent calc(var(--e) - var(--sf)), #000 var(--e), transparent calc(var(--e) + var(--sf) * 1.6));
 }
-.sp-head .sp-set {
-  mask-image: linear-gradient(to bottom, #000 calc(var(--x) - var(--ss)), transparent calc(var(--x) + var(--ss)));
+.sp-head .sp-set,
+.sp-head::after {
+  --dir: to right;
 }
 
 /* the stream and its runs (lib/gl/splitPour.ts): under the text, overhanging the figure for the glow. --gl fades it

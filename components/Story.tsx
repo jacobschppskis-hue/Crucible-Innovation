@@ -168,7 +168,7 @@ function Casting({
   inset?: number;
 }) {
   return (
-    <span className={`sp-w ${className}`} style={style} data-in={inset}>
+    <span className={`sp-w ${className}`} style={style} data-in={inset} data-w={name}>
       {name}
       <span className="sp-liq">{name}</span>
       <span className="sp-fr">{name}</span>
