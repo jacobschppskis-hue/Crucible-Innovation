@@ -71,3 +71,17 @@ sky never band.
 - Agree with `lava` on the hand-off from the far sea (planet.glsl) to the near sea (lava.glsl): same temperature field
   and colour ramp, blended by footprint.
 - Perf: per-pixel march only where the camera is high; the sky-view LUT covers sky and reflections when low.
+
+## In the engine (07:30-13:45 UTC)
+- `lib/world/look.ts` + `glsl/{atmosphere,atmosphere-luts,sun,sky,planet,post}.glsl`, registered. LUTs are rendered by
+  look's own programs into textures the engine's Uniforms own (no engine change).
+- The post is neutral (`look.gain` 1); look's light is in its own radiance unit (`UNIT` 3: sky, sun, far planet,
+  `look_sunLight`), so lava's and the mark's radiance mean the same thing.
+- No sun disc (the mark draws the core). While the core is near (hero), the air is lit from its azimuth 1.5 deg over
+  the horizon: warm glow down to the sea, a steel-blue band, stars. Far away the core is the star.
+- Stars: sparse and faint, one-pixel points (story/QA: copy reads over them).
+- Far field: `look_planetFarMod(r, s, m)` + `look_farMix(s)`; lava has the exact diff to blend into it (not merged by
+  me: lava owns lava.glsl). Until then the planet from orbit is lava's near sea at one temperature.
+- Not done: a sunrise-over-the-limb tune (the shore camera doesn't frame the limb on phones yet), a measured iPhone
+  cost of the far field (~60-100 noise evaluations per planet pixel at orbit, fewer with footprint early-outs).
+- Frames: `shots/engine-v2-hero.webp`, `shots/engine-v3-phone.webp`.
