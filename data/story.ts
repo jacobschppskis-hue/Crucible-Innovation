@@ -4,18 +4,19 @@
 export type FounderStory = {
   name: string;
   role: string;
-  /** ASCII portrait (public/team/*-bone.webp, made by scripts/bone-portraits.py): bone characters on transparent, straight on the page. */
+  /** CRT portrait (public/team/*-crt.webp, made by scripts/crt-portraits.py): a bone phosphor screen on transparent. */
   portrait: string;
   paragraphs: string[];
-  /** Set as a large serif quote after the second paragraph. Must be a sentence from the text. */
-  pullQuote?: string;
+  /** One sentence of a paragraph set at display size where it stands: the paragraph flows into it and continues after,
+   * so it is read once, in order. `sentence` must appear exactly once in `paragraphs[paragraph]`. */
+  breakOut?: { paragraph: number; sentence: string };
 };
 
 export const stories: FounderStory[] = [
   {
     name: 'Jacob Schopp',
     role: 'Co-founder, Crucible',
-    portrait: '/team/jacob-bone.webp',
+    portrait: '/team/jacob-crt.webp',
     paragraphs: [
       'My name is Jacob Schopp, and I am still in high school. Crucible, which I co-founded with Charlie Rochford, is the name we build our ventures under.',
       'Crucible started with a car ride, when my dad put on the audiobook of Walter Isaacson’s biography of Elon Musk. Most of what I took from it concerned Elon himself, but part of the book covers PayPal and the people who worked there before eBay bought the company in 2002. After the sale, members of that group went on to found YouTube, LinkedIn, Yelp and Palantir, while Elon used much of his share of the money to fund SpaceX and later to invest in Tesla. People call them the PayPal Mafia. It is interesting that so much came out of a single company, and I do not believe it was luck, the members being exceptional people who found each other early and continued to back one another long after PayPal itself was gone. When Jeremy Stoppelman and Russel Simmons set out to start Yelp, it was their former PayPal colleague Max Levchin who put up the first million dollars.',
@@ -24,12 +25,12 @@ export const stories: FounderStory[] = [
       'For now, Crucible has one venture, Crucible Sites, which designs and builds websites for local businesses. Charlie and I build the sites together, and our first ones are already lined up. It is small compared to what I want Crucible to become, and I know that. However it is real work, and it is where we are learning to ship.',
       'Some people hear all of this and find it unrealistic for someone my age, perhaps even egotistical. I can understand why they react that way. But if I commit myself fully to this and have even a .1% chance of building something that changes the world, would that not be worth it? I intend to find out, and maybe, years from now, the people who build it with me will have a name too.',
     ],
-    pullQuote: 'I want to know what happens when a group like it comes together earlier.',
+    breakOut: { paragraph: 2, sentence: 'I want to know what happens when a group like it comes together earlier.' },
   },
   {
     name: 'Charles Rochford',
     role: 'Co-founder, Crucible',
-    portrait: '/team/charlie-bone.webp',
+    portrait: '/team/charlie-crt.webp',
     paragraphs: [
       'I’m Charles Rochford, a young entrepreneur, developer, and co-founder of Crucible Innovation. I’ve always been fascinated by technology, entrepreneurship, and the potential for new ideas to change the world. My passion comes from a desire to create something meaningful, challenge conventional thinking, and contribute to a future that’s better than the world we live in today.',
       'My interest in entrepreneurship began with a curiosity about how businesses operate and how technology can be used to solve real-world problems. Since then, I’ve spent much of my time exploring new ideas, developing technical skills, and learning what it takes to turn a concept into something valuable. Through my experiences in software development, business strategy, and entrepreneurship, I’ve come to appreciate both the creativity and persistence required to build something from the ground up.',
