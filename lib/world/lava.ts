@@ -11,6 +11,7 @@ import type { WorldModule } from './modules';
 import LAVA_GLSL from './glsl/lava.glsl';
 import { createWake, WAKE } from './wake';
 import { createInput, HAND, type Input } from './input';
+import { ventureRipples } from './ventures';
 
 /** Tunables (`window.__lava.LAVA`; call `__lava.retune()` after changing the swell's). */
 export const LAVA = {
@@ -154,6 +155,12 @@ export const lava: WorldModule = {
       });
     }
     tLast = t;
+    // a press on a monolith rings the sea at its foot (ventures fills the queue, lava drains it)
+    while (ventureRipples.length) {
+      const r = ventureRipples.shift()!;
+      const [ru, rv] = f.surfOf(r.p);
+      wake.ring(ru, rv, t, { speed: 2.2, W0: 0.16, slope: 0.3 * r.k, tau: 1.6, life: 4.5 });
+    }
     wake.pack(t, input ? input.heads() : []);
 
     for (let i = 0; i < LAVA_NW; i++) {
