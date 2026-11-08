@@ -1161,7 +1161,6 @@ html.lenis body {
   background: radial-gradient(circle, rgba(255, 91, 31, 0.2) 0%, rgba(255, 179, 71, 0.05) 32%, rgba(255, 91, 31, 0) 64%);
   opacity: var(--k);
   transform: scale(calc(0.6 + var(--k) * 0.5));
-  transform: scale(calc(0.6 + var(--k) * 0.5));
   pointer-events: none;
 }
 
