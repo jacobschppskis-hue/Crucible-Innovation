@@ -51,7 +51,9 @@ async function run(device) {
   for (const r of await page.evaluate(domRules, { home })) (r.sev === 'P0' ? fail : warn)(device, `${r.rule}: ${r.text}`);
   if (kind === 'world' || kind === 'concept') await page.evaluate(() => window.__qa.hold());
   const frames = {};
+  const times = [];
   for (const p of PLACES) {
+    const tp = Date.now();
     if (kind === 'world' || kind === 'concept') { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 8, 70); }
     else { await page.evaluate((p) => scrollTo(0, p * (document.documentElement.scrollHeight - innerHeight)), p); await page.waitForTimeout(300); }
     let png = await shot(page);
@@ -66,22 +68,33 @@ async function run(device) {
     if (s.mean > 0.6) fail(device, `p=${p}: frame is mostly white (mean L ${s.mean.toFixed(2)}): artifact frame / body background?`);
     const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
     if (ov > 0) fail(device, `p=${p}: horizontal overflow ${ov}px`);
+    times.push(`${p}:${((Date.now() - tp) / 1000).toFixed(1)}s`);
     if (A.shots) await saveWebp(png, path.join(QA, 'out/smoke', `${A.target}-${device}-${String(p * 100).padStart(2, '0')}.webp`), { width: 600 });
   }
+  notes.push(`[${device}] settle+capture per place: ${times.join(' ')}`);
   // the loop seam, at a fixed scene clock (?t): crossing the seam (1-e -> e) must change the frame no more than the
   // same scroll distance inside the page does (e -> 3e)
   if (kind === 'world') {
     const st = await page.evaluate(() => window.__qa.state());
     notes.push(`[${device}] state ${JSON.stringify(st).slice(0, 160)}`);
-    await page.goto(tg.url + tg.path + (tg.path.includes('?') ? '&' : '?') + 't=8', { waitUntil: 'load' });
-    await waitWorld(page, 15000); await page.evaluate(() => window.__qa.hold());
-    const at = async (p) => { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 10, 60); return shot(page); };
+    // a fresh page (closing the old one drops its queued software-GL frames; a reload in place waited on them)
+    const t0s = Date.now();
+    const sp = await ctx.newPage();
+    const slog = watch(sp);
+    await page.close();
+    await sp.goto(tg.url + tg.path + (tg.path.includes('?') ? '&' : '?') + 't=8', { waitUntil: 'domcontentloaded', timeout: 60000 });
+    const sk = await waitWorld(sp, 30000);
+    if (sk !== 'world') { fail(device, `loop seam: the world did not start on the ?t=8 page (${sk})`); await ctx.close(); return; }
+    await sp.evaluate(() => window.__qa.hold());
+    notes.push(`[${device}] seam page up in ${((Date.now() - t0s) / 1000).toFixed(1)} s`);
+    const at = async (p) => { await sp.evaluate((p) => window.__qa.go(p), p); await settle(sp, 10, 60); return shot(sp); };
     const e = 0.0001;
     const a0 = await at(1 - 3 * e), a = await at(1 - e), b2 = await at(e), c = await at(3 * e);
     const seam = await diff(a, b2), r1 = await diff(b2, c), r2 = await diff(a0, a);
     const ref = { mad: Math.max(r1.mad, r2.mad) };
     if (seam.mad > ref.mad * 2 + 1) fail(device, `loop seam: crossing it changes the frame by ${seam.mad.toFixed(2)} vs ${ref.mad.toFixed(2)} for the same scroll inside the page`);
     else notes.push(`[${device}] loop seam ok (Δ ${seam.mad.toFixed(2)} vs in-page ${ref.mad.toFixed(2)})`);
+    log.errors.push(...slog.errors); log.failed.push(...slog.failed);
   }
   const errs = log.errors.filter((e) => !benignError(e));
   for (const e of errs.slice(0, 8)) fail(device, e);
