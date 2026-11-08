@@ -97,7 +97,7 @@ void thesis_sea(Ray r, Sea s, inout SeaMod m){
   // the temperature the eye sees, on look's true Planck curve (the same as the lava's): from below the Draper point at
   // the start to flowing orange-yellow metal at the readout's 1811 K. (Displayed kelvin are compressed: a true 1811 K
   // next to the ~1050 K sea would be ~100x brighter; this keeps it molten, not blown out.)
-  float T = 700.0 + k * 720.0 * (0.62 + 0.62 * n * n * (3.0 - 2.0 * n)) * mix(0.82, 1.0, pool);
+  float T = 820.0 + k * 640.0 * (0.62 + 0.62 * n * n * (3.0 - 2.0 * n)) * mix(0.82, 1.0, pool);
   m.emit += look_planck(T) * look_uLavaGain * 0.95 * thesis_uW * low;
 }
 `;

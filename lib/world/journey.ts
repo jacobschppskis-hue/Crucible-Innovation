@@ -129,6 +129,8 @@ export function keys(): Key[] {
     { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
     // thesis: climb; the sea heats from 293 K to 1811 K below (the sun still well under the limb ahead)
     { at: ['thesis', 0], s: deg(151.5), h: 30, yaw: 0, pitch: 4, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
+    // climb early, so the heating sea is seen from above (the hot metal reads as a planet, not a black strip)
+    { at: ['thesis', 0.4], s: deg(153.5), h: 260, yaw: 0, pitch: -9, fov: 48, ...FAR, ph: { fov: 62, pitch: -6 } },
     { at: ['thesis', 1], s: deg(156), h: 480, yaw: 0, pitch: -6, fov: 46, ...FAR, ph: { fov: 60, pitch: -4 } },
     // shore: the sunrise over the limb, made by the climb (the horizon drops away under the sun ahead)
     { at: ['shore', 0], s: deg(158), h: 700, yaw: 0, pitch: -24, fov: 46, ...FAR, ph: { fov: 60, pitch: -22 } },
