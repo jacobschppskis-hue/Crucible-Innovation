@@ -24,7 +24,7 @@ export const SHORE_V = -1200;
 
 const GLSL = /* glsl */ `
 // the lava's glow (look's Planck radiance x the lava gain), as lava.glsl lights its sea
-vec3 lava_planck(float T){ return look_planck(T) * look_uLavaGain; }
+vec3 shore_planck(float T){ return look_planck(T) * look_uLavaGain; }
 uniform float shore_uOn;   // 0 far away (all work skipped), 1 near the beach
 uniform float shore_uT;    // the surf's clock (s)
 const float SHORE_V = ${SHORE_V.toFixed(1)};
@@ -72,11 +72,11 @@ void shore_sea(Ray r, Sea s, inout SeaMod m){
   float lam = SHORE_C * SHORE_PER;     // crest spacing
   float cph = fract(ph + max(d, 0.0) / lam);
   // the crest at cph = 0: seaward of it (cph small) the long back slope, shoreward (cph near 1) the steep face
-  float back = exp(-cph * 5.0), face = exp(-(1.0 - cph) * 40.0);
+  float back = exp(-cph * 5.0), face = exp(-(1.0 - cph) * 18.0);
   float shoal = smoothstep(140.0, 40.0, d) * (1.0 - 0.6 * smoothstep(8.0, 0.0, d));
-  float A = 0.32 * shoal * shore_uOn;
+  float A = 0.22 * shoal * shore_uOn;
   float hgt = A * (back + face) - A * 0.25;
-  float dh = A * (-5.0 * back + 40.0 * face) / lam; // d(height)/d(d)
+  float dh = A * (-5.0 * back + 18.0 * face) / lam; // d(height)/d(d)
   // footprint: crests finer than a pixel fade to their mean (no shimmer at the horizon)
   float att = 1.0 - smoothstep(0.5, 2.0, s.fw / 1.5);
   m.g += vec3(hgt, -dh * shore_lineD(s.w.x), dh) * att;
@@ -90,10 +90,16 @@ void shore_sea(Ray r, Sea s, inout SeaMod m){
   float zone = smoothstep(150.0, 60.0, d);
   float ridge = back * 0.35 + face;                     // 0 in the trough .. 1 at the crest
   float glowD = 0.55 * lip * brk + 0.45 * ridge * shoal;
-  m.heat += (-0.12 * zone * (1.0 - ridge) + 0.5 * ridge * shoal + 1.1 * lip * brk) * shore_uOn;
-  m.emit += lava_planck(1800.0 + 400.0 * brk) * (lip * brk * 1.6 + face * shoal * 0.35 + back * shoal * 0.06) * shore_uOn;
-  // the water's edge itself stays bright: the sheet of the swash is where the sea meets the sand
-  m.heat += 0.6 * smoothstep(8.0, 0.0, d) * shore_uOn;
+  // The surf glows in its own right, at absolute temperatures (whatever the open sea around it is doing): the zone a
+  // dull molten red, the crests' faces orange, the breaking lips white-hot, the water's edge bright (the swash sheet).
+  // (look_planck is a true Planck curve: a few hundred kelvin is the whole range from ember to white.)
+  float F = 0.05;
+  vec3 e = shore_planck(1120.0) * zone * 0.55
+         + shore_planck(1260.0) * ridge * shoal * 0.8
+         + shore_planck(1550.0 + 150.0 * brk) * lip * brk * 0.9
+         + shore_planck(1300.0) * smoothstep(8.0, 0.0, d) * 0.8;
+  m.emit += e * (1.0 - F) * shore_uOn;
+  m.heat += 0.05 * zone * shore_uOn;
   m.rough += 0.0 * glowD;
 }
 
@@ -166,7 +172,7 @@ vec3 shore_sandCol(Ray r, Hit h, out vec3 rdir, out float rw){
   vec3 hh = normalize(Ls + v);
   col += sunE * 0.02 * pow(max(dot(n, hh), 0.0), 40.0) * NoL;
   // the surf's warm light on the sand near it, falling off inland
-  col += lava_planck(1500.0) * 0.05 * exp(-max(x, 0.0) / 9.0);
+  col += shore_planck(1250.0) * 0.04 * exp(-max(x, 0.0) / 9.0);
   // the sky's cool fill from above
   col += vec3(0.004, 0.005, 0.008) * max(n.y * 0.0 + dot(n, normalize(h.p)), 0.0);
   if (x < xf) {
@@ -174,16 +180,16 @@ vec3 shore_sandCol(Ray r, Hit h, out vec3 rdir, out float rw){
     float lipd = xf - x;
     float lip = exp(-lipd * lipd / (2.0 * 0.8 * 0.8));
     float up = ph < 0.28 ? 1.0 : 0.55;           // brighter while it surges up
-    float T = 1250.0 + 450.0 * lip * up + 120.0 * smoothstep(L, 0.0, x);
+    float T = 1130.0 + 300.0 * lip * up + 60.0 * smoothstep(L, 0.0, x);
     float F = 0.04 + 0.96 * pow(1.0 - NoV, 5.0);
-    col = lava_planck(T) * (1.0 - F) * (0.55 + 0.45 * smoothstep(0.0, 0.6, lipd + lip));
+    col = shore_planck(T) * (1.0 - F) * (0.55 + 0.45 * smoothstep(0.0, 0.6, lipd + lip));
     rdir = reflect(r.rd, normalize(h.p)); rw = F * 0.8;
     return col;
   }
   // the wet sand the drain just left: it glows and cools to black, mirroring the sky while wet
   float age = shore_age(ph, x, L);
   float wet = smoothstep(L + 2.0, 0.0, x);
-  if (age >= 0.0) col += lava_planck(1250.0 - 150.0 * min(age, 3.0)) * exp(-age / 1.3);
+  if (age >= 0.0) col += shore_planck(1120.0 - 120.0 * min(age, 3.0)) * 0.7 * exp(-age / 1.3);
   if (wet > 0.0) { rdir = reflect(r.rd, n); rw = (0.02 + 0.98 * pow(1.0 - NoV, 5.0)) * wet * 0.7; }
   return col;
 }
