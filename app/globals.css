@@ -56,6 +56,11 @@
     text-rendering: optimizeLegibility;
     -webkit-tap-highlight-color: transparent;
   }
+  /* A sideways finger drag makes waves on the liquid; without this, Chrome on Android takes it as a swipe back to the
+     previous page (the page's own edge-swipe is the system's and still works). The home page sets its own (World.css). */
+  html:not([data-world]) {
+    overscroll-behavior-x: none;
+  }
   body {
     @apply font-sans;
     overflow-x: clip;

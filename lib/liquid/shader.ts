@@ -39,14 +39,17 @@ export const LOOK = {
   crisp: [0.002, 0.005] as number[], // curvature (|laplacian|, 1/px) over which a glint fades in: off when [0, 0]
   shade: 0.15, // faces tilted away from the key (towards the top of the screen) fall into a light shadow (0..1)
   dip: -0.01, // how much darker than the swell's own sheen a wave may reflect (sky units): never a hole
-  env: [0.15, 0.14, 0.13], // the sky's brightest (dark warm grey), towards the top of the screen
+  env: [0.15, 0.06, 0.035], // the sky's brightest (the night over a molten sea: dark red), towards the top of the screen
   envW: 0.38, // its spread (tilt)
   caustic: 0.025,
   crest: [0.16, 0.003, 0.022] as number[], // interaction crests from any direction catch a soft warm light: strength, over
   // the curvature (-laplacian, 1/px) where it fades in (the key alone only lights crests facing the bottom edge)
-  sheen: [0.085, 0.058, 0.04] as number[], // the swell's warm sheen at its brightest (added to the ground)
+  sheen: [0.085, 0.032, 0.016] as number[], // the swell's sheen at its brightest (added to the ground): molten red
   sheenRelief: 9, // the swell: slope -> normal tilt for its sheen (its slopes are tiny)
   sheenExp: 9, // the sheen's lobe (broad: a soft light, not a glint)
+  // the molten body under the skin: where the visitor's waves stretch the skin thin it glows through, hotter where it
+  // is stretched more (a blackbody ramp: deep red, Ember, yellow-white); the swell never opens it, so text sits on dark
+  heat: [0.7, 0.006, 0.05] as number[], // strength, stretch (|laplacian| 1/px + slope / 30) over which it heats 0 -> 1
 };
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
@@ -75,6 +78,12 @@ ${swellGLSL(true)}
 
 const vec3 GROUND = vec3(0.0510, 0.0510, 0.0431);
 const vec3 EMBER = vec3(1.0, 0.357, 0.122);
+// the glow of the metal under the skin, 0 (just open: a deep red, nearly black) .. 1 (white-hot yellow), linear-ish
+vec3 molten(float x) {
+  vec3 c = mix(vec3(0.30, 0.025, 0.0), EMBER, smoothstep(0.0, 0.55, x));
+  c = mix(c, vec3(1.0, 0.72, 0.38), smoothstep(0.55, 1.0, x));
+  return c * x * x;
+}
 const vec3 KEY = ${v3(key)};
 const vec3 HK = ${v3(half)};
 
@@ -150,6 +159,9 @@ void main() {
   // crests (convex, from any direction) catch a soft warm light, so a wake reads whichever way it runs
   float cr = ${f(LOOK.crest[0])} * smoothstep(${f(LOOK.crest[1])}, ${f(LOOK.crest[2])}, -lap);
   col += EMBER * (${f(LOOK.softK)} * soft + ${f(LOOK.coreK)} * core + ca + cr);
+  // the molten body showing through where the visitor's waves stretch the skin
+  float st = abs(lap) + length(gr) / 30.0;
+  col += ${f(LOOK.heat[0])} * molten(smoothstep(${f(LOOK.heat[1])}, ${f(LOOK.heat[2])}, st));
 
   col += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0; // dither: no banding in the dark
   o = vec4(col, 1.0);

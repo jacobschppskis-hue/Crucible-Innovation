@@ -80,6 +80,15 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
   SwiftShader + 4x CPU). Sent the fix list to world (start on first use, worker, software-GL low start).
 - Lava constraints for the pages' liquid sent (bg luminance ≤ 0.03 where text sits, CPU model in sync, cheap).
 
+- (14:30) The other pages' liquid in the world's palette (`lib/liquid/shader.ts`): the sky it mirrors and the swell's
+  sheen are the night over a molten sea (dark reds, not warm grey), and where the visitor's waves stretch the skin the
+  molten body glows through (`LOOK.heat`, a blackbody ramp: deep red → Ember → yellow-white, thin lines along the
+  wake, gone in ~3 s). At rest the background stays dark: relative luminance p99 0.0068, max 0.0073 on /sites at
+  2600/5000/8000 px, iPhone 15 and 1440 (text hidden, canvas only), so --bone-dim text stays ≥ 6:1. Frames:
+  `lab/pages/shots/sites-lava-*.webp`. liquid/sites-stage/process specs pass.
+- (14:30) Bug: a sideways finger drag on /sites (making waves) made Chrome swipe back in history (to about:blank in the
+  test). `html:not([data-world]) { overscroll-behavior-x: none }`; the home page keeps world's own setting.
+
 ## Decisions
 - (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
