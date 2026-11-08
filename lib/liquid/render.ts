@@ -10,8 +10,9 @@
 // data-q (quality step), data-path (worker | main).
 
 import { createEngine, type Engine, type GridMeta } from './engine';
-import { activity, attachSim, liveCount as liveFloats, setFloatSink, addSource, samplePx, sampleGrid, textMask } from './field';
-import { createInput } from './input';
+import { activity, attachSim, liveCount as liveFloats, setFloatSink, addSource, samplePx, sampleGrid } from './field';
+import { createInput, TUNE } from './input';
+import { WAKE } from './wake';
 import { clock, onFrame, renderer, clockHeld } from './loop';
 import { createSim } from './sim';
 
@@ -46,8 +47,6 @@ export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
 
   // ---- the frame: input -> grid -> renderer ----
   let meta: GridMeta = { cols: 0, rows: 0, x0: 0, y0: 0, cell: 8, on: false };
-  let maskOut: Uint8Array | null = null;
-  let maskV = -1;
   let send: ((t: number, sy: number, dt: number) => void) | null = null;
   let begin: (() => void) | null = null;
   const offFrame = onFrame((t, dt) => {
@@ -59,14 +58,10 @@ export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
     }
     const stamps = input.stamps(dt, sim.cell);
     activity.last = input.lastUser();
-    const shifted = sim.follow(sy);
-    sim.advance(dt, stamps);
-    // the text mask is rebuilt only when the boxes or the grid's window changed (never every frame)
-    if (shifted || textMask.version !== maskV) {
-      maskV = textMask.version;
-      if (sim.setMask(textMask.rects)) maskOut = sim.mask;
-    }
-    if (sim.takeMaskDirty()) maskOut = sim.mask;
+    sim.follow(sy);
+    // the drops step in the grid, then the wake is evaluated into the same display state
+    const sx = scrollX;
+    sim.advance(dt, stamps, (out, cols, rows, x0, y0, cell) => input.wake.addTo(out, cols, rows, x0, y0, cell, t, sx, sy, input.heads()), input.wake.active(t));
     meta = { cols: sim.cols, rows: sim.rows, x0: sim.x0, y0: sim.y0, cell: sim.cell, on: !sim.quiet };
     begin?.();
     send?.(t, sy, dt);
@@ -77,7 +72,6 @@ export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
 
   const onResize = () => {
     sim.resize(innerWidth, innerHeight, cellFor(), scrollY);
-    maskOut = sim.mask;
     view?.();
   };
   let view: (() => void) | null = null;
@@ -122,19 +116,17 @@ export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
         if (!heights || heights.length !== N) heights = new Float32Array(N);
         heights.set(sim.out.subarray(0, N));
       }
-      const mask = maskOut ? maskOut.slice() : null;
-      maskOut = null;
       const tr: Transferable[] = heights ? [heights.buffer] : [];
-      worker.postMessage({ type: 'frame', t, sy, late, hold: clockHeld(), meta, heights, mask }, tr);
+      worker.postMessage({ type: 'frame', t, sy, late, hold: clockHeld(), meta, heights }, tr);
       late = 0;
       busy = true;
     };
-    // While nothing moves (a quiet grid, no scrolling, no new mask) only the slow swell changes: 30 frames a second
+    // While nothing moves (a quiet grid, no scrolling) only the slow swell changes: 30 frames a second
     // are plenty and halve the cost. A harness that steps time gets every frame.
     let lastPost = -1;
     let lastSy = NaN;
     send = (t, sy) => {
-      if (!meta.on && !maskOut && sy === lastSy && !clockHeld() && t - lastPost < 1 / 40 && t >= lastPost) return;
+      if (!meta.on && sy === lastSy && !clockHeld() && t - lastPost < 1 / 40 && t >= lastPost) return;
       if (busy) {
         pending = { t, sy };
         late++;
@@ -217,9 +209,8 @@ export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
     send = (t, sy, dt) => {
       // heights straight from the grid (no copy); unchanged quiet grids are not uploaded again
       const on = meta.on;
-      engine.upload(meta, on || lastOn ? sim.out : null, maskOut);
+      engine.upload(meta, on || lastOn ? sim.out : null);
       lastOn = on;
-      maskOut = null;
       if (engine.draw(t, sy, dt > 0.034 ? 1 : 0, clockHeld())) n++;
       drew(t, n, engine.stats.q);
       if (n === 1) cv.dataset.on = '';
@@ -287,6 +278,9 @@ export function startLiquid(canvas: HTMLCanvasElement): (() => void) | null {
     sample: (x: number, docY: number, t?: number) => ({ ...samplePx(x, docY, t) }),
     grid: (x: number, docY: number) => ({ ...sampleGrid(x, docY) }),
     near: (x: number, docY: number, r = 150) => sim.near(x, docY, r),
+    /** the wake's and the input's tunables (live: a harness can try values without a rebuild) */
+    tune: { WAKE, TUNE },
+    wakeCount: () => input.wake.count,
   };
   (window as unknown as { __liquid?: typeof hooks }).__liquid = hooks;
 
