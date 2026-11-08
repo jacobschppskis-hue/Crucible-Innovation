@@ -663,6 +663,8 @@ async function inertia(device) {
     await page.evaluate(() => window.__qa.hold());
     for (let i = 0; i < 10; i++) await page.evaluate((ms) => window.__qa.step(ms), ms);
     const y0 = await page.evaluate(() => window.__world.state().scroll);
+    // record what the page receives (its own clock), to know the finger speed the handler really saw
+    await page.evaluate(() => { const r = (window.__tm = []); addEventListener('touchmove', (e) => r.push([performance.now(), e.touches[0]?.clientY]), { passive: true, capture: true }); });
     let ts = Date.now() / 1000, x = 195, y = 700;
     await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }], timestamp: ts });
     await page.evaluate((ms) => window.__qa.step(ms), ms);
@@ -681,14 +683,19 @@ async function inertia(device) {
     const end = trace.at(-1); const glide = end - yLift; const drag = yLift - y0;
     // time to come (nearly) to rest
     let stopI = trace.findIndex((sy) => Math.abs(end - sy) < 2); const stopMs = stopI * 4 * ms;
-    rows.push({ hz, drag: Math.round(drag), glide: Math.round(glide), stopMs: Math.round(stopMs) });
-    I('inertia', dn, `${hz} Hz: finger ${Math.round(drag)} px at 3000 px/s, then glides ${Math.round(glide)} px and rests after ~${Math.round(stopMs)} ms (native iOS: ~1500 px, ~2.5 s)`);
+    // the release speed the page saw: the last ~100 ms of touchmoves
+    const vSeen = await page.evaluate(() => { const r = window.__tm; const b = r.at(-1); const a = r.find((q) => b[0] - q[0] <= 100) || r[0]; return b[0] > a[0] ? Math.abs((b[1] - a[1]) / ((b[0] - a[0]) / 1000)) : 0; });
+    const iosGlide = vSeen * 0.4995; // UIScrollView: 0.998/ms decay, glide = v * tau
+    const ratio = iosGlide > 0 ? glide / iosGlide : 0;
+    rows.push({ hz, drag: Math.round(drag), glide: Math.round(glide), stopMs: Math.round(stopMs), vSeen: Math.round(vSeen), iosGlide: Math.round(iosGlide), ratio: +ratio.toFixed(2) });
+    I('inertia', dn, `${hz} Hz: release ${Math.round(vSeen)} px/s as the page saw it, glides ${Math.round(glide)} px (iOS physics for that speed: ${Math.round(iosGlide)} px, ratio ${ratio.toFixed(2)}), rests after ~${Math.round(stopMs)} ms`);
   }
   fs.writeFileSync(path.join(OUT, `inertia-${dn}.json`), JSON.stringify(rows));
-  const g60 = rows.find((r) => r.hz === 60)?.glide ?? 0;
-  if (g60 < 600) F('P1', 'inertia', dn, `a 3000 px/s flick glides only ${g60} px at 60 Hz after lift (native iOS ~1500 px): momentum feels killed`);
-  const gs = rows.map((r) => r.glide); const spread = Math.max(...gs) / Math.max(1, Math.min(...gs));
-  if (spread > 1.6) F('P1', 'inertia', dn, `fling length depends on frame rate: ${rows.map((r) => `${r.hz} Hz ${r.glide} px`).join(', ')} (Low Power Mode = 30 Hz, ProMotion/Android = 120 Hz)`);
+  // pass: at every frame rate the glide matches iOS physics for the speed the page saw (±30%)
+  const bad = rows.filter((r) => r.iosGlide > 50 && (r.ratio < 0.7 || r.ratio > 1.3));
+  if (bad.length) F('P1', 'inertia', dn, `glide differs from iOS physics: ${bad.map((r) => `${r.hz} Hz ${r.glide}/${r.iosGlide} px (x${r.ratio})`).join(', ')}`);
+  const rs = rows.filter((r) => r.iosGlide > 50).map((r) => r.ratio); const spread = rs.length ? Math.max(...rs) / Math.max(0.01, Math.min(...rs)) : 1;
+  if (spread > 1.3) F('P1', 'inertia', dn, `fling length depends on frame rate (glide/iOS ratio ${rows.map((r) => `${r.hz} Hz x${r.ratio}`).join(', ')})`);
   await ctx.close();
 }
 
