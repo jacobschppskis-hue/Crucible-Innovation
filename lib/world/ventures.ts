@@ -198,7 +198,8 @@ function frameUpdate(f: Frame, u: Uniforms) {
   u.set('ventures_uOn', any ? 1 : 0);
   u.set('ventures_uGain', GAIN);
   // the near sea cools through the place (fades in and out at the pin's ends, so the neighbours are untouched)
-  u.set('ventures_uCool', 0.16 * Math.min(clamp(p / 0.06), clamp((1 - p) / 0.06)) * (any ? 1 : 0));
+  // V2 (never black): the near sea is no longer cooled here; the words stay AA as solid bone over the night sea
+  u.set('ventures_uCool', 0);
   u.set('ventures_uP', U.P);
   u.set('ventures_uM', U.M);
   u.set('ventures_uK', U.K);
