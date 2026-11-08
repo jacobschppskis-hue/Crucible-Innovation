@@ -10,7 +10,13 @@ const browser = await chromium.launch({ executablePath: exe, args: ['--use-angle
 const ctx = dev === 'iphone' ? await browser.newContext({ ...devices['iPhone 15'] }) : await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
 const page = await ctx.newPage();
 page.on('console', (m) => console.log('console:', m.text()));
-const file = 'file://' + path.resolve('lab/mark/proto.html') + '?' + query;
+import fs from 'node:fs';
+const pageName = process.env.PAGE || 'world-proto';
+let html = fs.readFileSync(path.resolve(`lab/mark/${pageName}.html`), 'utf8');
+html = html.replace('/*MARK_GLSL*/', fs.readFileSync(path.resolve('lib/world/glsl/mark.glsl'), 'utf8'));
+const tmp = path.resolve(process.env.MARK_TMP || '/tmp/claude-0', `mark-${pageName}-${process.pid}.html`);
+fs.writeFileSync(tmp, html);
+const file = 'file://' + tmp + '?' + query;
 await page.goto(file);
 await page.waitForFunction(() => document.title !== '', null, { timeout: 120000 });
 const title = await page.title();
