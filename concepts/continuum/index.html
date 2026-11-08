@@ -1,0 +1,1837 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Crucible · Continuum (concept)</title>
+<meta name="description" content="Concept: one continuous world, a molten sea at dusk that becomes the dark liquid the site floats on.">
+<meta name="theme-color" content="#0D0D0B">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&display=swap">
+<style>
+/* ---------- tokens: colour means temperature ---------- */
+:root {
+  --ground: #0D0D0B;
+  --bone: #E8E4D8;
+  --bone-dim: #ADA89B;
+  --ember: #FF5B1F;
+  --ember-hot: #FFD9A6;
+  --ember-deep: #B8400F;
+  --quench: #8DB6F2; /* cold only: the dusk sky band, starlight, the CRT glass, a cold readout */
+  --nav-h: 64px;
+  --gut: clamp(16px, 5vw, 72px);
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--ground); color: var(--bone); -webkit-text-size-adjust: 100%; overflow-x: clip; }
+body {
+  margin: 0; background: transparent; overflow-x: clip;
+  font-family: Archivo, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 17px; line-height: 1.6; font-variation-settings: 'wdth' 100;
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility;
+}
+::selection { background: rgba(255, 91, 31, 0.32); }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--ember); outline-offset: 4px; border-radius: 4px; }
+canvas, img, svg { user-select: none; -webkit-user-drag: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* the sea: one fixed canvas under everything, it paints the dark itself */
+#sea { position: fixed; left: 0; top: 0; width: 100vw; height: 100lvh; z-index: -1; pointer-events: none; display: block; opacity: 0; }
+html.gl #sea { opacity: var(--sea, 0); }
+/* before/without WebGL: the ground and a still horizon glow */
+.nogl-sky { position: fixed; inset: 0; z-index: -2; background: var(--ground); }
+html:not(.gl) .nogl-sky::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 0; height: 100lvh;
+  background: radial-gradient(60% 22% at 62% 64%, #6a2a12 0%, rgba(106, 42, 18, 0) 70%);
+  opacity: var(--nogl, 1);
+}
+
+/* ---------- nav: opaque, never translucent ---------- */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 20; height: var(--nav-h);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 0 var(--gut); background: var(--ground);
+}
+.wm { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; }
+.wm svg { width: 26px; height: 26px; }
+.wm b { font-weight: 600; font-size: 21px; letter-spacing: -0.03em; font-variation-settings: 'wdth' 112; line-height: 1; }
+.spark-i { position: relative; display: inline-block; }
+.spark-i::after {
+  content: ''; position: absolute; left: calc(50% + 0.015em); top: 0.115em; width: 0.14em; height: 0.14em;
+  border-radius: 50%; background: var(--ember); transform: translateX(-50%);
+}
+.nav ul { display: flex; gap: 28px; list-style: none; margin: 0; padding: 0; font-size: 14px; }
+.nav ul a { text-decoration: none; color: var(--bone-dim); }
+.nav ul a:hover { color: var(--bone); }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 20px; border-radius: 999px;
+  font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; cursor: pointer;
+}
+.btn-hot { background: var(--ember); color: var(--ground); }
+.btn-hot:hover { background: #ff7440; }
+.btn-line { color: var(--bone); box-shadow: inset 0 0 0 1.5px rgba(232, 228, 216, 0.45); }
+.btn-line:hover { box-shadow: inset 0 0 0 1.5px var(--bone); }
+.nav .btn { height: 38px; padding: 0 16px; font-size: 14px; }
+@media (max-width: 760px) { .nav ul { display: none; } }
+
+/* ---------- type ---------- */
+.disp {
+  margin: 0; font-weight: 640; line-height: 0.94; letter-spacing: -0.025em;
+  font-variation-settings: 'wdth' 116; text-wrap: balance;
+}
+.ln { display: block; white-space: nowrap; }
+[data-heat] .w { display: inline-block; will-change: font-variation-settings; }
+.h-sec { font-size: clamp(40px, 6.6vw, 104px); }
+.lede { color: var(--bone-dim); max-width: 34ch; margin: 0; }
+.small { font-size: 13px; line-height: 1.4; color: var(--bone-dim); }
+.fl { will-change: translate, rotate; }
+
+/* ---------- hero (pinned): the horizon ---------- */
+.hero { position: relative; height: 470svh; }
+.stick { position: sticky; top: 0; height: 100svh; overflow: hidden; }
+.hero-copy {
+  position: absolute; left: var(--gut); bottom: 11svh; right: var(--gut);
+  display: grid; grid-template-columns: auto 1fr; align-items: end; column-gap: 48px; row-gap: 28px;
+}
+.hero h1 { font-size: clamp(54px, 8vw, 148px); grid-column: 1 / 3; }
+.hero .side { grid-column: 1; display: grid; gap: 22px; max-width: 420px; }
+.cta { display: flex; gap: 12px; flex-wrap: wrap; }
+.alloyed { color: var(--bone); }
+.beats { position: absolute; left: var(--gut); right: var(--gut); bottom: 14svh; display: grid; }
+.beat { grid-area: 1 / 1; font-size: clamp(44px, 7.4vw, 124px); opacity: 0; }
+.mark-still { position: absolute; display: none; }
+@media (max-width: 760px) {
+  .hero-copy { bottom: 7svh; grid-template-columns: 1fr; }
+  .hero h1 { font-size: clamp(46px, 14.5vw, 80px); grid-column: 1; }
+  .beats { bottom: 12svh; }
+  .beat { font-size: clamp(40px, 12.4vw, 72px); }
+}
+
+/* ---------- story ---------- */
+.story { position: relative; padding: 18svh 0 0; }
+.wrap { padding: 0 var(--gut); max-width: 1440px; margin: 0 auto; }
+.story-h { font-size: clamp(44px, 7vw, 116px); margin-bottom: 14svh; }
+.ch { display: grid; grid-template-columns: minmax(260px, 0.8fr) 1.2fr; gap: clamp(32px, 6vw, 110px); align-items: start; }
+.ch.flip { grid-template-columns: 1.2fr minmax(260px, 0.8fr); }
+.ch.flip .ch-side { order: 2; }
+.ch-side { position: sticky; top: calc(var(--nav-h) + 6svh); display: grid; gap: 18px; }
+.ch-side h3 { font-size: clamp(30px, 3.2vw, 46px); margin: 6px 0 0; }
+.ch-text p { margin: 0 0 1.15em; color: var(--bone-dim); max-width: 62ch; }
+.ch-text p.read { color: var(--bone); }
+.ch-cont { padding-top: 6svh; }
+.quote { font-size: clamp(32px, 4.4vw, 70px); margin: 9svh 0 10svh; max-width: 18ch; }
+.gap-ch { height: 24svh; }
+@media (max-width: 860px) {
+  .ch, .ch.flip { grid-template-columns: 1fr; }
+  .ch.flip .ch-side { order: 0; }
+  .ch-side { position: relative; top: 0; max-width: 340px; }
+}
+
+/* the CRT: a placeholder until Jacob's CRT portraits exist (no faces) */
+.crt {
+  position: relative; aspect-ratio: 4 / 3.3; border-radius: 26px; padding: 14px;
+  background: #121210; box-shadow: inset 0 0 0 1px #2b2a26, 0 30px 60px -30px #000;
+}
+.crt canvas { width: 100%; height: 100%; display: block; border-radius: 18px / 22px; background: #050606; }
+.crt::after { /* the knob row: real hardware, kept quiet */
+  content: ''; position: absolute; right: 22px; bottom: -11px; width: 46px; height: 4px; border-radius: 2px; background: #2b2a26;
+}
+
+/* ---------- PayPal: one company sinks, six surface ---------- */
+.pp { position: relative; height: 300svh; margin: 8svh 0 0; }
+.pp .stick { overflow: visible; }
+.pp-stage { position: absolute; inset: 0; }
+.pp-word, .pp-name { position: absolute; left: 50%; top: 50%; translate: -50% -50%; white-space: nowrap; margin: 0; }
+.pp-word { font-size: clamp(64px, 12vw, 200px); line-height: 1; }
+.pp-name { font-size: clamp(26px, 3.6vw, 58px); line-height: 1; opacity: 0; }
+.pp-date { position: absolute; left: 50%; top: calc(50% + clamp(52px, 8vw, 130px)); translate: -50% 0; opacity: 0; font-variant-numeric: tabular-nums; }
+
+/* ---------- ventures: castings rise out of the liquid ---------- */
+.ventures { position: relative; padding: 26svh 0 10svh; }
+.v-h { font-size: clamp(40px, 6.4vw, 104px); max-width: 12ch; margin-bottom: 12svh; }
+.v { display: grid; grid-template-columns: 1.35fr 1fr; gap: clamp(28px, 5vw, 90px); align-items: center; margin: 0 0 20svh; }
+.v.flip { grid-template-columns: 1fr 1.35fr; }
+.v.flip .slab { order: 2; }
+.slab {
+  position: relative; display: block; aspect-ratio: 2 / 1; border-radius: 16px; text-decoration: none;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.slab-name { /* only without WebGL: the cast name is drawn by the sea */
+  position: absolute; inset: 0; display: none; place-items: center; font-size: clamp(30px, 5vw, 76px);
+  font-weight: 800; font-variation-settings: 'wdth' 125; color: var(--bone); background: #1b1a17; border-radius: 16px;
+}
+html:not(.gl) .slab-name { display: grid; }
+.cap { display: grid; gap: 14px; align-content: start; }
+.status { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--bone-dim); }
+.status i { width: 7px; height: 7px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 10px var(--ember); }
+.status.cold i { background: transparent; box-shadow: inset 0 0 0 1.5px var(--bone-dim); }
+.cap h3 { font-size: clamp(30px, 3.4vw, 54px); margin: 0; }
+.cap p { margin: 0; color: var(--bone-dim); max-width: 36ch; }
+.open {
+  justify-self: start; display: inline-flex; align-items: center; gap: 10px; margin-top: 6px;
+  font-size: 15px; font-weight: 600; color: var(--bone); text-decoration: none; padding: 10px 0;
+}
+.open .arr { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px rgba(232, 228, 216, 0.5); transition: background-color .2s, color .2s, box-shadow .2s; }
+.v:hover .open .arr, .v.hot .open .arr, .open:focus-visible .arr { background: var(--ember); color: var(--ground); box-shadow: none; }
+@media (max-width: 860px) {
+  .v, .v.flip { grid-template-columns: 1fr; gap: 22px; margin-bottom: 16svh; }
+  .v.flip .slab { order: 0; }
+}
+
+/* ---------- thesis: the liquid reheats ---------- */
+.thesis { position: relative; height: 300svh; }
+.th-lines { position: absolute; left: var(--gut); right: var(--gut); top: calc(var(--nav-h) + 10svh); display: grid; }
+.th-a, .th-b { grid-area: 1 / 1; }
+.th-lines .disp { font-size: clamp(40px, 6.4vw, 104px); max-width: 13ch; }
+.th-lines p.sub { margin: 22px 0 0; color: var(--bone-dim); }
+.readout { position: absolute; right: var(--gut); top: calc(var(--nav-h) + 11svh); text-align: right; }
+.readout b { display: block; font-size: clamp(34px, 4vw, 64px); font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1;
+  font-variation-settings: 'wdth' 112; color: var(--quench); }
+@media (max-width: 760px) {
+  .readout { left: var(--gut); right: auto; top: auto; bottom: 30svh; text-align: left; }
+}
+
+/* ---------- footer: the shore ---------- */
+.shore { position: relative; height: 100svh; min-height: 560px; display: grid; grid-template-rows: 1fr auto auto; }
+.shore .links { padding: calc(var(--nav-h) + 6svh) var(--gut) 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 18px 24px; align-content: start; }
+.shore .links > div:first-child { grid-column: 1 / -1; }
+.shore .links a { display: block; text-decoration: none; color: var(--bone-dim); padding: 3px 0; }
+.shore .links a:hover { color: var(--bone); }
+.shore .mail { font-size: clamp(17px, 5.1vw, 48px); overflow-wrap: anywhere; font-weight: 600; color: var(--bone); font-variation-settings: 'wdth' 112; text-decoration: none; }
+.giant {
+  margin: 0; padding: 0 var(--gut); font-weight: 650; letter-spacing: -0.045em; line-height: 0.8;
+  font-size: clamp(72px, 18.5vw, 330px); font-variation-settings: 'wdth' 118; white-space: nowrap; text-align: center;
+}
+.sand { padding: 15svh var(--gut) max(22px, env(safe-area-inset-bottom)); align-items: end; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+@media (prefers-reduced-motion: reduce) { .fl { will-change: auto; } }
+</style>
+</head>
+<body>
+<div class="nogl-sky" aria-hidden="true"></div>
+<canvas id="sea" aria-hidden="true"></canvas>
+
+<nav class="nav" aria-label="Main">
+  <a class="wm" href="#top" aria-label="Crucible home">
+    <svg viewBox="0 0 64 64" aria-hidden="true" id="nav-mark"></svg>
+    <b aria-hidden="true">cruc<span class="spark-i">ı</span>ble</b>
+  </a>
+  <ul>
+    <li><a href="#story">Story</a></li>
+    <li><a href="#ventures">Ventures</a></li>
+    <li><a href="https://crucibleinnovation.com/work/">Work</a></li>
+    <li><a href="https://crucibleinnovation.com/sites/">Sites</a></li>
+  </ul>
+  <a class="btn btn-hot" href="https://crucibleinnovation.com/sites/#quote">Start a project</a>
+</nav>
+
+<main id="top">
+  <!-- 1. The horizon. The core is the sun; the rings hang around it over a molten sea. -->
+  <section class="hero" id="hero" aria-label="Crucible">
+    <div class="stick">
+      <svg class="mark-still" viewBox="0 0 64 64" aria-hidden="true" id="mark-still"></svg>
+      <div class="hero-copy" id="hero-copy">
+        <h1 class="disp"><span class="ln" data-heat>Intelligence,</span><span class="ln"><span class="alloyed" data-heat data-hot="1">alloyed</span></span></h1>
+        <div class="side">
+          <p class="lede">Human judgment and machine range, fused into one material. Crucible is a studio that builds and ships ventures.</p>
+          <div class="cta">
+            <a class="btn btn-hot" href="https://crucibleinnovation.com/sites/">See Crucible Sites <span aria-hidden="true">→</span></a>
+            <a class="btn btn-line" href="#ventures">Our ventures</a>
+          </div>
+        </div>
+      </div>
+      <div class="beats" aria-hidden="true">
+        <p class="disp beat" data-heat id="b1"><span class="ln">Not the person</span></p>
+        <p class="disp beat" data-heat id="b2"><span class="ln">Not the model</span></p>
+        <p class="disp beat" data-heat id="b3"><span class="ln">Neither, alone</span></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. The founders, each in their own words, on the dark liquid the sea became. -->
+  <section class="story" id="story" aria-labelledby="story-h">
+    <div class="wrap">
+      <h2 class="disp story-h fl" id="story-h" data-heat><span class="ln">Why Crucible</span></h2>
+
+      <article class="ch" aria-labelledby="jacob-h">
+        <div class="ch-side">
+          <div class="crt" data-crt="Jacob Schopp" data-ch="1"><canvas aria-hidden="true"></canvas></div>
+          <h3 class="disp fl" id="jacob-h" data-heat><span class="ln">Jacob Schopp</span></h3>
+          <p class="small">Co-founder, Crucible · portrait coming</p>
+        </div>
+        <div class="ch-text" id="jacob-a">
+          <p class="fl">My name is Jacob Schopp, and I am still in high school. Crucible, which I co-founded with Charlie Rochford, is the name we build our ventures under.</p>
+          <p class="fl">Crucible started with a car ride, when my dad put on the audiobook of Walter Isaacson’s biography of Elon Musk. Most of what I took from it concerned Elon himself, but part of the book covers PayPal and the people who worked there before eBay bought the company in 2002. After the sale, members of that group went on to found YouTube, LinkedIn, Yelp and Palantir, while Elon used much of his share of the money to fund SpaceX and later to invest in Tesla. People call them the PayPal Mafia. It is interesting that so much came out of a single company, and I do not believe it was luck, the members being exceptional people who found each other early and continued to back one another long after PayPal itself was gone. When Jeremy Stoppelman and Russel Simmons set out to start Yelp, it was their former PayPal colleague Max Levchin who put up the first million dollars.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="pp" id="paypal" aria-label="PayPal and the companies its people founded">
+      <div class="stick">
+        <div class="pp-stage" id="pp-stage">
+          <p class="disp pp-word" data-heat id="pp-word"><span class="ln">PayPal</span></p>
+          <p class="small pp-date" id="pp-date">eBay buys PayPal, 2002</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="wrap">
+      <div class="ch ch-cont">
+        <div aria-hidden="true"></div>
+        <div class="ch-text" id="jacob-b">
+          <p class="fl">That group came together mostly in their twenties. I want to know what happens when a group like it comes together earlier. Every high school has a handful of people who are already building things and thinking about problems far larger than the next test, yet most of them never meet, or they meet and nothing comes of it. The long-term goal of Crucible is to find those people while we are still young and to bring them together, so that between us we can create something generational.</p>
+          <blockquote class="disp quote fl" data-heat>I want to know what happens when a group like it comes together earlier.</blockquote>
+          <p class="fl">The name comes from what a crucible actually is, a vessel built to hold metal as it melts, in which separate metals can be combined into an alloy. Steel, being mostly iron with a small amount of carbon added, is far stronger than the iron it is made from. That is the idea behind the name, and it applies to the way people work with one another as much as it does to the way people work with AI. The logo is two rings, half drawn as continuous lines and half as pixels, meeting at an orange core. The human half and the machine half. I believe that people who learn to work alongside AI now, while they are young, will be able to build things that only a few years ago would have required a far larger and more experienced team.</p>
+          <p class="fl">For now, Crucible has one venture, Crucible Sites, which designs and builds websites for local businesses. Charlie and I build the sites together, and our first ones are already lined up. It is small compared to what I want Crucible to become, and I know that. However it is real work, and it is where we are learning to ship.</p>
+          <p class="fl">Some people hear all of this and find it unrealistic for someone my age, perhaps even egotistical. I can understand why they react that way. But if I commit myself fully to this and have even a .1% chance of building something that changes the world, would that not be worth it? I intend to find out, and maybe, years from now, the people who build it with me will have a name too.</p>
+        </div>
+      </div>
+      <div class="gap-ch"></div>
+      <article class="ch flip" aria-labelledby="charlie-h">
+        <div class="ch-side">
+          <div class="crt" data-crt="Charles Rochford" data-ch="2"><canvas aria-hidden="true"></canvas></div>
+          <h3 class="disp fl" id="charlie-h" data-heat><span class="ln">Charles Rochford</span></h3>
+          <p class="small">Co-founder, Crucible · portrait coming</p>
+        </div>
+        <div class="ch-text" id="charlie">
+          <p class="fl">I’m Charles Rochford, a young entrepreneur, developer, and co-founder of Crucible Innovation. I’ve always been fascinated by technology, entrepreneurship, and the potential for new ideas to change the world. My passion comes from a desire to create something meaningful, challenge conventional thinking, and contribute to a future that’s better than the world we live in today.</p>
+          <p class="fl">My interest in entrepreneurship began with a curiosity about how businesses operate and how technology can be used to solve real-world problems. Since then, I’ve spent much of my time exploring new ideas, developing technical skills, and learning what it takes to turn a concept into something valuable. Through my experiences in software development, business strategy, and entrepreneurship, I’ve come to appreciate both the creativity and persistence required to build something from the ground up.</p>
+          <p class="fl">As a co-founder of Crucible Innovation, I want to help create a company that stands for more than financial success. I believe that businesses have the potential to be powerful forces for positive change, and I want our work to reflect that belief. My goal is to build something that makes people’s lives better, creates new opportunities, and contributes to meaningful progress.</p>
+          <p class="fl">Outside of entrepreneurship, I’m a high school student with a strong interest in mathematics, science, and technology. Studying mathematics several years ahead of my grade level has strengthened my analytical thinking and problem-solving abilities. I’m constantly looking for opportunities to learn, challenge myself, and develop skills that will help me pursue increasingly ambitious goals.</p>
+          <p class="fl">Ultimately, I want to spend my life building things that matter. I don’t measure success solely by the size of a company or the amount of money it generates, but also by the positive impact it has on the people and world around it. Through Crucible Innovation, I hope to turn that philosophy into action, helping create a future defined by progress, opportunity, and lasting improvement.</p>
+          <p class="fl">For me, Crucible Innovation is more than a business. It’s an opportunity to turn ambition into action and contribute to making the world a better place.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- 3. The ventures: each one a casting that rises out of the liquid. -->
+  <section class="ventures" id="ventures" aria-labelledby="v-h">
+    <div class="wrap">
+      <h2 class="disp v-h fl" id="v-h" data-heat><span class="ln">Everything new</span><span class="ln">was once molten</span></h2>
+
+      <div class="v" data-v="0">
+        <a class="slab" href="https://crucibleinnovation.com/sites/" aria-label="Open Crucible Sites" data-slab="0"><span class="slab-name" aria-hidden="true">Crucible Sites</span></a>
+        <div class="cap fl">
+          <span class="status"><i></i>Live</span>
+          <h3 class="disp" data-heat><span class="ln">Crucible Sites</span></h3>
+          <p>Websites for local businesses, built in days.</p>
+          <a class="open" href="https://crucibleinnovation.com/sites/">Open Crucible Sites <span class="arr" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+
+      <div class="v flip" data-v="1">
+        <a class="slab" href="https://crucibleinnovation.com/ventures/verge/" aria-label="Open Verge" data-slab="1"><span class="slab-name" aria-hidden="true">Verge</span></a>
+        <div class="cap fl">
+          <span class="status cold"><i></i>Coming soon</span>
+          <h3 class="disp" data-heat><span class="ln">Find your verge</span></h3>
+          <p>An AI coach for endurance athletes.</p>
+          <a class="open" href="https://crucibleinnovation.com/ventures/verge/">Open Verge <span class="arr" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+
+      <div class="v" data-v="2">
+        <a class="slab" href="https://crucibleinnovation.com/ventures/trellis/" aria-label="Open Trellis" data-slab="2"><span class="slab-name" aria-hidden="true">Trellis</span></a>
+        <div class="cap fl">
+          <span class="status cold"><i></i>Coming soon</span>
+          <h3 class="disp" data-heat><span class="ln">A day that</span><span class="ln">actually fits</span></h3>
+          <p>An AI day planner that works with what you know.</p>
+          <a class="open" href="https://crucibleinnovation.com/ventures/trellis/">Open Trellis <span class="arr" aria-hidden="true">→</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. The thesis: the liquid heats from room temperature to the melting point of iron. -->
+  <section class="thesis" id="thesis" aria-label="Thesis">
+    <div class="stick">
+      <div class="th-lines">
+        <div class="th-a" id="th-a">
+          <p class="disp fl" data-heat><span class="ln">Nothing new</span><span class="ln">happens at 293 K</span></p>
+          <p class="sub">293 K is room temperature.</p>
+        </div>
+        <div class="th-b" id="th-b" style="opacity:0">
+          <p class="disp fl" data-heat><span class="ln">An alloy is</span><span class="ln">stronger than</span><span class="ln">its metals</span></p>
+          <p class="sub">Steel is harder than iron. Bronze is harder than copper.</p>
+        </div>
+      </div>
+      <div class="readout" aria-live="off"><span class="small">Temperature</span><b id="kelvin">293 K</b><span class="small" id="kcap">Room temperature</span></div>
+    </div>
+  </section>
+</main>
+
+<!-- The shore: the same molten sea, breaking on black sand under the wordmark. -->
+<footer class="shore" id="shore">
+  <div class="links">
+    <div><span class="small">Write to us</span><br><a class="mail" href="mailto:jacob@crucibleinnovation.com">jacob@crucibleinnovation.com</a></div>
+    <div><a href="#story">Story</a><a href="#ventures">Ventures</a><a href="https://crucibleinnovation.com/work/">Work</a><a href="https://crucibleinnovation.com/sites/">Crucible Sites</a></div>
+    <div><a href="https://crucibleinnovation.com/ventures/verge/">Verge</a><a href="https://crucibleinnovation.com/ventures/trellis/">Trellis</a><a href="https://crucibleinnovation.com/sites/#quote">Start a project</a></div>
+  </div>
+  <p class="giant fl" id="giant" aria-label="Crucible"><span aria-hidden="true">cruc<span class="spark-i">ı</span>ble</span></p>
+  <div class="sand small"><span>Jacob Schopp and Charles Rochford, co-founders</span><span>© 2026 Crucible</span></div>
+</footer>
+
+<script type="x-shader/x-fragment" id="sea-fs">
+#version 300 es
+// Continuum: one world. A camera over a liquid plane (y = 0, x right, z away from the first view). At the top of the
+// page it looks at the horizon: a molten sea at dusk under the core, which hangs over it as the sun with the mark's
+// rings around it. Scrolling pitches it down until it looks straight down; then 1 world unit = 1 CSS px and the plane
+// is the page's dark liquid, anchored to the content, cooling as it leaves the sun and reheating toward the shore.
+precision highp float;
+precision highp int;
+out vec4 fragColor;
+
+uniform vec2 uView;      // css viewport (w, h)
+uniform float uQ;        // render px per css px
+uniform float uT;        // clock seconds
+uniform vec4 uCam;       // world x, height, z, pitch (0 = horizon, pi/2 = straight down)
+uniform float uF;        // focal length, css px
+uniform vec4 uSun;       // core centre (world xyz), outer ring radius (world)
+uniform vec4 uSunX;      // foot distance from camera, core visibility, 0, 0
+uniform vec4 uArc[2];    // mark pieces: dx, dy, rotation, alpha (mark units, y down)
+uniform vec4 uCell[14];  // cell centre x, y, rotation, alpha
+uniform vec4 uMark;      // core flare, mark visibility, hero heat, page mode (0 horizon .. 1 page)
+uniform vec4 uW[96];     // wake points: x, z, time, strength (two trails of 48)
+uniform vec4 uWS[24];    // per-point scale (world per css px), packed
+uniform ivec2 uWN;       // points per trail
+uniform vec4 uWB[2];     // trail bounds (xmin, zmin, xmax, zmax)
+uniform vec4 uRing[16];  // rings: x, z, radius, amplitude
+uniform vec4 uRingW[4];  // ring widths, packed
+uniform int uRingN;
+uniform vec4 uSpot[8];   // hot spots under the surface: x, z, radius, heat
+uniform int uSpotN;
+uniform vec4 uHeat;      // thesis heat, thesis anchor z, shore z, shore on
+uniform vec4 uSlab[3];   // ventures: centre x, z, half w, half h
+uniform vec4 uSlabP[3];  // rise, heat, hover, kind (0 cast bone, 1 forging)
+uniform int uSlabN;
+uniform sampler2D uRelief;
+uniform vec2 uSwell;     // page swell amplitude, horizon swell amplitude
+
+const float PI = 3.14159265;
+float gCrest = 0.; // visitor-made crest height, in CSS px (scale-free), for the crest light
+const vec3 SUNC = vec3(1.0, 0.40, 0.13);
+
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+float vnoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p);
+  vec2 u = f * f * (3. - 2. * f);
+  return mix(mix(hash12(i), hash12(i + vec2(1, 0)), u.x), mix(hash12(i + vec2(0, 1)), hash12(i + vec2(1, 1)), u.x), u.y);
+}
+// fbm that fades each octave out once it is smaller than the pixel (fpN = pixel footprint in noise units)
+float fbmAA(vec2 p, float fpN, int oct) {
+  float v = 0., a = 0.5, tot = 0., fr = 1.;
+  mat2 m = mat2(1.6, 1.2, -1.2, 1.6);
+  for (int i = 0; i < 5; i++) {
+    if (i >= oct) break;
+    float w = clamp(1.5 - fpN * fr * 2.2, 0., 1.);
+    v += a * mix(0.5, vnoise(p), w);
+    tot += a; p = m * p; a *= 0.5; fr *= 2.;
+  }
+  return v / tot;
+}
+mat2 rot(float a) { float c = cos(a), s = sin(a); return mat2(c, s, -s, c); }
+float sdBox(vec2 p, vec2 b) { vec2 q = abs(p) - b; return length(max(q, 0.)) + min(max(q.x, q.y), 0.); }
+float sdRBox(vec2 p, vec2 b, float r) { vec2 q = abs(p) - b + r; return length(max(q, 0.)) + min(max(q.x, q.y), 0.) - r; }
+
+// ---------- the swell: long-crested, rolling toward the viewer (down the page), dispersive ----------
+// x: direction (rad, 0 = toward -z), y: wavelength (world px), z: relative amplitude, w: phase
+const vec4 SW[8] = vec4[8](
+  vec4(0.00, 520., 0.60, 0.0), vec4(-0.24, 330., 0.60, 1.7), vec4(0.19, 240., 0.70, 4.1), vec4(0.38, 170., 0.62, 2.3),
+  vec4(-0.43, 122., 0.55, 5.2), vec4(0.10, 86., 0.45, 0.9), vec4(-0.14, 57., 0.34, 3.3), vec4(0.52, 39., 0.25, 1.1));
+const vec4 SWL[3] = vec4[3](vec4(0.06, 2600., 1.0, 0.7), vec4(-0.18, 1500., 0.8, 2.2), vec4(0.27, 900., 0.7, 4.6));
+vec3 swell(vec2 p, float fp, inout float var) {
+  vec3 h = vec3(0.);
+  for (int i = 0; i < 8; i++) {
+    vec4 s = SW[i];
+    float k = 2. * PI / s.y;
+    vec2 kv = vec2(sin(s.x), -cos(s.x)) * k;
+    float ph = dot(kv, p) - 2.0 * sqrt(s.y) * k * uT + s.w;
+    float a = s.z * s.y * 0.0034 * uSwell.x;
+    float at = exp(-pow(k * fp * 0.5, 2.));
+    h += a * at * vec3(sin(ph), cos(ph) * kv);
+    var += 0.5 * pow(a * k, 2.) * (1. - at * at);
+  }
+  if (uSwell.y > 0.001) for (int i = 0; i < 3; i++) {
+    vec4 s = SWL[i];
+    float k = 2. * PI / s.y;
+    vec2 kv = vec2(sin(s.x), -cos(s.x)) * k;
+    float ph = dot(kv, p) - 2.0 * sqrt(s.y) * k * uT + s.w;
+    float a = s.z * s.y * 0.006 * uSwell.y;
+    float at = exp(-pow(k * fp * 0.5, 2.));
+    h += a * at * vec3(sin(ph), cos(ph) * kv);
+    var += 0.5 * pow(a * k, 2.) * (1. - at * at);
+  }
+  return h;
+}
+
+// ---------- the wake: an analytic boat wake from the pointer's recent path ----------
+// Each segment of the path (A older, B newer) is a stretch of the boat's track. A point beside it was passed `age`
+// seconds ago; there the wake's arms stand at |d| = r0 + c*age, c = v*tan(19.47 deg) (Kelvin's angle at every speed),
+// a short train of crests that lengthens with age, plus a smoothed trough along the track and transverse crests inside
+// the V. All in CSS px (scaled by `sc` = world per px where it was drawn), gradient analytic. Mirrored in JS (floaters).
+// A, B: x, z, time, floor(speed px/s) + strength. Only the nearest segment of a trail is evaluated (round joins at the
+// vertices), so uneven spacing or speed jitter between segments can never bead the arms.
+vec3 wakeSeg(vec2 P, vec4 A, vec4 B, float sA, float sB, float fp, inout float en) {
+  vec2 s = B.xy - A.xy;
+  float L = max(length(s), 1e-3);
+  vec2 dir = s / L;
+  vec2 q = P - A.xy;
+  float u = dot(q, dir) / L;
+  float uc = clamp(u, 0., 1.);
+  float dt = max(B.z - A.z, 1e-3);
+  float age = uT - (A.z + uc * dt);
+  if (age <= 0.) return vec3(0.);
+  float str = mix(fract(A.w), fract(B.w), uc);
+  if (str <= 0.002) return vec3(0.);
+  float sc = mix(sA, sB, uc);
+  float vp = max(mix(floor(A.w), floor(B.w), uc), 15.);
+  vec2 off = P - (A.xy + s * uc);
+  float dl = length(off);
+  vec2 ndir = dl > 1e-4 ? off / dl : vec2(0.);
+  float adp = dl / sc;
+  float fpp = fp / sc;
+  float c = clamp(vp * 0.3536, 26., 480.);
+  if (adp > 100. + c * age) return vec3(0.);
+  float r0 = 5. + 7. * min(str * 3., 1.);
+  float r = r0 + c * age;
+  float x = adp - r;
+  float lam = 14. + 6. * age;
+  float kx = 2. * PI / lam;
+  float sig = lam * (x < 0. ? 0.75 : 0.42);
+  float g = exp(-x * x / (sig * sig));
+  float cs = cos(kx * x), sn = sin(kx * x);
+  float aa = smoothstep(1.3, 3.2, lam / fpp);
+  float arm = g * cs * aa;
+  float armx = g * (-kx * sn - 2. * x / (sig * sig) * cs) * aa;
+  float hw = r0 * 0.9 + 0.22 * c * age;
+  float hd = exp(-age / 0.55);
+  float hull = -0.55 * exp(-adp * adp / (hw * hw)) * hd * smoothstep(1., 3., hw / fpp);
+  float hullx = hull * (-2. * adp / (hw * hw));
+  float hulla = -hull / 0.55;
+  float lt = vp * vp / 2600.;
+  float ta = 0.18 * smoothstep(10., 18., lt) * smoothstep(1.3, 3.2, lt / fpp);
+  lt = min(lt, 170.);
+  float kt = 2. * PI / lt;
+  float ins = 1. - smoothstep(0.5 * r, r, adp);
+  float td = exp(-age / 0.9);
+  float ph = kt * vp * age;
+  float tr = ta * ins * td * cos(ph);
+  float tra = ta * ins * td * (-sin(ph) * kt * vp - cos(ph) / 0.9);
+  float e1 = exp(-age / 0.05), e2 = exp(-age / 2.4);
+  float spd = inversesqrt(1. + 1.2 * age);
+  float A0 = str * (1. - e1) * e2 * spd;
+  float dA = str * e2 * spd * (e1 / 0.05 - (1. - e1) / 2.4) - A0 * 0.6 / (1. + 1.2 * age);
+  float G = arm + hull + tr;
+  float Gd = armx + hullx;
+  float Ga = armx * (-c) + hulla + tra;
+  en += A0 * (abs(arm) + 0.5 * abs(tr));
+  gCrest += A0 * (arm + tr);
+  float inside = (u > 0. && u < 1.) ? 1. : 0.;
+  vec2 grad = A0 * Gd * ndir + (dA * G + A0 * Ga) * (-dir / vp) * inside;
+  return vec3(A0 * G * sc, grad);
+}
+
+vec3 interact(vec2 P, float fp, inout float en) {
+  vec3 h = vec3(0.);
+  for (int i = 0; i < 16; i++) {
+    if (i >= uRingN) break;
+    vec4 R = uRing[i];
+    float W = uRingW[i / 4][i % 4];
+    vec2 q = P - R.xy;
+    float rr = length(q) + 1e-4;
+    float x = (rr - R.z) / W;
+    if (abs(x) > 3.5) continue;
+    float g = exp(-x * x), c = cos(2.4 * x), s = sin(2.4 * x);
+    float a = R.w * smoothstep(0.45, 1.3, W / fp);
+    h.x += a * g * c;
+    h.yz += a * g * (-2. * x * c - 2.4 * s) / W * q / rr;
+    en += abs(a * g * c) / W * 6.;
+    gCrest += a * g * c / W * 5.;
+  }
+  for (int j = 0; j < 2; j++) {
+    int n = j == 0 ? uWN.x : uWN.y;
+    if (n < 2) continue;
+    vec4 bb = uWB[j];
+    if (P.x < bb.x || P.y < bb.y || P.x > bb.z || P.y > bb.w) continue;
+    int base = j * 48;
+    float best = 1e18;
+    int bi = -1;
+    for (int i = 0; i < 47; i++) {
+      if (i >= n - 1) break;
+      vec4 A = uW[base + i], B = uW[base + i + 1];
+      vec2 sg = B.xy - A.xy;
+      float uu = clamp(dot(P - A.xy, sg) / max(dot(sg, sg), 1e-6), 0., 1.);
+      vec2 o = P - A.xy - sg * uu;
+      float d2 = dot(o, o);
+      if (d2 < best) { best = d2; bi = i; }
+    }
+    if (bi >= 0) {
+      int ia = base + bi, ib = ia + 1;
+      h += wakeSeg(P, uW[ia], uW[ib], uWS[ia / 4][ia % 4], uWS[ib / 4][ib % 4], fp, en);
+    }
+  }
+  return h;
+}
+
+// ---------- heat: colour means temperature ----------
+vec3 blackbody(float t) {
+  vec3 c = mix(vec3(0.), vec3(0.16, 0.010, 0.002), smoothstep(0.0, 0.25, t));
+  c = mix(c, vec3(0.85, 0.13, 0.03), smoothstep(0.2, 0.5, t));
+  c = mix(c, vec3(1.7, 0.55, 0.12), smoothstep(0.45, 0.75, t));
+  return mix(c, vec3(2.6, 1.85, 1.1), smoothstep(0.75, 1.0, t));
+}
+
+// ---------- the sky: afterglow, a cool band of dusk light, stars, a thin deck of cloud ----------
+vec3 sky(vec3 ro, vec3 d, bool full) {
+  float h = max(d.y, 0.);
+  vec3 sd = normalize(uSun.xyz - ro);
+  float cs = dot(d, sd);
+  vec2 dh = normalize(d.xz + vec2(0., 1e-4)), sh = normalize(sd.xz + vec2(0., 1e-4));
+  float az = max(dot(dh, sh), 0.);
+  vec3 c = vec3(0.30, 0.075, 0.022);
+  c = mix(c, vec3(0.105, 0.035, 0.03), smoothstep(0.0, 0.035, h));
+  c = mix(c, vec3(0.035, 0.026, 0.045), smoothstep(0.02, 0.09, h));
+  c = mix(c, vec3(0.018, 0.034, 0.072), smoothstep(0.07, 0.2, h));   // Quench: the cool band of dusk light
+  c = mix(c, vec3(0.0045, 0.0065, 0.014), smoothstep(0.18, 0.45, h));
+  c = mix(c, vec3(0.0012, 0.0013, 0.002), smoothstep(0.45, 0.9, h));
+  c += vec3(0.95, 0.28, 0.06) * 0.30 * exp(-h * 22.) * pow(az, 6.);
+  c += vec3(1.0, 0.40, 0.14) * 0.06 * exp(-h * 6.) * pow(az, 20.);
+  float vis = uSunX.y;
+  float m = max(cs, 0.);
+  c += vis * SUNC * (pow(m, 3000.) * 2.4 + pow(m, 260.) * 0.42 + pow(m, 28.) * 0.07) * (1. + 1.2 * uMark.x);
+  if (full && d.y > 0.0) {
+    // cloud deck at 2600 above the sea: thin stratus streaks lit from below by the afterglow
+    float t = (2600. - ro.y) / max(d.y, 1e-3);
+    if (t > 0. && t < 120000.) {
+      vec2 p = (ro.xz + d.xz * t) * vec2(0.00011, 0.00034) + vec2(uT * 0.004, 0.);
+      float fpN = t / (uF * uQ) * 0.00034 / max(d.y, 0.05);
+      float n = fbmAA(p, fpN, 5);
+      float dens = smoothstep(0.52, 0.8, n) * smoothstep(120000., 25000., t) * smoothstep(0.0, 0.03, d.y);
+      vec3 lit = mix(vec3(0.012, 0.009, 0.014), vec3(0.55, 0.15, 0.04), pow(az, 4.) * exp(-h * 9.));
+      c = mix(c, lit, dens * 0.6);
+    }
+    // stars, a few, cold
+    if (h > 0.12) {
+      vec2 g = vec2(atan(d.x, d.z), asin(d.y)) * uF * 0.30;
+      vec2 cell = floor(g), f = fract(g) - 0.5;
+      float hs = hash12(cell);
+      if (hs > 0.985) {
+        vec2 o = vec2(hash12(cell + 7.1), hash12(cell + 3.3)) - 0.5;
+        float r2 = dot(f - o * 0.6, f - o * 0.6);
+        float tw = 0.75 + 0.25 * sin(uT * (1.5 + hs * 3.) + hs * 40.);
+        c += vec3(0.55, 0.72, 1.0) * exp(-r2 * 70.) * (hs - 0.985) * 40. * tw * smoothstep(0.12, 0.3, h) * (1. - 0.9 * pow(m, 30.));
+      }
+    }
+  }
+  return c;
+}
+
+// ---------- the mark around the sun (mark units: 64 box, centred, y down) ----------
+float sdArcL(vec2 p, float r) {
+  if (p.x < 0.) return abs(length(p) - r) - 1.8;
+  float ey = abs(abs(p.y) - r) - 1.8;
+  return length(max(vec2(p.x, ey), 0.)) + min(max(p.x, ey), 0.);
+}
+vec3 markSD(vec2 m) {
+  vec3 best = vec3(1e5, 0., 0.);
+  for (int j = 0; j < 2; j++) {
+    vec4 a = uArc[j];
+    if (a.w <= 0.002) continue;
+    float d = sdArcL(rot(-a.z) * (m - a.xy), j == 0 ? 27. : 15.);
+    if (d < best.x) best = vec3(d, a.w, 0.);
+  }
+  for (int i = 0; i < 14; i++) {
+    vec4 c = uCell[i];
+    if (c.w <= 0.002) continue;
+    float d = sdBox(rot(-c.z) * (m - c.xy), vec2(1.8)) ;
+    if (d < best.x) best = vec3(d, c.w, 1.);
+  }
+  float dc = length(m) - 4.5;
+  if (dc < best.x) best = vec3(dc, 1., 2.);
+  return best;
+}
+// cast bone pieces hanging in the dusk, backlit by the core: a warm rim on the edges that face it, the cool sky on
+// the top edges, the sea's glow on the lower faces
+vec4 markShade(vec2 m, float px) {
+  vec3 b = markSD(m);
+  float cov = smoothstep(px * 0.8, -px * 0.8, b.x) * b.y;
+  if (cov <= 0.) return vec4(0.);
+  if (b.z > 1.5) {
+    float r = length(m) / 4.5;
+    float gran = vnoise(m * 2.2 + uT * 0.6) * 0.12;
+    vec3 core = mix(vec3(7.0, 5.2, 3.6), vec3(3.6, 0.95, 0.26), smoothstep(0.05, 1.0, r * r + gran));
+    return vec4(core * (1. + 1.4 * uMark.x) * uSunX.y, cov);
+  }
+  float e = max(px, 0.12);
+  vec2 g = vec2(markSD(m + vec2(e, 0.)).x - markSD(m - vec2(e, 0.)).x, markSD(m + vec2(0., e)).x - markSD(m - vec2(0., e)).x);
+  g = g / (length(g) + 1e-5);
+  float bev = clamp(-b.x / 0.6, 0., 1.);
+  vec3 n = normalize(vec3(g.x * (1. - bev), -g.y * (1. - bev), 0.75 + bev));
+  vec2 toC = -m / (length(m) + 1e-3);
+  vec3 lc = normalize(vec3(toC.x, -toC.y, 0.25));
+  float dist = length(m);
+  float rim = pow(max(dot(n, lc), 0.), 2.0) * (1. - bev * 0.92);
+  vec3 warm = vec3(3.2, 1.0, 0.30) * rim * (9. / (4. + dist * 0.45)) * (1. + uMark.x);
+  vec3 cool = vec3(0.05, 0.10, 0.24) * max(n.y, 0.) * (1. - bev * 0.7);
+  float below = clamp(m.y / 30. * 0.5 + 0.5, 0., 1.);
+  vec3 face = vec3(0.022, 0.021, 0.019) * (0.6 + 0.4 * (1. - below)) + vec3(0.05, 0.014, 0.004) * below * uMark.z;
+  face += vec3(0.30, 0.10, 0.03) * (6. / (6. + dist * 0.5)) * 0.12;
+  return vec4(face + warm + cool, cov);
+}
+
+// ---------- the ventures: castings that rise out of the liquid ----------
+// Returns rgb + a flag (1 = the slab is what this pixel sees). `P` is the liquid hit; heights add a meniscus.
+vec4 slabShade(vec3 ro, vec3 d, vec2 P, inout vec3 hgt, inout float E) {
+  for (int i = 0; i < 3; i++) {
+    if (i >= uSlabN) break;
+    vec4 S = uSlab[i], SP = uSlabP[i];
+    float rise = SP.x;
+    float rad = min(S.z, S.w) * 0.06 + 6.;
+    if (rise > 0.5) {
+      float tt = (ro.y - rise) / (-d.y);
+      vec2 Pt = (ro + d * tt).xz;
+      vec2 lt = Pt - S.xy;
+      float bt = sdRBox(lt, S.zw, rad);
+      if (bt < 0.) {
+        vec2 uv = lt / (S.zw * 2.) + 0.5;
+        vec2 auv = vec2(uv.x, (float(i) + 1. - uv.y) / 3.);
+        float tx = 1. / 1024.;
+        vec4 T0 = texture(uRelief, auv);
+        float hx = texture(uRelief, auv + vec2(tx, 0.)).g - texture(uRelief, auv - vec2(tx, 0.)).g;
+        float hz = texture(uRelief, auv - vec2(0., tx / 3. * 2.)).g - texture(uRelief, auv + vec2(0., tx / 3. * 2.)).g;
+        float wpt = S.z * 2. / 1024.; // world px per texel
+        float depth = 9.;
+        vec2 gr = -vec2(hx, hz) / (2. * wpt) * depth;          // letters are cut into the top
+        float edge = smoothstep(-14., 0., bt);
+        // bevel: the casting's edge rounds over
+        float ex = sdRBox(lt + vec2(1., 0.), S.zw, rad) - sdRBox(lt - vec2(1., 0.), S.zw, rad);
+        float ez = sdRBox(lt + vec2(0., 1.), S.zw, rad) - sdRBox(lt - vec2(0., 1.), S.zw, rad);
+        gr -= vec2(ex, ez) * 0.5 * pow(edge, 2.) * 1.6;
+        vec3 n = normalize(vec3(-gr.x, 1., -gr.y));
+        vec3 v = -d;
+        float cut = T0.g;
+        float grain = fbmAA(lt * 0.09, 0.09 / uQ, 4);
+        float pits = smoothstep(0.86, 0.95, vnoise(lt * 0.21 + 3.1));
+        vec3 col;
+        float hover = SP.z;
+        if (SP.w < 0.5) {
+          // cast bone metal: warm line on the edges, the cool sky from above, a softbox sliding over the top
+          vec3 alb = vec3(0.50, 0.47, 0.41) * (0.86 + 0.28 * grain) * (1. - 0.55 * cut) * (1. - 0.35 * pits);
+          vec3 Lk = normalize(vec3(-0.25, 0.85, 0.48));
+          float dif = max(dot(n, Lk), 0.);
+          vec3 hk = normalize(Lk + v);
+          float sp = pow(max(dot(n, hk), 0.), 40.) * 0.5 * (1. - cut);
+          float sky = 0.5 + 0.5 * n.y;
+          col = alb * (dif * vec3(0.95, 0.80, 0.66) * 0.55 + sky * vec3(0.10, 0.13, 0.20)) + sp * vec3(1.0, 0.82, 0.62) * 0.35;
+          col += vec3(1.6, 0.5, 0.15) * pow(edge, 6.) * (0.10 + 0.9 * hover) * 0.6;      // hot edge when you touch it
+          col += vec3(3.4, 0.9, 0.24) * T0.b * (0.8 + 0.4 * sin(uT * 2.));              // the mark's core stays orange
+        } else {
+          // still forging: a drifting dark crust with glowing cracks; the name is cut through to the hot metal
+          float n1 = fbmAA(lt * 0.016 + vec2(uT * 0.015, -uT * 0.01), 0.016 / uQ, 5);
+          float crk = smoothstep(0.93, 0.995, 1. - abs(2. * n1 - 1.));
+          float tC = 0.13 + 0.5 * crk + 0.06 * grain + 0.5 * T0.r + 0.12 * hover + 0.04 * sin(uT * 1.3 + lt.x * 0.01);
+          col = blackbody(clamp(tC, 0., 0.93)) * (0.75 + 0.25 * SP.y);
+          col += vec3(0.04, 0.035, 0.03) * max(dot(n, normalize(vec3(-0.2, 0.9, 0.4))), 0.);
+          col += vec3(1.8, 0.7, 0.2) * pow(edge, 6.) * hover * 0.6;
+        }
+        return vec4(col, 1.);
+      }
+      vec2 lg = P - S.xy;
+      float bg = sdRBox(lg, S.zw, rad);
+      if (bg < 0.) {
+        // the casting's wall, seen past its edge
+        float y = clamp(-bg / max(rise, 1.), 0., 1.);
+        vec3 col = SP.w < 0.5 ? vec3(0.05, 0.045, 0.04) * (0.6 + 0.6 * (1. - y)) : blackbody(0.35 + 0.2 * (1. - y));
+        col += vec3(0.5, 0.16, 0.05) * exp(-(1. - y) * 6.) * 0.3;   // the liquid's glow where it meets the wall
+        return vec4(col, 1.);
+      }
+      // the meniscus: the liquid climbs the wall a little
+      float m = rise * 0.10 * exp(-bg / 16.);
+      float ex = sdRBox(lg + vec2(1., 0.), S.zw, rad) - sdRBox(lg - vec2(1., 0.), S.zw, rad);
+      float ez = sdRBox(lg + vec2(0., 1.), S.zw, rad) - sdRBox(lg - vec2(0., 1.), S.zw, rad);
+      hgt += vec3(m, -m / 16. * vec2(ex, ez) * 0.5);
+      if (SP.w > 0.5) E = max(E, 0.38 * exp(-bg / 40.) * clamp(rise / 30., 0., 1.));
+    } else {
+      // still under: a casting seen through the liquid as a glow (forging) or a shadow (cooled)
+      float bg = sdRBox(P - S.xy, S.zw, rad);
+      float under = smoothstep(18., -8., bg) * clamp(1. + rise / 40., 0., 1.);
+      if (SP.w > 0.5) E = max(E, 0.62 * under);
+    }
+  }
+  return vec4(0.);
+}
+
+vec3 aces(vec3 x) { return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0., 1.); }
+
+void main() {
+  vec2 frag = gl_FragCoord.xy;
+  float sx = frag.x / uQ, sy = uView.y - frag.y / uQ;
+  float cp = cos(uCam.w), sp = sin(uCam.w);
+  vec3 Fw = vec3(0., -sp, cp), Uw = vec3(0., cp, sp);
+  vec3 Dun = Fw * uF + vec3(sx - uView.x * 0.5, 0., 0.) + Uw * (uView.y * 0.5 - sy);
+  float dl = length(Dun);
+  vec3 d = Dun / dl;
+  vec3 ro = uCam.xyz;
+  bool water = d.y < -1e-5;
+  float tw = water ? ro.y / (-d.y) : 1e9;
+  vec3 col;
+  float page = uMark.w;
+
+  if (!water) {
+    col = sky(ro, d, true);
+  } else {
+    vec3 P = ro + d * tw;
+    // footprint of one render pixel on the water (lateral and foreshortened, geometric mean)
+    float lat = tw / (dl * uQ);
+    float fp = lat / sqrt(max(-d.y, 0.004));
+    float var = 0., en = 0.;
+    vec3 hs = swell(P.xz, fp, var);
+    vec3 hi = interact(P.xz, fp, en);
+    vec3 hh = hs + hi;
+
+    // temperature of the sea here: hottest under the sun, cooling with distance and as the camera leaves the horizon;
+    // the thesis reheats it from below; the shore is molten
+    float ds = length(P.xz - uSun.xz);
+    float D = uSunX.x;
+    float E = uMark.z * (0.24 + 0.58 * exp(-ds / (0.20 * D)) + 0.16 * exp(-ds / (0.8 * D)));
+    float zt = uHeat.y;
+    float zb = zt - uView.y;
+    float band = (1. - smoothstep(zb, zb + uView.y * (0.14 + 0.36 * uHeat.x), P.z)) * smoothstep(zb - uView.y * 0.12, zb, P.z);
+    E = max(E, uHeat.x * 0.9 * band);
+    for (int i = 0; i < 8; i++) {
+      if (i >= uSpotN) break;
+      vec4 s = uSpot[i];
+      vec2 q = (P.xz - s.xy) / s.z;
+      E = max(E, s.w * exp(-dot(q, q)));
+    }
+    vec4 slab = slabShade(ro, d, P.xz, hh, E);
+
+    // the shore: the molten swash runs up black sand and drains back
+    float sand = 0., lip = 0., wet = 0., sandLight = 0.;
+    if (uHeat.w > 0.5) {
+      float zs = uHeat.z;
+      // the swash: each wave runs up the sand quickly and drains back slowly; the line stays roughly parallel
+      float ph = uT / 6.4 + P.x * 0.00022 + 0.05 * sin(P.x * 0.0021 + uT * 0.17);
+      float f = fract(ph);
+      float wv = 0.65 + 0.35 * hash12(vec2(floor(ph), 3.7));
+      float sw = (f < 0.2 ? smoothstep(0., 0.2, f) : 1. - pow(smoothstep(0.2, 1.0, f), 0.75)) * wv;
+      float run = uView.y * 0.085;
+      float zl = zs - run * sw + 9. * (fbmAA(vec2(P.x * 0.006, uT * 0.04), fp * 0.006, 3) - 0.5);
+      float s = P.z - zl;
+      float adv = f < 0.2 ? 1. : 0.3 + 0.7 * (1. - smoothstep(0.2, 0.55, f));
+      lip = exp(-s * s / 22.) * (0.45 + 0.55 * adv);
+      if (s < 0.) {
+        sand = 1.;
+        wet = 1. - smoothstep(zs - run * 1.05 - 10., zs - run * 1.05 + 30., zs - (P.z - zs) - zs + zs) * 0.;
+        wet = smoothstep(zs - run * 1.1, zs - run * 0.4, P.z);
+        sandLight = exp(s / 55.);
+      } else {
+        // the swash itself is a thin sheet of metal, brightest at its edge; behind it, the molten surf
+        E = max(E, 0.92 * (1. - smoothstep(0., uView.y * 0.42, s)));
+        float crest = smoothstep(0.35, 1.0, hs.x / (2.2 * uSwell.x + 0.01));
+        E = max(E, min(1., E + crest * 0.3 * (1. - smoothstep(0., uView.y * 0.4, s))));
+      }
+    }
+
+    vec3 n = normalize(vec3(-hh.y, 1., -hh.z));
+    vec3 v = -d;
+    float NoV = max(dot(n, v), 1e-3);
+    float F = 0.03 + 0.97 * pow(1. - NoV, 5.);
+    float rough = sqrt(0.0016 + var * 2.0 + min(fp * 0.00004, 0.05));
+
+    // reflection: the sky (with the core and its rings) seen in the liquid
+    vec3 rd = reflect(d, n);
+    rd.y = abs(rd.y) + 0.004;
+    rd = normalize(rd);
+    vec3 refl = sky(P, rd, false);
+    if (uMark.y > 0.01 && rd.z > 0.) {
+      float tm = (uSun.z - P.z) / rd.z;
+      vec3 Pm = P + rd * tm;
+      vec2 m = vec2(Pm.x - uSun.x, uSun.y - Pm.y) / uSun.w * 27.;
+      if (dot(m, m) < 1300.) {
+        float px = (tm / (dl * uQ)) / uSun.w * 27. + rough * 40.;
+        vec4 mc = markShade(m, px);
+        refl = mix(refl, mc.rgb, mc.a * uMark.y);
+      }
+    }
+    // the core as a light: a GGX lobe, wide where the waves are unresolved, so it becomes a glittering column
+    vec3 L = normalize(uSun.xyz - P);
+    vec3 Hh = normalize(L + v);
+    float NoH = max(dot(n, Hh), 0.);
+    float a2 = pow(max(rough, 0.012), 2.);
+    float Dg = a2 / (PI * pow(NoH * NoH * (a2 - 1.) + 1., 2.));
+    vec3 spec = SUNC * Dg * F * 0.020 * uSunX.y * (1. + 1.5 * uMark.x) * max(L.y * 4., 0.);
+    {
+      float ag = 0.05 + a2;
+      float Dw = ag / (PI * pow(NoH * NoH * (ag - 1.) + 1., 2.));
+      vec2 gp = P.xz / 7. + vec2(uT * 0.6, -uT * 0.9);
+      float fs = fp / 7.;
+      float sparkle = mix(pow(vnoise(gp) * vnoise(gp * 1.7 + 3.), 3.) * 30., 1., smoothstep(0.25, 1.2, fs));
+      spec += SUNC * Dw * F * 0.10 * sparkle * uSunX.y * (1. + uMark.x) * (1. - page);
+    }
+
+    // the page's own light, once looking down: a low warm key up the page catches the near faces of the swell's
+    // crests (a thin line along each), faces turned away catch a little cold sky
+    float sz = -hh.z, sxs = -hh.y;
+    float lit = sz * 9. + sxs * 2.5;
+    vec3 keyc = (vec3(0.85, 0.74, 0.62) * pow(max(lit, 0.), 1.6) * 0.006 + vec3(0.30, 0.45, 0.85) * max(-lit, 0.) * 0.0025) * page;
+    keyc += vec3(1.0, 0.70, 0.48) * exp(-pow((sz + 0.3 * sxs - 0.04) / 0.009, 2.)) * 0.022 * page;
+    // glints only where the visitor made waves: crisp, hot, on the faces that turn to the key
+    float iz = -hi.z, ix = -hi.y;
+    float slopeI = length(hi.yz);
+    float gl = exp(-pow((iz + 0.3 * ix - 0.10) / 0.06, 2.)) * smoothstep(0.02, 0.1, slopeI);
+    vec3 glint = (vec3(1.0, 0.40, 0.12) * gl * 0.55 + vec3(1.0, 0.6, 0.35) * smoothstep(0.03, 0.14, slopeI) * 0.010) * page;
+    // the crests the visitor makes catch the light along their whole length: smooth lines, brightest when fresh
+    float crestL = clamp(gCrest / 0.4, 0., 1.);
+    glint += (vec3(0.95, 0.62, 0.40) * crestL * 0.05 + vec3(1.0, 0.36, 0.10) * crestL * crestL * 0.05) * page;
+    glint -= vec3(0.0012) * smoothstep(0.05, 0.3, -gCrest) * page;
+
+    // the molten body: crust, cracks that glow, troughs hotter; the visitor's wake tears the crust (hotter)
+    vec3 emit = vec3(0.);
+    if (E > 0.004) {
+      vec2 np = P.xz / 300.;
+      float fpN = fp / 300.;
+      float n1 = fbmAA(np + vec2(0., uT * 0.010), fpN, 5);
+      float cr = 1. - abs(2. * n1 - 1.);
+      float far = smoothstep(0.015, 0.12, fpN);
+      float cracks = mix(smoothstep(0.86, 0.985, cr), 0.12, far);
+      float n2 = fbmAA(np * 3.1 + vec2(uT * 0.02, 0.), fpN * 3.1, 3);
+      float trough = smoothstep(0., -4., hh.x) * 0.6;
+      float T = E * (0.12 + 0.66 * cracks * (0.5 + 0.8 * n2) + 0.2 * trough) + E * min(en * 0.9, 0.45);
+      emit = blackbody(clamp(T, 0., 0.97)) * (0.35 + 0.65 * E);
+    }
+
+    vec3 base = vec3(0.0015, 0.0015, 0.0013);
+    col = base + emit * (1. - 0.6 * F) + refl * F + spec + keyc + glint;
+
+    if (sand > 0.5) {
+      // black sand: dark grains, a few that catch the glow, wet sand that mirrors it
+      vec2 gp = floor(P.xz / 1.6);
+      float gs = hash12(gp);
+      float rip = fbmAA(P.xz * vec2(0.004, 0.012), fp * 0.012, 3);
+      vec3 sandc = vec3(0.006, 0.0055, 0.005) * (0.7 + 0.6 * rip) * (0.8 + 0.4 * gs);
+      sandc += vec3(1.0, 0.36, 0.10) * sandLight * (0.012 + 0.03 * wet) * (0.7 + 0.6 * rip);
+      sandc += vec3(1.0, 0.55, 0.25) * step(0.975, gs) * (0.04 + sandLight) * 0.25 * smoothstep(1.6, 0.6, fp);
+      sandc += refl * F * wet * 0.8;
+      col = sandc;
+    }
+    col += vec3(2.2, 1.1, 0.42) * lip * 0.65;
+
+    if (slab.a > 0.5) col = slab.rgb;
+  }
+
+  // the core and its rings, in front of whatever is behind them
+  if (uMark.y > 0.01 && d.z > 0.) {
+    float tm = (uSun.z - ro.z) / d.z;
+    if (tm < tw) {
+      vec3 Pm = ro + d * tm;
+      vec2 m = vec2(Pm.x - uSun.x, uSun.y - Pm.y) / uSun.w * 27.;
+      if (dot(m, m) < 1300.) {
+        float px = (tm / (dl * uQ)) / uSun.w * 27.;
+        vec4 mc = markShade(m, px);
+        col = mix(col, mc.rgb, mc.a * uMark.y);
+      }
+    }
+  }
+
+  col = aces(col * 1.0);
+  col = pow(col, vec3(1. / 2.2));
+  col += (hash12(frag + fract(uT) * 91.) - 0.5) / 255.;
+  fragColor = vec4(col, 1.);
+}
+
+</script>
+<script>
+// Continuum: one world from the horizon to the shore. No libraries; one WebGL2 canvas; one clock.
+(() => {
+'use strict';
+const Q = new URLSearchParams(location.search);
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches || Q.has('still');
+const FIXT = Q.has('t') ? +Q.get('t') : null;
+const QFORCE = Q.has('q') ? +Q.get('q') : null;
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+const mix = (a, b, t) => a + (b - a) * t;
+const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const seg = (x, a, b) => clamp((x - a) / (b - a), 0, 1);
+const bell = (x, a, b, c, d) => sstep(a, b, x) * (1 - sstep(c, d, x));
+
+// ---------- the mark (lib/splitRing.ts geometry) ----------
+const RING = { c: 32, px: 3.6, core: 4.5, rings: [{ r: 27, n: 9 }, { r: 15, n: 5 }] };
+const CELLS = RING.rings.flatMap(({ r, n }, ring) => Array.from({ length: n }, (_, i) => {
+  const a = -Math.PI / 2 + (i + 1) * Math.PI / (n + 1);
+  return { x: r * Math.cos(a), y: r * Math.sin(a), ring, a };
+}));
+const f3 = (n) => +n.toFixed(3);
+function arcOutline(r, c = 32) {
+  const ro = r + 1.8, ri = r - 1.8;
+  return `M${c} ${f3(c - ro)}A${ro} ${ro} 0 0 0 ${c} ${f3(c + ro)}V${f3(c + ri)}A${ri} ${ri} 0 0 1 ${c} ${f3(c - ri)}Z`;
+}
+function markSvg(fg = '#E8E4D8') {
+  const arcs = RING.rings.map(({ r }) => `<path d="${arcOutline(r)}" fill="${fg}"/>`).join('');
+  const sq = CELLS.map(({ x, y }) => `<rect x="${f3(32 + x - 1.8)}" y="${f3(32 + y - 1.8)}" width="3.6" height="3.6" fill="${fg}"/>`).join('');
+  return arcs + sq + `<circle cx="32" cy="32" r="4.5" fill="#FF5B1F"/>`;
+}
+$('#nav-mark').innerHTML = markSvg();
+$('#mark-still').innerHTML = markSvg();
+
+// ---------- one clock ----------
+let now = FIXT ?? 0, held = FIXT != null, lastFrameT = 0;
+const canvas = $('#sea');
+let vw = innerWidth, vh = innerHeight;
+
+// ---------- WebGL2 ----------
+const gl = canvas.getContext('webgl2', { antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
+let prog, U = {}, reliefTex, glOK = false, softGL = false;
+function initGL() {
+  if (!gl) return false;
+  const vs = `#version 300 es
+in vec2 aP; void main(){ gl_Position = vec4(aP, 0., 1.); }`;
+  const fs = $('#sea-fs').textContent.trim();
+  const sh = (t, s) => { const o = gl.createShader(t); gl.shaderSource(o, s); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(o)); return o; };
+  try {
+    prog = gl.createProgram();
+    gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs));
+    gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+    gl.linkProgram(prog);
+    if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog));
+  } catch (e) { console.warn('[continuum] sea disabled:', e.message); return false; }
+  gl.useProgram(prog);
+  const b = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, b);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const loc = gl.getAttribLocation(prog, 'aP');
+  gl.enableVertexAttribArray(loc);
+  gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+  for (const n of ['uView', 'uQ', 'uT', 'uCam', 'uF', 'uSun', 'uSunX', 'uArc', 'uCell', 'uMark', 'uW', 'uWS', 'uWN', 'uWB', 'uRing', 'uRingW', 'uRingN', 'uSpot', 'uSpotN', 'uHeat', 'uSlab', 'uSlabP', 'uSlabN', 'uRelief', 'uSwell'])
+    U[n] = gl.getUniformLocation(prog, n);
+  reliefTex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, reliefTex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 255]));
+  gl.uniform1i(U.uRelief, 0);
+  const dbg = gl.getExtension('WEBGL_debug_renderer_info');
+  const ren = dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : '';
+  softGL = /swiftshader|llvmpipe|software/i.test(ren);
+  return true;
+}
+
+// ---------- render scale: steps, adaptive, monotone with one retry ----------
+const DPR = Math.min(devicePixelRatio || 1, 2);
+const STEPS = [1.5, 1.25, 1.0, 0.85, 0.72, 0.6, 0.5, 0.42, 0.35];
+let qi = 0;
+function startStep() {
+  const target = softGL ? 0.42 : Math.min(DPR, vw * vh > 1.6e6 ? 1.25 : 1.5) * (vw < 760 ? 0.66 : 1);
+  qi = STEPS.findIndex((s) => s <= target + 1e-6);
+  if (qi < 0) qi = STEPS.length - 1;
+}
+let Qs = 1;
+function resizeCanvas() {
+  Qs = QFORCE ?? STEPS[qi];
+  const cw = canvas.clientWidth || vw, ch = canvas.clientHeight || vh;
+  canvas.width = Math.max(1, Math.round(cw * Qs));
+  canvas.height = Math.max(1, Math.round(ch * Qs));
+  Qs = canvas.width / cw;
+  if (gl) gl.viewport(0, 0, canvas.width, canvas.height);
+}
+
+// ---------- layout ----------
+const hero = $('#hero'), pp = $('#paypal'), thesis = $('#thesis'), shore = $('#shore');
+let pins = [], CH = 0;
+function measure() {
+  vw = document.documentElement.clientWidth;
+  CH = canvas.clientHeight || innerHeight;
+  vh = CH;
+  const sy = scrollY;
+  pins = [hero, pp, thesis].map((el) => {
+    const st = $('.stick', el);
+    return { top: el.getBoundingClientRect().top + sy, len: el.offsetHeight - st.offsetHeight };
+  });
+  layPayPal();
+}
+const effScroll = (sy) => pins.reduce((e, p) => e - clamp(sy - p.top, 0, p.len), sy);
+
+// ---------- camera ----------
+const FOV = 50 * Math.PI / 180;
+const cam = { x: 0, y: 1, z: 0, pitch: 0, f: 1 };
+const comp = { hf: 0.64, sx: 0.66, Rs: 200, theta0: 0 };
+const sun = { x: 0, y: 0, z: 0, R: 1, D: 9000 };
+function compose() {
+  const f = CH / (2 * Math.tan(FOV / 2));
+  cam.f = f;
+  cam.y = f;
+  const desk = vw > 760;
+  comp.hf = desk ? 0.64 : 0.47;
+  comp.sx = desk ? 0.73 : 0.5;
+  comp.Rs = desk ? Math.min(0.2 * CH, 0.15 * vw) : Math.min(0.34 * vw, 0.19 * CH);
+  comp.theta0 = Math.atan((CH / 2 - comp.hf * CH) / f);
+  // place the core along the ray through its screen spot, D ahead
+  const syc = comp.hf * CH - 1.14 * comp.Rs - (desk ? 0 : 0);
+  const th = comp.theta0, cp = Math.cos(th), sp = Math.sin(th);
+  const F = [0, -sp, cp], Uv = [0, cp, sp];
+  const dx = comp.sx * vw - vw / 2, dy = CH / 2 - syc;
+  const D = [dx, F[1] * f + Uv[1] * dy, F[2] * f + Uv[2] * dy];
+  const k = sun.D / D[2];
+  sun.x = D[0] * k; sun.y = f + D[1] * k; sun.z = D[2] * k;
+  const depth = (sun.y - f) * F[1] + sun.z * F[2];
+  sun.R = comp.Rs * depth / f;
+}
+function basis(pitch) {
+  const cp = Math.cos(pitch), sp = Math.sin(pitch);
+  return { F: [0, -sp, cp], U: [0, cp, sp] };
+}
+// a screen point (css px) to the liquid; sc = world units per css px there
+function toWorld(sx, sy) {
+  const { F, U: Uv } = basis(cam.pitch);
+  const X = sx - vw / 2, Y = CH / 2 - sy;
+  const d = [X, F[1] * cam.f + Uv[1] * Y, F[2] * cam.f + Uv[2] * Y];
+  if (d[1] > -1e-3 * cam.f) return null;
+  const t = cam.y / -d[1];
+  return { x: cam.x + d[0] * t, z: cam.z + d[2] * t, sc: t * Math.hypot(d[0], d[1], d[2]) / Math.hypot(d[0], d[1], d[2]) ** 2 * Math.hypot(d[0], d[1], d[2]) / 1 };
+}
+// (t is in units of the unnormalised ray; the lateral scale is |d| * t / |d| = t)
+function toWorld2(sx, sy) { const w = toWorld(sx, sy); if (w) { const { F, U: Uv } = basis(cam.pitch); const Y = CH / 2 - sy; const dy = F[1] * cam.f + Uv[1] * Y; w.sc = cam.y / -dy; } return w; }
+
+// ---------- the wave model on the CPU (mirrors sea.glsl: swell + wake + rings) ----------
+const SW = [[0.00, 520, 0.60, 0.0], [-0.24, 330, 0.60, 1.7], [0.19, 240, 0.70, 4.1], [0.38, 170, 0.62, 2.3],
+  [-0.43, 122, 0.55, 5.2], [0.10, 86, 0.45, 0.9], [-0.14, 57, 0.34, 3.3], [0.52, 39, 0.25, 1.1]];
+let swellAmp = 1;
+function swellAt(x, z, t) {
+  let h = 0, gx = 0, gz = 0;
+  for (const [ang, lam, rat, phs] of SW) {
+    const k = 2 * Math.PI / lam, kx = Math.sin(ang) * k, kz = -Math.cos(ang) * k;
+    const ph = kx * x + kz * z - 2 * Math.sqrt(lam) * k * t + phs;
+    const a = rat * lam * 0.0034 * swellAmp;
+    h += a * Math.sin(ph); const c = a * Math.cos(ph); gx += c * kx; gz += c * kz;
+  }
+  return [h, gx, gz];
+}
+function wakeSegCPU(Px, Pz, A, B, out) {
+  const sx = B.x - A.x, sz = B.z - A.z, L = Math.max(Math.hypot(sx, sz), 1e-3);
+  const dx = sx / L, dz = sz / L;
+  const qx = Px - A.x, qz = Pz - A.z;
+  const u = (qx * dx + qz * dz) / L, uc = clamp(u, 0, 1);
+  const dt = Math.max(B.t - A.t, 1e-3);
+  const age = now - (A.t + uc * dt);
+  if (age <= 0) return;
+  const str = mix(Math.min(A.s, 0.999), Math.min(B.s, 0.999), uc);
+  if (str <= 0.002) return;
+  const sc = mix(A.sc, B.sc, uc), vp = Math.max(mix(A.v, B.v, uc), 15);
+  const ox = Px - (A.x + sx * uc), oz = Pz - (A.z + sz * uc), dl = Math.hypot(ox, oz);
+  const nx = dl > 1e-4 ? ox / dl : 0, nz = dl > 1e-4 ? oz / dl : 0;
+  const adp = dl / sc;
+  const c = clamp(vp * 0.3536, 26, 480);
+  if (adp > 100 + c * age) return;
+  const r0 = 5 + 7 * Math.min(str * 3, 1), r = r0 + c * age, x = adp - r;
+  const lam = 14 + 6 * age, kx = 2 * Math.PI / lam, sig = lam * (x < 0 ? 0.75 : 0.42);
+  const g = Math.exp(-x * x / (sig * sig)), cs = Math.cos(kx * x), sn = Math.sin(kx * x);
+  const arm = g * cs, armx = g * (-kx * sn - 2 * x / (sig * sig) * cs);
+  const hw = r0 * 0.9 + 0.22 * c * age, hd = Math.exp(-age / 0.55);
+  const hull = -0.55 * Math.exp(-adp * adp / (hw * hw)) * hd, hullx = hull * (-2 * adp / (hw * hw)), hulla = -hull / 0.55;
+  let lt = vp * vp / 2600;
+  const ta = 0.18 * sstep(10, 18, lt); lt = Math.min(lt, 170);
+  const kt = 2 * Math.PI / lt, ins = 1 - sstep(0.5 * r, r, adp), td = Math.exp(-age / 0.9), ph = kt * vp * age;
+  const tr = ta * ins * td * Math.cos(ph), tra = ta * ins * td * (-Math.sin(ph) * kt * vp - Math.cos(ph) / 0.9);
+  const e1 = Math.exp(-age / 0.05), e2 = Math.exp(-age / 2.4), spd = 1 / Math.sqrt(1 + 1.2 * age);
+  const A0 = str * (1 - e1) * e2 * spd;
+  const dA = str * e2 * spd * (e1 / 0.05 - (1 - e1) / 2.4) - A0 * 0.6 / (1 + 1.2 * age);
+  const G = arm + hull + tr, Gd = armx + hullx, Ga = armx * -c + hulla + tra;
+  out[0] += A0 * G * sc;
+  const inside = u > 0 && u < 1 ? 1 : 0;
+  const k1 = A0 * Gd, k2 = -(dA * G + A0 * Ga) / vp * inside;
+  out[1] += k1 * nx + k2 * dx; out[2] += k1 * nz + k2 * dz;
+  out[3] += A0 * (Math.abs(arm) + 0.5 * Math.abs(tr));
+}
+function nearestSeg(P, x, z) {
+  let best = 1e18, bi = -1;
+  for (let i = 0; i + 1 < P.length; i++) {
+    const A = P[i], B = P[i + 1], sx = B.x - A.x, sz = B.z - A.z;
+    const uu = clamp(((x - A.x) * sx + (z - A.z) * sz) / Math.max(sx * sx + sz * sz, 1e-6), 0, 1);
+    const ox = x - A.x - sx * uu, oz = z - A.z - sz * uu, d2 = ox * ox + oz * oz;
+    if (d2 < best) { best = d2; bi = i; }
+  }
+  return bi;
+}
+function interactAt(x, z) {
+  const out = [0, 0, 0, 0];
+  for (const R of ringU) {
+    const qx = x - R.x, qz = z - R.z, rr = Math.hypot(qx, qz) + 1e-4, X = (rr - R.r) / R.W;
+    if (Math.abs(X) > 3.5) continue;
+    const g = Math.exp(-X * X), c = Math.cos(2.4 * X), s = Math.sin(2.4 * X);
+    out[0] += R.a * g * c;
+    const dg = R.a * g * (-2 * X * c - 2.4 * s) / R.W;
+    out[1] += dg * qx / rr; out[2] += dg * qz / rr; out[3] += Math.abs(R.a * g * c) / R.W * 6;
+  }
+  for (const tr of trails) {
+    const P = tr.up;
+    const bi = nearestSeg(P, x, z);
+    if (bi >= 0) wakeSegCPU(x, z, P[bi], P[bi + 1], out);
+  }
+  return out;
+}
+
+// ---------- input: the boat. One coherent moving source per pointer; a path the shader turns into a wake ----------
+const newTrail = () => ({ pts: [], head: null, up: [], s: 0, pend: [] });
+const trails = [newTrail(), newTrail()];
+const ptr = { on: false, x: 0, y: 0, down: false, kind: 'mouse', touchId: -1, lastT: -9, coast: 0 };
+const ptr2 = { on: false, x: 0, y: 0, touchId: -1 };
+const SPACING = 9;
+function brk(tr) {
+  if (tr.head && tr.pts.length) { const h = { ...tr.head, s: 0 }; tr.pts.push(h); }
+  tr.head = null; tr.fx = null;
+}
+function sample(tr, sx, sy, t, base) {
+  // pointers report whole pixels (and fingers jitter): a 35 ms low-pass on the screen position keeps the track smooth,
+  // so the wake's arms never zigzag
+  if (tr.head && tr.fx != null) {
+    const k = 1 - Math.exp(-Math.max(t - tr.ft, 1 / 480) / 0.035);
+    sx = tr.fx + (sx - tr.fx) * k; sy = tr.fy + (sy - tr.fy) * k;
+  }
+  tr.fx = sx; tr.fy = sy; tr.ft = t;
+  const w = toWorld2(sx, sy);
+  if (!w || sy < 56) { brk(tr); return; }
+  if (!tr.head) {
+    tr.head = { x: w.x, z: w.z, t, s: 0, sc: w.sc, v: 0 };
+    tr.v = 0;
+    tr.pts.push({ ...tr.head });
+    return;
+  }
+  const h = tr.head, dist = Math.hypot(w.x - h.x, w.z - h.z);
+  if (dist < 0.35 * w.sc) return;
+  const v = dist / w.sc / Math.max(t - h.t, 1 / 240);
+  const k = 1 - Math.exp(-Math.max(t - h.t, 1 / 240) / 0.09);
+  tr.v = mix(tr.v || v, v, k);
+  const target = base * (0.55 + 0.45 * sstep(20, 420, tr.v));
+  tr.s = mix(tr.s, target, 0.35);
+  tr.head = { x: w.x, z: w.z, t, s: tr.s, sc: w.sc, v: tr.v };
+  const last = tr.pts[tr.pts.length - 1];
+  if (!last || Math.hypot(w.x - last.x, w.z - last.z) >= SPACING * w.sc) tr.pts.push({ ...tr.head });
+}
+function prune(tr) {
+  while (tr.pts.length && now - tr.pts[0].t > 4.6) tr.pts.shift();
+  if (tr.pts.length > 46) {
+    const half = tr.pts.length >> 1, keep = [];
+    for (let i = 0; i < half; i++) if (i % 2 === 0) keep.push(tr.pts[i]);
+    tr.pts = keep.concat(tr.pts.slice(half));
+  }
+  const up = tr.pts.slice();
+  if (tr.head) { const l = up[up.length - 1]; if (!l || l.t !== tr.head.t) up.push(tr.head); }
+  tr.up = up.length > 48 ? up.slice(up.length - 48) : up;
+}
+// pointer events are queued and stamped on the clock at frame time, spread evenly since the last frame
+function queue(tr, x, y, base) { tr.pend.push([x, y, base]); }
+function flushQueue(tr, t0, t1) {
+  const n = tr.pend.length;
+  tr.pend.forEach(([x, y, b], i) => sample(tr, x, y, mix(t0, t1, (i + 1) / n), b));
+  tr.pend.length = 0;
+}
+const STR = { hover: 0.5, drag: 1.0, touch: 0.9 };
+let downAt = null;
+addEventListener('pointermove', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  ptr.on = true; ptr.kind = 'mouse';
+  const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
+  for (const c of (evs.length ? evs : [e])) queue(trails[0], c.clientX, c.clientY, ptr.down ? STR.drag : STR.hover);
+  ptr.x = e.clientX; ptr.y = e.clientY;
+}, { passive: true });
+addEventListener('pointerdown', (e) => { if (e.pointerType === 'mouse') { ptr.down = true; downAt = { x: e.clientX, y: e.clientY, t: now }; } }, { passive: true });
+addEventListener('pointerup', (e) => {
+  if (e.pointerType !== 'mouse') return;
+  ptr.down = false;
+  if (downAt && Math.hypot(e.clientX - downAt.x, e.clientY - downAt.y) < 6 && now - downAt.t < 0.35) tap(e.clientX, e.clientY);
+  downAt = null;
+}, { passive: true });
+document.documentElement.addEventListener('mouseleave', () => { ptr.on = false; brk(trails[0]); });
+// a mouse drag that starts on the liquid (not on words) makes waves, not a selection
+document.addEventListener('selectstart', (e) => {
+  if (!ptr.down || ptr.kind !== 'mouse') return;
+  const t = e.target.nodeType === 3 ? e.target.parentElement : e.target;
+  if (!t || !t.closest('p,h1,h2,h3,blockquote,a,li,span,b')) e.preventDefault();
+});
+// touch: the finger is the boat, while dragging on the liquid and while the page scrolls under it; momentum keeps it
+// going after the finger lifts (the spot it left keeps moving through the page)
+let touchStart = null;
+addEventListener('touchstart', (e) => {
+  const t0 = e.changedTouches[0];
+  if (ptr.touchId < 0) {
+    ptr.touchId = t0.identifier; ptr.on = true; ptr.kind = 'touch'; ptr.x = t0.clientX; ptr.y = t0.clientY; ptr.coast = 0;
+    brk(trails[0]); queue(trails[0], t0.clientX, t0.clientY, STR.touch);
+    touchStart = { x: t0.clientX, y: t0.clientY, t: now, sy: scrollY };
+  } else if (ptr2.touchId < 0) {
+    ptr2.touchId = t0.identifier; ptr2.on = true; ptr2.x = t0.clientX; ptr2.y = t0.clientY;
+    brk(trails[1]); queue(trails[1], t0.clientX, t0.clientY, STR.touch);
+  }
+}, { passive: true });
+addEventListener('touchmove', (e) => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === ptr.touchId) { ptr.x = t.clientX; ptr.y = t.clientY; queue(trails[0], t.clientX, t.clientY, STR.touch); }
+    else if (t.identifier === ptr2.touchId) { ptr2.x = t.clientX; ptr2.y = t.clientY; queue(trails[1], t.clientX, t.clientY, STR.touch); }
+  }
+}, { passive: true });
+const touchEnd = (e) => {
+  for (const t of e.changedTouches) {
+    if (t.identifier === ptr.touchId) {
+      ptr.touchId = -1; ptr.coast = 1; ptr.lastT = now;
+      if (touchStart && Math.hypot(t.clientX - touchStart.x, t.clientY - touchStart.y) < 8 && now - touchStart.t < 0.3 && Math.abs(scrollY - touchStart.sy) < 4) tap(t.clientX, t.clientY);
+    } else if (t.identifier === ptr2.touchId) { ptr2.touchId = -1; ptr2.on = false; brk(trails[1]); }
+  }
+};
+addEventListener('touchend', touchEnd, { passive: true });
+addEventListener('touchcancel', touchEnd, { passive: true });
+
+// ---------- rings: taps, the core's ripples, the scripted moments ----------
+const rings = [];
+let ringU = [];
+function ring(x, z, o) { rings.push({ x, z, t0: now, r0: 0, speed: 140, W0: 9, slope: 0.25, tau: 1.6, life: 4.5, ...o }); }
+function tap(sx, sy) {
+  const w = toWorld2(sx, sy);
+  if (w) ring(w.x, w.z, { speed: 150 * w.sc, W0: 9 * w.sc, slope: 0.30, tau: 1.5, life: 4.5 });
+}
+function updRings() {
+  for (let i = rings.length - 1; i >= 0; i--) if (now - rings[i].t0 > rings[i].life || now < rings[i].t0 - 0.01) rings.splice(i, 1);
+  while (rings.length > 16) rings.shift();
+  ringU = rings.map((R) => {
+    const age = Math.max(now - R.t0, 0);
+    const r = R.r0 + R.speed * age;
+    const W = R.W0 * (1 + 0.35 * age);
+    const env = Math.exp(-age / R.tau) * (1 - Math.exp(-age / 0.06)) / Math.sqrt(1 + (r - R.r0) / (6 * R.W0));
+    return { x: R.x, z: R.z, r, W, a: R.slope * W / 2.4 * env };
+  });
+}
+
+// ---------- the hero: the mark hangs around the sun and comes apart; then the camera looks down ----------
+const rnd = (() => { let s = 7; return () => ((s = Math.imul(s ^ (s >>> 15), 2246822519) ^ Math.imul(s ^ (s >>> 13), 3266489917)) >>> 0) / 4294967296; })();
+const cellR = CELLS.map(() => [rnd() - 0.5, rnd(), rnd() - 0.5, rnd() * 6.28]);
+const arcU = new Float32Array(8), cellU = new Float32Array(56);
+let heroP = 0, heroPs = 0, fuseT = -99, fuseArmed = true, lastFootRing = -1, tiltS = 0;
+const heroCopy = $('#hero-copy'), beats = [$('#b1'), $('#b2'), $('#b3')];
+function tiltCurve(s, m1) {
+  // hermite: 0 -> 1 with zero start slope and end slope m1 (so the hand-off to the page flows at scroll speed)
+  return (3 * s * s - 2 * s * s * s) + (s * s * s - s * s) * m1;
+}
+function updHero(dt) {
+  const P = pins[0];
+  heroP = P ? clamp((scrollY - P.top) / P.len, 0, 1) : 0;
+  heroPs = RM ? heroP : heroPs + (heroP - heroPs) * Math.min(1, dt / 0.07);
+  const p = heroPs;
+  const s1 = bell(p, 0.12, 0.2, 0.29, 0.36), s2 = bell(p, 0.31, 0.39, 0.45, 0.51);
+  CELLS.forEach((c, i) => {
+    const [rj, rd, rr, ph] = cellR[i];
+    const ang = Math.atan2(c.y, c.x) + rj * 0.9;
+    const dist = (9 + 15 * rd) * s1;
+    const bob = Math.sin(now * 0.8 + ph) * 0.9 * s1;
+    cellU[i * 4] = c.x + Math.cos(ang) * dist;
+    cellU[i * 4 + 1] = c.y + Math.sin(ang) * dist + bob;
+    cellU[i * 4 + 2] = rr * 1.6 * s1 + 0.1 * s1 * Math.sin(now * 0.6 + ph);
+    cellU[i * 4 + 3] = 1;
+  });
+  arcU.set([-30 * s2, 2 * s2, -0.22 * s2, 1 - 0.88 * s2, -22 * s2, -1 * s2, -0.32 * s2, 1 - 0.88 * s2]);
+  // fuse: "Neither, alone": the pieces snap back, the core flares, a ring runs out across the sea
+  if (heroP > 0.505 && fuseArmed) {
+    fuseArmed = false; fuseT = now;
+    ring(sun.x, sun.z, { speed: sun.D * 0.09, W0: sun.D * 0.014, slope: 0.32, tau: 2.6, life: 7 });
+    heat.flash(beats[2], 1);
+  }
+  if (heroP < 0.47) fuseArmed = true;
+  // the core breathes ripples out under itself, like the reference
+  if (tiltS < 0.85) {
+    const k = Math.floor(now / 2.8);
+    if (k !== lastFootRing) { lastFootRing = k; ring(sun.x, sun.z, { speed: sun.D * 0.045, W0: sun.D * 0.009, slope: 0.16, tau: 4, life: 9 }); }
+  }
+  // copy
+  const out = sstep(0.025, 0.1, p);
+  heroCopy.style.opacity = (1 - out).toFixed(3);
+  heroCopy.style.translate = `0 ${(-out * 40).toFixed(1)}px`;
+  heroCopy.style.visibility = out > 0.999 ? 'hidden' : '';
+  const bo = [bell(p, 0.14, 0.185, 0.27, 0.315), bell(p, 0.325, 0.365, 0.43, 0.47), bell(p, 0.485, 0.525, 0.64, 0.7)];
+  beats.forEach((b, i) => { b.style.opacity = bo[i].toFixed(3); b.style.translate = `0 ${((1 - bo[i]) * 26 * (p > [0.23, 0.4, 0.59][i] ? -1 : 1)).toFixed(1)}px`; });
+  // the tilt
+  const m1 = (0.4 * P.len) / cam.f;
+  tiltS = seg(p, 0.6, 1.0);
+  const Δ = Math.PI / 2 - comp.theta0;
+  let pitch = comp.theta0 + Δ * tiltCurve(tiltS, m1 / Δ);
+  if (RM) pitch = heroP < 0.62 ? comp.theta0 : Math.PI / 2;
+  cam.pitch = Math.min(pitch, Math.PI / 2);
+}
+
+// ---------- PayPal: the company sinks; its ring runs out; six surface where it reaches them ----------
+const ppWord = $('#pp-word'), ppDate = $('#pp-date'), ppStage = $('#pp-stage');
+const NAMES = ['YouTube', 'LinkedIn', 'Yelp', 'Palantir', 'SpaceX', 'Tesla'];
+const NAME_POS_D = [[-0.30, -0.25], [0.29, -0.28], [-0.37, 0.04], [0.36, 0.02], [-0.22, 0.28], [0.24, 0.29]];
+const NAME_POS_M = [[-0.22, -0.30], [0.21, -0.21], [-0.24, -0.04], [0.23, 0.08], [-0.20, 0.25], [0.22, 0.33]];
+const ppNames = NAMES.map((n) => {
+  const el = document.createElement('p');
+  el.className = 'disp pp-name';
+  el.setAttribute('data-heat', '');
+  el.innerHTML = `<span class="ln">${n}</span>`;
+  ppStage.appendChild(el);
+  return { el, n, dx: 0, dy: 0, up: -1 };
+});
+function layPayPal() {
+  const P = vw > 760 ? NAME_POS_D : NAME_POS_M;
+  ppNames.forEach((o, i) => {
+    o.dx = P[i][0] * vw; o.dy = P[i][1] * vh;
+    o.el.style.left = `calc(50% + ${o.dx.toFixed(1)}px)`; o.el.style.top = `calc(50% + ${o.dy.toFixed(1)}px)`;
+  });
+}
+let ppT = -1, ppP = 0;
+function updPayPal() {
+  const P = pins[1];
+  ppP = clamp((scrollY - P.top) / P.len, 0, 1);
+  const r = ppWord.getBoundingClientRect();
+  const vis = r.bottom > -vh && r.top < 2 * vh;
+  if (!vis) return;
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  const w = toWorld2(cx, cy);
+  // before the sale: the word comes up to heat as you arrive
+  const warm = sstep(-0.35, 0.1, ppP - 0.0) * (ppT < 0 ? 1 : 0);
+  if (ppP > 0.2 && ppT < 0) {
+    ppT = now;
+    if (w) ring(w.x, w.z, { speed: 300 * w.sc, W0: 16, slope: 0.24, tau: 3.2, life: 7 });
+  }
+  if (ppP < 0.12 && ppT >= 0) { ppT = -1; ppNames.forEach((o) => (o.up = -1)); }
+  const age = ppT < 0 ? -1 : now - ppT;
+  // PayPal sinks: it cools, shrinks a little and goes under
+  const sink = ppT < 0 ? 0 : sstep(0, 1.3, age);
+  heat.set(ppWord, ppT < 0 ? warm : Math.max(0, 1 - age / 0.6));
+  ppWord.style.opacity = (1 - sink).toFixed(3);
+  ppWord.style.scale = (1 - 0.1 * sink).toFixed(4);
+  ppWord.style.filter = sink > 0.01 ? `blur(${(sink * 5).toFixed(2)}px)` : '';
+  ppDate.style.opacity = (ppT < 0 ? 0 : sstep(0.2, 0.8, age) * (1 - sstep(3.4, 4.4, age))).toFixed(3);
+  if (w && r.bottom > 0 && r.top < CH) spots.push({ x: w.x, z: w.z, r: Math.max(r.width * 0.32, 70), h: 0.5 * (ppT < 0 ? warm : Math.max(0, 1 - age / 1.6)) });
+  // the ring front, 300 px/s, reaches each name in turn; each surfaces white-hot and cools to bone
+  const front = age < 0 ? -1 : 300 * age;
+  ppNames.forEach((o) => {
+    const d = Math.hypot(o.dx, o.dy);
+    if (o.up < 0 && front >= d - 30) {
+      o.up = now;
+      const ww = toWorld2(cx + o.dx, cy + o.dy);
+      if (ww) ring(ww.x, ww.z, { speed: 120, W0: 10, slope: 0.2, tau: 1.6, life: 4 });
+    }
+    const a = o.up < 0 ? -1 : now - o.up;
+    const s = a < 0 ? 0 : sstep(0, 0.5, a);
+    o.el.style.opacity = s.toFixed(3);
+    o.el.style.filter = s < 0.99 ? `blur(${((1 - s) * 6).toFixed(2)}px)` : '';
+    heat.set(o.el, a < 0 ? 0 : Math.max(0, 1 - Math.max(0, a - 0.35) / 2.2));
+    if (a >= 0 && a < 2.8) { const ww = toWorld2(cx + o.dx, cy + o.dy); if (ww) spots.push({ x: ww.x, z: ww.z, r: 70, h: 0.6 * Math.max(0, 1 - a / 2.6) }); }
+  });
+}
+
+// ---------- ventures ----------
+const slabs = $$('.slab').map((el, i) => ({ el, v: el.closest('.v'), i, kind: i === 0 ? 0 : 1, rise: -40, hover: 0, hv: 0, press: 0, up: false }));
+slabs.forEach((s) => {
+  s.v.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') s.hover = 1; });
+  s.v.addEventListener('pointerleave', () => { s.hover = 0; });
+  s.el.addEventListener('focus', () => (s.hover = 1));
+  s.el.addEventListener('blur', () => (s.hover = 0));
+  s.el.addEventListener('pointerdown', () => { s.press = 1; s.v.classList.add('hot'); });
+  const off = () => { s.press = 0; setTimeout(() => s.v.classList.remove('hot'), 350); };
+  s.el.addEventListener('pointerup', off); s.el.addEventListener('pointercancel', off); s.el.addEventListener('pointerleave', off);
+});
+const slabU = new Float32Array(12), slabPU = new Float32Array(12);
+let slabN = 0;
+function updSlabs(dt) {
+  slabN = 0;
+  for (const s of slabs) {
+    const r = s.el.getBoundingClientRect();
+    if (r.bottom < -200 || r.top > CH + 200) { s.up = false; s.rise = -40; continue; }
+    const cy = r.top + r.height / 2;
+    const target = mix(-40, 30, sstep(CH * 1.02, CH * 0.58, cy)) + s.hover * 12 - s.press * 14;
+    s.rise += (target - s.rise) * Math.min(1, dt / (s.press ? 0.06 : 0.18));
+    if (RM) s.rise = target;
+    s.hv += ((s.hover || s.press ? 1 : 0) - s.hv) * Math.min(1, dt / 0.15);
+    const c = toWorld2(r.left + r.width / 2, cy);
+    if (!c) continue;
+    if (s.rise > 0 && !s.up) { s.up = true; ring(c.x, c.z, { r0: r.height * 0.5, speed: 110, W0: 14, slope: 0.16, tau: 1.8, life: 5 }); }
+    if (s.rise < -5) s.up = false;
+    const bob = swellAt(c.x, c.z, now)[0] * 2;
+    slabU.set([c.x, c.z, r.width / 2, r.height / 2], slabN * 4);
+    slabPU.set([s.rise + bob, 1, s.hv, s.kind], slabN * 4);
+    slabN++;
+  }
+}
+
+// ---------- thesis + shore ----------
+const thA = $('#th-a'), thB = $('#th-b'), kel = $('#kelvin'), kcap = $('#kcap');
+let thK = 0, thZ = -1e9, shoreZ = 0, shoreOn = 0, shownK = -1;
+function updThesis() {
+  const P = pins[2];
+  const p = clamp((scrollY - P.top) / P.len, 0, 1);
+  const s = seg(p, 0.04, 0.84);
+  thK = 0.5 * s + 0.5 * s * s * (3 - 2 * s);
+  thA.style.opacity = (1 - sstep(0.32, 0.44, p)).toFixed(3);
+  thB.style.opacity = sstep(0.5, 0.62, p).toFixed(3);
+  const st = $('.stick', thesis).getBoundingClientRect();
+  thZ = cam.z + (CH / 2 - st.top);
+  const T = Math.round(293 + thK * (1811 - 293));
+  if (T !== shownK) {
+    shownK = T;
+    kel.textContent = `${T} K`;
+    kcap.textContent = T >= 1811 ? 'Iron melts' : T <= 293 ? 'Room temperature' : 'Heating';
+    // cold reads Quench, hot reads Ember
+    const k = thK;
+    kel.style.color = k < 0.02 ? '' : `rgb(${Math.round(mix(141, 255, k))},${Math.round(mix(182, 91, k))},${Math.round(mix(242, 31, k))})`;
+  }
+  const g = $('#giant').getBoundingClientRect();
+  const sand = $('.sand', shore).getBoundingClientRect();
+  shoreZ = cam.z + (CH / 2 - (sand.top + 6));
+  shoreOn = sand.top < CH * 3 ? 1 : 0;
+}
+
+// ---------- heat type: words widen and gain weight as they warm, then settle ----------
+const heat = (() => {
+  const items = [];
+  const REST = { wd: 112, wg: 600 }, HOT = { wd: 125, wg: 800 };
+  function split(el) {
+    const walk = (node) => {
+      for (const ch of [...node.childNodes]) {
+        if (ch.nodeType === 3) {
+          const parts = ch.textContent.split(/(\s+)/);
+          const frag = document.createDocumentFragment();
+          for (const p of parts) {
+            if (!p) continue;
+            if (/^\s+$/.test(p)) { frag.appendChild(document.createTextNode(p)); continue; }
+            const s = document.createElement('span'); s.className = 'w'; s.textContent = p; frag.appendChild(s);
+          }
+          ch.replaceWith(frag);
+        } else if (ch.nodeType === 1 && !ch.classList.contains('w')) walk(ch);
+      }
+    };
+    walk(el);
+  }
+  for (const el of $$('[data-heat]')) {
+    split(el);
+    const words = $$('.w', el).map((w) => ({ el: w, h: 0, shown: -1, cx: 0, cy: 0, on: false }));
+    const quote = el.classList.contains('quote');
+    items.push({ el, words, force: el.dataset.hot ? 1 : 0, set: -1, flashT: -99, quote });
+  }
+  const byEl = new Map(items.map((i) => [i.el, i]));
+  return {
+    items,
+    set(el, v) { const it = byEl.get(el); if (it) it.set = v; },
+    flash(el) { const it = byEl.get(el); if (it) it.flashT = now; },
+    read() {
+      for (const it of items) {
+        const r = it.el.getBoundingClientRect();
+        it.vis = r.bottom > -50 && r.top < CH + 50 && getComputedStyle(it.el).visibility !== 'hidden';
+        it.cy = r.top + r.height / 2;
+        if (!it.vis) continue;
+        for (const w of it.words) { const b = w.el.getBoundingClientRect(); w.cx = b.left + b.width / 2; w.cy = b.top + b.height / 2; }
+      }
+    },
+    step(dt) {
+      for (const it of items) {
+        if (!it.vis) continue;
+        const flash = it.flashT > 0 ? Math.max(0, 1 - Math.max(0, now - it.flashT - 0.2) / 2.4) * (now >= it.flashT ? 1 : 0) : 0;
+        const force = it.force ? Math.max(0, 1 - Math.max(0, now - 0.9) / 2.6) : 0;
+        // warms as it crosses the reading line, cools once read
+        const read = it.set >= 0 || it.force ? 0 : 0.55 * Math.exp(-(((it.cy - CH * 0.52) / (CH * 0.2)) ** 2));
+        for (const w of it.words) {
+          let wake = 0;
+          if (!RM) { const ww = toWorld2(w.cx, w.cy); if (ww) { const o = interactAt(ww.x, ww.z); wake = clamp(o[3] * 4.5 + Math.hypot(o[1], o[2]) * 3, 0, 1); } }
+          const tgt = RM ? (it.set >= 0 ? 0 : 0) : Math.max(read, wake, flash, force, it.set >= 0 ? it.set : 0);
+          const tau = tgt > w.h ? 0.07 : 0.7;
+          w.h += (tgt - w.h) * Math.min(1, dt / tau);
+          if (Math.abs(w.h - w.shown) < 0.004) continue;
+          w.shown = w.h;
+          const h = w.h, q = it.quote ? 0.35 : 1;
+          const wd = REST.wd + (HOT.wd - REST.wd) * h * q, wg = REST.wg + (HOT.wg - REST.wg) * h * q;
+          w.el.style.fontVariationSettings = `'wdth' ${wd.toFixed(1)}, 'wght' ${wg.toFixed(0)}`;
+          const hot = sstep(0.35, 0.85, h);
+          // colour means temperature: bone -> Ember -> white-hot at the top of the range
+          const c = h > 0.85 ? [mix(255, 255, 0), mix(91, 217, (h - 0.85) / 0.15), mix(31, 166, (h - 0.85) / 0.15)] : [mix(232, 255, hot), mix(228, 91, hot), mix(216, 31, hot)];
+          w.el.style.color = h < 0.01 ? '' : `rgb(${c.map((x) => Math.round(x)).join(',')})`;
+          w.el.style.textShadow = h > 0.4 ? `0 0 ${(0.25 * h).toFixed(2)}em rgba(255,91,31,${(0.55 * sstep(0.4, 1, h)).toFixed(2)})` : '';
+        }
+      }
+    },
+  };
+})();
+
+// ---------- floating: text rides the liquid under it ----------
+const floats = $$('.fl').map((el) => ({ el, tx: 0, ty: 0, rz: 0, cx: 0, cy: 0, on: false }));
+function readFloats() {
+  for (const f of floats) {
+    const r = f.el.getBoundingClientRect();
+    f.on = r.bottom > -40 && r.top < CH + 40;
+    f.cx = r.left + r.width / 2 - f.tx; f.cy = r.top + r.height / 2 - f.ty;
+  }
+}
+function stepFloats(dt) {
+  if (RM) return;
+  for (const f of floats) {
+    if (!f.on) continue;
+    const w = toWorld2(f.cx, f.cy);
+    if (!w) continue;
+    const s = swellAt(w.x, w.z, now), o = interactAt(w.x, w.z);
+    const gx = s[1] * 34 + o[1] * 22, gz = s[2] * 34 + o[2] * 22;
+    const tx = clamp(-gx, -7, 7), ty = clamp(gz, -7, 7), rz = clamp(s[1] * 3 + o[1] * 4, -1.2, 1.2);
+    const k = Math.min(1, dt / 0.12);
+    f.tx += (tx - f.tx) * k; f.ty += (ty - f.ty) * k; f.rz += (rz - f.rz) * k;
+    f.el.style.translate = `${f.tx.toFixed(2)}px ${f.ty.toFixed(2)}px`;
+    f.el.style.rotate = `${f.rz.toFixed(3)}deg`;
+  }
+}
+
+// ---------- the CRTs: no signal yet, the name on the card ----------
+const crts = $$('[data-crt]').map((el) => ({ el, cv: $('canvas', el), name: el.dataset.crt, ch: el.dataset.ch, on: false, last: -1 }));
+const io = new IntersectionObserver((es) => es.forEach((e) => { const c = crts.find((c) => c.el === e.target); if (c) c.on = e.isIntersecting; }), { rootMargin: '20% 0px' });
+crts.forEach((c) => io.observe(c.el));
+function drawCRT(c) {
+  const cv = c.cv, s = Math.min(DPR, 2) * 0.75;
+  const W = Math.max(64, Math.round(cv.clientWidth * s)), H = Math.max(48, Math.round(cv.clientHeight * s));
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const x = cv.getContext('2d');
+  const t = now;
+  x.fillStyle = '#070909'; x.fillRect(0, 0, W, H);
+  const cx = W / 2, cy = H / 2, R = H * 0.34;
+  x.save();
+  x.globalAlpha = 0.9;
+  // test card in cooled greys; the glass is cold (Quench)
+  x.strokeStyle = 'rgba(141,182,242,0.10)'; x.lineWidth = 1;
+  for (let i = 1; i < 12; i++) { const gx = (W / 12) * i; x.beginPath(); x.moveTo(gx, 0); x.lineTo(gx, H); x.stroke(); }
+  for (let i = 1; i < 9; i++) { const gy = (H / 9) * i; x.beginPath(); x.moveTo(0, gy); x.lineTo(W, gy); x.stroke(); }
+  x.fillStyle = '#0b0d0d'; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.fill();
+  x.strokeStyle = 'rgba(232,228,216,0.45)'; x.lineWidth = Math.max(1, H * 0.006); x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke();
+  const steps = 7, bw = (R * 1.5) / steps, by = cy + R * 0.28;
+  for (let i = 0; i < steps; i++) { const g = Math.round(mix(24, 232, i / (steps - 1))); x.fillStyle = `rgb(${g},${g - 2},${g - 8})`; x.fillRect(cx - R * 0.75 + i * bw, by, bw + 0.5, R * 0.3); }
+  x.fillStyle = '#E8E4D8';
+  x.font = `700 ${Math.round(H * 0.085)}px Archivo, sans-serif`;
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText('NO SIGNAL', cx, cy - R * 0.22);
+  x.fillStyle = 'rgba(232,228,216,0.62)';
+  x.font = `500 ${Math.round(H * 0.048)}px Archivo, sans-serif`;
+  x.fillText(c.name, cx, cy + R * 0.08);
+  x.textAlign = 'left';
+  x.fillText(`CH ${c.ch}`, W * 0.06, H * 0.1);
+  x.restore();
+  // snow, a slow rolling bar, scanlines, the tube's curvature
+  if (!RM) for (let i = 0; i < W * H * 0.004; i++) { x.fillStyle = `rgba(232,228,216,${(Math.random() * 0.13).toFixed(3)})`; x.fillRect(Math.random() * W, Math.random() * H, 1.2, 1.2); }
+  const by2 = ((t * 0.09) % 1.4 - 0.2) * H;
+  const gb = x.createLinearGradient(0, by2 - H * 0.08, 0, by2 + H * 0.08);
+  gb.addColorStop(0, 'rgba(232,228,216,0)'); gb.addColorStop(0.5, 'rgba(232,228,216,0.05)'); gb.addColorStop(1, 'rgba(232,228,216,0)');
+  x.fillStyle = gb; x.fillRect(0, by2 - H * 0.08, W, H * 0.16);
+  x.fillStyle = 'rgba(0,0,0,0.28)';
+  for (let y = 0; y < H; y += 3) x.fillRect(0, y, W, 1);
+  const vg = x.createRadialGradient(cx, cy, H * 0.3, cx, cy, H * 0.85);
+  vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.75)');
+  x.fillStyle = vg; x.fillRect(0, 0, W, H);
+  const gl2 = x.createRadialGradient(W * 0.28, H * 0.2, 0, W * 0.28, H * 0.2, H * 0.6);
+  gl2.addColorStop(0, 'rgba(141,182,242,0.08)'); gl2.addColorStop(1, 'rgba(141,182,242,0)');
+  x.fillStyle = gl2; x.fillRect(0, 0, W, H);
+}
+
+// ---------- the relief: the ventures' names and the mark, cut into their castings ----------
+async function buildRelief() {
+  try { await Promise.all([document.fonts.load("800 120px Archivo"), document.fonts.load("600 60px Archivo")]); } catch (e) {}
+  const W = 1024, H = 512, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H * 3;
+  const x = cv.getContext('2d');
+  x.fillStyle = '#000'; x.fillRect(0, 0, W, H * 3);
+  x.fillStyle = '#fff';
+  try { x.fontStretch = 'expanded'; } catch (e) {}
+  const fit = (txt, size, maxW, weight = 800) => { let s = size; do { x.font = `${weight} ${s}px Archivo, sans-serif`; s -= 4; } while (x.measureText(txt).width > maxW && s > 20); };
+  // Crucible Sites: the mark and the name
+  {
+    const oy = 0, sc = 3.6, mx = 70, my = oy + H / 2 - 32 * sc;
+    x.save(); x.translate(mx, my); x.scale(sc, sc);
+    for (const { r } of RING.rings) x.fill(new Path2D(arcOutline(r)));
+    for (const c of CELLS) x.fillRect(32 + c.x - 1.8, 32 + c.y - 1.8, 3.6, 3.6);
+    x.restore();
+    x.textBaseline = 'alphabetic'; x.textAlign = 'left';
+    fit('Crucible', 150, 560);
+    x.fillText('Crucible', 340, oy + 248);
+    fit('Sites', 150, 560);
+    x.fillText('Sites', 340, oy + 392);
+  }
+  for (const [i, name, tag] of [[1, 'Verge', 'Find your verge'], [2, 'Trellis', 'A day that actually fits']]) {
+    const oy = i * H;
+    x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+    fit(name, 250, 860);
+    x.fillText(name, W / 2, oy + 300);
+    fit(tag, 52, 760, 600);
+    x.fillText(tag, W / 2, oy + 400);
+  }
+  const sharp = x.getImageData(0, 0, W, H * 3);
+  const cv2 = document.createElement('canvas'); cv2.width = W; cv2.height = H * 3;
+  const y = cv2.getContext('2d');
+  y.filter = 'blur(3px)';
+  y.drawImage(cv, 0, 0);
+  const soft = y.getImageData(0, 0, W, H * 3);
+  const out = new Uint8Array(W * H * 3 * 4);
+  const coreR = 4.5 * 3.6, ccx = 70 + 32 * 3.6, ccy = H / 2;
+  for (let j = 0; j < H * 3; j++) for (let i = 0; i < W; i++) {
+    const k = (j * W + i) * 4;
+    out[k] = sharp.data[k]; out[k + 1] = soft.data[k];
+    const dd = Math.hypot(i - ccx, j - ccy);
+    out[k + 2] = j < H ? Math.round(255 * clamp((coreR - dd) / 1.5 + 0.5, 0, 1)) : 0;
+    out[k + 3] = 255;
+  }
+  gl.bindTexture(gl.TEXTURE_2D, reliefTex);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, W, H * 3, 0, gl.RGBA, gl.UNSIGNED_BYTE, out);
+  gl.generateMipmap(gl.TEXTURE_2D);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+// texture rows: row 0 of the texture is the top of slab 0 (no flip), the shader reads (i + 1 - v) / 3 with v up
+
+// ---------- uniforms ----------
+const WU = new Float32Array(96 * 4), WSU = new Float32Array(96), WBU = new Float32Array(8);
+const RU = new Float32Array(64), RWU = new Float32Array(16), SPU = new Float32Array(32);
+let spots = [];
+function upload() {
+  gl.uniform2f(U.uView, vw, CH);
+  gl.uniform1f(U.uQ, Qs);
+  gl.uniform1f(U.uT, now);
+  gl.uniform4f(U.uCam, cam.x, cam.y, cam.z, cam.pitch);
+  gl.uniform1f(U.uF, cam.f);
+  gl.uniform4f(U.uSun, sun.x, sun.y, sun.z, sun.R);
+  gl.uniform4f(U.uSunX, sun.D, 1, 0, 0);
+  gl.uniform4fv(U.uArc, arcU);
+  const cu = new Float32Array(56);
+  for (let i = 0; i < 14; i++) cu.set([cellU[i * 4], cellU[i * 4 + 1], cellU[i * 4 + 2], cellU[i * 4 + 3]], i * 4);
+  gl.uniform4fv(U.uCell, cu);
+  const fa = now - fuseT;
+  const flare = fa < 0 || fa > 6 ? 0 : (1 - Math.exp(-fa / 0.06)) * Math.exp(-fa / 0.9) * 1.4;
+  const markVis = cam.pitch < 1.32 ? 1 : 0;
+  gl.uniform4f(U.uMark, flare, markVis, 1 - sstep(0.12, 0.85, tiltS), sstep(0.45, 1, tiltS));
+  swellAmp = mix(1.7, 1, sstep(0.2, 1, tiltS));
+  gl.uniform2f(U.uSwell, swellAmp, 1 - sstep(0.3, 0.95, tiltS));
+  // wakes
+  const n = [0, 0];
+  WBU.fill(0);
+  trails.forEach((tr, j) => {
+    const P = tr.up;
+    n[j] = P.length;
+    let x0 = 1e9, z0 = 1e9, x1 = -1e9, z1 = -1e9;
+    P.forEach((p, i) => {
+      WU.set([p.x, p.z, p.t, Math.floor(clamp(p.v || 0, 0, 4000)) + clamp(p.s, 0, 0.999)], (j * 48 + i) * 4);
+      WSU[j * 48 + i] = p.sc;
+      if (i + 1 < P.length) {
+        const q = P[i + 1], L = Math.hypot(q.x - p.x, q.z - p.z), dt = Math.max(q.t - p.t, 1e-3);
+        const vp = Math.max(p.v || 0, 15), age = Math.max(now - p.t, 0);
+        const reach = (20 + clamp(vp * 0.3536, 26, 480) * age + 3 * (14 + 6 * age) + 100) * Math.max(p.sc, q.sc);
+        x0 = Math.min(x0, p.x - reach, q.x - reach); x1 = Math.max(x1, p.x + reach, q.x + reach);
+        z0 = Math.min(z0, p.z - reach, q.z - reach); z1 = Math.max(z1, p.z + reach, q.z + reach);
+      }
+    });
+    WBU.set([x0, z0, x1, z1], j * 4);
+  });
+  gl.uniform4fv(U.uW, WU);
+  gl.uniform4fv(U.uWS, WSU);
+  gl.uniform2i(U.uWN, n[0], n[1]);
+  gl.uniform4fv(U.uWB, WBU);
+  RU.fill(0); RWU.fill(1);
+  ringU.slice(-16).forEach((R, i) => { RU.set([R.x, R.z, R.r, R.a], i * 4); RWU[i] = R.W; });
+  gl.uniform4fv(U.uRing, RU);
+  gl.uniform4fv(U.uRingW, RWU);
+  gl.uniform1i(U.uRingN, Math.min(16, ringU.length));
+  SPU.fill(0);
+  const sp = spots.filter((s) => s.h > 0.01).slice(0, 8);
+  sp.forEach((s, i) => SPU.set([s.x, s.z, s.r, s.h], i * 4));
+  gl.uniform4fv(U.uSpot, SPU);
+  gl.uniform1i(U.uSpotN, sp.length);
+  gl.uniform4f(U.uHeat, thK, thZ, shoreZ, shoreOn);
+  gl.uniform4fv(U.uSlab, slabU);
+  gl.uniform4fv(U.uSlabP, slabPU);
+  gl.uniform1i(U.uSlabN, slabN);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D, reliefTex);
+}
+
+// ---------- the frame ----------
+let fade = 0, slow = 0, run = 0, frames = 0, lastScroll = -1, lastRenderKey = '';
+function frame(dt) {
+  dt = Math.min(dt, 0.1);
+  const t0 = now;
+  now += dt;
+  frames++;
+  // input first: pointer samples stamped between the last frame and this one; a resting pointer still samples, since
+  // the page (and so the liquid) can move under it
+  updHero(dt);
+  const E = effScroll(scrollY);
+  cam.z = -E;
+  if (!RM) {
+    flushQueue(trails[0], t0, now);
+    flushQueue(trails[1], t0, now);
+    if (ptr.on && ptr.kind === 'mouse') sample(trails[0], ptr.x, ptr.y, now, ptr.down ? STR.drag : STR.hover);
+    if (ptr.kind === 'touch') {
+      if (ptr.touchId >= 0) sample(trails[0], ptr.x, ptr.y, now, STR.touch);
+      else if (ptr.coast > 0) {
+        // momentum: the spot the finger left keeps going through the page, fading
+        ptr.coast = Math.max(0, 1 - (now - ptr.lastT) / 1.2);
+        if (ptr.coast > 0) sample(trails[0], ptr.x, ptr.y, now, STR.touch * ptr.coast); else brk(trails[0]);
+      }
+    }
+    if (ptr2.touchId >= 0) sample(trails[1], ptr2.x, ptr2.y, now, STR.touch);
+  }
+  trails.forEach(prune);
+  updRings();
+  spots = [];
+  // reads
+  heat.read();
+  readFloats();
+  updPayPal();
+  updSlabs(dt);
+  updThesis();
+  // writes
+  heat.step(dt);
+  stepFloats(dt);
+  for (const c of crts) if (c.on && (now - c.last > 1 / 24 || c.last < 0)) { c.last = now; drawCRT(c); }
+  if (glOK) {
+    if (RM) {
+      const key = [scrollY, vw, CH, slabN].join();
+      if (key === lastRenderKey && frames > 3) return;
+      lastRenderKey = key;
+    }
+    upload();
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    if (fade < 1) { fade = RM || FIXT != null ? 1 : Math.min(1, fade + dt / 0.8); canvas.style.setProperty('--sea', (fade * fade * (3 - 2 * fade)).toFixed(3)); document.documentElement.style.setProperty('--nogl', (1 - fade).toFixed(3)); }
+    // quality: step down on slow frames (never while a test holds the clock)
+    if (!held && QFORCE == null) {
+      run += dt;
+      slow = dt > 0.024 ? slow + dt : Math.max(0, slow - dt * 0.5);
+      if (slow > 0.9 && run > 1.5 && qi < STEPS.length - 1) { qi++; slow = 0; resizeCanvas(); }
+    }
+  }
+}
+let rafLast = 0;
+function loop(ts) {
+  requestAnimationFrame(loop);
+  if (document.hidden) { rafLast = 0; return; }
+  const dt = rafLast ? (ts - rafLast) / 1000 : 1 / 60;
+  rafLast = ts;
+  if (!held) frame(dt);
+}
+
+// ---------- test hooks ----------
+window.__step = (dt = 1 / 60) => { held = true; frame(dt); return now; };
+window.__hold = () => { held = true; };
+window.__resume = () => { held = false; rafLast = 0; };
+window.__state = () => ({ now, pitch: cam.pitch, camZ: cam.z, heroP, tiltS, q: Qs, softGL, glOK, trails: trails.map((t) => t.up.length), rings: ringU.length, slabN, thK, shoreOn, spots: spots.length, cw: canvas.width, ch: canvas.height });
+window.__sample = (sx, sy) => { const w = toWorld2(sx, sy); return w ? { w, s: swellAt(w.x, w.z, now), i: interactAt(w.x, w.z) } : null; };
+
+// ---------- start ----------
+glOK = initGL();
+if (glOK) document.documentElement.classList.add('gl');
+if (RM) document.documentElement.classList.add('rm');
+startStep();
+measure(); compose(); resizeCanvas();
+if (glOK) buildRelief();
+let rsT = 0;
+const onResize = () => { clearTimeout(rsT); rsT = setTimeout(() => { measure(); compose(); resizeCanvas(); }, 60); };
+addEventListener('resize', onResize);
+new ResizeObserver(onResize).observe(document.body);
+document.fonts && document.fonts.ready.then(() => { measure(); compose(); });
+frame(0);
+requestAnimationFrame(loop);
+})();
+
+</script>
+</body>
+</html>
