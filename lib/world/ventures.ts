@@ -52,6 +52,21 @@ export const ventureBoxes = [0, 1, 2].map(() => ({ x: 0, y: 0, w: 0, h: 0, vis: 
 export const ventureRipples: { p: V3; k: number }[] = [];
 const feet: V3[] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
+/** The monoliths' reflections in the sea, for lava's crisp pass: per monolith from its waterline down to 1.2x its
+ * visible height (or the screen bottom), a little wider for the ripples; the union, viewport CSS px, or null. */
+export function ventureReflectBoxes(f: Frame): [number, number, number, number] | null {
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+  for (const b of ventureBoxes) {
+    if (!b.vis) continue;
+    const pad = b.w * 0.08 + 4;
+    x0 = Math.min(x0, b.x - pad);
+    x1 = Math.max(x1, b.x + b.w + pad);
+    y0 = Math.min(y0, b.y + b.h - 4);
+    y1 = Math.max(y1, Math.min(f.h, b.y + b.h + 1.2 * b.h));
+  }
+  return x1 > x0 && y1 > y0 ? [Math.max(0, x0), Math.max(0, y0), Math.min(f.w, x1), y1] : null;
+}
+
 export function setVentureHover(i: number, on: boolean) {
   S.hoverT[i] = on ? 1 : 0;
 }
