@@ -120,17 +120,6 @@ test('quote form without JavaScript: every question shows and the form opens a m
   await ctx.close();
 });
 
-test('scroll scenes reach their finished state', async ({ page }) => {
-  await page.goto('/', { waitUntil: 'networkidle' });
-  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-  // Thesis reads 1811 K and the second line is showing once you're past it. Poll: on a busy machine the first
-  // scroll frame can land well after the jump while the page is still hydrating.
-  await expect(page.locator('.thesis [aria-hidden] >> nth=0')).toBeAttached();
-  await expect
-    .poll(() => page.locator('.thesis').evaluate((el) => Number(getComputedStyle(el).getPropertyValue('--xb').trim())))
-    .toBeGreaterThan(0.99);
-});
-
 test('on /sites the logo goes to Crucible and "sites" goes to Crucible Sites', async ({ page }) => {
   await page.goto('/sites');
   await expect(page.getByRole('link', { name: 'Crucible home' })).toHaveAttribute('href', '/');

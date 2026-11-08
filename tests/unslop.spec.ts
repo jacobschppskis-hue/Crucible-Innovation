@@ -52,23 +52,25 @@ for (const path of PAGES) {
   });
 }
 
-// No dead zones on the home page: at every half-viewport of scroll there is something in view that responds to the
-// scroll (a [data-scroll] element, a pinned scene driven by trackScroll(), or reading heat).
-test('home: something responds to scroll at every position', async ({ page }) => {
-  await page.goto('/?tier=light', { waitUntil: 'networkidle' });
+// No dead zones on the home page: the whole page is one world (lib/world) whose camera follows the scroll, so at
+// every half-viewport of scroll the journey's progress moves on (the world answers the scroll everywhere).
+test('home: the world answers the scroll at every position', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?loop=0', { waitUntil: 'load' });
+  await page.mouse.move(200, 300);
+  await expect.poll(() => page.evaluate(() => !!(window as unknown as { __world?: unknown }).__world), { timeout: 20_000 }).toBe(true);
   const vh = page.viewportSize()!.height;
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
   const dead: number[] = [];
+  let last = -1;
   for (let y = 0; y <= max; y += vh / 2) {
     await page.evaluate((t) => scrollTo(0, t), y);
-    const alive = await page.evaluate(() => {
-      const inView = (el: Element) => {
-        const r = el.getBoundingClientRect();
-        return r.bottom > innerHeight * 0.1 && r.top < innerHeight * 0.9;
-      };
-      return [...document.querySelectorAll('[data-scroll], .ig, .thesis, .heat-text')].some(inView);
-    });
-    if (!alive) dead.push(Math.round(y / vh * 10) / 10);
+    // the world reads the scroll on its next frame (software GL draws a few a second)
+    const read = () => page.evaluate(() => (window as unknown as { __world: { state(): { progress: number; scroll: number } } }).__world.state());
+    let p = -1;
+    for (let k = 0; k < 40; k++) { const st = await read(); p = st.progress; if (p > last + 1e-4) break; await page.waitForTimeout(100); }
+    if (last >= 0 && !(p > last)) dead.push(Math.round((y / vh) * 10) / 10);
+    last = p;
   }
-  expect(dead, `dead zones at these scroll positions (in viewport heights): ${dead.join(', ')}`).toEqual([]);
+  expect(dead, `the world did not move on at these scroll positions (viewport heights): ${dead.join(', ')}`).toEqual([]);
 });
