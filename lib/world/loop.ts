@@ -1,7 +1,9 @@
 // The scroll loop: the home page never ends. The last place (`data-place="loop"`) is a copy of the hero's first screen,
 // exactly one viewport tall, so scroll position `loopLen` (= the document's scroll limit) looks exactly like 0; Lenis in
-// infinite mode wraps there, on wheel/trackpad, keyboard and touch (syncTouch: Lenis carries the finger's momentum
-// itself, because setting the scroll during a native iOS/Android fling kills the fling).
+// infinite mode wraps there, on wheel/trackpad and keyboard. Touch is ours (`touch()` below): a script that sets the
+// scroll during a native iOS fling stops the fling dead, so the finger moves the page directly (touchmove is
+// prevented) and on release we glide with iOS' own deceleration (0.998 per ms), integrated exactly per frame, so the
+// glide is the same length at 30, 60 and 120 Hz (Lenis' syncTouch inertia is per frame: 3x longer at 30 fps).
 //
 // Off (a normal page that simply ends, the copy hidden): reduced motion, no JS, ?loop=0, or no loop place.
 // `scroll` is unwrapped: it keeps growing on the next lap, so springs and the camera never run backwards at the seam.
@@ -52,10 +54,7 @@ export async function createScroll(opts: { still: boolean; spring?: number }): P
     de.setAttribute('data-loop', '');
     lenis = new Lenis({
       infinite: true,
-      syncTouch: true,
-      syncTouchLerp: 0.08,
-      touchInertiaExponent: 1.6,
-      touchMultiplier: 1.1,
+      syncTouch: false,
       lerp: 0.12,
       anchors: true,
       autoRaf: false,
@@ -99,6 +98,8 @@ export async function createScroll(opts: { still: boolean; spring?: number }): P
   };
   addEventListener('resize', onResize);
   offs.push(() => removeEventListener('resize', onResize));
+
+  if (lenis) offs.push(touch(lenis));
 
   if (lenis) {
     // keyboard: wrap like the wheel does (native key scrolling stops dead at the seam)
@@ -154,5 +155,94 @@ export async function createScroll(opts: { still: boolean; spring?: number }): P
       lenis?.destroy();
       de.removeAttribute('data-loop');
     },
+  };
+}
+
+/** iOS' scroll deceleration: velocity x 0.998 per ms (UIScrollView's normal rate), i.e. a time constant of ~0.5 s. */
+const TAU = -1 / (1000 * Math.log(0.998));
+
+/** Touch scrolling for the looping page: the finger drives the page 1:1, release glides with a time-based decay. */
+function touch(L: LenisLike): () => void {
+  let id: number | null = null;
+  let x0 = 0,
+    y0 = 0,
+    lastY = 0,
+    axis: 'y' | 'x' | null = null;
+  let samples: { t: number; y: number }[] = [];
+  let v = 0; // px/s of scroll (positive = down the page)
+  let gliding = false;
+  const now = () => performance.now();
+  const move = (dy: number) => L.scrollTo(L.targetScroll + dy, { immediate: true, force: true });
+
+  const onStart = (e: TouchEvent) => {
+    if (e.touches.length !== 1) {
+      id = null;
+      return;
+    }
+    const t = e.touches[0];
+    id = t.identifier;
+    x0 = t.clientX;
+    y0 = lastY = t.clientY;
+    axis = null;
+    gliding = false; // a finger catches the glide, as on iOS
+    v = 0;
+    samples = [{ t: now(), y: t.clientY }];
+  };
+  const onMove = (e: TouchEvent) => {
+    if (id == null) return;
+    const t = [...e.touches].find((k) => k.identifier === id);
+    if (!t) return;
+    if (!axis) {
+      const dx = Math.abs(t.clientX - x0),
+        dy = Math.abs(t.clientY - y0);
+      if (dx < 6 && dy < 6) return;
+      axis = dy >= dx ? 'y' : 'x';
+    }
+    if (axis !== 'y') return; // horizontal: leave it to the browser (back swipe)
+    if (e.cancelable) e.preventDefault();
+    const dy = lastY - t.clientY;
+    lastY = t.clientY;
+    if (dy) move(dy);
+    const tm = now();
+    samples.push({ t: tm, y: t.clientY });
+    while (samples.length > 2 && tm - samples[0].t > 100) samples.shift();
+  };
+  const onEnd = (e: TouchEvent) => {
+    if (id == null || [...e.touches].some((k) => k.identifier === id)) return;
+    id = null;
+    if (axis !== 'y') return;
+    const tm = now();
+    // release velocity: the last ~100 ms of the stroke (a finger that stopped before lifting does not glide)
+    const a = samples[0],
+      b = samples[samples.length - 1];
+    const dt = (b.t - a.t) / 1000;
+    v = dt > 0.008 && tm - b.t < 80 ? -(b.y - a.y) / dt : 0;
+    gliding = Math.abs(v) > 30;
+  };
+  const off = onFrame((_t, dt) => {
+    if (!gliding || dt <= 0) return;
+    const k = Math.exp(-dt / TAU);
+    const d = v * TAU * (1 - k);
+    v *= k;
+    move(d);
+    if (Math.abs(v) < 8) gliding = false;
+  });
+  // a wheel or key takes over from a glide
+  const stop = () => (gliding = false);
+  const opt = { passive: false } as AddEventListenerOptions;
+  addEventListener('touchstart', onStart, { passive: true });
+  addEventListener('touchmove', onMove, opt);
+  addEventListener('touchend', onEnd, { passive: true });
+  addEventListener('touchcancel', onEnd, { passive: true });
+  addEventListener('wheel', stop, { passive: true });
+  addEventListener('keydown', stop);
+  return () => {
+    off();
+    removeEventListener('touchstart', onStart);
+    removeEventListener('touchmove', onMove, opt);
+    removeEventListener('touchend', onEnd);
+    removeEventListener('touchcancel', onEnd);
+    removeEventListener('wheel', stop);
+    removeEventListener('keydown', stop);
   };
 }
