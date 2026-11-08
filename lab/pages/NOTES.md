@@ -89,6 +89,11 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
 - (14:30) Bug: a sideways finger drag on /sites (making waves) made Chrome swipe back in history (to about:blank in the
   test). `html:not([data-world]) { overscroll-behavior-x: none }`; the home page keeps world's own setting.
 
+- (14:20) /ventures and /ventures/[slug] show the monoliths (ventures' stills from the world's own shader,
+  `public/film/monoliths/`, `data/ventures.ts` `monolith`), not the old ingots: one metal across the site. Hover/focus
+  lifts the monolith 2.5%. The venture share images (`public/og/{verge,trellis}.jpg`) are rebuilt from them
+  (`scripts/venture-og.mjs`). IngotScene and lib/gl3d ingot code are now unused by any page: remove in the cleanup.
+
 ## Decisions
 - (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh

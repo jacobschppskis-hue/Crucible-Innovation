@@ -31,7 +31,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   // Its own share image when there is one: the rendered casting, cropped to 1200 × 630 (scripts/venture-og.mjs).
   const og = `/og/${v.slug}.jpg`;
   const images = fs.existsSync(path.join(process.cwd(), 'public', og))
-    ? [{ url: og, width: 1200, height: 630, alt: `${v.name}, cast in metal${v.status === 'live' ? '' : ' and still molten in its mould'}` }]
+    ? [{ url: og, width: 1200, height: 630, alt: `${v.name}: a metal monolith rising out of molten metal, still glowing at its base` }]
     : undefined;
   return {
     title,
@@ -43,8 +43,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 /**
- * A venture's own page. While it is still forging this is a teaser: the name, its line, its casting still molten in the
- * mould (the rendered ingot, or its mark glowing in CSS without one), Jacob's description (never edited) and a way to
+ * A venture's own page. While it is still forging this is a teaser: the name, its line, its metal monolith (the
+ * still the home page's world renders, or its mark glowing in CSS without one), Jacob's description (never edited) and a way to
  * hear when it ships. No dates, users or numbers until they are real.
  */
 export default async function VenturePage({ params }: Props) {

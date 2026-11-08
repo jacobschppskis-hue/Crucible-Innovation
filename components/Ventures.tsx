@@ -10,6 +10,7 @@ import './Ventures.css';
 
 // Ingot stills (scripts/ingot-stills.mjs → public/film/ingots/<slug>-<w>.webp, transparent). Checked at build time, so a venture without a
 // render falls back to its mark drawn in CSS: cool for a live venture, still glowing for one in the mould.
+export const hasMonolith = (name?: string) => !!name && fs.existsSync(path.join(process.cwd(), 'public/film/monoliths', `${name}-1200.webp`));
 export const hasIngot = (slug?: string) => !!slug && fs.existsSync(path.join(process.cwd(), 'public/film/ingots', `${slug}-1200.webp`));
 
 /**
@@ -79,7 +80,36 @@ function VentureCast({ v }: { v: Venture }) {
  * the /ventures pages.
  */
 export function VentureObject({ v, sizes = '(min-width: 1024px) 44vw, 92vw', eager, cue }: { v: Venture; sizes?: string; eager?: boolean; cue?: string }) {
+  if (hasMonolith(v.monolith)) return <MonolithStill name={v.monolith!} sizes={sizes} eager={eager} />;
   return hasIngot(v.ingot) ? <IngotScene slug={v.ingot!} sizes={sizes} eager={eager} cue={cue} /> : <MarkCast v={v} />;
+}
+
+/**
+ * The venture's metal monolith, as the home page's world renders it (a transparent still cut at its glowing waterline,
+ * 2:3). It stands on the page's own liquid: no floor, no box. Hover lifts it a little out of the liquid.
+ */
+function MonolithStill({ name, sizes, eager }: { name: string; sizes: string; eager?: boolean }) {
+  const src = (w: number) => `/film/monoliths/${name}-${w}.webp`;
+  // The still is 2:3 and fills its frame's height, so it is about two thirds of the frame's width (a 4:3 frame: half).
+  const narrow = sizes.replace(/(\d+)vw/g, (_, n) => `${Math.round(+n / 2)}vw`);
+  return (
+    <span className="vm">
+      {/* eslint-disable-next-line @next/next/no-img-element -- static export, the srcset is ours */}
+      <img
+        src={src(1200)}
+        srcSet={`${src(600)} 600w, ${src(1200)} 1200w, ${src(2400)} 2400w`}
+        sizes={narrow}
+        width={1200}
+        height={1800}
+        alt=""
+        draggable={false}
+        loading={eager ? 'eager' : 'lazy'}
+        fetchPriority={eager ? 'high' : undefined}
+        decoding="async"
+        className="vm-img"
+      />
+    </span>
+  );
 }
 
 /** The fallback visual (a venture without an ingot still): its mark, cool when live, glowing while it's forging. Verge's V is the
