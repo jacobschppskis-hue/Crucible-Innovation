@@ -54,9 +54,14 @@ async function run(device) {
   for (const p of PLACES) {
     if (kind === 'world' || kind === 'concept') { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 18, 40); }
     else { await page.evaluate((p) => scrollTo(0, p * (document.documentElement.scrollHeight - innerHeight)), p); await page.waitForTimeout(300); }
-    const png = await shot(page);
+    let png = await shot(page);
+    let s = await stats(png);
+    // a heavy frame on software GL can land after the capture: give it one more settle before calling it black
+    if (s.mean < 0.0015 && s.grad < 0.0005 && (kind === 'world' || kind === 'concept')) {
+      await page.waitForTimeout(3000); await settle(page, 6, 40); await page.waitForTimeout(1500);
+      png = await shot(page); s = await stats(png);
+    }
     frames[p] = png;
-    const s = await stats(png);
     if (s.mean < 0.0015 && s.grad < 0.0005) fail(device, `p=${p}: frame is black (mean L ${s.mean.toFixed(4)})`);
     if (s.mean > 0.6) fail(device, `p=${p}: frame is mostly white (mean L ${s.mean.toFixed(2)}): artifact frame / body background?`);
     const ov = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
