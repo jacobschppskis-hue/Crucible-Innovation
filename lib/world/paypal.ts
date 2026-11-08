@@ -167,12 +167,13 @@ export function beatChannels(p: number, narrow: boolean, R: number) {
 /** Journey keys for the `paypal` place (desktop values, phones in `ph`), sampled from beatCamera. */
 export function paypalKeys(R: number): Key[] {
   const out: Key[] = [];
-  for (const f of [0, 0.06, 0.12, 0.18, 0.22, 0.245, 0.26, 0.275, 0.29, 0.305, 0.32, 0.335, 0.35, 0.37, 0.6, 0.8, 0.9, 0.95, 1]) {
+  const fs = [0, 0.08, 0.16, 0.22];
+  for (let k = 0; k <= 16; k++) fs.push(0.24 + (0.14 * k) / 16); // the climb, densely: no kinks between keys
+  fs.push(0.5, 0.75, 1);
+  for (const f of fs) {
     const d = beatChannels(f, false, R), m = beatChannels(f, true, R);
     const k: Key = {
       at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov,
-      // a cooler night sea under the beat (lava.heat is additive and carries on to later keys: back to 0 at the end)
-      'lava.heat': -0.15 * smooth(0, 0.2, f) * (1 - smooth(0.9, 1, f)),
       ph: { s: m.s, h: m.h, pitch: m.pitch, fov: m.fov },
     };
     if (f > 0) k.ease = 'linear';
@@ -182,13 +183,8 @@ export function paypalKeys(R: number): Key[] {
 }
 
 // ---------------------------------------------------------------- layout
-/** Every throw of the beat: the six, plus spatter (a few short-lived sparks at each eruption and each landing, dying
- * within ~0.02 of p: real lava bombs and re-entries shed fragments of unequal brightness and lifetime). */
+/** Every throw of the beat: the six (V2: no spatter; sub-pixel sparks flickered on phones). */
 export const THROWS: Throw[] = [];
-const hash = (x: number) => {
-  const v = Math.sin(x * 127.1 + 311.7) * 43758.5453;
-  return v - Math.floor(v);
-};
 let layoutKey = '';
 /** Place the six landings from their screen targets (cast onto the sphere from the beat's end camera). */
 export function layout(R: number, narrow: boolean, aspect: number) {
@@ -220,23 +216,6 @@ export function layout(R: number, narrow: boolean, aspect: number) {
   THROWS.length = 0;
   SITES.forEach((s, i) => {
     THROWS.push(s);
-    for (let k = 0; k < 2; k++) {
-      // spatter at the vent, short and steep around this ember's heading
-      const h = (j: number) => hash(i * 17.3 + k * 5.1 + j * 1.37);
-      const range = 0.006 + 0.01 * h(1), flight = 0.012 + 0.01 * h(2), launch = s.launch + 0.002 * h(4);
-      THROWS.push({ o: pl.up, tf: pl.fwd, tr: pl.right, bearing: s.bearing + (h(3) - 0.5) * 1.4, range, apex: 0.45 * range,
-        launch, flight, land: launch + flight, seed: h(5), gain: 0.35 + 0.3 * h(6), size: 0.5, tau: 0.35, samples: 9 });
-    }
-    // spatter at the landing: a splash that carries on forward
-    const v = sub(s.dir, pl.up);
-    const tf = norm(sub(v, mul(s.dir, dot(v, s.dir))));
-    const tr = cross(s.dir, tf);
-    for (let k = 0; k < 4; k++) {
-      const h = (j: number) => hash(i * 31.7 + k * 7.9 + j * 2.11 + 3);
-      const range = 0.003 + 0.008 * h(1), flight = 0.008 + 0.01 * h(2), launch = s.land + 0.0015 * h(4);
-      THROWS.push({ o: s.dir, tf, tr, bearing: (h(3) - 0.5) * 2.4, range, apex: 0.5 * range, launch, flight,
-        land: launch + flight, seed: h(5), gain: 0.3 + 0.35 * h(6), size: 0.45, tau: 0.3, samples: 9 });
-    }
   });
 }
 
@@ -270,25 +249,22 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
     const after = Math.max(0, p - s.land); // after landing there is no head: everything ages on
     const span = Math.min(3 * TT, pHead - s.launch);
     const pts: Pt[] = [];
-    const N = s.samples;
-    for (let i = 0; i <= N; i++) {
-      const a = span * Math.pow(i / N, 1.7); // dense at the head, sparse in the old train
-      const u = (pHead - a - s.launch) / s.flight;
-      if (u < 0 || u > 1) continue;
+    // Points on a FIXED grid along the arc (plus the exact head and tail), so the drawn line never crawls as p moves:
+    // scrolling only changes where it starts and ends and how hot each point is, never the polyline itself.
+    const G = s.samples;
+    const uH = (pHead - s.launch) / s.flight;
+    const uT = Math.max(0, (pHead - span - s.launch) / s.flight);
+    const us: number[] = [uH];
+    for (let k = Math.ceil(uH * G) - 1; k / G > uT; k--) if (k / G < uH - 1e-6) us.push(k / G);
+    us.push(uT);
+    for (const u of us) {
+      const a = (uH - u) * s.flight; // how long ago the head was here
       const age = a + after;
-      let P = arcPos(R, s, u);
-      // the train drifts: a slow sideways wander that grows with age (wind on a meteor train): alive at rest
-      const wob = Math.min(age / 0.06, 1.5) * 0.004 * R * s.size;
-      const nrm = norm(P);
-      const side = norm(cross(nrm, sub(arcPos(R, s, Math.min(u + 0.01, 1)), P)));
-      const ph = u * 9 + s.seed * 7 + t * 0.25;
-      P = add(P, add(mul(side, wob * Math.sin(ph)), mul(nrm, wob * 0.5 * Math.cos(ph * 1.3))));
+      const P = arcPos(R, s, u);
       const hot = Math.exp(-age / TH);
       const K = 900 + 1350 * hot + 200 * Math.exp(-age / (0.03 * s.tau));
       const fade = Math.exp(-age / TT) * (1 - smooth(2 * TT, 3 * TT, age)) * smooth(0, 0.004 * s.tau, a + 0.0005);
-      // tumble: a lava bomb has a hot side, so its trail breathes a little (slow and shallow: never beads)
-      const tumble = 1 + 0.07 * Math.sin((s.launch + u * s.flight) * 280 + s.seed * 20);
-      const I = (0.9 + 3 * hot) * s.gain * fade * tumble;
+      const I = (0.9 + 3 * hot) * s.gain * fade;
       const w = (0.0003 + 0.0012 * (1 - Math.exp(-age / 0.04))) * R * s.size * 1.6; // half-width (world): ~2 m bombs, trains that spread
       pts.push({ P, K, I, w });
     }
