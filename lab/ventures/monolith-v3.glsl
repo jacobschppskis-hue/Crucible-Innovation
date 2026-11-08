@@ -1,6 +1,3 @@
-// GENERATED from monolith.glsl by lab/ventures/glsl2ts.mjs: edit the .glsl, then regenerate.
-/** The ventures' monoliths: monoTrace / monoShade / monoSeaGlow and their uniforms (see the .glsl header). */
-export const MONOLITH_GLSL = /* glsl */ `
 // monolith.glsl: the three venture monoliths (role: ventures). Cast metal rising out of the lava.
 //
 // Physically based, linear HDR radiance out (the composer's tone curve does the rest):
@@ -396,4 +393,3 @@ float monoSeaGlow(vec3 p) {
   }
   return g;
 }
-`;

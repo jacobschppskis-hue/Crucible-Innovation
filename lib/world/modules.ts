@@ -13,6 +13,7 @@ import { markModule } from './markModule';
 import { thesis } from './thesis'; // story
 import { look } from './look';
 import { paypal, paypalKeys } from './paypal'; // paypal
+import { ventures } from './ventures'; // ventures
 
 /** GLSL hooks a module can implement (named `<id>_<hook>`; signatures in ARCHITECTURE.md). */
 export type Hook = 'sky' | 'hit' | 'shade' | 'env' | 'sea' | 'over';
@@ -62,7 +63,7 @@ export const MODULES: WorldModule[] = [
   markModule, // mark: the Split Ring around the sun and the stronger-together beat (integrated by world)
   // together: import { together } from './together'; together,
   { ...paypal, keys: paypalKeys }, // paypal: PayPal -> six companies, with its own camera
-  // ventures: import { ventures } from './ventures'; ventures,
+  ventures, // ventures: the metal monoliths
   // type (story, lib/world/type.ts): display type reflected in the sea; off: it read as glyph noise, not a reflection
   thesis, // story: the sea heats 293 K -> 1811 K
 ];

@@ -1,166 +1,276 @@
-// The ventures in the world: three cast-metal monoliths rise out of the lava as the journey reaches them.
-// Framework-free (no React). The DOM side (components/world/VenturesClient.tsx) feeds the section's progress and each
-// link's hover/focus/press in; the world calls `venturesFrame()` once per clock tick with its camera and the ventures'
-// place on the planet, gets the shader uniforms back, and this module projects each monolith to the screen so the
-// links' hit areas lie exactly over them. The GLSL (trace + shade) is lib/world/glsl/monolith.glsl, exported as a string
-// by lib/world/glsl/monolith.ts.
+// The ventures in the world: three cast-metal monoliths rise out of the lava as the journey reaches them
+// (place `ventures`, skimming the night sea). Module `ventures` (ARCHITECTURE.md): GLSL hooks hit / shade / env / sea in
+// lib/world/glsl/monolith.glsl; this file computes their poses on the CPU every frame, owns the section's behaviour
+// (hover, focus, touch and press heat a monolith; each link's hit area is laid over its monolith's projection, so the
+// monolith and its words are one link that works by tap), and queues a ripple for the lava on a press.
+// Framework-free (no React). The section's markup is components/world/Ventures.tsx (static).
 
-export type Vec3 = [number, number, number];
+import type { WorldModule } from './modules';
+import type { Frame, V3 } from './frame';
+import { V, clamp } from './frame';
+import type { Uniforms } from './gl';
+import { haptic } from '@/lib/haptic';
+import monolithGlsl from './glsl/monolith.glsl';
 
-/** The ventures' place on the planet, from the journey: a point on the sea surface and its frame. */
-export type VenturePlace = {
-  origin: Vec3; // on the sea surface, where the middle monolith stands
-  up: Vec3; // the surface normal there
-  fwd: Vec3; // horizontal, from the place toward the camera's side (monolith faces turn to it)
-  scale: number; // world units per monolith unit (a monolith is 10 units tall)
-};
-export type VentureCamera = {
-  /** world -> CSS px in the viewport (x right, y down), or null behind the camera */
-  project: (p: Vec3) => [number, number] | null;
-  narrow: boolean; // portrait phone layout
-};
+export type Vec3 = V3;
 
-export const MONO_E: [number, number, number, number] = [1.6, 5.0, 0.42, 0.12]; // half w, half h, half d, fillet
-const KINDS = [0, 1, 1]; // Crucible Sites cooled (live), Verge and Trellis still forging
-// Layouts, in monolith units in the place's frame (x right, z toward the camera), yaw in radians (+ turns the face
-// right). Desktop: three in a row, the outer two turned in. Phone: staggered in depth, the live one nearest.
+/** Half width, half height, half depth, fillet radius: a monolith is 10 units tall, times SCALE world units. */
+export const MONO_E: [number, number, number, number] = [1.6, 5.0, 0.42, 0.12];
+/** World units (~m) per monolith unit: 14 makes them 140 m tall, against a camera 3 m above the sea. */
+const SCALE = 14;
+/** Where they stand: this far along the circle past the ventures place's first key (s = 160 deg), and the layouts in
+ * monolith units in the place's frame (x right, z toward the camera), yaw offsets from the hero angle (rad). */
+const AHEAD = 30 + 300;
 const LAYOUT = {
-  wide: { pos: [[-5.6, 0], [0, -1.5], [5.6, 0]], yaw: [0.32, 0.0, -0.32] },
-  narrow: { pos: [[-0.2, 0], [-4.6, -9], [4.2, -16]], yaw: [0.18, 0.35, -0.3] },
-} as const;
+  // desktop: right of the heading, at about 42%, 62% and 82% of the width, the two still forging a little further back
+  wide: { pos: [[-2.6, 0], [3.9, -3], [10.6, -1]] as const, aim: [-0.075, 0.075, -0.11] },
+  // phones: the live one in front, centred; the two forging ones behind it to either side
+  narrow: { pos: [[0, 0], [-6, -15], [5.5, -28]] as const, aim: [-0.06, 0.08, -0.1] },
+};
+const KINDS = [0, 1, 1];
+/** Forward lean of each monolith (rad, toward the camera). */
+const LEAN = [0.12, 0.085, 0.14]; // Crucible Sites cooled (live), Verge and Trellis still forging
 
-// state fed by the DOM
+// ---- state fed by the DOM -------------------------------------------------------------------------------------------
 const S = {
-  progress: 0, // the section's pin progress 0..1 (rises happen in its first part)
-  on: false, // the section is near the viewport
   hoverT: [0, 0, 0],
   hover: [0, 0, 0],
   hoverV: [0, 0, 0],
-  press: [0, 0, 0], // 1 on press, decays
+  press: [0, 0, 0],
   lift: [0, 0, 0],
   liftV: [0, 0, 0],
 };
-/** Hit boxes for the DOM (CSS px, viewport), written each frame. */
+/** Screen boxes (CSS px, viewport) of each monolith's part above the sea, and its rise; written every frame. */
 export const ventureBoxes = [0, 1, 2].map(() => ({ x: 0, y: 0, w: 0, h: 0, vis: false, rise: 0 }));
-/** Ripple requests for the lava module: world position and strength; the lava module drains this queue. */
-export const ventureRipples: { p: Vec3; k: number }[] = [];
+/** Ripple requests for the lava (world position on the sea, strength 0..1); lava drains this queue. */
+export const ventureRipples: { p: V3; k: number }[] = [];
+const feet: V3[] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
-export function setVenturesProgress(p: number, on = true) {
-  S.progress = p < 0 ? 0 : p > 1 ? 1 : p;
-  S.on = on;
-}
 export function setVentureHover(i: number, on: boolean) {
   S.hoverT[i] = on ? 1 : 0;
 }
-let lastPlace: VenturePlace | null = null;
 export function pressVenture(i: number) {
   S.press[i] = 1;
-  if (lastPlace) ventureRipples.push({ p: footOf(lastPlace, i, false), k: 1 });
+  ventureRipples.push({ p: feet[i], k: 1 });
+  if (ventureRipples.length > 8) ventureRipples.shift();
 }
 
-/** The rise of monolith i for section progress p: one after another over the first 60% of the pin. */
+/** The rise of monolith i for the section's pin progress p: one after another over the first ~65% of the pin. */
 export const riseAt = (p: number, i: number) => {
-  const x = (p - (0.04 + i * 0.12)) / 0.3;
-  const c = x < 0 ? 0 : x > 1 ? 1 : x;
+  const c = clamp((p - (0.03 + i * 0.12)) / 0.32);
   return c * c * (3 - 2 * c);
 };
 
-const add = (a: Vec3, b: Vec3): Vec3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const mul = (a: Vec3, k: number): Vec3 => [a[0] * k, a[1] * k, a[2] * k];
-const cross = (a: Vec3, b: Vec3): Vec3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const norm = (a: Vec3): Vec3 => mul(a, 1 / Math.hypot(a[0], a[1], a[2]));
-
-function frameOf(pl: VenturePlace) {
-  const up = norm(pl.up);
-  const z = norm(add(pl.fwd, mul(up, -(pl.fwd[0] * up[0] + pl.fwd[1] * up[1] + pl.fwd[2] * up[2]))));
-  const x = cross(up, z);
-  return { x, up, z };
-}
-let narrowNow = false;
-function footOf(pl: VenturePlace, i: number, narrow = narrowNow): Vec3 {
-  const { x, z } = frameOf(pl);
-  const L = narrow ? LAYOUT.narrow : LAYOUT.wide;
-  const [px, pz] = L.pos[i];
-  return add(pl.origin, add(mul(x, px * pl.scale), mul(z, pz * pl.scale)));
-}
-
-// critically damped spring step (exact), time constant tau
 function spring(x: number, v: number, to: number, dt: number, tau: number): [number, number] {
-  const w = 1 / tau, d = x - to, c = v + w * d, e = Math.exp(-w * dt);
+  if (dt <= 0) return [x, v];
+  const w = 1 / tau,
+    d = x - to,
+    c = v + w * d,
+    e = Math.exp(-w * dt);
   return [to + (d + c * dt) * e, (v - c * w * dt) * e];
 }
 
-export type VentureUniforms = {
-  uMonoP: Float32Array; // 3 x vec4
-  uMonoM: Float32Array; // 3 x mat3 (column major)
-  uMonoK: Float32Array; // 3 x vec4
-  uMonoE: Float32Array; // vec4 (world units)
-  any: boolean; // any monolith visible (skip the trace otherwise)
-};
-const U: VentureUniforms = {
-  uMonoP: new Float32Array(12),
-  uMonoM: new Float32Array(27),
-  uMonoK: new Float32Array(12),
-  uMonoE: new Float32Array(4),
-  any: false,
+// Planck at three wavelengths with the compressed brightness of the GLSL (for the analytic environment's colours)
+function bb(T: number): V3 {
+  if (T < 600) return [0, 0, 0];
+  const lam = [0.61, 0.55, 0.465];
+  const b = lam.map((l) => 1 / (l ** 5 * (Math.exp(14388 / (l * T)) - 1)));
+  const x = T / 1811,
+    s = clamp((T - 640) / 220),
+    k = x ** 6 * s * s * (3 - 2 * s);
+  return [k, (b[1] / b[0]) * k, (b[2] / b[0]) * k];
+}
+
+const U = {
+  P: new Float32Array(12),
+  M: new Float32Array(27),
+  K: new Float32Array(12),
+  E: new Float32Array(4),
 };
 
-/** One clock tick: springs, the monoliths' poses, their screen boxes. `t` seconds, `dt` the tick. */
-export function venturesFrame(t: number, dt: number, place: VenturePlace, cam: VentureCamera): VentureUniforms {
-  lastPlace = place;
-  narrowNow = cam.narrow;
-  const L = cam.narrow ? LAYOUT.narrow : LAYOUT.wide;
-  const { x, up, z } = frameOf(place);
-  const s = place.scale;
+function frameUpdate(f: Frame, u: Uniforms) {
+  const p = f.at('ventures');
+  const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
+  const s = SCALE;
   const H = 2 * MONO_E[1];
-  U.uMonoE.set([MONO_E[0] * s, MONO_E[1] * s, MONO_E[2] * s, MONO_E[3] * s]);
-  U.any = false;
+  const v0 = (160 * Math.PI) / 180 * f.R + AHEAD;
+  const origin = f.surf(0, v0, 0);
+  const up = V.norm(origin);
+  // the place's frame: z toward the camera's side (back along the circle), x to the right as seen from the camera
+  const along = V.norm(V.sub(f.surf(0, v0 + 1, 0), origin));
+  const z = V.mul(along, -1);
+  const x = V.cross(up, z);
+  U.E.set([MONO_E[0] * s, MONO_E[1] * s, MONO_E[2] * s, MONO_E[3] * s]);
+  const dt = f.still ? 0 : f.dt;
+  const t = f.still ? 0 : f.t;
+  let any = false;
   for (let i = 0; i < 3; i++) {
     [S.hover[i], S.hoverV[i]] = spring(S.hover[i], S.hoverV[i], S.hoverT[i], dt, 0.12);
-    S.press[i] *= Math.exp(-dt / 0.35);
-    const rise = S.on ? riseAt(S.progress, i) : 0;
-    // hover lifts it a little; a press sinks it with a kick (the spring carries the bob back)
+    S.press[i] *= dt > 0 ? Math.exp(-dt / 0.35) : 1;
+    // the camera is far from them anywhere else on the journey: risen only inside their own pin
+    const rise = riseAt(p, i);
     const liftTo = S.hover[i] * 0.22 - S.press[i] * 0.3;
     [S.lift[i], S.liftV[i]] = spring(S.lift[i], S.liftV[i], liftTo, dt, 0.16);
-    // a slow bob while it stands in the lava (tiny: it is huge)
     const bob = Math.sin(t * 0.6 + i * 2.1) * 0.035 * rise;
     const lift = (-(1 - rise) * (H + 0.6) + S.lift[i] + bob) * s;
-    const foot = footOf(place, i, cam.narrow);
+    const [px, pz] = L.pos[i];
+    const foot = V.add(origin, V.add(V.mul(x, px * s), V.mul(z, pz * s)));
+    const fup = V.norm(foot);
+    feet[i] = foot;
     const vis = rise > 0.001;
-    if (vis) U.any = true;
-    U.uMonoP.set([...foot, vis ? 1 : 0], i * 4);
-    // yaw about the up axis, plus the faintest list as it floats (never a wobble)
-    const a = L.yaw[i] + Math.sin(t * 0.21 + i) * 0.006;
-    const X = add(mul(x, Math.cos(a)), mul(z, -Math.sin(a)));
+    any ||= vis;
+    U.P.set([foot[0], foot[1], foot[2], vis ? 1 : 0], i * 4);
+    // the hero angle: the face turned so its normal sits just off the half vector between the camera and the sun, so
+    // the crown of the cast face carries a vertical highlight band (never the whole face lit, never all dark)
+    const toCam = V.sub(f.cam.pos, foot);
+    const hc = V.norm(V.madd(toCam, fup, -V.dot(toCam, fup)));
+    const sd = f.sun.dir;
+    const hs = V.madd(sd, fup, -V.dot(sd, fup));
+    const hh = V.norm(V.add(hc, V.mul(V.norm(hs), clamp(V.dot(sd, fup) * 6 + 1, 0, 1))));
+    const zx = V.dot(hh, x),
+      zz = V.dot(hh, z);
+    const yaw = Math.atan2(zx, zz) + L.aim[i] + Math.sin(t * 0.21 + i) * 0.006;
+    const Zf = V.norm(V.add(V.mul(z, Math.cos(yaw)), V.mul(x, Math.sin(yaw))));
+    const Xf0 = V.cross(fup, Zf);
     const tilt = Math.sin(t * 0.37 + i * 1.7) * 0.004 * rise;
-    const Y = norm(add(up, mul(X, tilt)));
-    const Z = cross(X, Y);
-    U.uMonoM.set([...X, ...Y, ...Z], i * 9);
-    U.uMonoK.set([lift, S.hover[i], KINDS[i], S.press[i]], i * 4);
+    // each leans a few degrees toward the viewer, as if set down by the sea that cast it: a face tipped forward mirrors
+    // the glowing sea (the reflected horizon crosses it about two thirds up) instead of the black night sky above
+    const Y = V.norm(V.madd(V.madd(fup, Xf0, tilt), Zf, LEAN[i]));
+    const Z = V.norm(V.cross(Xf0, Y));
+    const X = V.cross(Y, Z);
+    U.M.set([...X, ...Y, ...Z], i * 9);
+    U.K.set([lift, S.hover[i], KINDS[i], S.press[i]], i * 4);
 
-    // the screen box: project the eight corners of the part above the sea
+    // the screen box of the part above the sea
     const b = ventureBoxes[i];
     b.rise = rise;
     b.vis = false;
     if (!vis) continue;
-    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    const base = add(foot, mul(up, lift));
-    // the part above the sea: local heights from the waterline (-lift) to the top
-    const lo = Math.max(-lift, -0.3 * H * s), hi = H * s;
+    const base = V.madd(foot, Y, lift);
+    const lo = Math.max(-lift, -0.3 * H * s),
+      hi = H * s;
     if (hi <= lo) continue;
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const sx of [-1, 1])
       for (const sz of [-1, 1])
         for (const hy of [lo, hi]) {
-          const p = add(base, add(add(mul(X, sx * MONO_E[0] * s), mul(Z, sz * MONO_E[2] * s)), mul(Y, hy)));
-          const q = cam.project(p);
+          const q = f.project(V.add(base, V.add(V.add(V.mul(X, sx * MONO_E[0] * s), V.mul(Z, sz * MONO_E[2] * s)), V.mul(Y, hy))));
           if (!q) continue;
           x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]);
           y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]);
         }
+    // clipped to the viewport, so a hit area never reaches over the nav or off screen
+    x0 = Math.max(x0, 0); y0 = Math.max(y0, 0); x1 = Math.min(x1, f.w); y1 = Math.min(y1, f.h);
     if (x1 > x0 && y1 > y0) Object.assign(b, { x: x0, y: y0, w: x1 - x0, h: y1 - y0, vis: true });
   }
-  return U;
+  u.set('ventures_uOn', any ? 1 : 0);
+  u.set('ventures_uP', U.P);
+  u.set('ventures_uM', U.M);
+  u.set('ventures_uK', U.K);
+  u.set('ventures_uE', U.E);
+  // the analytic environment (only what the sea's reflections of the monoliths see): night over a glowing sea, and
+  // the sun's radiance for the direct lobe (irradiance ~3 from a disc of the engine's size)
+  const sr = Math.max(f.sun.rad, 1e-3);
+  const sunK = 3 / (Math.PI * sr * sr);
+  u.set('ventures_uSunL', [sunK, sunK * 0.62, sunK * 0.36]);
+  // night over a molten sea: the low air over the horizon is lit from below by the lava (a warm band), the zenith is
+  // black; the band is what the metal mirrors as its bright line
+  u.set('ventures_uZen', [0.0025, 0.003, 0.0055]);
+  u.set('ventures_uHorW', [0.5, 0.13, 0.035]);
+  u.set('ventures_uHorC', [0.42, 0.11, 0.03]);
+  u.set('ventures_uSea', V.mul(bb(980), 14 * 0.96));
+  u.set('ventures_uPool', V.mul(bb(1320), 14));
 }
 
-/** Extra lava emission near the feet is in GLSL (monoSeaGlow); the world can also ask here for its own CPU use. */
-export const venturesHot = () => S.hover.some((h) => h > 0.01) || S.press.some((p) => p > 0.01);
+// ---- the section's DOM ------------------------------------------------------------------------------------------------
+let sec: HTMLElement | null = null;
+let links: HTMLAnchorElement[] = [];
+let hits: HTMLElement[] = [];
+let items: HTMLElement[] = [];
+let parents: DOMRect[] = [];
+let armed = false;
+let view = { w: 0, narrow: true };
+const offs: (() => void)[] = [];
+
+function bindDom(root: HTMLElement) {
+  sec = root.querySelector<HTMLElement>('[data-ventures]');
+  if (!sec) return;
+  links = [...sec.querySelectorAll<HTMLAnchorElement>('.wv-link')];
+  hits = links.map((a) => a.querySelector<HTMLElement>('.wv-hit')!);
+  items = links.map((a) => a.closest<HTMLElement>('.wv-item')!);
+  const on = (el: EventTarget, ev: string, fn: () => void) => {
+    el.addEventListener(ev, fn, { passive: true });
+    offs.push(() => el.removeEventListener(ev, fn));
+  };
+  links.forEach((a, i) => {
+    const hot = (v: boolean) => () => {
+      setVentureHover(i, v);
+      a.toggleAttribute('data-hot', v);
+    };
+    on(a, 'pointerenter', hot(true));
+    on(a, 'pointerleave', hot(false));
+    on(a, 'focus', hot(true));
+    on(a, 'blur', hot(false));
+    on(a, 'touchstart', hot(true));
+    on(a, 'touchend', () => setTimeout(hot(false), 500));
+    on(a, 'touchcancel', hot(false));
+    on(a, 'pointerdown', () => {
+      pressVenture(i);
+      haptic(8);
+    });
+  });
+}
+
+export const ventures: WorldModule = {
+  id: 'ventures',
+  glsl: monolithGlsl,
+  hooks: ['hit', 'shade', 'env', 'sea'],
+  init({ root }) {
+    bindDom(root);
+  },
+  update(f, u) {
+    frameUpdate(f, u);
+    // layout reads before the frame's writes (after())
+    view = { w: f.w, narrow: f.narrow };
+    parents = hits.map((h) => (h.offsetParent as HTMLElement | null)?.getBoundingClientRect() ?? new DOMRect());
+  },
+  after() {
+    if (!sec) return;
+    // desktop: the words stand under their monoliths; keep them apart (one item's width + a gap) and on screen
+    const cx = ventureBoxes.map((b) => b.x + b.w / 2);
+    if (!view.narrow) {
+      const iw = Math.min(17 * 16, 0.21 * view.w),
+        gap = iw + 24;
+      const order = [0, 1, 2].sort((a, b) => cx[a] - cx[b]);
+      for (let k = 1; k < 3; k++) cx[order[k]] = Math.max(cx[order[k]], cx[order[k - 1]] + gap);
+      const over = cx[order[2]] - (view.w - iw / 2 - 24);
+      if (over > 0) for (const k of order) cx[k] -= over;
+    }
+    const any = ventureBoxes.some((b) => b.rise > 0);
+    if (any !== armed) {
+      armed = any;
+      sec.toggleAttribute('data-armed', any);
+    }
+    ventureBoxes.forEach((b, i) => {
+      const h = hits[i],
+        r = parents[i],
+        it = items[i];
+      if (!h || !it) return;
+      it.style.setProperty('--r', b.rise.toFixed(3));
+      it.style.pointerEvents = !armed || b.rise > 0.6 ? '' : 'none';
+      if (!b.vis || !r) {
+        h.style.visibility = 'hidden';
+        return;
+      }
+      h.style.visibility = '';
+      h.style.transform = `translate(${(b.x - r.left).toFixed(1)}px, ${(b.y - r.top).toFixed(1)}px)`;
+      h.style.width = `${b.w.toFixed(1)}px`;
+      h.style.height = `${b.h.toFixed(1)}px`;
+      it.style.setProperty('--cx', `${cx[i].toFixed(1)}px`);
+    });
+  },
+  dispose() {
+    offs.splice(0).forEach((fn) => fn());
+    sec?.removeAttribute('data-armed');
+  },
+};

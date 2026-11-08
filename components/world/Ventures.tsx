@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { ventures, ventureHref, type Venture } from '@/data/ventures';
-import { VenturesClient } from './VenturesClient';
 import './Ventures.css';
 
 /**
@@ -10,7 +9,8 @@ import './Ventures.css';
  * holds its status, name and line, plus a transparent hit area the world lays over its monolith (`.wv-hit`), so the
  * monolith and its text are one link that works by tap. No backing behind any of it.
  *
- * Static (no JS, reduced motion, no WebGL): a plain list, each item with its arrow; the world (or its still) behind it.
+ * Behaviour (hover/focus/touch heat, press, hit areas, rise) lives in the world module (lib/world/ventures.ts), which
+ * sets `data-armed` on the section while it runs. Without it (no JS, no WebGL): a plain list, each item with its arrow.
  */
 const WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five'];
 const cueFor = (v: Venture) => (v.status === 'live' ? `See ${v.name}` : `About ${v.name}`);
@@ -55,7 +55,6 @@ export function WorldVentures() {
           </ul>
         </div>
       </div>
-      <VenturesClient />
     </section>
   );
 }

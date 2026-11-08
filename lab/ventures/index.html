@@ -21,7 +21,7 @@ const P = new URLSearchParams(location.search);
 const num = (k, d) => (P.has(k) ? +P.get(k) : d);
 const cv = document.getElementById('c');
 const gl = cv.getContext('webgl2', { antialias: false, alpha: false, preserveDrawingBuffer: true });
-const mono = await (await fetch('../../lib/world/glsl/monolith.glsl')).text();
+const mono = await (await fetch('./monolith-v3.glsl')).text();
 
 const vs = `#version 300 es
 in vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
