@@ -103,12 +103,17 @@ def placeholder_signal(name, seed):
     # snow: per-line noise, stretched a little along the line like a real tube's
     snow = rng.random((LINES * 2, W // 2))
     snow = np.asarray(Image.fromarray((snow * 255).astype(np.uint8)).resize((W, H), Image.BILINEAR), dtype=np.float64) / 255
-    a += (snow ** 5) * 0.2
+    a += (snow ** 5) * 0.15
     img = Image.new('L', (W, H), 0)
     d = ImageDraw.Draw(img)
-    big = archivo(64, 680, 118)
-    small = archivo(30, 520, 100)
-    for text, font, y, v in [(name, big, H * 0.47, 235), ('No signal', small, H * 0.57, 150)]:
+    # the name as large as fits in three quarters of the face
+    size = 84
+    big = archivo(size, 700, 118)
+    while d.textlength(name, font=big) > W * 0.72 and size > 40:
+        size -= 4
+        big = archivo(size, 700, 118)
+    small = archivo(36, 560, 104)
+    for text, font, y, v in [(name, big, H * 0.47, 250), ('No signal', small, H * 0.575, 170)]:
         bb = d.textbbox((0, 0), text, font=font)
         d.text(((W - (bb[2] - bb[0])) / 2 - bb[0], y - (bb[3] - bb[1]) / 2 - bb[1]), text, fill=v, font=font)
     t = np.asarray(img, dtype=np.float64) / 255

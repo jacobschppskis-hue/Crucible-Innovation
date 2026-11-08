@@ -51,10 +51,14 @@ vec3 blackbody(float t) {
 float prof(float s, vec4 B, float r0) {
   float u = (B.x - s) / (r0 * 2.6);
   float m = (1.0 + B.w * exp(-u * u)) * (1.0 + 0.07 * sin(s / (r0 * 5.0) - uTime * 9.0));
-  if (B.y > 0.5) {
-    float z = clamp((s - B.y) / (r0 * 10.0), 0.0, 1.0);
-    float bead = pow(0.5 + 0.5 * cos(6.2832 * (s - B.y) / (r0 * 4.6) + 3.1416), 0.7) * 1.25;
-    m *= mix(bead * smoothstep(0.0, 0.35, z + 0.12), 1.0, smoothstep(0.25, 1.0, z));
+  if (B.y > 0.5 && B.z < 1.5) {
+    // the draining tail breaks into round beads (a circle's profile per bead, the first one centred on the tail, so
+    // the end is always round), merging back into the stream further up
+    float z = clamp((s - B.y) / (r0 * 9.0), 0.0, 1.0);
+    float lam = r0 * 2.7, R = r0 * 1.1;
+    float d = mod(s - B.y + 0.5 * lam, lam) - 0.5 * lam;
+    float bead = sqrt(max(0.0, R * R - d * d)) / r0;
+    m *= mix(bead, 1.0, smoothstep(0.3, 1.0, z));
   }
   return m;
 }
@@ -97,7 +101,7 @@ void main() {
     G = normalize(mix(G, gb, hh) + 1e-5);
     R = mix(R, rb, hh);
     S = mix(S, sb + float(b) * 1000.0, hh);
-    H = mix(H, B.z, hh);
+    H = mix(H, min(B.z, 1.0), hh);
   }
   // beads falling off the forks
   for (int i = 0; i < 3; i++) {
@@ -346,6 +350,19 @@ export function startSplitPour({ box, canvas, onFail }: Options): () => void {
   const NAME = new Float32Array(NN * 4);
   const times = [PAYPAL, ...[0, 0, 1, 1, 2, 2].map(nameTimes)];
 
+  /** One run's front/tail/heat/bulb. When the run has nearly drained, its last metal gathers (surface tension) into one
+   * round bead at its end that shrinks into the name or the fork: heat 2 tells the shader to draw it as a plain bead
+   * (no taper, no beading), so it never ends in a point. */
+  function setRun(i: number, fr: number, tl: number, alive: boolean, bulb: number, run: Run) {
+    const rEnd = run.pts[(NP - 1) * 4 + 3];
+    const gather = 7 * rEnd;
+    const rem = fr - tl;
+    if (alive && tl > 0.5 && rem < gather) {
+      const v = Math.max(0, rem / gather);
+      B.set([fr, fr - Math.min(rem, 0.5 * rEnd) * v, 2, 1.25 * Math.sqrt(v) - 1], i * 4);
+    } else B.set([fr, tl, alive ? 1 : 0, bulb], i * 4);
+  }
+
   /** Everything for pour time tau. */
   function state(tau: number) {
     const g = geo!;
@@ -354,7 +371,7 @@ export function startSplitPour({ box, canvas, onFail }: Options): () => void {
     const fT = tau < RUN ? 0.1 * g.em * sw : front(tau);
     const tT = tau < RUN + LAG ? 0 : front(tau - LAG);
     const trunkAlive = sw > 0 && tT < g.trunk.len - 0.5;
-    B.set([fT, tT, trunkAlive ? 1 : 0, tau < RUN ? -0.75 + 1.05 * sw : 0.38], 0);
+    setRun(0, fT, tT, trunkAlive, tau < RUN ? -0.75 + 1.05 * sw : 0.38, g.trunk);
     // a run: its front leaves the fork when the trunk's front gets there, the tail when the trunk's tail does
     for (let i = 0; i < 6; i++) {
       const row = i >> 1;
@@ -366,7 +383,7 @@ export function startSplitPour({ box, canvas, onFail }: Options): () => void {
       const fr = go(tau);
       const tl = tau - LAG <= FORK[row] ? 0 : go(tau - LAG);
       const alive = tau > FORK[row] && tl < r.len - 0.5;
-      B.set([fr, tl, alive ? 1 : 0, 0.32], (i + 1) * 4);
+      setRun(i + 1, fr, tl, alive, 0.32, r);
     }
     // a bead falls off each fork as the tail passes, and sinks
     for (let k = 0; k < 3; k++) {
