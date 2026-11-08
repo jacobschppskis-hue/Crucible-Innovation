@@ -117,11 +117,12 @@ export function keys(): Key[] {
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
-    // story-2 (the rest of Jacob's account): the limb and the stars from orbit
-    { at: ['story-2', 0], s: deg(55), h: 3400, yaw: 0, pitch: -14, fov: 46, ...FAR, ph: { fov: 60 } },
-    { at: ['story-2', 1], s: deg(90), h: 2200, yaw: 8, pitch: -12, fov: 46, ...FAR, ph: { fov: 60 } },
+    // story-2 (the rest of Jacob's account): the limb and the stars from orbit; the limb in the lower third (pitch =
+    // about 13-15 deg above the horizon dip, acos(R / (R + h)))
+    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -37, fov: 46, ...FAR, ph: { fov: 60, pitch: -35 } },
+    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -30, fov: 46, ...FAR, ph: { fov: 60, pitch: -28 } },
     // story-3 (Charlie): coming down over the night side
-    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -16, fov: 48, ...FAR, ph: { fov: 62 } },
+    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -18, fov: 48, ...FAR, ph: { fov: 62, pitch: -16 } },
     { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, ...FAR, ph: { fov: 62, pitch: 3 } },
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
