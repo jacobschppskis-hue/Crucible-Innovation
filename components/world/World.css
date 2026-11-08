@@ -17,13 +17,29 @@ html[data-world] canvas.liquid {
   display: none;
 }
 
-/* The still look before the world starts, and for no JS / no WebGL: the sunset over a dark sea. */
-html[data-world] {
-  background:
-    radial-gradient(120% 55% at 50% 62%, rgba(255, 110, 40, 0.28), rgba(120, 30, 10, 0.12) 38%, transparent 70%),
-    linear-gradient(to bottom, #050508 0%, #0b0a10 45%, #2a0d05 62%, #120604 70%, #050403 100%) fixed;
+/* The still look before the world starts, and for no JS / no WebGL: the hero frame itself, rendered by the world
+ * (lab/world/still.mjs -> public/world/hero-*.webp, ~12-26 KB) and laid out like the live camera (fixed, centred,
+ * the viewport's width: the camera keeps a phone's frame width too), so the world takes over in place. */
+html:has([data-world-root]) {
+  background: #050403;
 }
-html[data-world] body {
+.w-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: url('/world/hero-landscape.webp') center / 100vw auto no-repeat;
+}
+@media (max-aspect-ratio: 3/4) {
+  .w-root::before {
+    background-image: url('/world/hero-portrait.webp');
+  }
+}
+html[data-world-on] .w-root::before {
+  display: none;
+}
+html:has([data-world-root]) body {
   background: transparent;
 }
 html[data-world-on] {

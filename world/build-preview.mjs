@@ -65,7 +65,7 @@ const bundle = js.outputFiles[0].text.replace(/<\/script/gi, '<\\/script');
 // the artifact frame serves its own <html>: carry ours over (the font variable class, lang)
 const htmlCls = (html.match(/<html[^>]*class="([^"]*)"/) || [])[1] || '';
 const carry = `<script>document.documentElement.lang='en';document.documentElement.classList.add(${JSON.stringify(htmlCls.split(/\s+/).filter(Boolean)).slice(1, -1)})</script>`;
-const frameFix = carry + `<style>html,body{background:transparent!important;color:#E8E4D8!important}html{background:#050403!important}body{font:inherit;margin:0}</style>`;
+const frameFix = carry + `<style>body{background:transparent!important;color:#E8E4D8!important}html{background-color:#050403}body{font:inherit;margin:0}</style>`;
 // (replacer functions: the bundle contains `$'`-like sequences that string replacements would expand)
 html = html.replace('</head>', () => `${frameFix}</head>`).replace('</body>', () => `<script>${bundle}</script></body>`);
 fs.writeFileSync(path.join(DIST, 'crucible.html'), html);

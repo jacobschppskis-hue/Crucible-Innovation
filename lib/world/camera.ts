@@ -49,11 +49,14 @@ export function cameraFrom(R: number, ch: Channels, w: number, h: number, out?: 
     u = V.sub(V.mul(u, c), V.mul(r, sn));
     r = r2;
   }
-  const fov = ch.fov ?? 50;
+  // keys give the vertical fov; a portrait screen taller than ~0.6 (iPhone Safari with its bars) keeps that frame's
+  // WIDTH instead, so a tall phone (full screen, a 20:9 Android) sees the same horizontal composition, more sky and sea
+  let fov = ch.fov ?? 50;
+  const aspect = w / Math.max(h, 1);
+  if (aspect < 0.6) fov = 2 * Math.atan((Math.tan(0.5 * fov * D2R) * 0.6) / aspect) / D2R;
   const focal = (0.5 * h) / Math.tan(0.5 * fov * D2R);
   const cam = out ?? ({} as Camera);
   Object.assign(cam, { pos, r, u, f, fov, focal, s, x, h: alt, theta, up, along, across });
-  void w;
   return cam;
 }
 
