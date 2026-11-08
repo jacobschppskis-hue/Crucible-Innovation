@@ -68,6 +68,17 @@ function name(c: CanvasRenderingContext2D, s: string, cap: number) {
   c.fillText(s, MW / 2, MH / 2 + (cap / 2) * PX);
 }
 
+function soften(cv: HTMLCanvasElement | OffscreenCanvas, px: number) {
+  const c = cv.getContext('2d') as CanvasRenderingContext2D | null;
+  if (!c || !('filter' in c)) return;
+  const copy = typeof document === 'undefined' ? new OffscreenCanvas(cv.width, cv.height) : document.createElement('canvas');
+  copy.width = cv.width; copy.height = cv.height;
+  (copy.getContext('2d') as CanvasRenderingContext2D).drawImage(cv as HTMLCanvasElement, 0, 0);
+  c.filter = `blur(${px}px)`;
+  c.drawImage(copy as HTMLCanvasElement, 0, 0);
+  c.filter = 'none';
+}
+
 export function ingot(kind: IngotKind): IngotSpec {
   const root: ObjectInit = {};
   const stamp = reliefCanvas(MW, MH, (c) => {
@@ -79,6 +90,9 @@ export function ingot(kind: IngotKind): IngotSpec {
       name(c, kind === 'verge' ? 'Verge' : 'Trellis', 12.5);
     }
   });
+  // A cast stamp has a soft lip, not a pixel step: a slight blur so the cut's walls shade smoothly (no stair-stepped
+  // highlight along the edges at any size). Where canvas filters are missing it stays sharp.
+  soften(stamp, 1.6);
   const relief = { canvas: stamp, x: 0, y: 0, w: SW, h: SH };
   const hot = kind !== 'sites';
   const mesh = goldBar();

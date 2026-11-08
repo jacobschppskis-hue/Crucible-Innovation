@@ -61,7 +61,7 @@ g-=dot(g,nO)*nO;
 float rl=0.,ao=.6+.8*h0;
 vec3 n0=nO;
 vec3 nn=normalize(nO-g*k/uGrain*.05),nb=nn;
-if(uRel!=0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.55,vec2(.0004),vec2(.0011));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
+if(uRel!=0.){vec2 uv=(p.xy-uRelP.xy)/uRelP.zw+.5,d=clamp(fwidth(uv)*.7,vec2(.0007),vec2(.0014));float w=smoothstep(.6,.95,nO.z)*step(0.,min(uv.x,uv.y))*step(max(uv.x,uv.y),1.);
 rl=texture(uRelT,uv,-1.5).r*w;
 vec2 gr=vec2(texture(uRelT,uv+vec2(d.x,0),-1.5).r-texture(uRelT,uv-vec2(d.x,0),-1.5).r,texture(uRelT,uv+vec2(0,d.y),-1.5).r-texture(uRelT,uv-vec2(0,d.y),-1.5).r)*w*(.0011/d);
 nn=normalize(mix(nn,nO,.6*rl)-vec3(gr,0.)*uRel);}
@@ -144,8 +144,8 @@ float lq=vn(vec3(wq+vec2(uTime*.04,-uTime*.03),uTime*.12+uSeed));
 float st=.8+.4*vn(vec3(p.x*.05,p.y*.22+uTime*.25,uTime*.3+uSeed));
 float gl=(exp(-d/3.2)*.6+exp(-d/9.)*.24)*mix(.7,1.25,lq)*st*(1.-smoothstep(12.,26.,d))*(.88+.12*sin(d*.9-uTime*2.2+lq*5.));
 float pr=length(p.xy-uPoke.xy),pa=uPoke.z,pw=pr-4.-pa*30.;
-float ring=uPoke.w*exp(-pa*1.4)*(exp(-pw*pw/5.)-.5*exp(-(pw+3.)*(pw+3.)/5.))*smoothstep(0.,4.,pr);
-col=max(bb(.42)*uTemp*gl*(1.+.8*ring)+vec3(1.,.72,.42)*ring*(.2+.5*uTemp)*(.6+.4*st),0.);
+float ring=uPoke.w*exp(-pa*1.8)*(exp(-pw*pw/10.)-.25*exp(-(pw+4.)*(pw+4.)/10.))*smoothstep(0.,4.,pr);
+col=max(bb(.42)*uTemp*gl*(1.+.6*ring)+bb(.5)*ring*(.06+.16*uTemp)*(.6+.4*st)*exp(-d/14.),0.);
 }
 col*=uExp;
 col=clamp((col*(2.51*col+.03))/(col*(2.43*col+.59)+.14),0.,1.);
