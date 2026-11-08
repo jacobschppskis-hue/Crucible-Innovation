@@ -42,10 +42,12 @@ vec3 shore_uvy(vec3 P){
 // inland distance x (>0 on land), from the waterline
 float shore_x(vec2 w){ return shore_line(w.x) - w.y; }
 // sand height above the sea at inland distance x: a gentle beach, then low dunes
+// The land is a bar of black sand ~420 units wide (molten sea again behind it), so the run home never flies over a
+// plain of unlit dunes
 float shore_sand(vec2 w, float x){
   float beach = x * 0.055 - 0.25;
   float dune = smoothstep(45.0, 150.0, x) * (5.0 + 3.0 * sin(w.x * 0.021 + x * 0.013) + 2.0 * sin(w.x * 0.047 - x * 0.031));
-  return beach + dune;
+  return min(beach + dune, (430.0 - x) * 0.06 - 0.25);
 }
 // the wave phase along the shore (each stretch of beach a little out of step), 0..1
 float shore_phase(float u){
@@ -121,10 +123,14 @@ void shore_hit(Ray r, inout Hit h){
     vec3 P = r.ro + r.rd * t;
     vec3 q = shore_uvy(P);
     float x = shore_x(q.xy);
+    if (x > 450.0 && q.z < 1.0) { // over the sea behind the bar: skip ahead toward it
+      t += max(0.5, min((x - 440.0) * 0.7, 40.0 + t * 0.02));
+      continue;
+    }
     if (x < -2.0 && q.z < 1.0) { // over the sea: skip ahead toward the shoreline
       float dv = -x;
       t += max(0.5, min(dv * 0.7, 40.0 + t * 0.02));
-      prev = 1e9; continue;
+      continue;
     }
     if (abs(q.x) > 2000.0 || q.z > 60.0 && dot(r.rd, normalize(P)) > 0.0) break;
     float dy = q.z - shore_sand(q.xy, x);
@@ -242,13 +248,18 @@ export function shoreKeys(R: number): Key[] {
     // clear of the pinned contact
     { at: ['shore', 0], s: deg(157.5), h: 900, yaw: -30, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -12, pitch: -6 } },
     { at: ['shore', 1], s: deg(159.5), h: 1100, yaw: -29, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -11, pitch: -6.5 } },
-    // dawn: high over the day side, then down out of the sky over the sea to the beach, turning to face it
-    { at: ['dawn', 0], s: deg(235), h: 4600, yaw: 25, pitch: -38, fov: 46, ...FAR2, ph: { fov: 60 } },
-    { at: ['dawn', 0.4], s: beach + 900, h: 160, yaw: 150, pitch: -10, fov: 46, ...FAR2, ph: { fov: 60, pitch: -11 } },
-    // off the beach over the surf, facing the land with the setting sun off to the right: the sky and the dark dunes
-    // carry the wordmark, the surf breaks across the lower half
-    { at: ['dawn', 0.72], s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, 'lava.heat': 0.1, ...FAR2, ph: { fov: 62, pitch: -9 } },
-    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 146, pitch: -7.5, fov: 46, 'lava.heat': 0.1, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
+    // dawn (4 screens): the run home. From the end of the shore to the beach the camera orbits ~190 deg and turns
+    // ~160 deg; both are shared out at ONE constant rate of view rotation (~20 deg per 100 px of scroll): it eases out
+    // of the shore's still ('in'), runs linear through the middle keys (their values lie on the same line, so the speed
+    // never changes at a key), eases into the beach ('out', starting at the same speed), then holds on the surf with
+    // the wordmark. Descent in log-h along the way.
+    { at: ['dawn', 0], ease: 'in', s: deg(183.9), h: 2800, yaw: -0.4, pitch: -34, fov: 46, ...FAR2, ph: { fov: 60, pitch: -30 } },
+    { at: ['dawn', 0.35], ease: 'linear', s: deg(260.6), h: 1800, yaw: 61.3, pitch: -27, fov: 46, 'lava.heat': 0.06, ...FAR2, ph: { fov: 60, pitch: -25 } },
+    { at: ['dawn', 0.698], ease: 'linear', s: deg(337.4), h: 140, yaw: 123, pitch: -7, fov: 46, 'lava.heat': 0.1, ...FAR2, ph: { fov: 60, pitch: -8 } },
+    // over the surf, facing the land with the setting sun off to the right (no glitter path in frame): the sky and the
+    // dark dunes carry the wordmark, the surf breaks across the lower half
+    { at: ['dawn', 0.85], ease: 'out', s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, 'lava.heat': 0.08, ...FAR2, ph: { fov: 62, pitch: -9 } },
+    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 146, pitch: -7.5, fov: 46, 'lava.heat': 0.07, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
   ];
 }
 
@@ -261,7 +272,7 @@ export const shore: WorldModule & { keys: (R: number) => Key[] } = {
     // on only from the descent to the beach until the seam (at the seam the beach is below the hero's horizon, so turning
     // it off there is invisible); the march is skipped everywhere else
     const name = f.place.name;
-    const on = (name === 'dawn' && f.at('dawn') > 0.25) || name === 'loop' ? 1 : 0;
+    const on = (name === 'dawn' && f.at('dawn') > 0.6) || name === 'loop' ? 1 : 0;
     u.set('shore_uOn', on);
     u.set('shore_uT', f.still ? 2.2 : f.t);
   },

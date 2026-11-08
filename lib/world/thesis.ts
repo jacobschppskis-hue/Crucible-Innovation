@@ -124,9 +124,9 @@ export const thesis: WorldModule = {
     // The Nov 2 timing: the heat eases in and out between 8% and 78% of the pin.
     const k = inOut(seg(p, 0.08, 0.78));
     // The sea is the thesis's from the last fifth of ventures (it cools to still metal for "Nothing new happens at
-    // 293 K") until most of the way through the shore (it cools back to the lava, so the loop arrives unchanged).
+    // 293 K") until the sunrise starts in the shore (it cools back to the lava, so the loop arrives unchanged).
     const into = smooth(seg(f.at('ventures'), 0.8, 1));
-    const away = 1 - smooth(seg(f.at('shore'), 0.1, 0.7));
+    const away = 1 - smooth(seg(f.at('shore'), 0, 0.2));
     const w = p > 0 ? (p < 1 ? 1 : away) : into;
     // cold: the lava's own glow goes down while the metal is cold, and comes back as the heat takes over
     const cold = 1 - smooth(seg(k, 0.15, 0.6));

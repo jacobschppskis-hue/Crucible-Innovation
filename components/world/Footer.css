@@ -123,10 +123,10 @@
   opacity: 0.8;
 }
 
-/* dawn: 2 screens; the wordmark holds over the day side (pinned) while the camera crosses it and turns back to the
+/* dawn: 4 screens; the wordmark holds over the day side (pinned) while the camera crosses it and turns back to the
    setting sun, then lifts away as the hero comes up from below */
 .wfoot-dawn {
-  height: calc(var(--world-vh, 100svh) * 2);
+  height: calc(var(--world-vh, 100svh) * 4);
 }
 .wfoot-giant {
   position: sticky;
