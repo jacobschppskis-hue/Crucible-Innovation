@@ -1,8 +1,6 @@
 // mark.glsl: the hero's mark (role: mark). Jacob's Split Ring as one huge cast structure around its core, which is the
-// sun, and the "stronger together" beat: two runs of metal leave the top together, one down the arcs (the human half,
-// one continuous line), one filling the squares one by one (the machine half, steps); they meet at the bottom, the weld
-// flashes, the ring blazes, then it sets to bone in the order it was poured. Nothing ever moves: the beat is light and
-// heat on a rigid mark.
+// sun, always whole and still, and the "stronger together" beat: a confluence on the sea below (mark_sea): two rivers
+// of molten metal run toward each other and join into one river that runs hotter (lib/world/together.ts).
 //
 // Geometry: lib/splitRing.ts exactly (64-unit box, centred on the core, y up here): rings r 26.667 and 16, stroke
 // 3.467, squares 4.267 (7 on the outer ring 22.5 deg apart, 4 on the inner 36 deg apart, after one empty step), core
@@ -23,7 +21,7 @@
 //
 // Hooks: hit (secondary rays only: the sea's reflections), env (cheap shade for those), over (camera rays: the mark is
 // composited here, so its silhouette is anti-aliased and it can fade), sky (the core's flare on the sun disc).
-// The beat's timeline mirrors lib/world/together.ts: keep MARK_POUR / MARK_MEET and the set window in step.
+// The confluence timeline is lib/world/together.ts (fronts and flash arrive as uniforms).
 
 uniform vec4 mark_uC;     // xyz: the core's centre (world); w: world units per mark unit
 uniform mat3 mark_uB;     // mark -> world (columns: right, up, toward the viewer)
@@ -32,6 +30,9 @@ uniform vec4 mark_uLook;  // x: visibility 0..1, y: size (1 = the core is the su
 uniform vec3 mark_uSky;   // fill radiance from the sky above (cool)
 uniform vec3 mark_uSea;   // fill radiance from the glowing sea below (warm)
 uniform vec3 mark_uCoreL; // the core's radiance as a light on the pieces
+uniform vec4 mark_uRiv;   // the confluence: x the along-coord origin (world v at the together start), y source rivers' front
+                          // 0..1, z joined river's front 0..1, w the meeting flash 0..1
+uniform vec2 mark_uRivT;  // x: clock (s), y: on (0/1)
 
 vec3 mark_envDir(vec3 d);
 
@@ -105,79 +106,6 @@ float mark_shadow(vec3 p, vec3 n) { // soft shadow toward the core (a sphere lig
   return mix(1., 0.25 * (1. + res) * (1. + res) * (2. - res), mark_uLook.z);
 }
 
-// ---------------------------------------------------------------- the beat
-// mark_uBeat.x, 0..1, a pure function of scroll (so reversible): the pour B_POUR..B_MEET (two runs accelerate down both
-// halves, as if by gravity), the weld (B_MEET), heat running back up both halves at once and the blaze, then a crisp
-// bone front sets it in the order it was poured, gone by 0.97. Mirrors lib/world/together.ts (keep them in step).
-const float MARK_POUR = 0.08, MARK_MEET = 0.60;
-float mark_run(float b) { float u = clamp((b - MARK_POUR) / (MARK_MEET - MARK_POUR), 0., 1.); return PI * (0.3 * u + 0.7 * u * u); }
-// x: temperature 0..1 (white-hot), y: liquid skin 0..1
-vec2 mark_heat(vec3 p3, float id, float px) {
-  float b = mark_uBeat.x;
-  if (b <= MARK_POUR || b >= 0.97) return vec2(0.);
-  vec2 p = p3.xy;
-  float tf = mark_run(b);
-  float th = PI - abs(atan(p.x, -p.y));                    // 0 at the top, pi at the bottom, either side
-  bool inner = (id > 0.5 && id < 1.5) || id > 8.5;
-  float T = 0., wet = 0.;
-  if (id < 1.5) {
-    // a run of liquid metal down the arc: a rounded tongue (ahead mid-stroke, held back at the walls), white-hot tip,
-    // orange body, a tail already cooling
-    float R = id < 0.5 ? MARK_RO : MARK_RI;
-    float dr = clamp((length(p) - R) / MARK_HS, -1., 1.);
-    float x = (tf - th) * R - 1.6 * dr * dr - 0.9 * max(MARK_HD - p3.z, 0.) / MARK_HD;
-    float on = smoothstep(-px, px, x) * step(0.001, tf);
-    T = on * (0.30 + 0.70 * exp(-max(x, 0.) / 7.0) + 0.25 * exp(-max(x, 0.) / 1.2));
-    wet = on;
-  } else {
-    // a square: a little mould that fills from the bottom up (the level stays level) as the run reaches it, with a
-    // short heat bloom, then the body's orange
-    float thc, R; vec2 c = mark_cellOf(id, thc, R);
-    float lead = thc - MARK_HP / R;
-    float f = clamp((tf - lead) * R / 4.0, 0., 1.);
-    float lvl = (c.y - MARK_HP) + 2. * MARK_HP * f * (2. - f) * 1.04 + 0.12 * sin(p.x * 2.1 + mark_uBeat.w * 3.) * f * (1. - f);
-    float on = smoothstep(px, -px, p.y - lvl) * step(0.0001, f);
-    float since = max((tf - lead) * R - 4.0, 0.);
-    T = on * (0.30 + 0.62 * exp(-since / 5.0) + 0.08 * (1. - f));
-    wet = on;
-  }
-  // the weld: one flash where they meet
-  T += mark_uBeat.y * 0.55 * exp(-(PI - th) * 4.);
-  // heat runs back up both halves at once: the whole ring blazes, hottest where they met, Ember toward the top
-  float up = smoothstep(MARK_MEET, MARK_MEET + 0.06, b);
-  float reach = PI * (1. - up);
-  float blaze = smoothstep(reach + 0.15, reach - 0.15, th) * up;
-  T = max(T, blaze * (0.50 + 0.36 * exp(-(PI - th) / 0.8)));
-  wet = max(wet, blaze);
-  // it sets in the order it was poured: a crisp bone front runs down both halves (the outer ring a little ahead), the
-  // weld last; ahead of it the metal cools orange to dull red. Never an Ember-to-bone mix.
-  float ts = PI * 1.12 * smoothstep(0.70, 0.95, b) - (inner ? 0.12 : 0.0);
-  float set;
-  if (id < 1.5) {
-    float R = id < 0.5 ? MARK_RO : MARK_RI;
-    set = smoothstep(px, -px, (th - ts) * R);
-  } else {
-    float thc, R; vec2 c = mark_cellOf(id, thc, R);
-    float g = clamp((ts - (thc - MARK_HP / R)) * R / 4.0, 0., 1.);
-    set = smoothstep(-px, px, p.y - (c.y + MARK_HP - 2. * MARK_HP * g * 1.04)) * step(0.0001, g);
-  }
-  T *= (1. - 0.5 * smoothstep(0.68, 0.92, b)) * (1. - set);
-  wet *= 1. - set;
-  // a slow shimmer in the molten skin, flowing down with the metal (smooth and large: never specks)
-  float sh = mark_noise(vec3(th * 9. - mark_uBeat.w * 1.2, length(p) * 0.35, mark_uBeat.w * 0.4)) - 0.5;
-  T = clamp(T + sh * 0.05 * wet * smoothstep(0.2, 0.5, T), 0., 1.);
-  return vec2(T, wet);
-}
-// incandescence: Planck's chromaticity at three wavelengths, 750 K (T 0) to 3000 K (T 1), brightness compressed for
-// the eye (real radiance spans 10^5 over this range)
-vec3 mark_glow(float T) {
-  if (T <= 0.001) return vec3(0.);
-  float K = 750. + 2250. * T;
-  vec3 lam = vec3(610., 549., 468.);
-  vec3 bb = 1. / (pow(lam / 610., vec3(5.)) * (exp(1.4388e7 / (lam * K)) - 1.));
-  return bb / bb.r * 6.0 * pow(T, 2.6);
-}
-
 // ---------------------------------------------------------------- shading
 float mark_ggx(float nh, float a) { float a2 = a * a; float d = nh * nh * (a2 - 1.) + 1.; return a2 / (PI * d * d); }
 float mark_vis(float nv, float nl, float a) { float k = a * 0.5; return 0.25 / ((nv * (1. - k) + k) * (nl * (1. - k) + k)); }
@@ -188,7 +116,7 @@ vec3 mark_toWorld(vec3 v) { return mark_uB * v; }
 vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
   vec3 n = mark_normal(p, clamp(px * 1.1, 0.01, 0.45));
   vec3 v = -rd;
-  vec2 H = mark_heat(p, id, px);
+  vec2 H = vec2(0.); // the mark is always cast and cooled: the beat lives on the sea now (mark_sea)
   float T = H.x, wet = H.y;
   // in the liquid: hotter along the middle of a stroke or square (thicker, it holds its heat), cooler at its edges; and
   // faint streamlines drawn out along the flow (smooth, stretched along the run: never specks)
@@ -247,7 +175,6 @@ vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
   col += vec3(0.10, 0.13, 0.20) * pow(max(dot(nW, mark_uB[1]), 0.), 6.) * (1. - abs(n.z)) * 0.6 * (1. - wet);
   // heat: emission dominates while hot; emissivity falls at grazing angles, so the glowing pieces keep their form
   col *= 1. - 0.55 * smoothstep(0.05, 0.45, T);
-  col += mark_glow(T) * (0.62 + 0.38 * sqrt(nv));
   return col;
 }
 
@@ -402,8 +329,63 @@ void mark_over(Ray r, Hit h, inout vec3 col) {
 
 // The core is the sun: it flares with the blaze (look draws the disc; this brightens it and its glow).
 void mark_sky(Ray r, inout vec3 col) {
-  float f = mark_uBeat.z;
+  float f = mark_uBeat.z; // 0 since V2 (no flare); kept so the hook list is stable
   if (f <= 0.001 || mark_uLook.x <= 0.002) return;
   float x = acos(clamp(dot(r.rd, uSunDir), -1., 1.)) / max(uSunRad, 1e-4);
   col += vec3(1.0, 0.55, 0.22) * f * mark_uLook.x * 0.9 * exp(-(x - 1.) * 1.5) * step(1., x);
+}
+
+// ---------------------------------------------------------------- the confluence (stronger together)
+// Two rivers of molten metal on the sea run toward each other and join into one that runs on hotter (brighter, more
+// yellow: colour is temperature). Drawn as heat added to lava's own sea (SeaMod.heat; lava turns it into blackbody
+// light under its skin), so it is the world's own material. Local coords in world units on the surface: x across (u),
+// y ahead of the together start (origin - v), the camera looking toward +y and down onto it.
+// distance from p to a quadratic Bezier (a, c, b) by a 12-segment polyline; t = where along it (0..1)
+float mark_bez(vec2 p, vec2 a, vec2 c, vec2 b, out float t) {
+  float best = 1e9; t = 0.;
+  vec2 q0 = a;
+  for (int i = 1; i <= 12; i++) {
+    float s1 = float(i) / 12.;
+    vec2 q1 = mix(mix(a, c, s1), mix(c, b, s1), s1);
+    vec2 e = q1 - q0; float h = clamp(dot(p - q0, e) / dot(e, e), 0., 1.);
+    float d = length(p - q0 - e * h);
+    if (d < best) { best = d; t = (float(i - 1) + h) / 12.; }
+    q0 = q1;
+  }
+  return best;
+}
+// one river: heat at p for a river (a, c, b) of half-width w that has run as far as `front` (0..1) from a
+float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, out float along) {
+  float t; float d = mark_bez(p, a, c, b, t);
+  along = t;
+  if (front <= 0.) return 0.;
+  float len = length(c - a) + length(b - c);
+  float behind = (front - t) * len;                       // world units behind the tip
+  float soft = max(fw * 1.2, w * 0.35);
+  float tipR = w * (0.9 + 0.4 * smoothstep(0., 6., behind));
+  // the tip is round (a tongue), the banks smooth and anti-aliased by the pixel footprint
+  float dd = behind < 0. ? length(vec2(d, behind)) : d;
+  float body = smoothstep(tipR + soft, tipR - soft, dd);
+  // fresh metal at the tip runs a little hotter
+  return body * (T + 0.12 * exp(-max(behind, 0.) / (w * 3.)));
+}
+void mark_sea(Ray r, Sea s, inout SeaMod m) {
+  if (mark_uRivT.y < 0.5) return;
+  vec2 p = vec2(s.w.x, mark_uRiv.x - s.w.y);
+  if (p.y < -40. || p.y > 420. || abs(p.x) > 320.) return;
+  float fw = s.fw;
+  vec2 J = vec2(-6., 82.);
+  float aL, aR, aJ;
+  float hL = mark_river(p, vec2(-150., 205.), vec2(-40., 160.), J, 2.6, mark_uRiv.y, fw, 0.36, aL);
+  float hR = mark_river(p, vec2(150., 215.), vec2(70., 120.), J, 2.6, mark_uRiv.y, fw, 0.36, aR);
+  float hJ = mark_river(p, J, vec2(18., 45.), vec2(-28., 6.), 3.6, mark_uRiv.z, fw, 0.62, aJ);
+  // the meeting: a short flash in a pool where they join
+  float pool = mark_uRiv.w * 0.35 * smoothstep(11., 3., length(p - J));
+  float h = max(max(hL, hR), hJ) + pool;
+  if (h <= 0.001) return;
+  // the metal flows: a slow, smooth shimmer drawn downstream (large and soft: never specks)
+  float flow = world_noise(vec2((aL + aR + aJ) * 40. - mark_uRivT.x * 0.9, length(p) * 0.02));
+  h *= 0.93 + 0.12 * flow;
+  m.heat = max(m.heat, h);
+  m.calm = max(m.calm, 0.5 * smoothstep(0., 0.3, h));
 }

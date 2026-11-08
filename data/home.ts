@@ -8,12 +8,10 @@ export const hero = {
   secondary: { href: '#ventures', label: 'Our ventures' },
 };
 
-/** The "stronger together" moment (replaces "Not the person / Not the model / Neither, alone"). `mark` owns.
- * Two runs of metal fill the mark: one down the arcs, one square by square; neither closes the ring alone. The first
- * two lines are Jacob's own words ("The human half and the machine half."), each arriving with the run it names; the
- * third lands when they meet. Display lines: no periods. Order matters (lib/world/together.ts LINES). */
+/** The "stronger together" moment (`mark` owns): a confluence on the sea, two molten rivers joining into one that runs
+ * hotter (lib/world/together.ts). One line, when they meet. Display line: no period. */
 export const together = {
-  lines: ['The human half', 'The machine half', 'Stronger together'],
+  lines: ['Stronger together'],
 };
 
 export const storyIntro = {

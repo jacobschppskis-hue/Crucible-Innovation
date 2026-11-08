@@ -2,29 +2,24 @@
 // structure: the core IS the sun, a world point the journey places (frame.sun: near over the sea in the hero, with real
 // parallax and its reflection under it; a far star elsewhere), so the mark is centred on it and scaled so its core is
 // exactly the sun's sphere (scale = sun.R / 4.8 mark units). This module draws the core (look's own disc is turned off
-// with look.sunDisc 0 wherever the mark shows). Its "stronger together" beat (lib/world/together.ts) plays on the
-// `together` place's pin progress, with the captions in that section.
+// with look.sunDisc 0 wherever the mark shows). The mark is always whole, cast and still. "Stronger together"
+// (lib/world/together.ts) is a confluence on the sea below: two molten rivers join into one hotter river, drawn as heat
+// in lava's sea through the `sea` hook, on the `together` place's pin progress, with one line of copy.
 //
-// GLSL: lib/world/glsl/mark.glsl (hooks hit/env for the sea's reflections, over for camera rays, sky for the flare).
+// GLSL: lib/world/glsl/mark.glsl (hooks hit/env for the sea's reflections, over for camera rays, sea for the rivers).
 import type { Frame, V3 } from './frame';
 import type { Uniforms } from './gl';
 import type { WorldModule } from './modules';
 import markGlsl from './glsl/mark.glsl';
-import { BEAT, coreFlare, heatAmount, heatColor, LINES, lineOpacity, seaRing, weldFlash } from './together';
+import { BEAT, joinedFront, LINES, lineOpacity, meetFlash, sourceFront, togetherKeys } from './together';
 
 const CORE_R = 4.8; // mark units (lib/splitRing.ts RING.core 3.6 on the 48 grid, x4/3)
 const CORE_L: V3 = [9.0, 4.6, 1.9];
 
-/** What the rest of the world may read from the mark each frame (lava: the glitter's tint and the weld's ring). */
+/** What the rest of the world may read from the mark each frame. */
 export const markState = {
-  /** linear colour of the hot metal now (0 when cold) */
-  heat: [0, 0, 0] as V3,
-  /** 0..1: how much of the mark glows */
-  heatAmount: 0,
-  /** the beat's progress 0..1 */
+  /** the together beat's progress 0..1 */
   beat: 0,
-  /** set to 1 on the frame the weld flashes (consume and zero it): one ring across the sea under the sun */
-  ring: 0,
   /** the core (the sun) as a light: world position (far out along the sun), radius, radiance */
   core: { pos: [0, 0, 0] as V3, radius: 0, radiance: [0, 0, 0] as V3 },
 };
@@ -37,8 +32,8 @@ export function beatOf(f: Frame) {
   return b < 0 ? 0 : b > 1 ? 1 : b;
 }
 
-/** The beat as shown: it follows the scroll (forward and back) but never faster than a pour can be read, and slowest
- *  around the weld, so a fast thumb flick still sees the runs meet, the flash and the blaze. With a fixed clock (?t=,
+/** The beat as shown: it follows the scroll (forward and back) but never faster than the rivers can be read, and
+ *  slowest around their meeting, so a fast thumb flick still sees them join. With a fixed clock (?t=,
  *  dt 0) or a long gap it snaps to the scroll, so test frames stay a pure function of scroll. */
 let shown = -1;
 function follow(target: number, dt: number) {
@@ -58,7 +53,8 @@ const markBox = { x: 0, y: 0, r: 0, ok: false };
 export const mark: WorldModule = {
   id: 'mark',
   glsl: markGlsl,
-  hooks: ['hit', 'shade', 'env', 'over', 'sky'],
+  hooks: ['hit', 'shade', 'env', 'over', 'sky', 'sea'],
+  keys: togetherKeys,
   channels: { 'mark.vis': 1, 'mark.size': 1, 'mark.light': 1, 'mark.fill': 1 },
   init({ root }) {
     lines = Array.from(root.querySelectorAll<HTMLElement>('[data-together-line]'));
@@ -77,10 +73,14 @@ export const mark: WorldModule = {
     const scale = (f.sun.R * size) / CORE_R;
     // square to the line of sight, upright to the planet under the sun (so it reads as the logo, never a tilted plate)
     const B = facing(centre, pos, r, norm(centre));
-    const flare = coreFlare(b);
+    const flare = 0;
     u.set('mark_uC', [centre[0], centre[1], centre[2], scale]);
     u.set('mark_uB', [...B.right, ...B.up, ...B.out]);
-    u.set('mark_uBeat', [b, weldFlash(b), flare, f.t]);
+    u.set('mark_uBeat', [b, 0, 0, f.t]);
+    // the confluence (its origin: the together camera's start, s 8, along the great circle)
+    const on = f.at('together') > 0 && f.at('story') < 1 ? 1 : 0;
+    u.set('mark_uRiv', [8, sourceFront(b), joinedFront(b), meetFlash(b)]);
+    u.set('mark_uRivT', [f.t, on]);
     u.set('mark_uLook', [vis, size, f.quality.q >= 0.45 ? 1 : f.quality.q > 0.2 ? 0.6 : 0, 0]);
     u.set('mark_uSky', [0.2 * fill, 0.22 * fill, 0.27 * fill]);
     u.set('mark_uSea', [0.95 * fill, 0.66 * fill, 0.44 * fill]);
@@ -97,15 +97,12 @@ export const mark: WorldModule = {
     } else markBox.ok = false;
 
     markState.beat = b;
-    markState.heat = heatColor(b);
-    markState.heatAmount = heatAmount(b);
-    if (seaRing(b)) markState.ring = 1;
     markState.core.pos = centre;
     markState.core.radius = CORE_R * scale;
     markState.core.radiance = [CORE_L[0] * k * (1 + flare), CORE_L[1] * k * (1 + flare), CORE_L[2] * k * (1 + flare)];
   },
   after(f: Frame) {
-    // the captions: each arrives with the run it names; the payoff when the ring closes
+    // the one line: when the rivers meet
     const b = f.still ? 0.97 : shown < 0 ? beatOf(f) : shown;
     if (stage && markBox.ok) {
       const s = `${markBox.x.toFixed(1)},${markBox.y.toFixed(1)},${markBox.r.toFixed(1)}`;
