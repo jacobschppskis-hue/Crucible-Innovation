@@ -44,30 +44,27 @@ another long after PayPal itself was gone"). The last line sets up his breakout 
 - Trail cores still a little fat when near the camera: hairline core in px, train width in world units.
 - The planet, atmosphere, stars and tone curve here are stand-ins; in the build they come from `look`/`lava`.
 
-## Technical plan
-- `lib/world/paypal.ts` (main thread, DOM-free): the beat as pure functions of p: `sites` (bearing, range, launch,
-  loft), `arcPos(site, u)` (great circle in angle, parabola in height = ballistic with constant horizontal speed;
-  apex = k·range, flight time ∝ √range), `vent(p)`, `trail(site, p, age)` (temperature/intensity by age:
-  K = 900 + 1350·e^(-age/τhot), train fades with τtrain and drifts with a slow wind wobble driven by the clock, so at
-  rest it is alive but the shape is a pure function of p). `update(frame)` builds the ribbon vertex buffer (screen-space
-  strips with a Gaussian cross-profile, hairline core ≥ 1.3 device px with intensity scaled down when widened so the
-  energy holds, mirrored copies for the reflection in the lava, occlusion by the planet tested per vertex) and fills
-  the uniforms for the lava (7 places: dir, heat, age, flash, seed; 7 head lights).
-- `lib/world/glsl/paypal.glsl`: `paypalEmit(n, P)` called by the lava/planet shader for the places (core + halo +
-  flows, impact flash, a faint heat ripple) and `paypalLight(P, n, V)` for the embers' light on the glossy surface;
-  the ribbon program (additive HDR into the scene buffer before bloom/tone map). If the composer has no extra-pass hook,
-  I'll ask `world` for one ("draw additive geometry into the HDR target before post").
-- `components/world/PayPalBeat.tsx`: the section (static, readable HTML: heading, the five captions as a real
-  paragraph list for no-JS/reduced motion, the seven names), with `data-*` the engine reads; captions cross-fade by p;
-  labels positioned from projected world positions each frame (one writer, transform only).
-- Light version (reduced motion / no WebGL): a still from our renderer at p = 0.86 (six lights + PayPal) with the
-  captions as plain paragraphs.
-- Physics notes (research): lava bombs leave at unequal angles and speeds, one goes clearly long; head 2200-2500 K,
-  trail 1450 → 900 K; tumble wobble ±15% at ~0.4 s; landing flash ~100 ms then the place ignites over 0.5-1.5 s;
-  bloom only above 1.0, filmic curve so hot cores go white instead of clipping; no lens flares, no sparkle stars, no
-  hue that is not blackbody; the night side nearly black.
+## How it is built (in the world engine, lib/world/ARCHITECTURE.md)
+- `lib/world/paypal.ts` is the module (registered in `modules.ts`). Everything is a pure function of
+  `p = frame.at('paypal')`; the clock only adds the heads' flicker and the trains' drift.
+- `sea` hook: `paypal_places(q)` adds the seven places' heat (core, halo, 4 soft meandering flows that grow after the
+  landing, a landing flash, a faint heat ripple) as emission on the lava. Seven `vec4` pairs of uniforms.
+- `over` hook: the throws. The CPU samples each throw's path (dense at the head, sparse in the old train), with
+  temperature, intensity and half-width per point, and packs them into a 20x64 RGBA32F texture in 8-segment chunks,
+  each with a tight screen box (`paypal_uBox[64]`). A pixel reads only the chunks whose box it is in, takes the
+  ray-segment closest approach, a gaussian cross-section in px (min ~1.2 render px; a widened line keeps its energy)
+  and the brightest point per throw (no double counting at joints), depth-tested by `h.t` so the limb hides what is
+  behind it. Spatter: 2 short sparks at each eruption, 4 at each landing, gone in ~0.02 of p.
+- `after`: caption opacity (one at a time) and the names' positions (`frame.project` of the places) on the section's
+  own DOM. `components/world/PayPal.tsx` is static markup; copy in `data/home.ts` (`paypal`).
+- Camera: `paypalKeys(R)` (journey keys sampled from `beatCamera`), to be spliced in place of the journey's two paypal
+  keys by `world`. Lab: `lab/paypal/stage.html` (esbuild bundle of the real engine with these keys;
+  `node lab/paypal/stage-build.mjs`, frames with `node lab/paypal/shoot-stage.mjs phone|desk f1,f2 outDir`).
+- Static (no JS / no WebGL): the five steps read in order as text; the world's still look behind.
 
 ## Decisions
+- PayPal sits at 40 deg round the journey's circle (night side: the sun is at -87 deg).
+- Desktop end frame: lens 48 deg, orbit ~0.34 R so the heading has sky above the limb.
 - Ballistic eruption (Stromboli long exposure) over meteors or fireworks: it is lava, it starts at the vent, and the
   split into many arcs from one source is exactly the story. Fireworks bursts were rejected as cheap.
 - SpaceX is the throw that leaves the atmosphere; nothing more literal (no rockets).
