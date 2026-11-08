@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { test as worldTest } from './gl';
 
 // The "unslop" rules (.claude/skills/unslop/SKILL.md) that a machine can check. The concept client sites (.ls) are
 // other businesses' designs and are exempt; so is anything marked data-unslop-ok.
@@ -54,7 +55,8 @@ for (const path of PAGES) {
 
 // No dead zones on the home page: the whole page is one world (lib/world) whose camera follows the scroll, so at
 // every half-viewport of scroll the journey's progress moves on (the world answers the scroll everywhere).
-test('home: the world answers the scroll at every position', async ({ page }) => {
+// (worldTest: its own browser, so the hundreds of frames these steps queue go when it ends; tests/gl.ts)
+worldTest('home: the world answers the scroll at every position', async ({ page }) => {
   test.setTimeout(180_000);
   await page.goto('/?loop=0&q=8', { waitUntil: 'load' });
   let i = 0;

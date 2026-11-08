@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { test as worldTest } from './gl';
 
 // The home page: one world (lib/world) behind static, readable HTML, on a seamless scroll loop.
 // The deep checks (frame walks, touch, contrast, perf) live in lab/qa (npm run qa:deep); these are the contract.
@@ -27,7 +28,9 @@ test('the headline and nav paint without waiting for WebGL', async ({ page }) =>
   await expect(page.locator('nav').first()).toBeVisible();
 });
 
-test('the world starts: one fixed canvas behind the page, on the one clock, no errors', async ({ page }) => {
+// The tests that drive the world run in a browser of their own (tests/gl.ts), so the frames they queue under software
+// GL cannot hold up the next test.
+worldTest('the world starts: one fixed canvas behind the page, on the one clock, no errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(String(e)));
   page.on('console', (m) => m.type() === 'error' && !/Failed to load resource/.test(m.text()) && errors.push(m.text()));
@@ -46,7 +49,7 @@ test('the world starts: one fixed canvas behind the page, on the one clock, no e
   expect(errors).toEqual([]);
 });
 
-test('the loop: scrolling past the bottom with the wheel or keys comes back to the top, and progress runs on', async ({ page, isMobile }) => {
+worldTest('the loop: scrolling past the bottom with the wheel or keys comes back to the top, and progress runs on', async ({ page, isMobile }) => {
   test.skip(isMobile, 'wheel and keyboard');
   test.setTimeout(150_000); // software GL handles one wheel tick per drawn frame: draw at the cheapest step
   await start(page, '/?q=8');
