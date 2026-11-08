@@ -196,6 +196,23 @@ test('ventures: the live one has set and links to /sites; the next ones glow in 
   await expect(page.locator('#ventures [data-hot]')).toHaveCount(2);
   await expect(page.locator('#ventures').getByRole('link', { name: 'See Crucible Sites' })).toHaveAttribute('href', '/sites');
   for (const v of ['verge', 'trellis']) await expect(page.locator(`#ventures a.vf-link[href="/ventures/${v}"]`)).toHaveCount(1);
+  // The whole bar is the way in: a link around it (hidden from screen readers: one link per venture for them) with a
+  // label saying where it goes; on touch screens the label is always there, with a mouse it shows on hover.
+  for (const [v, label] of [['verge', 'About Verge'], ['trellis', 'About Trellis'], ['sites', 'See Crucible Sites']]) {
+    const bar = page.locator(`#ventures a.vf-visual[href="${v === 'sites' ? '/sites' : `/ventures/${v}`}"]`);
+    await expect(bar).toHaveAttribute('aria-hidden', 'true');
+    await expect(bar.locator('.ing-cue')).toHaveText(label);
+  }
+  await expect(page.locator('#ventures').getByRole('link', { name: /About Verge/ })).toHaveCount(1);
+  const cue = page.locator('#ventures a.vf-visual .ing-cue').nth(1);
+  const touch = await page.evaluate(() => matchMedia('(hover: none), (pointer: coarse)').matches);
+  await cue.scrollIntoViewIfNeeded();
+  if (touch) await expect.poll(() => cue.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  else {
+    expect(await cue.evaluate((el) => getComputedStyle(el).opacity)).toBe('0');
+    await page.locator('#ventures a.vf-visual').nth(1).hover({ force: true });
+    await expect.poll(() => cue.evaluate((el) => getComputedStyle(el).opacity)).toBe('1');
+  }
 });
 
 test('moving to /sites pours the next page in, then gets out of the way', async ({ page }) => {
