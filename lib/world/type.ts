@@ -212,7 +212,7 @@ vec4 type_at(vec2 px, float lod){
   return acc;
 }
 void type_sky(Ray r, inout vec3 col){
-  if (r.depth == 0 || type_uN == 0) return;
+  if (r.depth == 0 || type_uN == 0 || type_uGain <= 0.0) return;
   float z = dot(r.rd, uCam[2]);
   if (z <= 1e-3) return;
   float fc = uFocal * uPx; // focal length in CSS px
@@ -255,7 +255,10 @@ export const type: WorldModule = {
     u.set('type_uRect', fr.rect);
     u.set('type_uUV', fr.uv);
     u.set('type_uCol', fr.col);
-    u.set('type_uGain', 0.65);
+    // a line hangs in the sky over the sea only while we are low over it: from orbit a reflection of the type would
+    // wrap round the planet's curve (it read as a glitch), so it fades out between 120 and 500 m up
+    const h = f.cam.h;
+    u.set('type_uGain', 0.65 * (h <= 120 ? 1 : h >= 500 ? 0 : 1 - (h - 120) / 380));
     u.set('type_uScale', SCALE);
   },
   dispose() {

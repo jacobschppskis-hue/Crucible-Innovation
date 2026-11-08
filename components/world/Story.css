@@ -98,6 +98,10 @@
 }
 
 .wch-text {
+  min-width: 0;
+}
+.wch-text > p,
+.wch-break > .wch-p {
   max-width: 40rem;
 }
 .wch-lead {
@@ -122,8 +126,8 @@
   margin-top: 0;
 }
 
-/* Jacob's sentence, once, in place: the paragraph runs into it and carries on after it. Display size, bone. On wide
-   screens it reaches left across the side column, so it reads as the question the scene before it asked. */
+/* Jacob's sentence, once, in place: the paragraph runs into it and carries on after it. Display size, bone, as wide as
+   the text column allows (the side column keeps the name pinned, so it never reaches over it). */
 .wch-break-line {
   margin: 2.5rem 0;
   font-family: var(--font-display);
@@ -136,8 +140,9 @@
 }
 @media (min-width: 1024px) {
   .wch-break-line {
-    margin: 4rem 0 4rem calc(-20rem - 5rem);
-    max-width: 14.5em;
+    margin: 4rem 0;
+    max-width: 13em;
+    font-size: clamp(3rem, 4.6vw, 4.5rem);
   }
 }
 
