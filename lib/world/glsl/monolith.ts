@@ -242,9 +242,11 @@ vec3 monoShade(MonoHit h, vec3 rd, float pixAng) {
   // --- the cast face's slow waviness and the draw marks, faded by footprint ---
   vec2 fuv = vec2(lp.x, lp.y) * foot;                  // face coordinates in half widths
   float wav = 1.0 - smoothstep(0.03, 0.12, px * foot); // waviness only while a wave spans several pixels
-  vec3 n1 = monoNoised(fuv * vec2(1.3, 0.55) + float(i) * 7.31);
+  // slow, mostly vertical undulation (the face was drawn upward out of the mould); one octave only: a second, finer
+  // one showed as mottling in the sun's lobe
+  vec3 n1 = monoNoised(fuv * vec2(0.7, 0.22) + float(i) * 7.31);
   vec3 n2 = monoNoised(fuv * vec2(3.1, 1.2) + float(i) * 3.17 + 11.0);
-  vec2 g = (n1.yz * vec2(1.3, 0.55) * 0.005 + n2.yz * vec2(3.1, 1.2) * 0.0012) * wav * face;
+  vec2 g = n1.yz * vec2(0.7, 0.22) * 0.006 * wav * face;
   // a cast face is never optically flat: it crowns slightly (a few hundredths of a radian across the face), so the
   // reflected sky changes across its width and the horizon line bends gently near the edges
   g += vec2(fuv.x * 0.035, (fuv.y * E.x / E.y - 1.0) * 0.012) * face;

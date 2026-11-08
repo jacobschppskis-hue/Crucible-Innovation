@@ -38,9 +38,13 @@ really dumb and has flaking on it."
 - Hover/focus/press: heat rises (waterline +120 K, glow climbs ~2x higher), lift (engine), ripple (lava module).
 - The monoliths carry no text; names and info are DOM next to them (Archivo). Verge/Trellis carry no marks yet
   (their SVGs are placeholders).
-- Lighting recommendation for the world camera: sun low and to the side (about 70 deg off the view axis), not straight
-  behind: the side faces then catch a broad satin sheen and the front faces show the horizon line. Straight backlight
-  makes three black slabs.
+- Lighting recommendation for the world camera (v2 frames): the sun low BEHIND THE CAMERA's shoulder (40-70 deg off
+  the view axis), so the monoliths stand in warm low light against the dark anti-sun sky (the Dune look: lit
+  monuments, dark sky). The steel then shows a long brushed sheen and the Sites face reads bone. Keep the sun's mirror
+  direction off the broad faces (or the exposure low), or the satin face burns out on a phone. Straight backlight
+  makes three black slabs with lit edges (v1 frames); usable, but it does not read as "shiny".
+- Waviness: one slow, mostly vertical octave (0.6% slope). A second, finer octave showed as mottling inside the sun's
+  lobe (the "dirty" look), so it was removed.
 
 ## Contract offered to `world` (until ARCHITECTURE.md lands)
 `lib/world/glsl/monolith.glsl`: `monoTrace(ro, rd, tMax, out MonoHit)`, `monoShade(hit, rd, pixAng)`,
