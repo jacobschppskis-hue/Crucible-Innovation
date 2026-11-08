@@ -49,7 +49,7 @@ export const CAPTION_AT: [number, number][] = [
   [0.235, 0.455],
   [0.475, 0.7],
   [0.715, 0.855],
-  [0.865, 1.01],
+  [0.865, 0.99], // gone just before the pin releases (it would otherwise ride up under the nav)
 ];
 export function captionOpacity(i: number, p: number) {
   const [a, b] = CAPTION_AT[i] ?? [2, 2];
@@ -559,11 +559,16 @@ export const paypal: WorldModule = {
       c.style.translate = `0 ${((1 - o) * 10).toFixed(1)}px`;
       c.style.visibility = o > 0.001 ? 'visible' : 'hidden';
     });
+    // the names' container scrolls away with the section once the pin releases; the labels are in viewport px
+    const box = S.names[0]?.parentElement?.getBoundingClientRect();
+    const ox = box ? box.left : 0, oy = box ? box.top : 0;
+    // all the names leave together as the pin releases (rather than being clipped one by one)
+    const leave = box ? Math.min(1, Math.max(0, 1 + box.top / (0.25 * window.innerHeight))) : 1;
     S.names.forEach((n, i) => {
       const L = S.labels[i];
       if (!L) return;
-      n.style.translate = `${L.x.toFixed(1)}px ${(L.y - 12).toFixed(1)}px`;
-      n.style.opacity = L.o.toFixed(3);
+      n.style.translate = `${(L.x - ox).toFixed(1)}px ${(L.y - oy - 12).toFixed(1)}px`;
+      n.style.opacity = (L.o * leave).toFixed(3);
     });
   },
   dispose() {
