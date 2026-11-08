@@ -4,7 +4,7 @@
 The footer's glowing surf moves to the top: a molten sea at dusk rolls onto a black-sand beach and laps it constantly,
 and the beach is a sand mould. Every wave that reaches the giant "crucıble" pressed into the sand fills the letters
 with metal, which then cools to a cracked skin until the next wave refills them. The logo's core hangs over the water
-as the sun, drawn inside a hairline ghost of the mark, and the same coast runs down the whole page (the sea along the
+as the sun, drawn inside a hairline ghost of the mark (Jacob's logo family: rings 20/12 on the 48 grid, 7 + 4 squares), and the same coast runs down the whole page (the sea along the
 right edge, opening into coves between sections) until it turns again under the footer's wordmark.
 
 ## The cold colour (Quench, `#8ab8f0`)

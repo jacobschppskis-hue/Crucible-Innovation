@@ -203,7 +203,7 @@ html:not(.gl) .delta .nm { color: var(--bone); }
 
 <header class="nav">
   <a class="mark" href="#top" aria-label="Crucible, home">
-    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 3.2A28.8 28.8 0 0 0 32 60.8V57.2A25.2 25.2 0 0 1 32 6.8Z" fill="currentColor"/><path d="M32 15.2A16.8 16.8 0 0 0 32 48.8V45.2A13.2 13.2 0 0 1 32 18.8Z" fill="currentColor"/><g fill="currentColor"><rect x="38.543" y="4.521" width="3.6" height="3.6"/><rect x="46.07" y="8.357" width="3.6" height="3.6"/><rect x="52.043" y="14.33" width="3.6" height="3.6"/><rect x="55.879" y="21.857" width="3.6" height="3.6"/><rect x="57.2" y="30.2" width="3.6" height="3.6"/><rect x="55.879" y="38.543" width="3.6" height="3.6"/><rect x="52.043" y="46.07" width="3.6" height="3.6"/><rect x="46.07" y="52.043" width="3.6" height="3.6"/><rect x="38.543" y="55.879" width="3.6" height="3.6"/><rect x="37.7" y="17.21" width="3.6" height="3.6"/><rect x="43.19" y="22.7" width="3.6" height="3.6"/><rect x="45.2" y="30.2" width="3.6" height="3.6"/><rect x="43.19" y="37.7" width="3.6" height="3.6"/><rect x="37.7" y="43.19" width="3.6" height="3.6"/></g><circle cx="32" cy="32" r="4.5" fill="#FF5B1F"/></svg>
+    <svg viewBox="0 0 64 64" aria-hidden="true"><path d="M32 3.6A28.4 28.4 0 0 0 32 60.4V56.933A24.933 24.933 0 0 1 32 7.067Z" fill="currentColor"/><path d="M32 14.267A17.733 17.733 0 0 0 32 49.733V46.267A14.267 14.267 0 0 1 32 17.733Z" fill="currentColor"/><rect x="40.072" y="5.23" width="4.267" height="4.267" fill="currentColor"/><rect x="48.723" y="11.01" width="4.267" height="4.267" fill="currentColor"/><rect x="54.503" y="19.662" width="4.267" height="4.267" fill="currentColor"/><rect x="56.533" y="29.867" width="4.267" height="4.267" fill="currentColor"/><rect x="54.503" y="40.072" width="4.267" height="4.267" fill="currentColor"/><rect x="48.723" y="48.723" width="4.267" height="4.267" fill="currentColor"/><rect x="40.072" y="54.503" width="4.267" height="4.267" fill="currentColor"/><rect x="39.271" y="16.922" width="4.267" height="4.267" fill="currentColor"/><rect x="45.084" y="24.922" width="4.267" height="4.267" fill="currentColor"/><rect x="45.084" y="34.811" width="4.267" height="4.267" fill="currentColor"/><rect x="39.271" y="42.811" width="4.267" height="4.267" fill="currentColor"/><circle cx="32" cy="32" r="4.8" fill="#FF5B1F"/></svg>
     <span class="wm" aria-hidden="true">cruc<span class="i">ı</span>ble</span>
   </a>
   <nav class="nav-links" aria-label="Main">
@@ -438,14 +438,16 @@ vec2 coastAt(float Z){ return texture(uCoast, vec2((Z/8. + .5)/uStrip.y, .5)).xy
 /* ---------- the mark, as a hairline drawing around the sun ---------- */
 float sdBox(vec2 p, float h){ vec2 q = abs(p) - h; return length(max(q, 0.)) + min(max(q.x, q.y), 0.); }
 float markSD(vec2 m){
+  // Jacob's mark, on its 48-unit grid: rings r 20 and 12 (stroke 2.6), the left half solid to the centre line, a one-step
+  // break, then upright squares 3.2 on the circle: 7 on the outer ring (22.5 deg apart), 4 on the inner (36 deg)
   float d = 1e5;
   for (int i = 0; i < 2; i++){
-    float r = i == 0 ? 27. : 15.;
-    if (m.x <= 0.) d = min(d, abs(length(m) - r) - 1.8);
-    else { vec2 q = vec2(m.x, abs(abs(m.y) - r) - 1.8); d = min(d, length(max(q, 0.)) + min(max(q.x, q.y), 0.)); }
+    float r = i == 0 ? 20. : 12.;
+    if (m.x <= 0.) d = min(d, abs(length(m) - r) - 1.3);
+    else { vec2 q = vec2(m.x, abs(abs(m.y) - r) - 1.3); d = min(d, length(max(q, 0.)) + min(max(q.x, q.y), 0.)); }
   }
-  for (int k = 1; k <= 9; k++){ float a = -PI*.5 + float(k)*PI/10.; d = min(d, sdBox(m - 27.*vec2(cos(a), sin(a)), 1.8)); }
-  for (int k = 1; k <= 5; k++){ float a = -PI*.5 + float(k)*PI/6.; d = min(d, sdBox(m - 15.*vec2(cos(a), sin(a)), 1.8)); }
+  for (int k = 1; k <= 7; k++){ float a = -PI*.5 + float(k)*PI/8.; d = min(d, sdBox(m - 20.*vec2(cos(a), sin(a)), 1.6)); }
+  for (int k = 1; k <= 4; k++){ float a = -PI*.5 + float(k)*PI/5.; d = min(d, sdBox(m - 12.*vec2(cos(a), sin(a)), 1.6)); }
   return d;
 }
 
@@ -481,8 +483,8 @@ vec3 skyCol(vec2 p, float fw, out float sunA){
   vec3 sunc = mix(vec3(1., .357, .122), vec3(1., .80, .55), smoothstep(R, 0., r)*.9);
   sunA = disc;
   // the mark's rings, a hairline ghost around it
-  float u = R/4.5; vec2 m = d/u;
-  if (length(m) < 31.){
+  float u = R/3.6; vec2 m = d/u;
+  if (length(m) < 23.5){
     float sd = markSD(vec2(m.x, -m.y));
     float line = 1. - smoothstep(0., (fw + .3)/u, abs(sd + .3));
     float fill = smoothstep(.0, -(fw)/u, sd)*.07;
@@ -986,8 +988,8 @@ function layout() {
   // sun: the mark's outer ring fits the sky
   const sky = L.HOR - L.nav;
   const Rout = Math.min(sky * 0.43, L.W * (phone ? 0.36 : 0.16), 190);
-  const u = Rout / 28.8;
-  L.sun = [0, sky * 0.5 + Math.sin(0) * 0, 4.5 * u];
+  const u = Rout / 21.6;   // the mark's outer edge, in its 48-unit grid
+  L.sun = [0, sky * 0.5, 3.6 * u];
   L.sunG = [L.W / 2, gZ(L.HOR + (gZ(0) * 0 + (L.HOR + (yWB - L.HOR) * 0.4) - L.HOR) * 0.32)];
   // the wordmark's ground rectangle (it's a ground object, so the perspective foreshortens it)
   L.types = []; L.gates = [];
