@@ -44,3 +44,8 @@
 - Verified: `npm run world:smoke` ok (seam iPhone Δ 5.6 vs in-page 8.6, desktop 3.2 vs 3.9); frames
   `lab/world/shots/v5-{phone,desk}.webp`.
 - Open: the shore shot puts the rising far sun + mark behind the footer links on phones; worker rendering for TBT.
+- 14:00-14:20: story's shore module (eff66f5) called lava_planck / lava_uSunL, which don't exist: the world never
+  started (smoke: no __world on either device). Fixed in 5e57524 (shader compiles, frames render in the preview).
+  After that `world:smoke` still did not finish: its second `page.goto(...?t=8)` (the seam check) times out on
+  "load" (and a later run hung > 8 min). It passed twice at 13:45-13:55, before the shore landed. Not diagnosed in
+  time: suspect the frame cost with the clock held (the software-GL fps cap is off while a harness holds the clock).
