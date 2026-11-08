@@ -47,9 +47,19 @@ export const LOOK = {
   sheen: [0.085, 0.032, 0.016] as number[], // the swell's sheen at its brightest (added to the ground): molten red
   sheenRelief: 9, // the swell: slope -> normal tilt for its sheen (its slopes are tiny)
   sheenExp: 9, // the sheen's lobe (broad: a soft light, not a glint)
-  // the molten body under the skin: where the visitor's waves stretch the skin thin it glows through, hotter where it
-  // is stretched more (a blackbody ramp: deep red, Ember, yellow-white); the swell never opens it, so text sits on dark
-  heat: [0.7, 0.006, 0.05] as number[], // strength, stretch (|laplacian| 1/px + slope / 30) over which it heats 0 -> 1
+  // The molten body under a thin cooler skin (lava's model, lib/world/glsl/lava.glsl, seen from straight above): it
+  // glows with a true blackbody (Planck at 600/550/460 nm, as look_planck), dimmed by Fresnel (Kirchhoff) and by the
+  // skin's path. At rest it is a deep, dark red (the page must stay dark under its text); the swell's troughs, where
+  // the skin is pulled thin, glow a little hotter, so the long waves read; the visitor's waves stretch it and glow
+  // hotter still, so a wake is a brief line of Ember turning amber. Hotter = brighter AND yellower, never pink.
+  T: 975, // K at rest
+  troughK: 36, // K added at the swell's deepest trough (heights / troughH, clamped to 1)
+  troughH: 4, // px
+  wakeK: [140, 1.6, 0.03] as number[], // K: + a * (1 - exp(-b * stretch / c)), stretch = |laplacian| + slope / 30
+  crestK: [60, 0.01] as number[], // K: + a * clamp(-laplacian / b, -0.6, 1)
+  skin: 30, // K: the skin's cooling along its path (1 - exp(-0.3 / cos))
+  emit: 8, // exposure of the glow (linear; the rest glow is ~0.002 luminance)
+  f0: 0.053, // Fresnel at normal incidence
 };
 
 const f = (n: number) => (Number.isInteger(n) ? n.toFixed(1) : String(n));
@@ -78,11 +88,15 @@ ${swellGLSL(true)}
 
 const vec3 GROUND = vec3(0.0510, 0.0510, 0.0431);
 const vec3 EMBER = vec3(1.0, 0.357, 0.122);
-// the glow of the metal under the skin, 0 (just open: a deep red, nearly black) .. 1 (white-hot yellow), linear-ish
-vec3 molten(float x) {
-  vec3 c = mix(vec3(0.30, 0.025, 0.0), EMBER, smoothstep(0.0, 0.55, x));
-  c = mix(c, vec3(1.0, 0.72, 0.38), smoothstep(0.55, 1.0, x));
-  return c * x * x;
+// blackbody radiance at T kelvin, sampled at 600/550/460 nm, 1 = green at 1500 K (the same as look_planck)
+vec3 planck(float T) {
+  const vec3 lam = vec3(600e-9, 550e-9, 460e-9);
+  const float c2 = 1.4388e-2;
+  vec3 l5 = lam * lam * lam * lam * lam;
+  vec3 b = 1.0 / (l5 * (exp(c2 / (lam * max(T, 300.0))) - 1.0));
+  float g5 = 550e-9 * 550e-9 * 550e-9 * 550e-9 * 550e-9;
+  vec3 rgb = b * (g5 * (exp(c2 / (550e-9 * 1500.0)) - 1.0));
+  return mix(rgb, vec3(dot(rgb, vec3(0.3333))), 0.12);
 }
 const vec3 KEY = ${v3(key)};
 const vec3 HK = ${v3(half)};
@@ -159,9 +173,17 @@ void main() {
   // crests (convex, from any direction) catch a soft warm light, so a wake reads whichever way it runs
   float cr = ${f(LOOK.crest[0])} * smoothstep(${f(LOOK.crest[1])}, ${f(LOOK.crest[2])}, -lap);
   col += EMBER * (${f(LOOK.softK)} * soft + ${f(LOOK.coreK)} * core + ca + cr);
-  // the molten body showing through where the visitor's waves stretch the skin
+  // the molten body glowing through its skin (linear light, added to the display colour's linear value)
+  vec3 nn = normalize(vec3(-gr * ${f(LOOK.relief)} - sw.yz * ${f(LOOK.reliefSwell)}, 1.0));
   float st = abs(lap) + length(gr) / 30.0;
-  col += ${f(LOOK.heat[0])} * molten(smoothstep(${f(LOOK.heat[1])}, ${f(LOOK.heat[2])}, st));
+  float T = ${f(LOOK.T)}
+    + ${f(LOOK.troughK)} * clamp(-sw.x / ${f(LOOK.troughH)}, -1.0, 1.0)
+    + ${f(LOOK.wakeK[0])} * (1.0 - exp(-${f(LOOK.wakeK[1])} * st / ${f(LOOK.wakeK[2])}))
+    + ${f(LOOK.crestK[0])} * clamp(-lap / ${f(LOOK.crestK[1])}, -0.6, 1.0)
+    - ${f(LOOK.skin)} * (1.0 - exp(-0.3 / max(nn.z, 0.2)));
+  float fr = ${f(LOOK.f0)} + (1.0 - ${f(LOOK.f0)}) * pow(1.0 - nn.z, 5.0);
+  vec3 em = planck(T) * ${f(LOOK.emit)} * (1.0 - fr);
+  col = pow(pow(max(col, 0.0), vec3(2.2)) + em, vec3(1.0 / 2.2));
 
   col += (hash(gl_FragCoord.xy + uSeed) - 0.5) / 255.0; // dither: no banding in the dark
   o = vec4(col, 1.0);

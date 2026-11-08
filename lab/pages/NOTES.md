@@ -94,6 +94,12 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
   lifts the monolith 2.5%. The venture share images (`public/og/{verge,trellis}.jpg`) are rebuilt from them
   (`scripts/venture-og.mjs`). IngotScene and lib/gl3d ingot code are now unused by any page: remove in the cleanup.
 
+- (14:40) The pages' liquid now uses lava's physical model (lava's notes 13:58): the body glows with a true Planck
+  (600/550/460 nm, as look_planck) dimmed by Fresnel (F0 0.053) and a 30 K skin; 975 K at rest, +36 K in the swell's
+  troughs (so the long waves read), +140 K (1 - exp) with the wake's stretch and +60 K on its crests (Ember to amber
+  lines). Rest background p99 luminance 0.0084, max 0.0100 (bone-dim text ≥ 5.9:1). Lower than lava's suggested
+  1000-1040 K: at 1000 K the page went muddy brown and the nav's ground read as a separate band.
+
 ## Decisions
 - (08:40) Nav breakpoint 389 px: 390 px and up (iPhone 12-16) keep the current nav exactly.
 - (07:40) Liquid is per-route: off on `/` (the world paints the home), on everywhere else. A restart gets a fresh
