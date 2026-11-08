@@ -46,3 +46,13 @@ how every piece of text sits in the world (no scrims), and the footer/shore that
 ## Open
 - PayPal captions paraphrase Jacob's paragraph 2, which the scene follows. Accepted: Jacob asked for the beat to be
   explained more; the captions are short steps, the paragraph is his account (kept word for word).
+
+## After JACOB.md (07:25 UTC)
+- Footer: his one footer "like" is the glowing surf ("waves breaking on a shoreline, except glowing"). The shore place
+  becomes a real shore: glowing surf on black sand under the giant wordmark, then the camera lifts over open sea into
+  the hero frame (asked `world` who draws the surf).
+- Quench: never ratified by Jacob. In my sections it is only the 293 K readout (cold data), nothing else.
+- Thesis: smooth molten metal, no crust/cracks (tonight's "dirty" rule beats the Nov 2 cracks at cold): cold is a dark
+  glossy mirror, not cracked metal.
+- R3: "come up with some ideas to make the biography pages look better" → the chapters get the cinematic treatment
+  (credits over a night landscape, the tube as the pinned partner, the break-out as the scene's answer).
