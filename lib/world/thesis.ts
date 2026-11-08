@@ -65,11 +65,6 @@ vec2 thesis_flow(vec2 q, float nfp, float sp, int oct){
   float n = clamp(0.5 + thesis_fbm(q + 2.2 * w2 + vec2(0.0, -sp * 2.0), nfp, oct) * 0.9, 0.0, 1.0);
   return vec2(n, 1.0 - smoothstep(0.08, 0.35, nfp));
 }
-vec3 thesis_planck(float T){
-  vec3 lam = vec3(0.610, 0.550, 0.465);
-  vec3 b = 1.0 / (pow(lam, vec3(5.0)) * (exp(14388.0 / (lam * T)) - 1.0));
-  return b / max(b.r, 1e-30);
-}
 void thesis_sea(Ray r, Sea s, inout SeaMod m){
   if (thesis_uW <= 0.001) return;
   // where in the frame this pixel is (0 top .. 1 bottom): the metal pools low, under the type (the Nov 2 build pooled
@@ -96,13 +91,14 @@ void thesis_sea(Ray r, Sea s, inout SeaMod m){
     wsum += wi;
     if (wsum > 0.98) break;
   }
-  // pooled toward the viewer; the reach grows with the heat and with the altitude
-  float reach = mix(5.0, 26.0, k) + uCamH * mix(1.2, 3.5, k);
+  // pooled toward the viewer, but the whole visible sea heats (the far sea a little cooler, so the horizon stays calm)
+  float reach = 60.0 + uCamH * 4.0;
   float pool = exp(-max(s.t - uCamH, 0.0) / reach);
-  float kl = k * mix(0.42, 1.0, pool) * (0.5 + 0.78 * n * n * (3.0 - 2.0 * n));
-  float T = 293.0 + kl * 1518.0;
-  float I = 0.8 * pow(max(T - 720.0, 0.0) / 1091.0, 2.6);
-  m.emit += thesis_planck(max(T, 800.0)) * I * thesis_uW * low;
+  // the temperature the eye sees, on look's true Planck curve (the same as the lava's): from below the Draper point at
+  // the start to flowing orange-yellow metal at the readout's 1811 K. (Displayed kelvin are compressed: a true 1811 K
+  // next to the ~1050 K sea would be ~100x brighter; this keeps it molten, not blown out.)
+  float T = 700.0 + k * 720.0 * (0.62 + 0.62 * n * n * (3.0 - 2.0 * n)) * mix(0.82, 1.0, pool);
+  m.emit += look_planck(T) * look_uLavaGain * 0.95 * thesis_uW * low;
 }
 `;
 

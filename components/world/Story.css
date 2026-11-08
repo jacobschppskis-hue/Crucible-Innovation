@@ -8,6 +8,13 @@
 .wstory-head {
   padding-bottom: clamp(4rem, 12vh, 8rem);
 }
+/* wide screens: the heading arrives once the camera has turned from the sunset to the night sky (it stood on the
+   bright afterglow before: 1.67:1) */
+@media (min-width: 1024px) {
+  .wstory-head {
+    padding-top: 38vh;
+  }
+}
 .wstory-sub {
   margin-top: 1.5rem;
   max-width: 26rem;
