@@ -65,3 +65,18 @@ Query: `view=desk|phone|close|low`, `sun=back|side|front`, `rise`, `rise0..2`, `
 - Not done: monolith stills for /ventures pages and the reduced-motion home (asked by pages; missed the 12:00 slot
   because this session's worker was down); WebKit; a real-GPU frame-time check.
 - Frames: shots/engine-*.webp.
+
+## Afternoon (14:20-15:00 UTC)
+- Light at the place: look's cold moon (`look.moon` 1.2, az 150, el 12 in `venturesKeys`), used as a second
+  anisotropic GGX light; each face is aimed just off the half vector between the camera and the moon, so it carries a
+  cool sheen band and cold fillet lines over the hot glowing foot. The monoliths' own light (heat, pool, lava-lit air)
+  is scaled to look's radiance unit (`GAIN` 4).
+- Out of their place: they sink back into the sea over the first 22% of the thesis pin, and they are off the trace
+  (uP.w = 0) when the camera is more than 8 km away.
+- Text: solid bone everywhere (AA over the sea); the near sea is a little cooler through the place (`ventures_uCool`).
+- Layout: armed from the world's first frame; phones pitch +8 (monoliths between the lede and the list).
+- Without the world: each venture shows its still (public/film/monoliths, from `scripts/monolith-stills.mjs` via
+  `lab/ventures/still.html`); pages use the same stills on /ventures.
+- Perf (SwiftShader, 1440x900, q4): a ventures frame ~7.5 s vs story-3 ~6.3 s. Optimisations: the march starts on the
+  casting's box (24 steps primary, 10 in reflections), one look_sky per pixel, a cheap reflection path.
+- Checked: a touch tap on the Sites monolith's hit area lands on its link (iPhone 15 emulation).
