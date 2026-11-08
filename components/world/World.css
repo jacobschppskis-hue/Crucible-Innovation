@@ -192,6 +192,11 @@ html[data-loop] [data-place='loop'] {
     font-size: 9.6vw;
   }
   .w-hero-meta p {
-    max-width: 62%;
+    max-width: 56vw;
+  }
+  /* the buttons stacked on the left, on dark sea, clear of the core's glitter column (~62-72% of the width) */
+  .w-hero-meta > div {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
