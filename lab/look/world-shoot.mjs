@@ -32,7 +32,7 @@ for (const spec of (A.at || 'hero:0').split(',')) {
   for (let i = 0; i < 3; i++) await page.evaluate(() => window.__world.step(16));
   const st = await page.evaluate(() => { const s = window.__world.state(); return { place: s.place, h: s.cam.h, q: s.quality }; });
   const file = `${OUT}/${A.dev || 'phone'}-${name}-${f || 0}.png`;
-  await page.screenshot({ path: file });
+  const t0 = Date.now(); await page.screenshot({ path: file, timeout: 300000 }); console.log('shot ms', Date.now() - t0);
   console.log(file, JSON.stringify(st));
   await page.evaluate(() => window.__world.resume());
 }
