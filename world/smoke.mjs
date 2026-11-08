@@ -37,6 +37,9 @@ async function run(device) {
   await page.waitForLoadState('load', { timeout: 20000 }).catch(() => warn(device, 'load event > 20 s'));
   const kind = await waitWorld(page, 15000);
   notes.push(`[${device}] h1 "${h1}" · hooks: ${kind}`);
+  if (kind.startsWith('fail')) fail(device, `the world failed to start: ${kind.slice(6).slice(0, 300)} (html[data-world-fail]; a module that does not compile?)`);
+  const wf = await page.evaluate(() => document.documentElement.dataset.worldFail).catch(() => undefined);
+  if (wf !== undefined && !kind.startsWith('fail')) fail(device, `html[data-world-fail] is set: ${String(wf).slice(0, 300)}`);
   if (kind === 'none' && !A['allow-no-world'] && !['airless', 'continuum'].includes(A.target)) fail(device, 'the world never started (no window.__world within 15 s of load + first use)');
   // body must set its own background/colour (the artifact frame sets white/black)
   const body = await page.evaluate(() => { const cs = getComputedStyle(document.body); return { bg: cs.backgroundColor, color: cs.color }; });
@@ -46,10 +49,10 @@ async function run(device) {
   // Jacob's copy/brand rules: P0s fail the smoke, the rest are warnings (the deep harness reports them all)
   const home = ['out', 'dist', 'frame'].includes(A.target) || /\/$/.test(tg.path);
   for (const r of await page.evaluate(domRules, { home })) (r.sev === 'P0' ? fail : warn)(device, `${r.rule}: ${r.text}`);
-  if (kind !== 'none') await page.evaluate(() => window.__qa.hold());
+  if (kind === 'world' || kind === 'concept') await page.evaluate(() => window.__qa.hold());
   const frames = {};
   for (const p of PLACES) {
-    if (kind !== 'none') { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 18, 40); }
+    if (kind === 'world' || kind === 'concept') { await page.evaluate((p) => window.__qa.go(p), p); await settle(page, 18, 40); }
     else { await page.evaluate((p) => scrollTo(0, p * (document.documentElement.scrollHeight - innerHeight)), p); await page.waitForTimeout(300); }
     const png = await shot(page);
     frames[p] = png;

@@ -182,11 +182,17 @@ export async function adapter(page) {
 // wait until the world (or a concept) is up; returns the adapter kind or 'none'
 export async function waitWorld(page, ms = 15000) {
   const t0 = Date.now();
-  // the engine starts after load + idle or first use: give it a first use
+  // the engine starts after load + idle or first use (software GL waits for first use): give it a real one,
+  // the way a visitor does (pointer move, a key, a touch on phones)
   try { await page.mouse.move(200, 300); await page.mouse.move(210, 310); } catch {}
+  try { await page.keyboard.press('Shift'); } catch {}
+  try { if (page.context()._options?.hasTouch) await page.touchscreen.tap(5, 5).catch(() => {}); } catch {}
   while (Date.now() - t0 < ms) {
     const k = await page.evaluate(() => (window.__world ? 'world' : window.__state ? 'concept' : 'none')).catch(() => 'none');
     if (k !== 'none') { await adapter(page); return k; }
+    // the engine says why it could not start (a module that fails to compile, no WebGL2): stop waiting
+    const fail = await page.evaluate(() => document.documentElement.dataset.worldFail).catch(() => undefined);
+    if (fail !== undefined) { await adapter(page); return 'fail: ' + (fail || 'html[data-world-fail] set'); }
     await page.waitForTimeout(250);
   }
   await adapter(page);

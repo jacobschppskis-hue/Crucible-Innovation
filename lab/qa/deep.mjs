@@ -34,7 +34,8 @@ async function open(device, { url = URL0, dpr = 1, ctxOpts = {}, b = B } = {}) {
   const page = await ctx.newPage();
   const log = watch(page);
   await page.goto(url, { waitUntil: 'load', timeout: 45000 });
-  const kind = await waitWorld(page, 15000);
+  let kind = await waitWorld(page, 15000);
+  if (kind.startsWith('fail')) { F('P0', 'world', devName(device), `the world failed to start: ${kind.slice(6, 300)}`); kind = 'none'; }
   return { ctx, page, log, kind };
 }
 async function contactSheet(files, out, cols = 6, w = 240) {
