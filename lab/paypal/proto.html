@@ -60,29 +60,50 @@ const mix = (a, b, t) => a + (b - a) * t;
 // ---------- the places ----------
 // PayPal sits at the top of the sphere (+Y). Each company is a bearing (deg, 0 = +Z, i.e. away from the camera, toward
 // the limb; positive = to the right) and an angular range (rad) from PayPal, along a great circle.
-const PP = [0, 1, 0];
+let PP = [0, 1, 0];
+// Where each place sits in the frame when the camera has finished rising (p = END_P), per orientation, as
+// [x, y] fractions of the viewport (y from the top). They are cast back onto the sphere, so the composition holds on
+// any screen; the arcs are then computed from PayPal to those points.
 const SITES = [
-  // first salvo: the four companies its people founded (launched together, a split second apart)
-  { name: 'YouTube',  bearing: -34, range: 0.21, launch: 0.230 },
-  { name: 'LinkedIn', bearing: -9, range: 0.40, launch: 0.238 },
-  { name: 'Yelp',     bearing: 21,  range: 0.30, launch: 0.244 },
-  { name: 'Palantir', bearing: 52, range: 0.15, launch: 0.250 },
-  // Elon's share: SpaceX first, the highest throw; Tesla later
-  { name: 'SpaceX',   bearing: 6,  range: 0.56, launch: 0.485, loft: 2.4 },
-  { name: 'Tesla',    bearing: -62, range: 0.12, launch: 0.610 },
+  // first salvo: the four companies its people founded (one eruption, a split second apart, unequal throws)
+  { name: 'YouTube',  pt: [0.20, 0.555], ls: [0.38, 0.60], launch: 0.230, loft: 1.0 },
+  { name: 'LinkedIn', pt: [0.60, 0.470], ls: [0.56, 0.47], launch: 0.237, loft: 1.25 },
+  { name: 'Yelp',     pt: [0.84, 0.575], ls: [0.76, 0.55], launch: 0.243, loft: 0.9 },
+  { name: 'Palantir', pt: [0.74, 0.765], ls: [0.79, 0.76], launch: 0.250, loft: 1.1 },
+  // Elon's share: SpaceX first, the highest throw (it leaves the atmosphere); Tesla later and short
+  { name: 'SpaceX',   pt: [0.15, 0.475], ls: [0.90, 0.62], launch: 0.468, loft: 2.6 },
+  { name: 'Tesla',    pt: [0.24, 0.800], ls: [0.30, 0.80], launch: 0.610, loft: 0.9 },
 ];
+const PP_PT = { pt: [0.5, 0.66], ls: [0.56, 0.70] };
+const END_P = 0.78;
 // Great-circle point at angle a along bearing b from PayPal.
 function surfaceDir(bearingDeg, a) {
   const b = bearingDeg * Math.PI / 180;
-  const tdir = [-Math.sin(b), 0, Math.cos(b)]; // +bearing = screen right // tangent at PP
+  const tdir = [-Math.sin(b), 0, Math.cos(b)]; // +bearing = screen right
   return V.add(V.mul(PP, Math.cos(a)), V.mul(tdir, Math.sin(a)));
 }
-for (const s of SITES) {
-  s.dir = surfaceDir(s.bearing, s.range);
-  // ballistic throw at a fixed launch angle: apex ~ range/4 (45°), flight time ~ sqrt(range)
-  s.apex = 0.12 * s.range * (s.loft || 1);
-  s.flight = 0.125 * Math.sqrt(s.range / 0.3) * Math.sqrt(s.loft || 1);
-  s.land = s.launch + s.flight;
+let layoutAsp = 0;
+function layout(asp) {
+  if (Math.abs(asp - layoutAsp) < 1e-3) return; layoutAsp = asp;
+  const cam = camera(END_P, asp), B = camBasis(cam), tan = Math.tan(cam.fov / 2);
+  const cast = (x, y) => {
+    const rd = V.norm(V.add(B.f, V.add(V.mul(B.r, (x * 2 - 1) * tan * asp), V.mul(B.u, (1 - y * 2) * tan))));
+    const bb = V.dot(cam.pos, rd), c = V.dot(cam.pos, cam.pos) - 1, disc = bb * bb - c;
+    const t = disc > 0 ? -bb - Math.sqrt(disc) : -bb; // a miss lands on the limb
+    return V.norm(V.add(cam.pos, V.mul(rd, t)));
+  };
+  for (const s of SITES) {
+    const k = asp < 1 ? s.pt : s.ls;
+    s.dir = cast(k[0], k[1]);
+    const d = clamp(V.dot(s.dir, PP), -1, 1);
+    s.range = Math.acos(d);
+    const tg = V.sub(s.dir, V.mul(PP, d));
+    s.bearing = Math.atan2(-tg[0], tg[2]) * 180 / Math.PI;
+    // a ballistic throw at a shallow fixed angle: apex ∝ range, flight time ∝ √range
+    s.apex = 0.12 * s.range * s.loft;
+    s.flight = Math.min(0.125 * Math.sqrt(s.range / 0.3) * Math.pow(s.loft, 0.3), 0.17);
+    s.land = s.launch + s.flight;
+  }
 }
 // A point on the throw: great circle in angle (horizontal speed constant), parabola in height (ballistic).
 function arcPos(site, u) {
@@ -102,7 +123,7 @@ const CAPS = [ // [in, out] of each caption
 function vent(p) { // PayPal: pressure builds, erupts twice, then cools ("long after PayPal itself was gone")
   const swell = smooth(0.08, 0.228, p);
   const flash1 = 0.5 * Math.exp(-Math.pow((p - 0.236) / 0.008, 2));
-  const flash2 = 0.7 * Math.exp(-Math.pow((p - 0.487) / 0.01, 2)) + 0.45 * Math.exp(-Math.pow((p - 0.612) / 0.01, 2));
+  const flash2 = 0.7 * Math.exp(-Math.pow((p - 0.47) / 0.01, 2)) + 0.45 * Math.exp(-Math.pow((p - 0.612) / 0.01, 2));
   const cool = smooth(0.80, 0.97, p);
   return { heat: mix(0.55 + 0.45 * swell, 0.12, cool), flash: flash1 + flash2 };
 }
@@ -112,10 +133,10 @@ function vent(p) { // PayPal: pressure builds, erupts twice, then cools ("long a
 function camera(p, aspect) {
   const portrait = aspect < 1;
   const k = smooth(0.0, 1.0, p);
-  const pull = smooth(0.15, 0.72, p);   // rise as the embers spread: the reveal of scale
-  const alt = mix(portrait ? 0.16 : 0.14, portrait ? 0.42 : 0.34, pull);
-  const back = mix(0.22, portrait ? 0.42 : 0.36, pull);
-  const look = mix(0.20, portrait ? 0.34 : 0.30, pull);
+  const pull = smooth(0.10, 0.40, p);   // rise as the embers spread: the reveal of scale
+  const alt = mix(portrait ? 0.075 : 0.06, portrait ? 0.62 : 0.46, pull);
+  const back = mix(0.15, portrait ? 0.30 : 0.30, pull);
+  const look = mix(0.30, portrait ? 0.30 : 0.28, pull);
   const pos = [0, 1 + alt, -back];
   const tgt = surfaceDir(0, look);
   const fov = (portrait ? 64 : 42) * Math.PI / 180;
@@ -236,19 +257,22 @@ void main(){
       float grow = 1. - exp(-age*14.);
       // flows: a few smooth lobes, long and thin, like lava running out from a new vent seen from orbit
       float lobes = 0.;
-      for (int k=0;k<5;k++){
-        float a0 = seed*6.283 + float(k)*2.39996 + 0.35*sin(seed*31.+float(k));
-        float dphi = atan(sin(phi-a0), cos(phi-a0));
-        float len = (0.018 + 0.03*fract(seed*7.3+float(k)*.37)) * grow;
+      for (int k=0;k<4;k++){
+        float fk = float(k);
+        float len = (0.03 + 0.05*fract(seed*7.3+fk*.37)) * grow;
         float along = ang / max(len, 1e-4);
-        float wdt = 0.16 * (1. - 0.6*clamp(along, 0., 1.));
-        lobes += exp(-dphi*dphi/(wdt*wdt)) * smoothstep(1., 0.15, along) * step(0., len - 1e-4);
+        // each flow meanders: its heading bends with distance, and its width breathes with low-frequency noise
+        float a0 = seed*6.283 + fk*1.9 + 0.5*sin(seed*31.+fk) + 0.9*(fract(seed*3.1+fk*.71)-.5)*along;
+        float dphi = atan(sin(phi-a0), cos(phi-a0));
+        float wdt = (0.42 - 0.22*clamp(along, 0., 1.)) * (0.8 + 0.4*noise(n*90. + fk*7.));
+        float body = exp(-dphi*dphi/(wdt*wdt)) * smoothstep(1.05, 0.2, along) * smoothstep(0.0, 0.25, along);
+        lobes += body * (0.6 + 0.4*noise(n*160. + fk*3.)) * step(0., len - 1e-4);
       }
-      float core = exp(-pow(ang/0.0045, 2.));
-      float mid = exp(-pow(ang/0.012, 2.));
-      float halo = exp(-ang/0.035);
+      float core = exp(-pow(ang/0.005, 2.));
+      float mid = exp(-pow(ang/0.016, 2.));
+      float halo = exp(-ang/0.05);
       float Ks = mix(900., 1650., core) + 250.*mid;
-      float e = heat*(2.4*core + 0.55*mid + 0.10*halo + 0.32*lobes*(0.5+0.5*mid));
+      float e = heat*(2.2*core + 0.45*mid + 0.08*halo + 0.30*lobes);
       emit += bb(Ks) * e;
       // impact flash: a brief white bloom right at the site
       emit += vec3(1.,.93,.82) * uSpotB[i].z * 1.5 * exp(-pow(ang/0.005, 2.));
@@ -256,7 +280,7 @@ void main(){
       float ra = uSpotB[i].y;
       if (ra > 0. && ra < 0.2) {
         float rr = ra*0.55; float wd = 0.004 + ra*0.05;
-        float ring = exp(-pow((ang-rr)/wd, 2.)) * exp(-ra*40.) * 0.35;
+        float ring = exp(-pow((ang-rr)/wd, 2.)) * exp(-ra*60.) * 0.12;
         rings += ring;
       }
     }
@@ -269,7 +293,7 @@ void main(){
       float nl = max(dot(n, L), 0.);
       vec3 H = normalize(L+V);
       float spec = pow(max(dot(n,H),0.), 220.) * 40.;
-      col += bb(2200.) * I * (nl*0.00004/(d2+0.002) + spec*0.00003/(d2+0.002));
+      // (no light pools under the embers: at this scale they read as out-of-focus blobs)
     }
     // sky reflection (dark, faint starlight) with Fresnel
     float fr = 0.04 + 0.96*pow(1.-max(dot(n,V),0.), 5.);
@@ -430,9 +454,9 @@ function buildRibbons(p, t, cam, B, asp, dpr) {
   for (const site of SITES) {
     const uHead = (p - site.launch) / site.flight;
     // the throw is visible from launch until its train has faded (a few TAU_TRAIN after landing): nothing left sitting
-    if (uHead < 0 || p > site.land + 4 * TAU_TRAIN) { heads.push(null); continue; }
+    if (uHead < 0 || p > site.land + 3 * TAU_TRAIN) { heads.push(null); continue; }
     const pts = [], ref = [];
-    const maxAge = Math.min(4 * TAU_TRAIN, p - site.launch);
+    const maxAge = Math.min(3 * TAU_TRAIN, p - site.launch);
     const N = 90;
     for (let i = 0; i <= N; i++) {
       // sample densely near the head, sparser in the old train
@@ -443,7 +467,7 @@ function buildRibbons(p, t, cam, B, asp, dpr) {
       const age = ageP;
       const hot = Math.exp(-age / TAU_HOT);
       const K = 900 + 1350 * hot + 200 * Math.exp(-age / 0.03);
-      const fade = Math.exp(-age / TAU_TRAIN) * smooth(0, 0.004, a + 0.0005);
+      const fade = Math.exp(-age / TAU_TRAIN) * (1 - smooth(2 * TAU_TRAIN, 3 * TAU_TRAIN, age)) * smooth(0, 0.004, a + 0.0005);
       const pr = project(s.P, cam, B, asp);
       if (pr[2] <= 0.01) continue;
       const vis = 1 - occluded(s.P, cam);
@@ -459,7 +483,7 @@ function buildRibbons(p, t, cam, B, asp, dpr) {
       const pm = project(M, cam, B, asp);
       if (pm[2] > 0.01) ref.push({ x: pm[0], y: pm[1], K, I: I * 0.03 * Math.exp(-hgt / 0.03), w: wpx * 2.2 });
     }
-    pushStrip(pts); pushStrip(ref);
+    pushStrip(pts); if (Q.has('refl')) pushStrip(ref);
     if (uHead <= 1) {
       const P = arcPos(site, uHead);
       const flick = 0.85 + 0.15 * Math.sin(t * 37 + site.bearing) * Math.sin(t * 23.1 + site.range * 50);
@@ -503,6 +527,7 @@ function frame() {
   const p = progress();
   const asp = W / H;
   const dpr = W / innerWidth;
+  layout(asp);
   const cam = camera(p, asp);
   const B = camBasis(cam);
 
