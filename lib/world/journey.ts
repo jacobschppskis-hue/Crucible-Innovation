@@ -112,8 +112,9 @@ export function keys(): Key[] {
     // ... and swoops low over the night sea while Jacob's first paragraphs are read: the visitor's cursor and finger
     // make wakes here (lava: full wakes below h 14); the horizon sits low, the type has the dark sky
     { at: ['story', 0], s: 90, h: 7, yaw: 62, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
-    { at: ['story', 0.55], s: 440, h: 6, yaw: 22, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
-    { at: ['story', 1], s: deg(12), h: 420, yaw: 15, pitch: -8, fov: 50, ...FAR, ph: { fov: 64, pitch: 0 } },
+    { at: ['story', 0.45], s: 400, h: 6, yaw: 22, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
+    // V2: one slow climb from the swoop straight up to PayPal's orbit (no zoom onto the vent's glowing patch)
+    { at: ['story', 1], s: deg(14), h: 1300, yaw: 6, pitch: -26, fov: 48, ...FAR, ph: { fov: 62, pitch: -22 } },
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
