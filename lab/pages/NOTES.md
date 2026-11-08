@@ -112,6 +112,11 @@ MobileMenu}.tsx` and every component outside `components/world`, `app/{sites,wor
   `/` 98-99/100/100/100 (TBT 42 ms). world:smoke ok. qa asked to make world.spec `start()` keep moving the mouse
   inside its poll (one move can land before hydration under load: flaky 1 in 3).
 
+- (15:05) Lava's review applied to the pages' liquid: 940 K at rest (near-black deep red, not brown), no grey mix in
+  the Planck, the mirrored night halved and the swell's tilt for it 2 → 0.8 (no broad diagonal bands), and the swell's
+  sheen a narrow lobe (exp 600, tilt ×25) so only its steepest faces flash: a few hairline warm crest lines. Rest
+  background p50 0.0046, p99 ≤ 0.012, max 0.07 on a hairline. Wake unchanged. Frames: lab/pages/shots/sites-lava-*.
+
 ## Decisions
 - (14:55) Software GL gets no idle start on the home page: Lighthouse and CI have no GPU, real visitors do; GPU-less
   visitors see the designed still until they touch or scroll, then the world.
