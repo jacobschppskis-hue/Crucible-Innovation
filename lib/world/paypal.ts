@@ -167,10 +167,12 @@ export function beatChannels(p: number, narrow: boolean, R: number) {
 /** Journey keys for the `paypal` place (desktop values, phones in `ph`), sampled from beatCamera. */
 export function paypalKeys(R: number): Key[] {
   const out: Key[] = [];
-  for (const f of [0, 0.06, 0.12, 0.18, 0.22, 0.245, 0.26, 0.275, 0.29, 0.305, 0.32, 0.335, 0.35, 0.37, 0.6, 0.8, 1]) {
+  for (const f of [0, 0.06, 0.12, 0.18, 0.22, 0.245, 0.26, 0.275, 0.29, 0.305, 0.32, 0.335, 0.35, 0.37, 0.6, 0.8, 0.9, 0.95, 1]) {
     const d = beatChannels(f, false, R), m = beatChannels(f, true, R);
     const k: Key = {
       at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov,
+      // a cooler night sea under the beat (lava.heat is additive and carries on to later keys: back to 0 at the end)
+      'lava.heat': -0.15 * smooth(0, 0.2, f) * (1 - smooth(0.9, 1, f)),
       ph: { s: m.s, h: m.h, pitch: m.pitch, fov: m.fov },
     };
     if (f > 0) k.ease = 'linear';
