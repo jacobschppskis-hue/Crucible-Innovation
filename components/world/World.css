@@ -95,7 +95,7 @@ html[data-loop] body {
   padding-bottom: clamp(2rem, 6vh, 4rem);
 }
 .w-hero-title {
-  font-size: clamp(3.25rem, 11vw, 9.5rem);
+  font-size: clamp(2.6rem, 11vw, 9.5rem);
   line-height: 0.92;
 }
 .w-hero-line {
@@ -161,4 +161,15 @@ html[data-loop] [data-place='loop'] {
 .w-v-link {
   display: block;
   padding-block: 1rem;
+}
+
+/* Phones (mark): the core sits right of centre (journey ph yaw 169), so the headline and paragraph keep left of the
+   sun's glitter column on the sea */
+@media (max-width: 760px) {
+  .w-hero-title {
+    font-size: 9.6vw;
+  }
+  .w-hero-meta p {
+    max-width: 62%;
+  }
 }
