@@ -113,12 +113,11 @@ export const slab = (hw: number, hh: number, depth: number, bev: number, seg = 3
   extrude(rectChains(hw, hh), depth, bev, seg, caps);
 
 /**
- * The human half of the ring of radius `r` with its two welded end cells, as one outline (y up, ring centre at the
- * origin; lib/splitRing.ts `arcOutline` is the same contour in SVG): the cells' outer edges run straight from x = 3w/2 to
- * x = 0, where they are tangent to the circles, then the half circles round the left. Chains break at the cells'
- * right-hand corners; insets are miter offsets of the whole outline.
+ * The human half of the ring of radius `r` as one outline (y up, ring centre at the origin; lib/splitRing.ts
+ * `arcOutline` is the same contour in SVG): the half circles round the left, cut flat on x = 0 (the core's centre line).
+ * Chains break at the four corners of the flat ends; insets are miter offsets of the whole outline.
  */
-function weldedArcChains(r: number, w: number): Chains {
+function arcChains(r: number, w: number): Chains {
   const h = w / 2, ro = r + h, ri = r - h;
   const arc = (R: number, a: number, b: number): Pt[] => {
     const n = 2 * Math.max(6, Math.round((Math.abs(b - a) * R) / 2.4)); // even: a vertex at 9 o'clock, so the box is exact
@@ -129,10 +128,10 @@ function weldedArcChains(r: number, w: number): Chains {
   };
   const H = Math.PI / 2;
   const base: Pt[][] = [
-    [[3 * h, ri], [3 * h, ro]],
-    [[3 * h, ro], ...arc(ro, H, 3 * H), [3 * h, -ro]],
-    [[3 * h, -ro], [3 * h, -ri]],
-    [[3 * h, -ri], ...arc(ri, 3 * H, H), [3 * h, ri]],
+    [[0, ri], [0, ro]],
+    arc(ro, H, 3 * H).map(([x, y], j, a) => (j === 0 || j === a.length - 1 ? [0, y] : [x, y]) as Pt),
+    [[0, -ro], [0, -ri]],
+    arc(ri, 3 * H, H).map(([x, y], j, a) => (j === 0 || j === a.length - 1 ? [0, y] : [x, y]) as Pt),
   ];
   // The closed outline (CCW), each chain's last point being the next chain's first.
   const loop: Pt[] = base.flatMap((ch) => ch.slice(0, -1));
@@ -152,7 +151,7 @@ function weldedArcChains(r: number, w: number): Chains {
   return (k) => idx.map((ch) => ch.map((g) => [loop[g][0] + k * miter[g][0], loop[g][1] + k * miter[g][1]] as Pt));
 }
 /** One ring's arc outline as the 3D logo extrudes it (closed, CCW, y up, ring centre at the origin): for checks against the SVG. */
-export const arcOutline3d = (r: number): Pt[] => weldedArcChains(r, RING.px)(0).flatMap((ch) => ch.slice(0, -1));
+export const arcOutline3d = (r: number): Pt[] => arcChains(r, RING.stroke)(0).flatMap((ch) => ch.slice(0, -1));
 const norm = (v: Pt): Pt => {
   const l = Math.hypot(v[0], v[1]) || 1;
   return [v[0] / l, v[1] / l];
@@ -181,20 +180,19 @@ export function recentre(m: Mesh): Vec3 {
 export type Piece = { id: string; kind: 'arc' | 'square' | 'core'; mesh: Mesh; center: Vec3; ring?: 0 | 1 };
 
 /**
- * The mark as separate pieces: 2 arcs (each with its welded end cells), 16 free upright cells, the core. Units are mark
- * units (64 across), origin at the ring centre, y up, front toward +z. Each mesh is centred on its own bounding box;
- * `center` is that rest position. Free cells sit on the lattice (lib/splitRing.ts `cells()`), ring 0 then 1, top → bottom.
+ * The mark as separate pieces: 2 arcs, 14 upright squares, the core. Units are mark units (64 across), origin at the
+ * ring centre, y up, front toward +z. Each mesh is centred on its own bounding box; `center` is that rest position.
+ * Squares sit on their circles (lib/splitRing.ts `cells()`), ring 0 then 1, top → bottom.
  */
 export function logoPieces(depth = 2.4, bev = 0.4): Piece[] {
-  const { c, px, rings, core } = RING;
+  const { c, px, stroke, rings, core } = RING;
   const out: Piece[] = [];
   rings.forEach(({ r }, ri) => {
-    const mesh = extrude(weldedArcChains(r, px), depth, bev);
+    const mesh = extrude(arcChains(r, stroke), depth, bev);
     out.push({ id: `arc${ri}`, kind: 'arc', mesh, center: recentre(mesh), ring: ri as 0 | 1 });
   });
   const k = [0, 0];
   for (const q of cells()) {
-    if (q.weld) continue;
     const mesh = slab(px / 2, px / 2, depth, bev);
     out.push({ id: `sq${q.ring}-${k[q.ring]++}`, kind: 'square', mesh, center: [q.x - c, c - q.y, 0], ring: q.ring });
   }

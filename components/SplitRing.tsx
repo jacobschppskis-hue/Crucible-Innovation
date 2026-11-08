@@ -10,10 +10,10 @@ type Props = {
   title?: string;
 };
 
-/** The lattice ring (lib/splitRing.ts): each band is one filled outline with its welded end cells; the free cells are upright. */
+/** The Split Ring (lib/splitRing.ts): each band is one filled outline ending on the core's centre line; the squares are upright, on the circles. */
 export function SplitRing({ size = 64, animated = false, pixel = 'square', className, title = 'Crucible' }: Props) {
   const { c, px, rings } = RING;
-  const free = cells().filter((q) => !q.weld);
+  const free = cells();
   const svg = (
     <svg
       viewBox="0 0 64 64"

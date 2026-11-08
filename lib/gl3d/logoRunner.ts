@@ -1,5 +1,5 @@
-// The home logo, live: 2 arcs (each with its welded end cells), 16 upright cells and the core, each its own object on a
-// transparent canvas, all on the mark's lattice (lib/splitRing.ts).
+// The home logo, live: 2 arcs, 14 upright squares and the core, each its own object on a transparent canvas, all on the
+// mark's circles (lib/splitRing.ts).
 // Every piece's pose comes from the main thread with each tick of the one clock (logoScene.ts: the scroll story's
 // offsets plus its floating on the page's wave grid, the cursor's push included); this file applies exactly that pose,
 // plays the pour (the floating fades in as the logo is released) and draws. It keeps no springs and no time of its own.
@@ -20,7 +20,7 @@ export const LOGO_SPAN = 2.4;
 const MARK = 64;
 
 /**
- * Per piece (logoPieces() order: arc 0, arc 1, the 16 free cells, the core), POSE_STRIDE numbers in mark units (y up)
+ * Per piece (logoPieces() order: arc 0, arc 1, the 14 squares, the core), POSE_STRIDE numbers in mark units (y up)
  * and radians: the story's offset [x, y, z, rx, ry, rz, scale], then the floating [x, y, z, rx, ry, rz]. The floating
  * is scaled by how much of it shows (0 while the metal is poured, 1 once released).
  */

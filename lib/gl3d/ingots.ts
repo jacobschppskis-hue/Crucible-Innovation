@@ -1,6 +1,6 @@
 // The ventures' ingots: cast bars (lib/gl3d/geometry.ts `goldBar`), freestanding, no casing, no floor. Object units:
 // length along x (100 at the foot), width along y, the stamped top face toward +z. The stamp is cut into the top face as
-// a relief map drawn here (white = cut in): Crucible Sites carries the lattice ring and its name, the bars still forging
+// a relief map drawn here (white = cut in): Crucible Sites carries the Split Ring and its name, the bars still forging
 // carry their names alone. `ingot(kind)` returns a mesh-less root plus
 // the bar; `addIngot` (index.ts) parents the bar to the root: move/rotate the root to float and turn it.
 import { BAR, goldBar } from './geometry';
@@ -31,7 +31,7 @@ export type IngotSpec = { root: ObjectInit; parts: ObjectInit[] };
 const SW = 82, SH = 29, MW = 2048, MH = Math.round((MW * SH) / SW);
 const PX = MW / SW; // canvas px per object unit
 
-/** The Crucible lattice ring (lib/splitRing.ts), `size` units tall, centred at (x, y) units from the stamp's centre (y up). */
+/** The Crucible Split Ring (lib/splitRing.ts), `size` units tall, centred at (x, y) units from the stamp's centre (y up). */
 function ring(c: CanvasRenderingContext2D, x: number, y: number, size: number) {
   const k = (size * PX) / 57; // the mark's box is 3.5..60.5 of its 64 units
   c.save();
@@ -39,7 +39,7 @@ function ring(c: CanvasRenderingContext2D, x: number, y: number, size: number) {
   c.scale(k, k);
   c.translate(-RING.c, -RING.c);
   for (const { r } of RING.rings) c.fill(new Path2D(arcOutline(r)));
-  for (const q of cells()) if (!q.weld) c.fillRect(q.x - RING.px / 2, q.y - RING.px / 2, RING.px, RING.px);
+  for (const q of cells()) c.fillRect(q.x - RING.px / 2, q.y - RING.px / 2, RING.px, RING.px);
   c.beginPath(); c.arc(RING.c, RING.c, RING.core, 0, Math.PI * 2); c.fill();
   c.restore();
 }

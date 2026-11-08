@@ -40,7 +40,7 @@ const BUOYS: Record<'arc' | 'square' | 'core', BuoyOpts> = {
   arc: { ...STRONG, tilt: 0.12, drift: 6.5, f: 0.85, zeta: 0.6 },
 };
 /** The idle swell's share: its long waves (520-1050 px) run across the ring's width, so at full height they would move
- *  pieces on opposite sides apart by several px; at this share the ring stays one readable lattice at rest. */
+ *  pieces on opposite sides apart by several px; at this share the ring stays one readable mark at rest. */
 const SWELL = 0.25;
 /** The visitor's ripples: wavenumber (1/px) of their ringing (input.ts: 8.5 Hz at 420 px/s), so that h² + |∇h|²/k² is
  *  a ripple's squared amplitude (px²) whatever its phase: the waves' energy, smooth in space and time. */
@@ -115,17 +115,16 @@ function bodies(): Body[] {
   const base = (kind: Body['kind'], id: string, i: number) => ({ id, kind, b: buoy3(BUOYS[kind]), fp: { h: 0, gx: 0, gy: 0, roll: 0, pitch: 0 }, e: 0, tx: 0, ty: 0, dip: 0, dv: 0, hard: 0, lastRipple: -1e9 - i, fx: 0, fy: 0, fz: 0 });
   const out: Body[] = [];
   rings.forEach(({ r }, ri) => {
-    // The arc's mesh is centred on its box: x from -(r + 1.5) to the welded cell's far edge (+4.5), y symmetric.
-    const cx = (3 * h - r - h) / 2;
+    // The arc's mesh is centred on its box: x from -(r + h) to its flat ends on the centre line (0), y symmetric.
+    const cx = -(r + RING.stroke / 2) / 2;
     const pts: number[] = [];
     for (let j = 0; j <= 6; j++) {
       const a = Math.PI / 2 + (Math.PI * j) / 6; // top, round the left, bottom
       pts.push(r * Math.cos(a) - cx, r * Math.sin(a));
     }
-    pts.push(2 * h - cx, r, 2 * h - cx, -r); // the welded cells at its ends
     out.push({ ...base('arc', `arc${ri}`, ri), ring: ri as 0 | 1, bx: cx, by: 0, pts, half: 0, k: 0, sc: scatter(0) });
   });
-  const free = cells().filter((q) => !q.weld);
+  const free = cells();
   free.forEach((q, i) => out.push({ ...base('square', `sq${q.ring}-${i}`, i + 2), ring: q.ring, bx: q.x - c, by: c - q.y, pts: [], half: h, k: i / (free.length - 1), sc: scatter(i) }));
   out.push({ ...base('core', 'core', 99), ring: 0, bx: 0, by: 0, pts: [], half: core, k: 0, sc: scatter(0) });
   return out;

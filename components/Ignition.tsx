@@ -11,14 +11,14 @@ const scatter = (i: number) => {
   const r = (n: number) => ((Math.sin(i * 127.1 + n * 311.7) * 43758.5453) % 1 + 1) % 1;
   return { dx: 16 + r(1) * 44, dy: (r(2) - 0.5) * 64, dr: (r(3) - 0.5) * 23 };
 };
-const FREE = cells().filter((q) => !q.weld); // the welded end cells are part of the arcs' outlines
+const FREE = cells(); // the machine half's squares
 /** The farthest a scattered cell goes right of the core (mark units). */
 const SCATTER_FAR = Math.max(...FREE.map((q, k) => q.x - RING.c + scatter(k).dx));
 
 // The pour's ghost: a hairline technical drawing of the mark that the 3D metal is poured into (rich tier, first visit).
 // Each piece's outline sits GHOST_IN units inside its edge, so the opaque metal drawn over it (the 3D pieces lie on the
 // SVG to within a pixel) hides it exactly where it has filled; nothing has to keep time with the worker. The dashed
-// construction lines (the circles the machine half is rasterised from, the axis, the sprue) and the crop marks stay
+// construction lines (the circles the machine half sits on, the axis, the sprue) and the crop marks stay
 // until the drawing fades. Units: the mark's 64-unit box, drawn with a GM-unit margin.
 const GM = 6;
 const GHOST_IN = 0.35;
