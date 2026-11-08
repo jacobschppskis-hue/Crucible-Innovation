@@ -144,9 +144,11 @@ function analyse(tr, dir = 1) {
   }
   return { wraps, backs, moved: tr.at(-1)[1] - tr[0][1] };
 }
+// input tests can run the world at a cheap step so SwiftShader does not starve input (--inputQuery=q=5)
+const INPUT_URL = A.inputQuery ? withQ(URL0, A.inputQuery) : URL0;
 async function loop(device) {
   const dn = devName(device);
-  const { ctx, page, kind } = await open(device);
+  const { ctx, page, kind } = await open(device, { url: INPUT_URL });
   if (kind === 'none') { await ctx.close(); return; }
   await page.evaluate(() => window.__qa.resume());
   const maxY = await page.evaluate(() => window.__qa.maxY());
@@ -176,7 +178,7 @@ async function loop(device) {
     const c = await cdp(page);
     await page.evaluate((y) => scrollTo(0, y), maxY - 1.5 * H); await sleep(800);
     const tp = trace(page, 6000, 25);
-    for (let k = 0; k < 4; k++) { await flick(c, { y: H * 0.8, dy: -H * 0.6, speed: 2500 }); await sleep(150); }
+    for (let k = 0; k < 4; k++) { await flick(c, { y: H * 0.8, dy: -H * 0.45 }); await sleep(700); }
     const tr = await tp; const a = analyse(tr, 1);
     fs.writeFileSync(path.join(OUT, `loop-flick-${dn}.json`), JSON.stringify(tr));
     if (!a.wraps.length) F('P0', 'loop', dn, `touch flick: no wrap past the bottom (scrollY ${tr[0][1]} -> ${tr.at(-1)[1]}, maxY ${maxY})`);
@@ -241,16 +243,18 @@ async function touch(device) {
       return shot(page);
     };
     const s0 = await page.evaluate(() => scrollY);
-    const a = await frameAfter(false);
-    // reload so time and state match, then drag
-    await page.reload({ waitUntil: 'load' }); await waitWorld(page, 15000);
-    const b = await frameAfter(true);
+    const region = { x: 0, y: Math.round(H * 0.45), w: W, h: Math.round(H * 0.35) };
+    const reload = async () => { await page.reload({ waitUntil: 'load' }); await waitWorld(page, 15000); };
+    await reload(); const a = await frameAfter(false);
+    // the noise floor: the same no-drag run again (time after a reload is not exactly the same everywhere)
+    await reload(); const a2 = await frameAfter(false);
+    await reload(); const b = await frameAfter(true);
     const s1 = await page.evaluate(() => scrollY);
-    const d = await diff(a, b, { x: 0, y: Math.round(H * 0.45), w: W, h: Math.round(H * 0.35) });
+    const d = await diff(a, b, region), n0 = await diff(a, a2, region);
     const f = path.join(OUT, `touch-wake-${dn}.webp`);
     await saveWebp(b, f, { width: 390 });
-    I('touch', dn, `finger wake at p=${placeP}: Δ vs no-drag ${d.mad.toFixed(2)} (p99 ${d.p99}); scroll ${s0}/${s1}`);
-    if (d.mad < 0.4 && d.p99 < 6) F('P1', 'touch', dn, `a horizontal finger drag over the sea left no visible wake at p=${placeP} (Δ ${d.mad.toFixed(2)}): pass --seaP=<p> of a low swoop or expose state().seaP`, f);
+    I('touch', dn, `finger wake at p=${placeP}: Δ vs no-drag ${d.mad.toFixed(2)} (p99 ${d.p99}), noise floor ${n0.mad.toFixed(2)}; scroll ${s0}/${s1}`);
+    if (d.mad < Math.max(0.4, n0.mad * 2)) F('P1', 'touch', dn, `a horizontal finger drag over the sea left no visible wake at p=${placeP} (Δ ${d.mad.toFixed(2)}): pass --seaP=<p> of a low swoop or expose state().seaP`, f);
   }
   // tap: the first visible link/button in main receives a click
   await page.evaluate(() => { window.__qa?.resume?.(); scrollTo(0, 0); });
@@ -283,7 +287,7 @@ async function rm(device) {
   if (d.mad > 1.5) F('P1', 'rm', dn, `reduced motion: the screen keeps changing at rest (Δ ${d.mad.toFixed(2)} over 0.8 s)`);
   const maxY = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
   await page.evaluate(() => scrollTo(0, 1e9)); await sleep(400);
-  if (device === 'desktop') { for (let i = 0; i < 10; i++) { await page.mouse.wheel(0, 200); await sleep(60); } } else { const c = await cdp(page); await flick(c, { y: 600, dy: -400 }); }
+  if (device === 'desktop') { for (let i = 0; i < 10; i++) { await page.mouse.wheel(0, 200); await sleep(60); } } else { const c = await cdp(page); await flick(c, { y: 600, dy: -400 }); await sleep(900); await flick(c, { y: 600, dy: -400 }); }
   await sleep(800);
   const y = await page.evaluate(() => scrollY);
   if (y < maxY - 5) F('P1', 'rm', dn, `reduced motion: the page does not simply end (scrollY ${y} after scrolling past the bottom, max ${maxY}): it should not loop`);

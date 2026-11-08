@@ -260,8 +260,17 @@ export async function tap(c, x, y) {
   await sleep(60);
   await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
 }
-// a flick: Chromium's own touch gesture pipeline, with a fling (momentum) after lift
-export async function flick(c, { x = 195, y = 600, dy = -500, speed = 3000 } = {}) {
-  await c.send('Input.synthesizeScrollGesture', { x, y, yDistance: dy, xDistance: 0, speed, gestureSourceType: 'touch', preventFling: false, repeatCount: 1 });
+// a flick: a fast finger stroke with tight event timestamps, so Chromium's gesture detector sees the release velocity
+// and flings (momentum after lift, like a phone). (Input.synthesizeScrollGesture does not scroll in this headless build.)
+// dy < 0 moves the finger up = scrolls the page down.
+export async function flick(c, { x = 195, y = 640, dy = -400, steps = 10, ms = 8 } = {}) {
+  let ts = Date.now() / 1000;
+  await c.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 1 }], timestamp: ts });
+  for (let i = 1; i <= steps; i++) {
+    ts += ms / 1000;
+    await c.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y: y + (dy * i) / steps, id: 1 }], timestamp: ts });
+    await sleep(ms);
+  }
+  await c.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [], timestamp: ts + 0.004 });
 }
 export { sleep, sharp, fs, path };
