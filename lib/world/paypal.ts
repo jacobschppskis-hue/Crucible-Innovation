@@ -227,6 +227,8 @@ export const TW = 2 + 2 * CH_PTS;
 export const ROWS = 64;
 const trail = new Float32Array(TW * ROWS * 4);
 const boxes = new Float32Array(ROWS * 4);
+/** The union of this frame's trail boxes (viewport CSS px): the crisp pass's box. */
+const cssBox: [number, number, number, number] = [1e9, 1e9, -1e9, -1e9];
 type Pt = { P: V3; K: number; I: number; w: number };
 
 export interface Cam {
@@ -241,6 +243,8 @@ export interface Cam {
 /** Fills the trails texture for beat progress p; returns the number of rows used. */
 export function packTrails(p: number, t: number, cam: Cam, R: number): number {
   let row = 0;
+  cssBox[0] = cssBox[1] = 1e9;
+  cssBox[2] = cssBox[3] = -1e9;
   THROWS.forEach((s, id) => {
     const uHead = (p - s.launch) / s.flight;
     const TH = TAU_HOT * s.tau, TT = TAU_TRAIN * s.tau;
@@ -297,11 +301,13 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
         trail[o + 7] = 0;
       }
       if (!any) continue;
-      // CSS px (y down) -> NDC (y up)
-      boxes[row * 4] = trail[base] = (x0 / cam.w) * 2 - 1;
-      boxes[row * 4 + 1] = trail[base + 1] = 1 - (y1 / cam.h) * 2;
-      boxes[row * 4 + 2] = trail[base + 2] = (x1 / cam.w) * 2 - 1;
-      boxes[row * 4 + 3] = trail[base + 3] = 1 - (y0 / cam.h) * 2;
+      // CSS px (y down) -> the camera's tangent space (y up), the same in both passes whatever their resolution
+      boxes[row * 4] = trail[base] = (x0 - cam.w / 2) / cam.focal;
+      boxes[row * 4 + 1] = trail[base + 1] = -(y1 - cam.h / 2) / cam.focal;
+      boxes[row * 4 + 2] = trail[base + 2] = (x1 - cam.w / 2) / cam.focal;
+      boxes[row * 4 + 3] = trail[base + 3] = -(y0 - cam.h / 2) / cam.focal;
+      cssBox[0] = Math.min(cssBox[0], x0); cssBox[1] = Math.min(cssBox[1], y0);
+      cssBox[2] = Math.max(cssBox[2], x1); cssBox[3] = Math.max(cssBox[3], y1);
       trail[base + 4] = c1 - c0;
       trail[base + 5] = id;
       trail[base + 6] = c0 === 0 && uHead <= 1 ? flick : 0;
@@ -320,6 +326,7 @@ uniform vec4 paypal_uDome;      // x dome height, y dome radius, z wave radius, 
 uniform vec2 paypal_uVentW;     // PayPal's surface coords (u across, v along)
 uniform float paypal_uRows;     // rows used in the trails texture
 uniform float paypal_uMinPx;    // thinnest line (render px)
+uniform float paypal_uMinPxCrisp; // thinnest line in the crisp pass (canvas px)
 uniform highp sampler2D paypal_uTrail;
 uniform vec4 paypal_uBox[${ROWS}]; // each row's screen box (NDC x0, y0, x1, y1), so a pixel only reads rows it is inside
 #define PAYPAL_ROWS ${ROWS}
@@ -351,29 +358,15 @@ vec3 paypal_places(vec3 q){
     float cs = dot(q, sd);
     if (cs < 0.99) continue; // beyond ~8 deg nothing of this place reaches
     float ang = acos(min(cs, 1.));
-    vec3 tx = normalize(cross(sd, abs(sd.x) < .9 ? vec3(1,0,0) : vec3(0,1,0)));
-    vec3 ty = cross(sd, tx);
-    vec3 d = q - sd*cs;
-    float phi = atan(dot(d, ty), dot(d, tx));
     float age = paypal_uSpotB[i].x, seed = paypal_uSpotB[i].w;
     float grow = 1. - exp(-age*14.);
-    float lobes = 0.;
-    for (int k=0;k<4;k++){
-      float fk = float(k);
-      float L = (0.035 + 0.06*fract(seed*7.3+fk*.37)) * grow;
-      if (L < 1e-4) continue;
-      float along = ang / L;
-      float a0 = seed*6.283 + fk*1.9 + 0.5*sin(seed*31.+fk) + 0.9*(fract(seed*3.1+fk*.71)-.5)*along;
-      float dphi = atan(sin(phi-a0), cos(phi-a0));
-      float wdt = (0.42 - 0.22*clamp(along, 0., 1.)) * (0.8 + 0.4*paypal_noise(q*540. + fk*7.));
-      lobes += exp(-dphi*dphi/(wdt*wdt)) * smoothstep(1.05, 0.2, along) * smoothstep(0.0, 0.25, along)
-             * (0.6 + 0.4*paypal_noise(q*960. + fk*3.));
-    }
+    // V2: a round glow only (the meandering flows read as X/Y-shaped smears on phones)
+    float spread = 1. + 1.6 * grow; // it grows after the landing
     float core = exp(-pow(ang/0.005, 2.));
-    float mid = exp(-pow(ang/0.022, 2.));
-    float halo = exp(-ang/0.05);
+    float mid = exp(-pow(ang/(0.012*spread), 2.));
+    float halo = exp(-ang/(0.025*spread)) * smoothstep(0.14, 0.07, ang); // to zero well inside the cut-off: no edge
     float Ks = mix(900., 1650., core) + 250.*mid;
-    emit += paypal_bb(Ks) * heat * (2.2*core + 0.55*mid + 0.1*halo + 0.5*lobes);
+    emit += paypal_bb(Ks) * heat * (2.2*core + 0.6*mid + 0.12*halo);
     emit += vec3(1.,.93,.82) * flash * 1.5 * exp(-pow(ang/0.005, 2.));
     float ra = paypal_uSpotB[i].y; // a faint heat ripple running out from a landing, gone fast
     if (ra > 0. && ra < 0.12) ripple += exp(-pow((ang - ra*0.55)/(0.004 + ra*0.05), 2.)) * exp(-ra*60.) * 0.12;
@@ -403,10 +396,11 @@ void paypal_sea(Ray r, Sea s, inout SeaMod m){
 // The throws in the air: per pixel, the nearest point of each throw's sampled path (ray-segment closest approach),
 // a gaussian cross-section in pixels (never thinner than paypal_uMinPx; a widened line keeps its energy), coloured by
 // the blackbody of that point. One contribution per throw (no double counting at joints); hidden behind the planet.
-void paypal_over(Ray r, Hit h, inout vec3 col){
+vec3 paypal_trails(Ray r, float tMax, float minPx){
   int rows = int(paypal_uRows + 0.5);
-  if (rows <= 0) return;
-  vec2 ndc = gl_FragCoord.xy / uRes * 2. - 1.;
+  if (rows <= 0) return vec3(0);
+  vec3 v = r.rd * uCam; // the pixel in the camera's tangent space (resolution independent), like the CPU's boxes
+  vec2 ndc = v.xy / v.z;
   vec3 ro = r.ro - uCamPos;
   vec3 acc = vec3(0);
   float curId = -1.; float bestV = 0.; float bestK = 1000.;
@@ -422,9 +416,9 @@ void paypal_over(Ray r, Hit h, inout vec3 col){
     vec4 a1 = texelFetch(paypal_uTrail, ivec2(3, i), 0);
     if (info.z > 0.){ // the head: a tight white-gold point (bloom carries its glare)
       vec3 w = a0.xyz - ro; float t = dot(w, r.rd);
-      if (t > 0. && t < h.t){
+      if (t > 0. && t < tMax){
         float dpx = length(w - r.rd*t) / (t * r.pa);
-        float v = info.z * exp(-4.*pow(dpx/(paypal_uMinPx*0.8), 2.));
+        float v = info.z * exp(-4.*pow(dpx/(minPx*0.8), 2.));
         if (v > bestV){ bestV = v; bestK = 2500.; }
       }
     }
@@ -438,10 +432,10 @@ void paypal_over(Ray r, Hit h, inout vec3 col){
       float sp = den > 1e-9*c ? clamp((e - b*d) / den, 0., 1.) : 0.;
       vec3 q = a0.xyz + u*sp;
       float t = dot(q - ro, r.rd);
-      if (t > 0. && t < h.t){
+      if (t > 0. && t < tMax){
         float dpx = length(ro + r.rd*t - q) / (t * r.pa);
         float wpx = mix(a1.y, b1.y, sp) / (t * r.pa);
-        float wc = max(wpx, paypal_uMinPx);
+        float wc = max(wpx, minPx);
         float x = dpx / wc;
         if (x < 2.5){
           float v = mix(a1.x, b1.x, sp) * (wpx / wc) * exp(-4.*x*x);
@@ -451,8 +445,18 @@ void paypal_over(Ray r, Hit h, inout vec3 col){
       a0 = b0; a1 = b1;
     }
   }
-  acc += paypal_bb(bestK) * bestV;
-  col += acc;
+  return acc + paypal_bb(bestK) * bestV;
+}
+
+// scene pass: only when there is no crisp pass this frame (it draws them at the screen's own resolution)
+void paypal_over(Ray r, Hit h, inout vec3 col){
+  if (uCrispOn > 0.5) return;
+  col += paypal_trails(r, h.t, paypal_uMinPx);
+}
+// crisp pass: light adds (an emitter covers nothing), hidden behind the planet by the exact sea sphere
+vec4 paypal_crisp(Ray r, float tScene){
+  float ts = world_seaT(r);
+  return vec4(paypal_trails(r, ts > 0. ? ts : 1e30, paypal_uMinPxCrisp), 0.);
 }
 `;
 
@@ -465,14 +469,20 @@ const S = {
   caps01: [0, 0, 0, 0, 0],
   rows: 0,
   ver: 0,
+  box: null as DOMRect | null,
 };
+const SPOT = new Float32Array(28), SPOTB = new Float32Array(28); // reused every frame (no garbage while scrolling)
 /** The beat's labels, captions and trail rows of the last frame (tests, lab). */
 export const paypalDebug = () => ({ rows: S.rows, labels: S.labels.map((l) => ({ ...l })), caps: [...S.caps01] });
 
 export const paypal: WorldModule = {
   id: 'paypal',
   glsl: PAYPAL_GLSL,
-  hooks: ['sea', 'over'],
+  hooks: ['sea', 'over', 'crisp'],
+  crispBox(f: Frame) {
+    if (!S.rows) return null;
+    return [Math.max(0, cssBox[0]), Math.max(0, cssBox[1]), Math.min(f.w, cssBox[2]), Math.min(f.h, cssBox[3])];
+  },
   keys: paypalKeys,
   init({ root }) {
     S.section = root.querySelector<HTMLElement>('[data-place="paypal"]');
@@ -488,7 +498,7 @@ export const paypal: WorldModule = {
     const t = f.still ? 0 : f.t;
     // the places
     const v = vent(p);
-    const spot = new Float32Array(28), spotB = new Float32Array(28);
+    const spot = SPOT, spotB = SPOTB;
     spot.set([...pl.up, v.heat], 0);
     spotB.set([1, p - ERUPT_P, v.flash, 0.42], 0);
     SITES.forEach((s, i) => {
@@ -514,8 +524,11 @@ export const paypal: WorldModule = {
     u.set('paypal_uRows', rows);
     if (rows || S.rows) u.set('paypal_uBox', boxes);
     u.set('paypal_uMinPx', Math.max(1.2, 0.75 * f.quality.scale));
+    u.set('paypal_uMinPxCrisp', 1.6); // canvas px: ~0.55 CSS px at dpr 3, a hairline that stays solid
     // captions and names
     S.caps01 = S.caps01.map((_, i) => captionOpacity(i, p));
+    // read layout here, before any module writes the DOM this frame (a read in after() would force a layout)
+    S.box = S.names[0]?.parentElement?.getBoundingClientRect() ?? null;
     const lab = (dir: V3, o: number, k: number) => {
       const pr = f.project(mul(dir, R));
       const L = S.labels[k];
@@ -536,7 +549,7 @@ export const paypal: WorldModule = {
       c.style.visibility = o > 0.001 ? 'visible' : 'hidden';
     });
     // the names' container scrolls away with the section once the pin releases; the labels are in viewport px
-    const box = S.names[0]?.parentElement?.getBoundingClientRect();
+    const box = S.box;
     const ox = box ? box.left : 0, oy = box ? box.top : 0;
     // all the names leave together as the pin releases (rather than being clipped one by one)
     const leave = box ? Math.min(1, Math.max(0, 1 + box.top / (0.25 * window.innerHeight))) : 1;
