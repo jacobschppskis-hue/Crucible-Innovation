@@ -23,7 +23,7 @@ void main(){vP=aP;vO=aN;vec4 w=uM*vec4(aP,1.);vW=w.xyz;gl_Position=uVP*w;}`;
 export const FS = `#version 300 es
 precision highp float;
 in vec3 vP;in vec3 vW;in vec3 vO;out vec4 o;
-uniform int uMat;uniform float uTone,uTemp,uGlow,uSeed,uGrain,uExp,uRel;uniform vec2 uTemper;
+uniform mat4 uM;uniform int uMat;uniform float uTone,uTemp,uGlow,uSeed,uGrain,uExp,uRel;uniform vec2 uTemper;
 uniform vec3 uEye;uniform vec4 uRelP,uClip,uCore,uPoke;uniform float uTy,uEdge,uTime,uRefl;uniform vec2 uVp;uniform mat3 uNM;uniform sampler2D uRelT;
 ${BARS}
 float h3(vec3 p){p=fract(p*.3183099+.1);p*=17.;return fract(p.x*p.y*p.z*(p.x+p.y+p.z));}
@@ -149,18 +149,25 @@ col=mix(liq,crust,cv)+ramp(T)*smoothstep(.0,.5,cv)*(1.-smoothstep(.5,1.,cv))*.5*
 }else if(uMat==4){
 float az=clamp((p.z+HZ)/(2.*HZ),0.,1.),dr=(p.z+HZ)*TD;
 float es=clamp(min(HA-dr-abs(p.x),HB-dr-abs(p.y))/16.,0.,1.);
-float hc=smoothstep(.7,1.,az)*smoothstep(.25,.85,nO.z)*pow(es,.6);
+float top=smoothstep(.7,1.,az)*smoothstep(.25,.85,nO.z),hc=top*pow(es,.6);
 vec3 dq=p*.045+vec3(uTime*.018,-uTime*.011,-uTime*.03)+uSeed;
 dq+=.9*vec3(vn(dq*1.4+vec3(0.,0.,uTime*.05)),vn(dq*1.4+4.3),vn(dq*1.4+8.1));
 float cv=.65*vn(dq)+.35*vn(dq*2.3+3.7);
+// the molten skin on top: brighter convection cells drifting slowly (rising hot metal), a dull oxide film between them
+vec3 cq=vec3(p.xy*.11,uTime*.07)+vec3(uTime*.025,-uTime*.017,0.)+uSeed*1.7;
+cq.xy+=.7*vec2(vn(cq*.6+2.),vn(cq*.6+7.));
+float cl=smoothstep(.48,.85,.6*vn(cq)+.4*vn(cq*2.1+5.));
+float ox=smoothstep(.42,.62,vn(vec3(p.xy*.06+vec2(-uTime*.012,uTime*.009),uTime*.03+uSeed+3.)))*(1.-cl);
 float sh=vn(vec3(p.x*.22+uTime*.35,p.y*.5,uTime*.7+uSeed))-.5;
-float T=.24+.13*az*az+.4*hc+.11*(cv-.5)*(1.-.4*hc)+.015*sh-.21*rl;
+float T=.24+.13*az*az+.33*hc+.11*(cv-.5)*(1.-.4*hc)+.015*sh-.21*rl;
+T+=top*(.075*cl-.025*ox)-top*.07*(1.-smoothstep(.0,.45,es));
 vec3 em=bb(T)*(.93+.14*h0);
-vec3 K=normalize(vec3(-.55,.65,.72)),S=normalize(vec3(-.3,.9,.3));
+vec3 K=normalize(vec3(-.55,.65,.72)),S=normalize(vec3(-.3+.25*sin(uTime*.11+uSeed),.9,.3+.2*cos(uTime*.08+uSeed)));
 float nv=max(dot(n,v),1e-3);vec3 rr=reflect(-v,n);
 float F=.05+.95*pow(1.-nv,5.);
-vec3 sp=vec3(1.,.9,.74)*(pow(max(dot(n,normalize(K+v)),0.),140.)*1.4+pow(max(dot(rr,S),0.),14.)*.1);
-col=em*(1.-.3*rl)+sp*(.3+F)+bb(min(T+.14,1.))*pow(1.-nv,3.)*.4;
+vec3 sp=vec3(1.,.9,.74)*(pow(max(dot(n,normalize(K+v)),0.),140.)*1.4*(1.-.5*ox)+pow(max(dot(rr,S),0.),5.)*(.12+.1*top));
+vec3 film=vec3(.75,.72,.68)*ox*top*(.03+.2*F);
+col=em*(1.-.3*rl)+sp*(.3+F)+film+bb(min(T+.14,1.))*pow(1.-nv,3.)*.4;
 }else if(uMat==5){
 float dr=(p.z+HZ)*TD;
 float ds=max(0.,min(HA-dr-abs(p.x),HB-dr-abs(p.y)));
@@ -193,16 +200,30 @@ vec3 sp=F*env+F*vec3(1.,.84,.6)*nl*(pow(nh,mix(70.,12.,w))*.4+pow(nh,400.)*2.5*(
 vec3 df=F0*(vec3(1.,.88,.7)*.14*nl+vec3(.3,.33,.38)*.12*max(dot(n,L2),0.)+vec3(.13,.125,.115)*(.7+.3*n.y));
 col=(df+sp)*ab;
 float az=clamp((p.z+HZ)/(2.*HZ),0.,1.),br=.88+.12*sin(uTime*.7+uSeed)*(.6+.4*vn(vec3(p.xy*.08,uTime*.2)));
-col+=bb(.33)*uTemp*br*(rl*rl*.13+exp(-de/1.2)*.05*(1.-rl)+smoothstep(.3,0.,az)*.1)*(1.-.5*pit);
+col*=1.-.22*rl;
+col+=vec3(.95,.42,.07)*uTemp*br*(pow(rl,4.)*.055+exp(-de/1.)*.025*(1.-rl))*(1.-.5*pit);
 }else if(uMat==6){
+// Light the bar throws on the dark liquid it floats in, on a surface tilted away from us: brightest close under its
+// foot, pressed flat into the surface plane (short behind it, longer toward the viewer), broken by the ripples into crisp
+// glints, and a broken column of reflection toward the viewer. No glow of its own: only lit water.
 vec2 q=abs(p.xy)-vec2(HA,HB)+4.;float d=max(length(max(q,0.))+min(max(q.x,q.y),0.)-4.,0.);
-vec2 wq=p.xy*vec2(.05,.11);
-float lq=vn(vec3(wq+vec2(uTime*.04,-uTime*.03),uTime*.12+uSeed));
-float st=.8+.4*vn(vec3(p.x*.05,p.y*.22+uTime*.25,uTime*.3+uSeed));
-float gl=(exp(-d/3.2)*.6+exp(-d/9.)*.24)*mix(.7,1.25,lq)*st*(1.-smoothstep(12.,26.,d))*(.88+.12*sin(d*.9-uTime*2.2+lq*5.));
+vec3 fw=(uM*vec4(clamp(p.xy,-vec2(HA,HB),vec2(HA,HB)),-HZ,1.)).xyz,dw=vW-fw;
+float far=smoothstep(-1.,3.,dw.y),de=d*mix(.8,2.4,far);
+// the ripples: four small travelling waves and a slow warp (units), their slope tilts the surface
+// the surface: a slow warp and two trains of small ripples running across the view; light catches their crests
+vec2 wp=vW.xy+5.*vec2(vn(vec3(vW.xy*.07,uTime*.12+uSeed)),vn(vec3(vW.xy*.09+7.,uTime*.14)));
+float c1=sin(wp.y*1.25+wp.x*.08-uTime*1.7),c2=sin(wp.y*1.9-wp.x*.1+uTime*1.15+2.);
+float hs=.5+.25*(c1+c2);
+float brk=smoothstep(.52,.78,vn(vec3(wp*vec2(.32,.6),uTime*.3+uSeed)));
+float crest=(smoothstep(.9,.99,c1)+.6*smoothstep(.93,.995,c2))*brk;
+float glint=crest*exp(-de/3.6)*(1.-.9*far)*mix(.03,1.,step(.5,uTemp))*2.2;
+float spill=(exp(-de/1.6)*.5+exp(-de/4.2)*.08)*(.75+.5*hs);
+float col1=exp(-dw.x*dw.x/18.)*(1.-far)*exp(-max(-dw.y,0.)/12.)*smoothstep(.2,.9,.5+.5*c1)*brk;
+float nh=.6+.4*hs;
+float lw=(spill+glint+col1*.3)*(1.-smoothstep(6.,14.,de));
 float pr=length(p.xy-uPoke.xy),pa=uPoke.z,pw=pr-4.-pa*30.;
-float ring=uPoke.w*exp(-pa*1.8)*(exp(-pw*pw/10.)-.25*exp(-(pw+4.)*(pw+4.)/10.))*smoothstep(0.,4.,pr);
-col=max(bb(.42)*uTemp*gl*(1.+.6*ring)+bb(.5)*ring*(.06+.16*uTemp)*(.6+.4*st)*exp(-d/14.),0.);
+float ring=uPoke.w*exp(-pa*1.8)*exp(-pw*pw/10.)*smoothstep(0.,4.,pr)*exp(-d/14.);
+col=bb(.46)*uTemp*lw+bb(.5)*ring*(.05+.2*uTemp)*(.4+.8*nh);
 }
 col*=uExp;
 col=clamp((col*(2.51*col+.03))/(col*(2.43*col+.59)+.14),0.,1.);

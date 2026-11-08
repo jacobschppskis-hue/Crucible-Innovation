@@ -103,6 +103,6 @@ export function ingot(kind: IngotKind): IngotSpec {
       { mesh, material: 'bar', tone: 0.2, temp: 1, temper: [0, 0.45], grain: 0.5, seed: 2, relief: { ...relief, strength: -2.4 } };
   // Its reflection in the liquid (the same bar mirrored through the surface at its foot) and the light it casts there.
   const mirror: ObjectInit = { ...bar, relief: { ...relief, strength: 0 }, scale: [1, 1, -1], position: [0, 0, -BAR.H], reflect: hot ? 0.55 : 0.22 };
-  const glow: ObjectInit = { mesh: pool(), material: 'pool', temp: hot ? 1 : 0.06, seed: bar.seed };
+  const glow: ObjectInit = { mesh: pool(), material: 'pool', temp: hot ? 1 : 0.13, seed: bar.seed };
   return { root, parts: [mirror, glow, bar] };
 }
