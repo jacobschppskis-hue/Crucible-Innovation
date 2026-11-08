@@ -133,8 +133,10 @@
   top: 0;
   height: var(--world-vh, 100svh);
   display: grid;
-  place-items: center;
-  padding-bottom: 8svh;
+  justify-items: center;
+  align-content: start;
+  /* in the upper third, over dark sky: the camera puts the dunes' skyline at ~43% and the surf under it */
+  padding-top: calc(var(--nav-h) + 9svh);
 }
 .wfoot-word {
   font-size: 24vw;

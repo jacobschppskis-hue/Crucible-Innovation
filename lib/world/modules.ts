@@ -10,6 +10,7 @@ import { defaultLook } from './defaults/look';
 import { lava } from './lava';
 import { defaultLava } from './defaults/lava';
 import { thesis } from './thesis'; // story
+import { shore } from './shore'; // story
 import { look } from './look';
 import { paypal, paypalKeys } from './paypal'; // paypal
 import { ventures } from './ventures'; // ventures
@@ -66,6 +67,7 @@ export const MODULES: WorldModule[] = [
   ventures, // ventures: the metal monoliths
   // type (story, lib/world/type.ts): display type reflected in the sea; off: it read as glyph noise, not a reflection
   thesis, // story: the sea heats 293 K -> 1811 K
+  shore, // story: the molten surf on a black-sand beach under the footer wordmark, with the footer's camera
 ];
 
 /** The registry with stand-ins replaced (a stand-in goes when another module provides its function). */
