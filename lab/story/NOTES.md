@@ -56,3 +56,13 @@ how every piece of text sits in the world (no scrims), and the footer/shore that
   glossy mirror, not cracked metal.
 - R3: "come up with some ideas to make the biography pages look better" → the chapters get the cinematic treatment
   (credits over a night landscape, the tube as the pinned partner, the break-out as the scene's answer).
+
+## Footer v1 (07:40 UTC, after world asked for ~2 more viewports before the seam)
+- `shore` 2.4 screens: the contact block is pinned (sticky, centred) in the sunrise shot. One display line over it:
+  "Already building something?" (Jacob's goal, finding the people already building things, turned into an invitation;
+  no fact claimed, placed once). Not a sentence from his story: repeating one of his lines would be "the same sentence
+  twice", which he dislikes.
+- `dawn` 2.0 screens: the giant wordmark pinned over the day-side crossing; low over the sea at the end its reflection
+  shows (type.ts, below 500 m). Then the loop copy of the hero comes up from below.
+- Phones: links in two columns (Pages | Ventures, status under the name), founders full width, so the pinned block fits
+  844 px. Frames: `shots/footer-phone-v1.webp`.
