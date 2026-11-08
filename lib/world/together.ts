@@ -68,7 +68,7 @@ export function seaRing(b: number) {
 export const LINES = [
   { id: 'human', text: 'The human half', from: 0.1, in: 0.18, out: 0.56, gone: 0.62 },
   { id: 'machine', text: 'The machine half', from: 0.2, in: 0.28, out: 0.56, gone: 0.62 },
-  { id: 'together', text: 'Stronger together', from: 0.6, in: 0.66, out: 0.97, gone: 1.01 },
+  { id: 'together', text: 'Stronger together', from: 0.6, in: 0.66, out: 2, gone: 3 }, // stays: it leaves with the section
 ] as const;
 export function lineOpacity(i: number, b: number) {
   const L = LINES[i];
