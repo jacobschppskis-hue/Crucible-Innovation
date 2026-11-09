@@ -43,6 +43,7 @@ test('the liquid starts after load, is alive on its own, and answers the cursor'
 
 test('a cursor that keeps moving without a click always has waves right at it', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
+  test.slow(); // 14 legs of real pointer input, each waiting for drawn frames: a busy CI runner takes most of 30 s
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   // Wander on a smooth closed path (no button pressed) and look at the surface around the cursor after every leg:
@@ -154,6 +155,8 @@ test('at rest the text keeps rocking on the swell, and links and buttons come to
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   const h1 = page.locator('h1').first();
   await expect(h1).toHaveAttribute('data-fl', '', { timeout: 10_000 });
+  // Floating writes its first offset a few frames after it registers (later on a busy runner): sample from there.
+  await expect.poll(() => h1.evaluate((el) => el.style.translate), { timeout: 15_000 }).not.toBe('');
   // Nobody touches the page: the heading is never exactly still (the idle swell), and it moves smoothly.
   const offsets: [number, number, number][] = [];
   for (let i = 0; i < 12; i++) {
@@ -174,11 +177,17 @@ test('at rest the text keeps rocking on the swell, and links and buttons come to
   await page.mouse.move(b.x + b.width + 60, b.y + b.height / 2, { steps: 20 });
   await page.mouse.move(b.x - 60, b.y + b.height / 2, { steps: 20 });
   await page.mouse.move(5, 5, { steps: 4 });
-  const t0 = Date.now();
-  await expect
-    .poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-fl-c]')].filter((el) => el.style.translate || el.style.rotate).length), { timeout: 2_500, intervals: [100] })
-    .toBe(0);
-  expect(Date.now() - t0).toBeLessThan(2_500);
+  // 2.5 s of the page's own animation time, stepped at 60 Hz: a starved CI runner draws a few frames a second and each
+  // frame advances the springs by at most 0.1 s, so wall-clock time says nothing about how far they have run.
+  const moving = await page.evaluate(async () => {
+    const c = (window as unknown as { __clock: { pause(): void; step(ms?: number): Promise<void>; resume(): void } }).__clock;
+    c.pause();
+    for (let i = 0; i < 150; i++) await c.step(1000 / 60);
+    const n = [...document.querySelectorAll<HTMLElement>('[data-fl-c]')].filter((el) => el.style.translate || el.style.rotate).length;
+    c.resume();
+    return n;
+  });
+  expect(moving, 'controls still offset 2.5 s after the last input').toBe(0);
 });
 
 test('a finger dragging the page (a native pan) still makes waves where it touches', async ({ page, isMobile }) => {

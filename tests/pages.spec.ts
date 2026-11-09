@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { test as worldTest } from './gl';
 
 // The other pages and moving between them. The home page paints one world (lib/world): see tests/world.spec.ts.
 
@@ -41,7 +42,10 @@ test('no alloy beat and CRT portraits on / and /sites', async ({ page }) => {
   }
 });
 
-test('moving to /sites pours the next page in, then gets out of the way', async ({ page }) => {
+// The two tests below start on the home page and give it input, which starts its world (lib/world): under software GL
+// it queues frames for seconds, so they run in a browser of their own (tests/gl.ts) and get the slow budget.
+worldTest('moving to /sites pours the next page in, then gets out of the way', async ({ page }) => {
+  test.slow();
   await page.goto('/', { waitUntil: 'networkidle' });
   await page.getByRole('link', { name: /See Crucible Sites/ }).first().click();
   await expect(page).toHaveURL(/\/sites$/);
@@ -57,7 +61,8 @@ test('moving to /sites pours the next page in, then gets out of the way', async 
   await expect(page.locator('.route-sheet')).toBeHidden();
 });
 
-test('going Back while the next page is still pouring in never leaves the sheet behind', async ({ page }) => {
+worldTest('going Back while the next page is still pouring in never leaves the sheet behind', async ({ page }) => {
+  test.slow();
   await page.goto('/', { waitUntil: 'networkidle' });
   await page.getByRole('link', { name: /See Crucible Sites/ }).first().click();
   await expect(page).toHaveURL(/\/sites$/);
