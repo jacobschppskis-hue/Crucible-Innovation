@@ -30,7 +30,7 @@ const browser = await chromium.launch({ executablePath: fs.existsSync(exe) ? exe
 const s = await serve('out');
 const q = new URLSearchParams({ q: args.q || '4', world: args.full ? 'full' : '' });
 const places = (args.places || 'hero:0.5').split(',').map((x) => x.split(':'));
-const profiles = { phone: { ...devices['iPhone 15'], deviceScaleFactor: 1 }, desk: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
+const profiles = { phone: { ...devices['iPhone 15'], deviceScaleFactor: +(args.dpr || 1) }, desk: { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 } };
 const step = (page, n = 1) => page.evaluate((n) => { for (let i = 0; i < n; i++) window.__world.step(1000 / 60); }, n);
 for (const [name, prof] of Object.entries(profiles)) {
   if (args.only && args.only !== name) continue;

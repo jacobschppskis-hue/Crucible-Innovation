@@ -183,6 +183,9 @@ export const lava: WorldModule = {
     u.set('lava_uRing', W.ring);
     u.set('lava_uRingW', W.ringW);
     u.set('lava_uRingN', W.ringN);
+    // five reflection taps while the monoliths stand in the sea (a smooth streak under each), three elsewhere
+    const va = f.places.ventures ? f.at('ventures') : -1;
+    u.set('lava_uReflN', va > 0 && va < 1 ? 5 : 3);
   },
   dispose() {
     input?.destroy();

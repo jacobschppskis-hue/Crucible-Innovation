@@ -37,6 +37,7 @@ uniform vec4 lava_uWB;            // bounds of everything the wake can reach (u0
 uniform vec4 lava_uRing[8];       // rings: u, v, radius, amplitude (units)
 uniform vec4 lava_uRingW[2];      // ring widths (units), packed
 uniform int lava_uRingN;
+uniform int lava_uReflN;          // reflection taps: 3, or 5 where tall objects stand in the sea
 
 /** The sea's shape: height, slope (d/du, d/dv), unresolved slope variance, skin stretch (+ = thin, ~ steepness),
  *  crest (signed, the visitor's crests) and energy (the visitor's waves, 0..~1). */
@@ -200,19 +201,29 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // three taps spread along the reflection (and a little sideways) by the skin's roughness, weighted 1:2:1: a tall bright
   // thing (a monolith) reflects as a soft, swell-broken streak, never stacked slabs or hard strips where single rays hit
   // or miss it (V2: a crisp mirror would read as glass, a stepped one as pixels)
-  float spread = clamp(sqrt(a2) * 1.2, 0.025, 0.2);
+  // wider at grazing angles, where the swell's slope changes fastest per pixel (and the reflection would step)
+  float spread = clamp(sqrt(a2) * 1.2 + 0.05 * (1. - s.graz), 0.03, 0.2);
   vec3 side = normalize(cross(rd, s.up) + 1e-6);
   vec3 vup = normalize(cross(side, rd));
-  vec3 acc = world_env(rr) * 0.5;
-  for (int i = 0; i < 2; i++) {
-    float sg = i == 0 ? 1. : -1.;
+  // taps along the reflection (and a little across) with binomial weights: 3 (1:2:1) normally, 5 (1:4:6:4:1) where
+  // tall objects stand in the sea (lava_uReflN, the ventures place), so their reflection is one smooth streak with no
+  // steps at the scene's scale. No per-pixel jitter: at scene scale it showed as a woven noise texture.
+  int nt = lava_uReflN;
+  vec3 acc = vec3(0.);
+  float wsum = 0.;
+  for (int i = 0; i < 5; i++) {
+    if (i >= nt) break;
+    float sg = nt == 3 ? float(i - 1) : (float(i) - 2.) * 0.75;
+    float w = nt == 3 ? (i == 1 ? 2. : 1.) : (i == 2 ? 6. : (i == 1 || i == 3) ? 4. : 1.);
     Ray r2 = rr;
     r2.rd = normalize(rd + vup * spread * sg + side * spread * 0.5 * sg);
     float u2 = dot(r2.rd, s.up);
     if (u2 < 0.002) r2.rd = normalize(r2.rd + s.up * (0.002 - u2));
-    r2.pa = rr.pa + spread;
-    acc += world_env(r2) * 0.25;
+    r2.pa = rr.pa + spread * 0.5;
+    acc += world_env(r2) * w;
+    wsum += w;
   }
+  acc /= wsum;
   col += acc * F * lava_uLook.w;
 
   // the sun as a light (look's, after the air): GGX widened by the unresolved slopes and the sun's own disc, so it is a
