@@ -3,10 +3,10 @@
 // every place's middle and between places, plus a contact sheet for review against Jacob's list.
 //   node lab/qa/v2-walk.mjs --dir=<built out/> [--q=4] [--n=16]
 import { args, serve, browser, context, waitWorld, settle, shot, saveWebp, sharp, fs, path, QA, ROOT } from './lib.mjs';
-const A = args({ dir: path.join(ROOT, 'out'), q: '4', n: '16' });
-const OUT = path.join(QA, 'out', 'v2-walk'); fs.mkdirSync(OUT, { recursive: true });
+const A = args({ dir: path.join(ROOT, 'out'), q: '4', n: '16', device: 'iphone' });
+const OUT = path.join(QA, 'out', 'v2-walk', A.device); fs.mkdirSync(OUT, { recursive: true });
 const srv = await serve(path.resolve(A.dir));
-const b = await browser(); const ctx = await context(b, 'iphoneFull', { dpr: 2 }); const page = await ctx.newPage();
+const b = await browser(); const ctx = await context(b, A.device === 'iphone' ? 'iphoneFull' : A.device, { dpr: A.device === 'iphone' ? 2 : 1 }); const page = await ctx.newPage();
 await page.goto(`${srv.url}/?q=${A.q}&t=8`, { waitUntil: 'load' }); await waitWorld(page, 40000);
 await page.evaluate(() => window.__qa.hold());
 const files = [];
@@ -22,5 +22,5 @@ const imgs = await Promise.all(files.map((f) => sharp(f).resize({ width: 195 }).
 const h = Math.max(...imgs.map((i) => i.info.height)), cols = 8, rows = Math.ceil(imgs.length / cols);
 await sharp({ create: { width: cols * 195, height: rows * h, channels: 3, background: '#000' } })
   .composite(imgs.map((im, i) => ({ input: im.data, left: (i % cols) * 195, top: Math.floor(i / cols) * h }))).webp({ quality: 62 })
-  .toFile(path.join(QA, 'shots', 'v2', `walk-iphone-q${A.q}.webp`));
+  .toFile(path.join(QA, 'shots', 'v2', `walk-${A.device}-q${A.q}.webp`));
 await b.close(); srv.close();
