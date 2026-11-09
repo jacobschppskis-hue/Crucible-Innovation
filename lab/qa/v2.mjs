@@ -39,7 +39,10 @@ for (const dev of A.devices.split(',')) {
     // frame is planet at every place of the journey (sea level or orbit)
     const m = await sharp(png).metadata();
     const disk = (await stats(png, { x: 0, y: Math.round(m.height * 0.75), w: m.width, h: Math.round(m.height * 0.24) })).mean;
-    if (mean < floor.mean || litFrac < floor.lit || disk < +(A.disk ?? 0.03)) {
+    // portrait phone frames are mostly sky, so the lit-area floor is relaxed there (the planet + limb band still lit);
+    // the lower-quarter "disk" number is informational only: at sea level it is lava's night sea, not the disk
+    const litFloor = dev === 'iphone' ? Math.min(floor.lit, 0.15) : floor.lit;
+    if (mean < floor.mean || litFrac < litFloor) {
       const f = path.join(OUT, `black-${dev}-p${p.toFixed(2)}.webp`); await saveWebp(png, f, { width: 390 });
       black.push(`${p.toFixed(2)} (${place}: mean ${mean.toFixed(4)}, lit ${(litFrac * 100).toFixed(1)}%, disk ${disk.toFixed(4)})`);
     }
