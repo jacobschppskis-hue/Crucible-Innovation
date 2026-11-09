@@ -23,7 +23,7 @@ const boxes = await page.evaluate(() => {
   }
   return out;
 });
-const hide = await page.addStyleTag({ content: '*{color:transparent!important;-webkit-text-fill-color:transparent!important}' });
+const hide = await page.addStyleTag({ content: '*{color:transparent!important;-webkit-text-fill-color:transparent!important;text-shadow:none!important} h1 *,h1,p,a{background-image:none!important}' });
 const png = await shot(page);
 await hide.evaluate((e) => e.remove());
 const { data, w, h } = await raw(png);
