@@ -249,7 +249,7 @@ function makeLook(): WorldModule {
       u.set('look_uLandAmt', ch['look.land'] ?? 0);
       u.set('look_uLimb', 0);
       // quiet (world keys it where long text crosses the planet; an engine uQuiet, if set, wins)
-      u.set('look_uQuiet', Math.max(ch['look.quiet'] ?? 0, (u.get('uQuiet') as number | undefined) ?? 0));
+      u.set('look_uQuiet', ch['look.quiet'] ?? 0);
       // the moon: placed relative to the camera (az from its forward direction round the local up, positive toward the
       // camera's LEFT (side = up x forward): az 150 = behind the left shoulder; el above the horizon). ventures mirrors
       // this on the CPU to aim the monoliths' faces: keep the convention.

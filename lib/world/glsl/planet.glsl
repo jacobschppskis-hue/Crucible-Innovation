@@ -113,8 +113,9 @@ float look_seaTemp(vec3 q, float fp, float land) {
   float h2 = exp(-abs(f2) / max(0.02, fpq * 1.5)) * smoothstep(0.35, 0.0, abs(f));
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
   // quiet: the rivers lose ~70 K of excess, i.e. ~1/3 of their radiance (Planck at ~1300 K: -70 K is a factor ~3)
-  float rq = mix(1.0, 0.7, look_uQuiet);
-  float T = 1060.0 - 12.0 * look_uQuiet + 15.0 * broad + rq * (120.0 * halo + 110.0 * core + 55.0 * h2);
+  float qt = max(look_uQuiet, uQuiet);   // world's journey channel 'quiet' (prelude) or look's own
+  float rq = mix(1.0, 0.7, qt);
+  float T = 1060.0 - 12.0 * qt + 15.0 * broad + rq * (120.0 * halo + 110.0 * core + 55.0 * h2);
   T += 110.0 * exp(-max(0.0, -land) * 22.0);
   return T + look_uHeat * 520.0;
 }
