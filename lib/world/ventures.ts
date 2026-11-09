@@ -26,7 +26,7 @@ const LAYOUT = {
   // desktop: right of the heading, at about 42%, 62% and 82% of the width, the two still forging a little further back
   wide: { pos: [[-3.4, 0], [5.6, -3], [14.6, -1]] as const, aim: [-0.075, 0.075, -0.11] },
   // phones: the live one in front, centred; the two forging ones behind it to either side
-  narrow: { pos: [[0.4, 7], [-5.2, -5], [5.2, -17]] as const, aim: [-0.06, 0.08, -0.1] },
+  narrow: { pos: [[0.4, 11], [-5.0, -1], [5.0, -12]] as const, aim: [-0.06, 0.08, -0.1] },
 };
 const KINDS = [0, 1, 1];
 /** The monoliths' own light (heat, the pool, the lava-lit air) in the world's radiance unit. */
@@ -78,7 +78,7 @@ export function pressVenture(i: number) {
 
 /** The rise of monolith i for the section's pin progress p: one after another over the first ~65% of the pin. */
 export const riseAt = (p: number, i: number) => {
-  const c = clamp((p - (0.005 + i * 0.1)) / 0.25);
+  const c = clamp((p - (0.0 + i * 0.05)) / 0.16);
   return c * c * (3 - 2 * c);
 };
 
@@ -130,7 +130,7 @@ function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
   // they sink back into the sea over the end of their own pin, so the thesis opens on an empty sea (continuous,
   // reversible; the words leave with them)
-  const th = clamp((p - 0.72) / 0.2);
+  const th = clamp((p - 0.84) / 0.12);
   const sinkK = 1 - th * th * (3 - 2 * th);
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;
@@ -281,7 +281,8 @@ export function venturesKeys(R: number): Key[] {
   const MOON = { 'look.moon': 1.2, 'look.moonAz': 150, 'look.moonEl': 12 };
   return [
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5 } },
-    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5 } },
+    // phones travel half as far through the place, so the live monolith grows less and stays clear of the lede
+    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5, s: deg(150) + 30 } },
   ];
 }
 
