@@ -171,7 +171,7 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   float fpA = s.fw / look_uK;
   float land = look_land(s.q, fpA);
   float T = look_seaTemp(s.q, fpA, land) + lava_uTone.x + 850. * m.heat;
-  T += 300. * clamp(L.stretch, -0.12, 0.12);         // (true Planck: +-36 K is already ~2x in brightness)
+  T += 450. * clamp(L.stretch, -0.12, 0.12);         // (true Planck: +-36 K is already ~2x in brightness)
   float fresh = 1. - exp(-1.6 * max(L.energy, 0.));
   // the visitor's waves tear the skin open to the hot metal under it, whatever the place's own (cooled) temperature:
   // the stirred band glows at least ~1090 K, its crests ~1320 K (as hot as the monoliths' feet) (thin bright V lines; the troughs between them stay
@@ -193,7 +193,7 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // the glow keep the full normal.
   // (a quarter of the slope: with half, a long wave tilted toward the camera far down the sea caught the monoliths as a
   // detached patch)
-  vec3 nr = normalize(s.up - 0.25 * (L.g.x * s.eU + L.g.y * s.eV));
+  vec3 nr = normalize(s.up - 0.15 * (L.g.x * s.eU + L.g.y * s.eV));   // (0.15: the long swell's crests no longer band it)
   vec3 rd = reflect(r.rd, nr);
   float up = dot(rd, s.up);
   if (up < 0.002) rd = normalize(rd + s.up * (0.002 - up));
