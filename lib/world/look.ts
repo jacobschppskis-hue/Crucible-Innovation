@@ -44,9 +44,9 @@ export const AIR = {
   glow: [0.04, 0.011, 0.0028],
   // the night limb's airglow is sodium-orange (as Earth's 589 nm layer is): a warm thin line along the limb whenever the
   // sun is gone, so the planet's edge never disappears; the blue only where sunlight scatters
-  airglow: [5e-4, 2.3e-4, 0.5e-4],
+  airglow: [3.2e-4, 1.5e-4, 0.33e-4], // wider layer (see atmosphere.glsl), same column
   airglowH: 9,
-  airglow2: [1.0e-4, 1.45e-4, 2.7e-4],
+  airglow2: [0.75e-4, 1.1e-4, 2.0e-4],
   airglowH2: 30,
 };
 

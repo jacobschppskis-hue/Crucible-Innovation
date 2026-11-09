@@ -154,7 +154,7 @@ void look_march(vec3 ro, vec3 rd, float tMax, int steps, float jitter, out vec3 
     vec3 Ts = look_T(max(r, look_uRg), muS) * look_sunVis(r, muS);
     vec3 sc = scR + scM;
     vec3 S = look_uSunE * (Ts * (scR * pR + scM * pM) + look_msL(r, muS) * sc) + glow * sc;
-    float ag = (r - look_uRg - look_uAirglowH) / (look_uAirglowH * 0.18);
+    float ag = (r - look_uRg - look_uAirglowH) / (look_uAirglowH * 0.4); // a few px wide at phone scale, never a dotted hairline
     S += look_uAirglow * exp(-ag * ag);
     float ag2 = (r - look_uRg - look_uAirglowH2) / (look_uAirglowH2 * 0.5);
     S += look_uAirglow2 * exp(-ag2 * ag2);

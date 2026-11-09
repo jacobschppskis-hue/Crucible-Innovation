@@ -75,9 +75,12 @@ float look_seaTemp(vec3 q, float fp, float land) {
   // filaments, clustered along the currents
   float f2 = look_fbm(pw * 2.6 + 5.0, 7, fpq * 2.6, 0.5);
   float c2 = look_line(f2, 0.016, fpq, 0.005) * exp(-abs(f1) * 7.0);
+  c2 *= smoothstep(0.3, 1.0, 0.005 / max(fpq, 1e-6));
   // threads
   float f3 = look_fbm(pw * 8.0 + 9.0, 6, fpq * 8.0, 0.5);
   float c3 = look_line(f3, 0.012, fpq, 0.0025) * exp(-abs(f1) * 12.0);
+  // threads thinner than ~1.5 px fade out as a whole (a sub-pixel band stair-steps however it is filtered)
+  c3 *= smoothstep(0.4, 1.2, 0.0025 / max(fpq, 1e-6));
   // a soft warm wake around each current (heat diffusing into the dark water) and a dim body glow, so the disc reads
   float near = exp(-abs(f1) * 10.0);
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
