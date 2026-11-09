@@ -189,6 +189,11 @@ export const lava: WorldModule = {
     // five reflection taps while the monoliths stand in the sea (a smooth streak under each), three elsewhere
     const va = f.places.ventures ? f.at('ventures') : -1;
     u.set('lava_uReflN', va > 0 && va < 1 ? 5 : 3);
+    // phones: a narrower sunset glint column, so the hero's headline sits on dark sea
+    // phones, while the hero is on screen: the sun's (and the mark's) mirror image lands right behind the headline, so the
+    // glint and the mirrored image are quieter there (1 -> 0 as the hero scrolls away)
+    const hero = f.places.hero ? f.at('hero') : 1;
+    u.set('lava_uTight', f.narrow ? 1 - sstep(0.6, 1, hero) : 0);
   },
   dispose() {
     input?.destroy();

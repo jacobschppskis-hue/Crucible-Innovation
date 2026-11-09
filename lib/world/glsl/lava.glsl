@@ -38,6 +38,7 @@ uniform vec4 lava_uRing[8];       // rings: u, v, radius, amplitude (units)
 uniform vec4 lava_uRingW[2];      // ring widths (units), packed
 uniform int lava_uRingN;
 uniform float lava_uMirror;       // 1: the sea mirrors everything (sky, mark, monoliths); 0: the sky only. Set by ventures.
+uniform float lava_uTight;        // 1 on narrow (phone) layouts: a narrower sun-glint column
 uniform int lava_uReflN;          // reflection taps: 3, or 5 where tall objects stand in the sea
 
 /** The sea's shape: height, slope (d/du, d/dv), unresolved slope variance, skin stretch (+ = thin, ~ steepness),
@@ -203,7 +204,9 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // thing (a monolith) reflects as a soft, swell-broken streak, never stacked slabs or hard strips where single rays hit
   // or miss it (V2: a crisp mirror would read as glass, a stepped one as pixels)
   // wider at grazing angles, where the swell's slope changes fastest per pixel (and the reflection would step)
-  float spread = clamp(sqrt(a2) * 1.2 + 0.05 * (1. - s.graz), 0.03, 0.2);
+  // a small blur only: a wide one smeared the mirrored sun down the sea toward the camera (the hero's column under the
+  // headline); the monoliths' soft streaks are ventures' own now (lava_uMirror). Tighter still on phones.
+  float spread = clamp(sqrt(a2) * 0.5, 0.004, 0.04) * (1. - 0.6 * lava_uTight);
   vec3 side = normalize(cross(rd, s.up) + 1e-6);
   vec3 vup = normalize(cross(side, rd));
   // taps along the reflection (and a little across) with binomial weights: 3 (1:2:1) normally, 5 (1:4:6:4:1) where
@@ -226,22 +229,36 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
     wsum += w;
   }
   acc /= wsum;
-  col += acc * F * lava_uLook.w;
+  // phones in the hero: the mirrored sun and mark land right behind the headline (see the glint below), so they're quieter
+  vec3 lit = acc * F * lava_uLook.w;                   // (the mirrored sky, sun and mark; phones' hero: see below)
 
   // the sun as a light (look's, after the air): GGX widened by the unresolved slopes and the sun's own disc, so it is a
   // glitter path, never a dot
   vec3 Ls = uSunDir;
   vec3 H = normalize(Ls + v);
-  float NoH = max(dot(n, H), 0.), NoL = max(dot(n, Ls), 0.);
-  float as2 = a2 + uSunRad * uSunRad * 0.5;
+  // phones (lava_uTight 1): the glint sees a calmer surface (less slope, less unresolved spread), so the sunset's column
+  // is about half as wide and the headline over it sits on dark sea; desktop keeps the full column
+  float tight = lava_uTight;
+  vec3 ng = normalize(s.up - (1. - 0.5 * tight) * (L.g.x * s.eU + L.g.y * s.eV));
+  float NoH = max(dot(ng, H), 0.), NoL = max(dot(ng, Ls), 0.);
+  float as2 = a2 * (1. - 0.5 * tight) + uSunRad * uSunRad * 0.5;
   float D = as2 / (PI * pow(NoH * NoH * (as2 - 1.) + 1., 2.));
   float kk = sqrt(as2) * 0.5;
-  float Vis = 0.25 / ((NoL * (1. - kk) + kk) * (NoV * (1. - kk) + kk));
+  float NoVg = max(dot(ng, v), 1e-4);                    // the glint's own normal throughout (not the full one's NoV)
+  float Vis = 0.25 / ((NoL * (1. - kk) + kk) * (NoVg * (1. - kk) + kk));
   float Fs = F0 + (1. - F0) * pow(1. - max(dot(v, H), 0.), 5.);
   // No glitter texture (V2, Jacob: "remove what looks like sea foam or the bubbles, so it's just the water"): the sun's
   // path is the swell's own glint, widened by the slope the pixel can't resolve (LEAN), and nothing else.
   float spk = 1.;
-  col += look_sunLight(s.p) * (lava_uLook.z * D * Vis * Fs * NoL * spk);
+  // phones: the sun's mirror image lands as far below the horizon as the sun stands above it, which in the hero is right
+  // behind the headline; there the glint is dimmed (still the swell's own glitter, just quieter)
+  lit += look_sunLight(s.p) * (lava_uLook.z * D * Vis * Fs * NoL * spk);
+  // phones in the hero: the sun's (and the mark's) mirror image lands as far below the horizon as they stand above it,
+  // right behind the headline. There the mirrored light rolls off softly to a ceiling (x / (1 + x / c)): the sun's path
+  // still reads, brighter than the sea, but never blazes behind the title. Desktop and every other place: unchanged.
+  float cap = mix(1e4, 0.3, lava_uTight);
+  lit = lit / (1. + lit / cap);
+  col += lit;
   return mix(col + m.emit, far, k);
 }
 
