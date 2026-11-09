@@ -4,9 +4,9 @@
 // Reports the 5th-percentile contrast (95% of the box at or above it); body text needs >= 4.5, large text >= 3.
 //   node lab/qa/v2-hero-contrast.mjs --dir=<built out/> [--p=0]
 import { args, serve, browser, context, waitWorld, settle, shot, raw, relLum, contrast, path, ROOT } from './lib.mjs';
-const A = args({ dir: path.join(ROOT, 'out'), p: '0', q: '4' });
+const A = args({ dir: path.join(ROOT, 'out'), p: '0', q: '4', device: 'iphone' });
 const srv = await serve(path.resolve(A.dir));
-const b = await browser(); const ctx = await context(b, 'iphoneFull', { dpr: 2 }); const page = await ctx.newPage();
+const b = await browser(); const ctx = await context(b, A.device === 'iphone' ? 'iphoneFull' : A.device, { dpr: A.device === 'iphone' ? 2 : 1 }); const page = await ctx.newPage();
 await page.goto(`${srv.url}/?q=${A.q}&t=8`, { waitUntil: 'load' }); await waitWorld(page, 40000);
 await page.evaluate(() => window.__qa.hold());
 await page.evaluate((p) => window.__qa.go(+p), A.p); await settle(page, 10, 70);
@@ -27,7 +27,7 @@ const hide = await page.addStyleTag({ content: '*{color:transparent!important;-w
 const png = await shot(page);
 await hide.evaluate((e) => e.remove());
 const { data, w, h } = await raw(png);
-const dpr = w / 390;
+const dpr = w / (A.device === 'iphone' ? 390 : 1440);
 let fails = 0;
 for (const bx of boxes) {
   // buttons with their own opaque fill are judged against that fill, not the sea
