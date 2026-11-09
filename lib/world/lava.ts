@@ -190,13 +190,13 @@ export const lava: WorldModule = {
     const va = f.places.ventures ? f.at('ventures') : -1;
     u.set('lava_uReflN', va > 0 && va < 1 ? 5 : 3);
     // phones: a narrower sunset glint column, so the hero's headline sits on dark sea
-    // phones, while the hero is on screen: the sun's (and the mark's) mirror image lands right behind the headline, so the
+    // while the hero is on screen (phones and desktop: the big headline sits over the column on both): the sun's (and the mark's) mirror image lands right behind the headline, so the
     // glint and the mirrored image are quieter there (1 -> 0 as the hero scrolls away)
     // (a function of the journey that is the same at progress 0 and 1, so the loop seam never shows: on in the hero, off
     // once it has scrolled away, back on over the last 3% as the camera comes round to the hero again)
     const hero = f.places.hero ? f.at('hero') : 1;
     const back = f.loopLen > 0 ? sstep(0.97, 1, f.progress) : 0;
-    u.set('lava_uTight', f.narrow ? Math.max(1 - sstep(0.6, 1, hero), back) : 0);
+    u.set('lava_uTight', Math.max(1 - sstep(0.6, 1, hero), back));
   },
   dispose() {
     input?.destroy();
