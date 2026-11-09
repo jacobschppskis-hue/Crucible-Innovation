@@ -180,7 +180,8 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   T = mix(T, max(T + 80., 1320.), cw);
   float skin = lava_uTone.z * (1. - 0.7 * max(fresh, cw));
   float Tseen = T - skin * (1. - exp(-lava_uTone.w / NoV));
-  vec3 col = look_planck(Tseen) * look_uLavaGain * (1. - F);
+  // never black (V2): the near sea keeps the far field's ember floor, so a low night view still shows a faint glow
+  vec3 col = max(look_planck(Tseen), vec3(0.055, 0.0095, 0.0016) / 3.) * look_uLavaGain * (1. - F);
 
   // what the skin mirrors: the sky, the mark, the monoliths (their cheap env shading), the sea itself. The reflected
   // cone is the pixel's own widened by the skin's roughness (sqrt(a2) ~ the lobe's half-angle), so point lights (stars)
