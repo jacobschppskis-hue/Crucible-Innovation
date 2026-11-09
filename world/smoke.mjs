@@ -35,7 +35,13 @@ async function run(device) {
   }, null, { timeout: 4000 }).then((h) => h.jsonValue()).catch(() => null);
   if (!h1) fail(device, 'no visible h1 within 4 s of DOMContentLoaded');
   await page.waitForLoadState('load', { timeout: 20000 }).catch(() => warn(device, 'load event > 20 s'));
-  const kind = await waitWorld(page, 15000);
+  // the world starts on first use; under parallel software GL its shaders (scene + crisp) compile slowly, so wait up to
+  // 45 s, but log how long it took (a standalone start is ~1 s: a slow start is reported, not hidden)
+  const tStart = Date.now();
+  const kind = await waitWorld(page, 45000);
+  const startS = (Date.now() - tStart) / 1000;
+  notes.push(`[${device}] world start ${startS.toFixed(1)} s after first use`);
+  if (kind === 'world' && startS > 15) warn(device, `the world took ${startS.toFixed(1)} s to start (> 15 s): slow shader compile or a busy machine`);
   notes.push(`[${device}] h1 "${h1}" · hooks: ${kind}`);
   if (kind.startsWith('fail')) fail(device, `the world failed to start: ${kind.slice(6).slice(0, 300)} (html[data-world-fail]; a module that does not compile?)`);
   const wf = await page.evaluate(() => document.documentElement.dataset.worldFail).catch(() => undefined);
@@ -43,7 +49,7 @@ async function run(device) {
   // a module whose shader fails is dropped (the world runs without it): that is a broken push, not a pass
   const dropped = await page.evaluate(() => document.documentElement.dataset.worldDropped).catch(() => undefined);
   if (dropped !== undefined) fail(device, `a world module was dropped (html[data-world-dropped]): ${String(dropped).slice(0, 300)}`);
-  if (kind === 'none' && !A['allow-no-world'] && !['airless', 'continuum'].includes(A.target)) fail(device, 'the world never started (no window.__world within 15 s of load + first use)');
+  if (kind === 'none' && !A['allow-no-world'] && !['airless', 'continuum'].includes(A.target)) fail(device, 'the world never started (no window.__world within 45 s of load + first use)');
   // body must set its own background/colour (the artifact frame sets white/black)
   const body = await page.evaluate(() => { const cs = getComputedStyle(document.body); return { bg: cs.backgroundColor, color: cs.color }; });
   if (/rgb\(255, 255, 255\)/.test(body.bg)) fail(device, `body background is white (${body.bg}): set body{background:transparent}`);
@@ -121,7 +127,9 @@ async function narrow() {
 }
 
 const want = A.only ? [A.only] : ['iphone', 'desktop'];
-await Promise.all([...want.map(run), narrow()]);
+// devices run one after another: parallel SwiftShader contexts starve each other (false 'never started' and timeouts)
+for (const d of want) await run(d);
+await narrow();
 await b.close(); tg.close();
 
 const secs = ((Date.now() - t0) / 1000).toFixed(0);
