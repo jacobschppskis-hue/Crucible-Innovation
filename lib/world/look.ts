@@ -44,7 +44,7 @@ export const AIR = {
   glow: [0.04, 0.011, 0.0028],
   // the night limb's airglow is sodium-orange (as Earth's 589 nm layer is): a warm thin line along the limb whenever the
   // sun is gone, so the planet's edge never disappears; the blue only where sunlight scatters
-  airglow: [3.2e-4, 1.5e-4, 0.33e-4], // wider layer (see atmosphere.glsl), same column
+  airglow: [5.5e-4, 2.4e-4, 0.5e-4], // wider layer (see atmosphere.glsl), same column
   airglowH: 9,
   airglow2: [0.75e-4, 1.1e-4, 2.0e-4],
   airglowH2: 30,
@@ -234,7 +234,7 @@ function makeLook(): WorldModule {
       u.set('look_uHighW', w);
       // from high up the limb seen against the sun blazes: real aerosol has a sharp forward peak the single-lobe
       // phase function misses; low down it would put a second sun on the horizon under the core, so it fades in with height
-      u.set('look_uFwd', 0.7 * sstep(30, 200, hAir));
+      u.set('look_uFwd', 1.0 * sstep(30, 200, hAir));
       u.set('look_uSteps', Math.round(10 + 14 * f.quality.q));
       // stars keep their brightness at a low render scale (an energy-conserving point spread over a magnified render pixel
       // reads dim once upscaled) and are a little more present on phones (Jacob: 'slightly more prevalent for iPhone')
