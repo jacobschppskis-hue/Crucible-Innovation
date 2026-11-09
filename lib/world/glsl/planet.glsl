@@ -64,23 +64,38 @@ float look_line(float f, float w, float fpu, float wTrue) {
 // Seen from space a molten sea should read like a fluid photographed from orbit (Jupiter's bands, Io's flows from
 // Juno): mostly dark, slow metal; currents with crisp banks; finer filaments branching off them; the finest threads
 // thin and bright. Each scale is the zero set of a field of the eddied position, so all of them follow the same flow.
+// A line of heat of true half-width w (in the field's position units) along the zero set of f, from |f| / |grad f|
+// with the gradient measured analytically in world space (finite differences of the field, not screen derivatives,
+// which are constant per 2x2 pixel quad and stair-step at a low render scale), anti-aliased over 1.5 footprints;
+// thinner than a pixel, its energy is spread over the pixel (a far line stays a faint smooth line).
+float look_lineA(float f, float g, float w, float fpu) {
+  float d = abs(f) / max(g, 1e-4);
+  float e = max(fpu * 1.5, 1e-6);
+  float we = max(w, e * 0.5);
+  return (1.0 - smoothstep(we - e, we + e, d)) * min(1.0, w / we);
+}
+
 float look_seaTemp(vec3 q, float fp, float land) {
   float t = uTime * 0.003 * (1.0 - uStill);
   vec3 p = q * (look_uRg / 700.0);
   float fpq = fp / 700.0;
   vec3 pw = look_eddy(p + vec3(t, 0.0, -t), q, fpq);
-  // currents: a few hundred km of field = ~0.25 field units; half-width ~6 km
+  // tangent directions for the gradient
+  vec3 tA = normalize(cross(q, abs(q.y) < 0.95 ? vec3(0, 1, 0) : vec3(1, 0, 0))), tB = cross(q, tA);
+  // currents: the main streams (field units: 1 = 700 air km); half-width ~5 km
+  float hh = max(fpq * 0.7, 0.0015);
   float f1 = look_fbm(pw * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
-  float c1 = look_line(f1, 0.022, fpq, 0.010);
-  // filaments, clustered along the currents
+  float f1a = look_fbm((pw + tA * hh) * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
+  float f1b = look_fbm((pw + tB * hh) * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
+  float g1 = length(vec2(f1a - f1, f1b - f1)) / hh;
+  float c1 = look_lineA(f1, g1, 0.011, fpq);
+  // filaments, clustered along the currents: a band in the field's own units, anti-aliased analytically (gradient
+  // ~ its frequency), never by screen derivatives
   float f2 = look_fbm(pw * 2.6 + 5.0, 7, fpq * 2.6, 0.5);
-  float c2 = look_line(f2, 0.016, fpq, 0.005) * exp(-abs(f1) * 7.0);
-  c2 *= smoothstep(0.3, 1.0, 0.005 / max(fpq, 1e-6));
+  float c2 = look_lineA(f2, 1.6, 0.0035, fpq) * exp(-abs(f1) * 7.0);
   // threads
   float f3 = look_fbm(pw * 8.0 + 9.0, 6, fpq * 8.0, 0.5);
-  float c3 = look_line(f3, 0.012, fpq, 0.0025) * exp(-abs(f1) * 12.0);
-  // threads thinner than ~1.5 px fade out as a whole (a sub-pixel band stair-steps however it is filtered)
-  c3 *= smoothstep(0.4, 1.2, 0.0025 / max(fpq, 1e-6));
+  float c3 = look_lineA(f3, 4.5, 0.0018, fpq) * exp(-abs(f1) * 12.0);
   // a soft warm wake around each current (heat diffusing into the dark water) and a dim body glow, so the disc reads
   float near = exp(-abs(f1) * 10.0);
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
