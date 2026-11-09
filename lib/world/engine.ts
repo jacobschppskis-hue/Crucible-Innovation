@@ -457,6 +457,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
 
   // software GL (no GPU: CI, Lighthouse): draw at most ~12 fps so the main thread keeps breathing
   let lastDraw = -1;
+  let lastScroll = 0;
   function tick(t: number, dt: number) {
     if (dead) return;
     if (software && !opts.full && fixedT == null && !clockHeld() && t - lastDraw < 1 / 12 && lastDraw >= 0) {
@@ -485,7 +486,9 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     draw();
     for (const m of mods) m.after?.(f);
     rend.done(t);
-    if (quality.feed(dt)) resizeTargets();
+    const moving = Math.abs(f.scroll - lastScroll) > 0.5;
+    lastScroll = f.scroll;
+    if (quality.feed(dt, moving)) resizeTargets();
   }
 
   measure();

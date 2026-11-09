@@ -14,7 +14,8 @@ export const MAX_SCALE = 2;
 
 export type QualityCtl = Quality & {
   /** Feed a frame interval (s). Returns true when the step changed. */
-  feed(dt: number): boolean;
+  /** `moving`: the view is moving (scrolling): a climb then waits for stillness, so sharpness never pops mid-move. */
+  feed(dt: number, moving?: boolean): boolean;
   /** Scene target size for a viewport. */
   size(w: number, h: number): [number, number];
 };
@@ -44,7 +45,7 @@ export function createQuality(opts: { dpr: number; software: boolean; pinned?: n
     q: opts.full ? 1 : KNOB[start],
     software: opts.software,
     full: !!opts.full,
-    feed(dt) {
+    feed(dt, moving = false) {
       if (fixed || clockHeld() || dt <= 0 || dt > 0.25) return false;
       ema += (dt - ema) * 0.1;
       if (ema > 1 / 45) {
@@ -62,7 +63,7 @@ export function createQuality(opts: { dpr: number; software: boolean; pinned?: n
         slow = 0;
         return true;
       }
-      if (fast > 4 && climbs < 2 && q.step > top && !opts.software) {
+      if (fast > 4 && !moving && climbs < 2 && q.step > top && !opts.software) {
         climbs++;
         set(q.step - 1);
         fast = 0;
