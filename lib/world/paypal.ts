@@ -499,11 +499,14 @@ export const paypal: WorldModule = {
     // the places
     const v = vent(p);
     const spot = SPOT, spotB = SPOTB;
-    spot.set([...pl.up, v.heat], 0);
+    // everything of the beat sinks back into the sea by the end of the place, so the next places show only the
+    // planet's own rivers (smooth, reversible: a function of p)
+    const gone = 1 - smooth(0.9, 1, p);
+    spot.set([...pl.up, v.heat * gone], 0);
     spotB.set([1, p - ERUPT_P, v.flash, 0.42], 0);
     SITES.forEach((s, i) => {
       const age = p - s.land;
-      spot.set([...s.dir, smooth(0, 0.012, age)], (i + 1) * 4);
+      spot.set([...s.dir, smooth(0, 0.012, age) * gone], (i + 1) * 4);
       spotB.set([Math.max(age, 0), age, age > 0 ? Math.exp(-age / 0.008) : 0, s.seed], (i + 1) * 4);
     });
     u.set('paypal_uSpot', spot);
@@ -538,8 +541,8 @@ export const paypal: WorldModule = {
         L.o = o;
       } else L.o = 0;
     };
-    lab(pl.up, smooth(0.03, 0.08, p) * (1 - 0.85 * smooth(0.2, 0.232, p) * (1 - smooth(0.3, 0.34, p))) * (1 - 0.55 * smooth(0.82, 0.97, p)), 0);
-    SITES.forEach((s, i) => lab(s.dir, smooth(s.land + 0.004, s.land + 0.03, p), i + 1));
+    lab(pl.up, smooth(0.03, 0.08, p) * (1 - 0.85 * smooth(0.2, 0.232, p) * (1 - smooth(0.3, 0.34, p))) * (1 - 0.55 * smooth(0.82, 0.97, p)) * gone, 0);
+    SITES.forEach((s, i) => lab(s.dir, smooth(s.land + 0.004, s.land + 0.03, p) * gone, i + 1));
   },
   after() {
     S.caps.forEach((c, i) => {
