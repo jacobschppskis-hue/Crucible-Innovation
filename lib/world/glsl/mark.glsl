@@ -377,40 +377,49 @@ float mark_bez(vec2 p, vec2 a, vec2 c, vec2 b, out float t) {
   }
   return best;
 }
-// one river: heat at p for a river (a, c, b) of half-width w that has run as far as `front` (0..1) from a
-float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, out float along) {
+// one river: heat at p for a river (a, c, b) of mean half-width w that has run as far as `front` (0..1) from a. Like the
+// rivers in the reference frame: it meanders (the caller warps p), its width breathes along its course, its heat falls
+// off softly from the centre line (no hard bank: a glow seen through the skin, with a faint wider warmth beneath),
+// and its front thins to a point as it advances (never a rounded cap).
+float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, float seed, out float along) {
   float t; float d = mark_bez(p, a, c, b, t);
   along = t;
   if (front <= 0.) return 0.;
   float len = length(c - a) + length(b - c);
   float behind = (front - t) * len;                       // world units behind the tip
-  float soft = max(fw * 1.2, w * 0.35);
-  float tipR = w * (0.9 + 0.4 * smoothstep(0., 6., behind));
-  // the tip is round (a tongue), the banks smooth and anti-aliased by the pixel footprint
-  float dd = behind < 0. ? length(vec2(d, behind)) : d;
-  float body = smoothstep(tipR + soft, tipR - soft, dd);
-  // fresh metal at the tip runs a little hotter
-  return body * (T + 0.12 * exp(-max(behind, 0.) / (w * 3.)));
+  if (behind < -2. * w) return 0.;
+  float wk = w * (0.75 + 0.5 * world_noise(vec2(t * len * 0.035 + seed, seed * 3.1)));
+  wk *= smoothstep(0., 9. * w, behind) * 0.85 + 0.15 * step(0., behind); // the front tapers to a thread
+  wk = max(wk, fw * 0.7);
+  float x = d / wk;
+  float core = exp(-x * x * 1.6);                          // the molten channel, soft-edged
+  float under = 0.22 * exp(-x * x * 0.18);                 // warmth under the skin beside it
+  float on = smoothstep(-0.5 * w, 1.5 * w, behind);        // the tip's heat fades in, no hard end
+  return (core + under) * on * T;
 }
 void mark_sea(Ray r, Sea s, inout SeaMod m) {
   if (mark_uRivT.y < 0.5) return;
   vec2 p = vec2(s.w.x, mark_uRiv.x - s.w.y);
-  if (p.y < -40. || p.y > 420. || abs(p.x) > 320.) return;
+  if (p.y < -60. || p.y > 420. || abs(p.x) > 340.) return;
+  // meanders: a slow, smooth warp of the plane (two octaves, large: bends, never wiggles)
+  vec2 q = p * 0.018;
+  vec2 warp = vec2(world_noise(q + 3.7) - 0.5, world_noise(q * 1.9 + 8.1) - 0.5) * 22. + vec2(world_noise(q * 3.3 + 1.3) - 0.5, 0.) * 6.;
+  vec2 pw = p + warp;
   float fw = s.fw;
   vec2 J = vec2(-6., 82.);
   float aL, aR, aJ;
-  float hL = mark_river(p, vec2(-150., 205.), vec2(-40., 160.), J, 2.6, mark_uRiv.y, fw, 0.36, aL);
-  float hR = mark_river(p, vec2(150., 215.), vec2(70., 120.), J, 2.6, mark_uRiv.y, fw, 0.36, aR);
-  float hJ = mark_river(p, J, vec2(18., 45.), vec2(-28., 6.), 3.6, mark_uRiv.z, fw, 0.62, aJ);
-  // the meeting: a short flash in a pool where they join
-  float pool = mark_uRiv.w * 0.35 * smoothstep(11., 3., length(p - J));
+  float hL = mark_river(pw, vec2(-160., 215.), vec2(-40., 160.), J, 2.4, mark_uRiv.y, fw, 0.27, 1.3, aL);
+  float hR = mark_river(pw, vec2(165., 225.), vec2(70., 120.), J, 2.4, mark_uRiv.y, fw, 0.27, 7.9, aR);
+  float hJ = mark_river(pw, J, vec2(18., 45.), vec2(-30., -20.), 3.4, mark_uRiv.z, fw, 0.52, 4.4, aJ);
+  // where they meet: a brief brightening that spreads into the joined river (soft, no disc)
+  float pool = mark_uRiv.w * 0.22 * exp(-dot(pw - J, pw - J) / 90.);
+  // the joined river carries both: its heat sits on top of the two it came from, never a seam at the junction
   float h = max(max(hL, hR), hJ) + pool;
-  if (h <= 0.001) return;
-  // the metal flows: a slow, smooth shimmer drawn downstream (large and soft: never specks)
-  float flow = world_noise(vec2((aL + aR + aJ) * 40. - mark_uRivT.x * 0.9, length(p) * 0.02));
-  h *= 0.93 + 0.12 * flow;
+  if (h <= 0.002) return;
+  // the metal flows: slow, smooth brighter drifts carried downstream (large and soft: never specks)
+  float flow = world_noise(vec2((aL + aR + aJ) * 30. - mark_uRivT.x * 0.6, length(pw) * 0.015));
+  h *= 0.9 + 0.18 * flow;
   m.heat = max(m.heat, h);
-  m.calm = max(m.calm, 0.5 * smoothstep(0., 0.3, h));
 }
 
 // ---------------------------------------------------------------- the crisp pass (V2): the mark at the screen's resolution
