@@ -190,7 +190,9 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // tall reflection into flat slabs with black gaps (front faces mirror it, back faces the sky), which at the scene's
   // render scale read as pixel bands under the crisp monoliths; half the slope keeps one rippled streak. The glint and
   // the glow keep the full normal.
-  vec3 nr = normalize(s.up - 0.45 * (L.g.x * s.eU + L.g.y * s.eV));
+  // (a quarter of the slope: with half, a long wave tilted toward the camera far down the sea caught the monoliths as a
+  // detached patch)
+  vec3 nr = normalize(s.up - 0.25 * (L.g.x * s.eU + L.g.y * s.eV));
   vec3 rd = reflect(r.rd, nr);
   float up = dot(rd, s.up);
   if (up < 0.002) rd = normalize(rd + s.up * (0.002 - up));
@@ -198,7 +200,7 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // three taps spread along the reflection (and a little sideways) by the skin's roughness, weighted 1:2:1: a tall bright
   // thing (a monolith) reflects as a soft, swell-broken streak, never stacked slabs or hard strips where single rays hit
   // or miss it (V2: a crisp mirror would read as glass, a stepped one as pixels)
-  float spread = clamp(sqrt(a2) * 1.2, 0.01, 0.2);
+  float spread = clamp(sqrt(a2) * 1.2, 0.025, 0.2);
   vec3 side = normalize(cross(rd, s.up) + 1e-6);
   vec3 vup = normalize(cross(side, rd));
   vec3 acc = world_env(rr) * 0.5;
