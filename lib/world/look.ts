@@ -205,7 +205,7 @@ function makeLook(): WorldModule {
     provides: ['look_sky', 'look_atmo', 'look_post'],
     glsl: [atmoGlsl, sunGlsl, skyGlsl, planetGlsl].join('\n'),
     post: postGlsl,
-    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 1, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0, 'look.moon': 0, 'look.moonAz': 150, 'look.moonEl': 14 },
+    channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 1, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0, 'look.quiet': 0, 'look.moon': 0, 'look.moonAz': 150, 'look.moonEl': 14 },
     init({ gl: g, u }) {
       gl = g;
       ldr = !(gl.getExtension('EXT_color_buffer_float') || gl.getExtension('EXT_color_buffer_half_float'));
@@ -248,6 +248,8 @@ function makeLook(): WorldModule {
       u.set('look_uHeat', ch['look.heat'] ?? 0);
       u.set('look_uLandAmt', ch['look.land'] ?? 0);
       u.set('look_uLimb', 0);
+      // quiet (world keys it where long text crosses the planet; an engine uQuiet, if set, wins)
+      u.set('look_uQuiet', Math.max(ch['look.quiet'] ?? 0, (u.get('uQuiet') as number | undefined) ?? 0));
       // the moon: placed relative to the camera (az from its forward direction round the local up, positive toward the
       // camera's LEFT (side = up x forward): az 150 = behind the left shoulder; el above the horizon). ventures mirrors
       // this on the CPU to aim the monoliths' faces: keep the convention.

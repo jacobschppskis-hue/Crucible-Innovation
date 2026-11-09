@@ -10,6 +10,7 @@
 uniform float look_uLavaGain;   // emitted radiance scale of the molten sea
 uniform float look_uHeat;       // 0..1 extra heat (the thesis heats the world)
 uniform float look_uLandAmt;    // 0..1 how much land
+uniform float look_uQuiet;      // 0..1 where long body text crosses the planet: rivers to ~a third, the glow a little lower
 
 // Signed land field (> 0 land). q: unit sphere point; fp: footprint (air km). The journey's own great circle (x = 0)
 // stays open sea, so the low swoops always fly over the molten sea; continents lie off to the sides.
@@ -111,7 +112,9 @@ float look_seaTemp(vec3 q, float fp, float land) {
   float f2 = look_riverField(pw * 1.9 + 7.0);
   float h2 = exp(-abs(f2) / max(0.02, fpq * 1.5)) * smoothstep(0.35, 0.0, abs(f));
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
-  float T = 1060.0 + 15.0 * broad + 120.0 * halo + 110.0 * core + 55.0 * h2;
+  // quiet: the rivers lose ~70 K of excess, i.e. ~1/3 of their radiance (Planck at ~1300 K: -70 K is a factor ~3)
+  float rq = mix(1.0, 0.7, look_uQuiet);
+  float T = 1060.0 - 12.0 * look_uQuiet + 15.0 * broad + rq * (120.0 * halo + 110.0 * core + 55.0 * h2);
   T += 110.0 * exp(-max(0.0, -land) * 22.0);
   return T + look_uHeat * 520.0;
 }
