@@ -27,6 +27,7 @@
 //
 // Phones: a key's `ph` overrides its values when the layout is narrow.
 
+import { cameraFrom, surfOf } from './camera';
 import { clamp, type Channels } from './frame';
 
 export const R = 6000; // planet radius (world units). 1 unit ~ 1 m at the low swoops.
@@ -122,12 +123,12 @@ export function keys(): Key[] {
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
-    // story-2 (the rest of Jacob's account): the limb and the stars from orbit; the limb in the lower third (pitch =
-    // about 13-15 deg above the horizon dip, acos(R / (R + h)))
-    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -37, fov: 46, ...dusk(176.3), ph: { fov: 60, pitch: -35 } },
-    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -30, fov: 46, ...dusk(216.9), ph: { fov: 60, pitch: -28 } },
+    // story-2 (the rest of Jacob's account): the reference framing: the planet fills the frame below the limb (the limb
+    // ~15-20% from the top: pitch = -(dip + 14) desktop, -(dip + 20) phones; dip = acos(R / (R + h))), dusk ahead
+    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -64, fov: 46, ...duskSun(deg(32), 3400, 0), ph: { fov: 60, pitch: -70 } },
+    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -57, fov: 46, ...duskSun(deg(80), 2200, 8), ph: { fov: 60, pitch: -63 } },
     // story-3 (Charlie): coming down over the night side
-    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -18, fov: 48, ...dusk(223.6), ph: { fov: 62, pitch: -16 } },
+    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -44, fov: 48, ...duskSun(deg(100), 900, 0), ph: { fov: 62, pitch: -50 } },
     { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, ...FAR, ph: { fov: 62, pitch: 3 } },
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
@@ -148,6 +149,22 @@ export function keys(): Key[] {
     // loop: exactly the hero's first key, one lap on
     { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } },
   ];
+}
+
+
+/**
+ * V2, the reference's dusk (plan/v2/reference-orbit.webp): sun channels that put the far sun `below` degrees under the
+ * visible limb, straight along the camera's heading (s, h, yaw as in a key). From orbit the atmosphere then lights a
+ * sunset line along the limb with the blue glow above it; low over the sea it is a sunset glow on the horizon ahead.
+ */
+export function duskSun(s: number, h: number, yaw: number, below = 4): Channels {
+  const cam = cameraFrom(R, { s, h, yaw, pitch: 0, fov: 50 }, 1, 1);
+  const dip = Math.acos(R / (R + h));
+  const el = -dip - (below * Math.PI) / 180;
+  const d = [0, 1, 2].map((i) => cam.f[i] * Math.cos(el) + cam.up[i] * Math.sin(el));
+  const p = [0, 1, 2].map((i) => cam.pos[i] + d[i] * 1e6) as [number, number, number];
+  const [u, v, y] = surfOf(R, p);
+  return { sunU: u, sunV: v, sunY: y, sunR: 1.2e4 };
 }
 
 export type Anchor = { y: number; key: Key; ch: Channels };
