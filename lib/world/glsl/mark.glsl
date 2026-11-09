@@ -152,9 +152,12 @@ vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
     T = clamp(T + stream * 0.07 * wet * smoothstep(0.15, 0.4, T), 0., 1.);
   }
   // cold: bone cast metal; hot: a glossy liquid skin, nearly black but for its own light
-  float rough = mix(0.30 + 0.10 * (1. - abs(n.z)), 0.06, wet);
+  // a cast skin at this scale: roughness and tone drift slowly across each face (one or two gentle changes per piece,
+  // never a pattern, never specks), so the light's sheen breaks up a little as it would on a real casting
+  float skinV = mark_noise(vec3(p.xy * 0.11, id * 1.7)) * 0.65 + mark_noise(vec3(p.xy * 0.27, id * 3.1 + 5.)) * 0.35;
+  float rough = mix(0.27 + 0.10 * (1. - abs(n.z)) + 0.09 * (skinV - 0.5), 0.06, wet);
   float a = rough * rough;
-  vec3 bone = vec3(0.80, 0.77, 0.69) * (0.97 + 0.06 * mark_hash12(vec2(id, 3.1)));
+  vec3 bone = vec3(0.80, 0.77, 0.69) * (0.97 + 0.06 * mark_hash12(vec2(id, 3.1))) * (0.96 + 0.08 * skinV);
   float liq = smoothstep(0.0, 0.3, wet);
   vec3 F0 = mix(bone * 0.62, vec3(0.32, 0.30, 0.28), liq);   // liquid metal is a mirror too
   vec3 alb = bone * 0.55 * (1. - liq) * (1. - smoothstep(0.05, 0.35, T));
