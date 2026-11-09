@@ -240,6 +240,7 @@ let hits: HTMLElement[] = [];
 let items: HTMLElement[] = [];
 let parents: DOMRect[] = [];
 let armed = false;
+let lastFrame: Frame | null = null;
 let view = { w: 0, narrow: true };
 const offs: (() => void)[] = [];
 
@@ -292,13 +293,18 @@ export const ventures: WorldModule = {
   glsl: monolithGlsl,
   hooks: ['hit', 'shade', 'env', 'sea', 'crisp'],
   // the crisp pass's box: the union of the monoliths' screen boxes, a few px wider for the anti-aliased edges
-  crispBox() {
+  crispBox(f) {
+    lastFrame = f;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
     for (const b of ventureBoxes) {
       if (!b.vis) continue;
       x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
     }
-    return x1 > x0 ? [x0 - 4, y0 - 4, x1 + 4, y1 + 4] : null;
+    if (!(x1 > x0)) return null;
+    // ...and their reflections below (drawn in the crisp pass too)
+    const r = lastFrame ? ventureReflectBoxes(lastFrame) : null;
+    if (r) { x0 = Math.min(x0, r[0]); y0 = Math.min(y0, r[1]); x1 = Math.max(x1, r[2]); y1 = Math.max(y1, r[3]); }
+    return [x0 - 4, y0 - 4, x1 + 4, y1 + 4];
   },
   init({ root }) {
     bindDom(root);

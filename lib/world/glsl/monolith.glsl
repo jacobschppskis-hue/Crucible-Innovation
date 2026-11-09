@@ -458,6 +458,8 @@ void ventures_hit(Ray r, inout Hit h) {
   if (ventures_uOn < 0.5) return;
   // the primary view is drawn by the crisp pass (canvas resolution) when it runs; reflections stay here
   if (r.depth == 0 && uCrispOn > 0.5) return;
+  // ...and so are their reflections in the sea (ventures_streak): the sea's own mirror of them steps at scene scale
+  if (r.depth > 0 && uCrispOn > 0.5) return;
   VenturesHit vh;
   if (ventures_trace(r.ro, r.rd, h.t, max(r.pa, 1e-4), r.depth == 0 ? 24 : 10, vh)) {
     h.t = vh.t; h.id = VENTURES_ID + vh.id; h.p = vh.wp; h.n = ventures_uM[vh.id][1]; h.data = vec4(vh.lp, 0.0);
@@ -521,18 +523,71 @@ float ventures_traceCov(vec3 ro, vec3 rd, float tMax, float pa, out VenturesHit 
   }
   return 0.0;
 }
+// The monoliths' reflections, drawn here as analytic soft streaks (V2: the sea's own mirror of them broke into stepped
+// slabs at the scene's resolution). For a sea point the reflected ray is followed to each monolith's middle plane:
+// where it passes within the casting's width and below its top there is reflection. The width is widened with
+// distance, the streak fades over 1.3x the monolith's height, a few smooth sines of the swell ripple it, and its
+// colour runs from the foot's glow to a dimmed face. No mirrored geometry, no steps.
+vec4 ventures_streak(Ray r, float tSea) {
+  vec3 p = r.ro + r.rd * tSea;
+  vec3 up = normalize(p);
+  vec3 rr = reflect(r.rd, up);
+  vec4 acc = vec4(0.0);
+  float H = 2.0 * ventures_uE.y;
+  for (int i = 0; i < VENTURES_N; i++) {
+    if (ventures_uP[i].w < 0.5) continue;
+    mat3 M = ventures_uM[i];
+    vec3 o = (p - ventures_origin(i)) * M, d = rr * M;
+    if (abs(d.z) < 1e-4) continue;
+    float t = -o.z / d.z;
+    if (t <= 0.0) continue;
+    vec3 q = o + d * t;
+    float lift = ventures_uK[i].x;
+    float hs = q.y + lift;                              // height above the sea where the reflected ray meets it
+    float hTop = H + lift;                              // the visible height
+    if (hTop <= 0.0) continue;
+    // ripple: the swell bends the reflected column sideways and in height, smoothly
+    float rip = sin(o.z * 0.035 + o.x * 0.012 + uTime * 0.9) + 0.55 * sin(o.z * 0.081 - o.x * 0.02 - uTime * 1.35)
+              + 0.3 * sin(o.z * 0.17 + uTime * 1.9);
+    float x = q.x + rip * ventures_uE.x * 0.16 * (1.0 - uStill);
+    float ew = ventures_uE.x * 0.10 + tSea * 0.012;     // edges soften with distance
+    float wx = smoothstep(ventures_uE.x + ew, ventures_uE.x - ew, abs(x));
+    float y = hs + rip * hTop * 0.02;
+    float fy = smoothstep(-0.02 * hTop, 0.02 * hTop, y) * (1.0 - smoothstep(0.0, 1.3 * hTop, y));
+    float a = wx * fy;
+    if (a <= 0.0) continue;
+    // colour: the hot foot right at the waterline, then the dimmed metal (its moonlit sheen, cool)
+    float kind = ventures_uK[i].z, heat = ventures_uK[i].y;
+    float Tw = (kind < 0.5 ? 1280.0 : 1520.0) + heat * 120.0;
+    vec3 glow = ventures_bB(Tw) * 14.0 * ventures_uGain;
+    vec3 F0 = kind < 0.5 ? vec3(0.80, 0.76, 0.68) : vec3(0.56, 0.57, 0.58);
+    vec3 warm = glow * 0.08;                            // the lower faces, lit by their own foot and the sea
+    vec3 face = F0 * (look_moonLight() * 0.3 + vec3(0.02, 0.008, 0.004) * ventures_uGain);
+    vec3 col = mix(mix(glow, warm, smoothstep(0.0, 0.07 * hTop, y)), face, smoothstep(0.15 * hTop, 0.6 * hTop, y));
+    col *= 0.28;                                        // the sea reflects about a third at this grazing angle
+    a *= 0.6;
+    acc = acc + vec4(col * a, a) * (1.0 - acc.a);
+  }
+  return acc;
+}
 vec4 ventures_crisp(Ray r, float tScene) {
   if (ventures_uOn < 0.5) return vec4(0.0);
   float tSea = world_seaT(r);
   VenturesHit vh;
   float cov = ventures_traceCov(r.ro, r.rd, tSea > 0.0 ? tSea + 1e-3 : 1e30, max(r.pa, 1e-6), vh);
-  if (cov <= 0.0) return vec4(0.0);
-  // the waterline, sharp: the part under the sea is the sea's (lp.y + lift is the height above it)
-  float hs = vh.lp.y + ventures_uK[vh.id].x;
-  cov *= clamp(hs / max(vh.t * r.pa, 1e-6) + 0.5, 0.0, 1.0);
-  if (cov <= 0.0) return vec4(0.0);
-  Hit h; h.t = vh.t; h.id = VENTURES_ID + vh.id; h.p = vh.wp; h.n = ventures_uM[vh.id][1]; h.data = vec4(vh.lp, 0.0);
-  vec3 col = ventures_shade(r, h);
-  col = look_atmo(col, r, h);
-  return vec4(col * cov, cov);
+  vec4 mono = vec4(0.0);
+  if (cov > 0.0) {
+    // the waterline, sharp: the part under the sea is the sea's (lp.y + lift is the height above it)
+    float hs = vh.lp.y + ventures_uK[vh.id].x;
+    cov *= clamp(hs / max(vh.t * r.pa, 1e-6) + 0.5, 0.0, 1.0);
+    if (cov > 0.0) {
+      Hit h; h.t = vh.t; h.id = VENTURES_ID + vh.id; h.p = vh.wp; h.n = ventures_uM[vh.id][1]; h.data = vec4(vh.lp, 0.0);
+      vec3 col = ventures_shade(r, h);
+      col = look_atmo(col, r, h);
+      mono = vec4(col * cov, cov);
+    }
+  }
+  if (mono.a >= 1.0 || tSea <= 0.0) return mono;
+  vec4 st = ventures_streak(r, tSea);
+  return mono + st * (1.0 - mono.a);
 }
