@@ -13,6 +13,8 @@ await page.goto(`http://localhost:${srv.address().port}/?q=4&t=8`);
 await page.waitForFunction(() => window.__world);
 await page.evaluate(() => window.__world.goPlace('hero', 0));
 await page.waitForTimeout(400);
+const h1 = await page.evaluate(() => { const r = document.querySelector('[data-place="hero"] h1, h1').getBoundingClientRect(); return [r.left, r.top, r.right, r.bottom].map(Math.round); });
+console.log('h1', JSON.stringify(h1));
 await page.addStyleTag({ content: 'main *, nav * { color: transparent !important; background: transparent !important; border-color: transparent !important; }' });
 if (process.env.GLINT0) await page.evaluate(() => { window.__lava.LAVA.glint = 0; });
 if (process.env.ENV0) await page.evaluate(() => { window.__lava.LAVA.env = 0; });
