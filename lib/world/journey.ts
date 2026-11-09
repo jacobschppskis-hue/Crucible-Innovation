@@ -23,6 +23,8 @@
 //          distance and radius interpolate in log space (camera.ts sunFrom), so a near sun recedes into the sky along a
 //          clean path instead of sweeping past the camera.
 //   exposure (stops, 0 = neutral)
+//   quiet  0..1: long running text on screen (the founders' accounts): look dims the rivers and disk glow under it
+//          (GLSL uQuiet), smoothly with the keys
 //   anything with a dot ('mark.size', 'lava.calm', ...): a module's own channel, default from its module's `channels`.
 //
 // Phones: a key's `ph` overrides its values when the layout is narrow.
@@ -60,6 +62,7 @@ export const CAMERA_DEFAULTS: Channels = {
   sunY: 30,
   sunR: 4.2,
   exposure: 0,
+  quiet: 0,
 };
 
 /** Channels interpolated in log space. */
@@ -123,13 +126,13 @@ export function keys(): Key[] {
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
-    // story-2 (the rest of Jacob's account): the reference framing: the planet fills the frame below the limb (the limb
-    // ~15-20% from the top: pitch = -(dip + 14) desktop, -(dip + 20) phones; dip = acos(R / (R + h))), dusk ahead
-    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -64, fov: 46, ...duskSun(deg(32), 3400, 0), ph: { fov: 60, pitch: -70 } },
-    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -57, fov: 46, ...duskSun(deg(80), 2200, 8), ph: { fov: 60, pitch: -63 } },
+    // story-2 (the rest of Jacob's account): long text, so the planet fills only the lower ~40% (the limb ~60% down:
+    // pitch = 7 - dip; dip = acos(R / (R + h))), dusk ahead, and `quiet` 1 so look dims the rivers under running text
+    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -45.5, fov: 46, quiet: 1, ...duskSun(deg(32), 3400, 0), ph: { fov: 60, pitch: -43 } },
+    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -38, fov: 46, quiet: 1, ...duskSun(deg(80), 2200, 8), ph: { fov: 60, pitch: -36 } },
     // story-3 (Charlie): coming down over the night side
-    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -44, fov: 48, ...duskSun(deg(100), 900, 0), ph: { fov: 62, pitch: -50 } },
-    { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, ...FAR, ph: { fov: 62, pitch: 3 } },
+    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -44, fov: 48, quiet: 1, ...duskSun(deg(100), 900, 0), ph: { fov: 62, pitch: -50 } },
+    { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, quiet: 0, ...FAR, ph: { fov: 62, pitch: 3 } },
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
     { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },

@@ -256,7 +256,7 @@ export function shoreKeys(R: number): Key[] {
     // V2 (world): dusk framing over the day side too: the sun just behind the limb ahead, the planet filling the frame
     { at: ['dawn', 0], ease: 'in', s: deg(183.9), h: 2800, yaw: -0.4, pitch: -42, fov: 46, ...duskSun(deg(183.9), 2800, -0.4), ph: { fov: 60, pitch: -45 } },
     { at: ['dawn', 0.35], ease: 'linear', s: deg(260.6), h: 1800, yaw: 61.3, pitch: -47, fov: 46, 'lava.heat': 0.06, ...duskSun(deg(260.6), 1800, 61.3), ph: { fov: 60, pitch: -55 } },
-    { at: ['dawn', 0.698], ease: 'linear', s: deg(337.4), h: 140, yaw: 123, pitch: -7, fov: 46, 'lava.heat': 0.1, ...FAR2, ph: { fov: 60, pitch: -8 } },
+    { at: ['dawn', 0.698], ease: 'linear', s: deg(337.4), h: 140, yaw: 123, pitch: -7, fov: 46, 'lava.heat': 0.1, ...duskSun(deg(337.4), 140, 123, -2), ph: { fov: 60, pitch: -8 } },
     // over the surf, facing the land with the setting sun off to the right (no glitter path in frame): the sky and the
     // dark dunes carry the wordmark, the surf breaks across the lower half
     { at: ['dawn', 0.85], ease: 'out', s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, 'lava.heat': 0.08, ...FAR2, ph: { fov: 62, pitch: -9 } },

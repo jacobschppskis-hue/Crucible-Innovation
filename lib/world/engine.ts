@@ -336,6 +336,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     u.set('uSunPos', f.sun.pos);
     u.set('uSunR', f.sun.R);
     u.set('uExposure', chv.exposure ?? 0);
+    u.set('uQuiet', chv.quiet ?? 0);
     u.set('uProgress', f.progress);
     u.set('uQ', quality.q);
     u.set('uStep', quality.step);

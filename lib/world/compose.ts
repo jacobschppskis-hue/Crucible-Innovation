@@ -31,6 +31,7 @@ uniform float uSunRad;    // the sun's angular radius as seen from the camera (r
 uniform vec3 uSunPos;     // the sun's world position (near in the hero: it hangs over the sea; far elsewhere)
 uniform float uSunR;      // the sun's physical radius (world units)
 uniform float uExposure;  // stops
+uniform float uQuiet;     // 0..1: long running text on screen (journey channel 'quiet'): dim busy detail under it
 uniform float uProgress;  // journey progress in this lap (0..1)
 uniform float uQ;         // quality 0..1 (1 = best)
 uniform int uStep;        // quality step (0 = best)
