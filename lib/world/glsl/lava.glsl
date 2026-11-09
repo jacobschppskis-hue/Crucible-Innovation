@@ -37,6 +37,7 @@ uniform vec4 lava_uWB;            // bounds of everything the wake can reach (u0
 uniform vec4 lava_uRing[8];       // rings: u, v, radius, amplitude (units)
 uniform vec4 lava_uRingW[2];      // ring widths (units), packed
 uniform int lava_uRingN;
+uniform float lava_uMirror;       // 1: the sea mirrors everything (sky, mark, monoliths); 0: the sky only. Set by ventures.
 uniform int lava_uReflN;          // reflection taps: 3, or 5 where tall objects stand in the sea
 
 /** The sea's shape: height, slope (d/du, d/dv), unresolved slope variance, skin stretch (+ = thin, ~ steepness),
@@ -220,7 +221,8 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
     float u2 = dot(r2.rd, s.up);
     if (u2 < 0.002) r2.rd = normalize(r2.rd + s.up * (0.002 - u2));
     r2.pa = rr.pa + spread * 0.5;
-    acc += world_env(r2) * w;
+    // lava_uMirror 0: the sky only (ventures draws the monoliths' reflections itself, as soft streaks in the crisp pass)
+    acc += (lava_uMirror > 0.5 ? world_env(r2) : world_sky(r2)) * w;
     wsum += w;
   }
   acc /= wsum;

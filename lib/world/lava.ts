@@ -107,7 +107,10 @@ export const lava: WorldModule = {
   glsl: LAVA_GLSL,
   provides: ['lava_shade', 'lava_env'],
   channels: { 'lava.heat': 0, 'lava.swell': 1, 'lava.calm': 0, 'lava.interact': -1 },
-  init() {
+  init({ u }) {
+    // the sea mirrors everything until another module says otherwise (ventures sets 0 while it draws the monoliths'
+    // reflections itself); set once here, never per frame, so their value holds
+    u.set('lava_uMirror', 1);
     waves = spectrum(R);
     if (typeof window !== 'undefined') {
       input = createInput(wake);
