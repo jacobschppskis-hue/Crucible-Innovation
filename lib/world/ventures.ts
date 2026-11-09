@@ -283,7 +283,9 @@ export function venturesKeys(R: number): Key[] {
   return [
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5 } },
     // phones travel half as far through the place, so the live monolith grows less and stays clear of the lede
-    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5, s: deg(150) + 30 } },
+    { at: ['ventures', 0.85], s: deg(150) + 51, h: 3.37, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5, s: deg(150) + 25.5 } },
+    // as they sink, phones tip down a little so the glowing horizon band holds the frame (never black)
+    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 5, h: 1.5, s: deg(150) + 30 } },
   ];
 }
 
