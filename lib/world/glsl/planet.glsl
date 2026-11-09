@@ -75,35 +75,43 @@ float look_lineA(float f, float g, float w, float fpu) {
   return (1.0 - smoothstep(we - e, we + e, d)) * min(1.0, w / we);
 }
 
+// A smooth, low-frequency warp: big lazy loops, not fractal wiggles (two passes of a curl-like rotation).
+vec3 look_meander(vec3 p, vec3 n) {
+  vec3 g = vec3(look_vnoise(p * 0.7), look_vnoise(p * 0.7 + 17.3), look_vnoise(p * 0.7 + 31.7));
+  p += cross(g, n) * 0.55;
+  g = vec3(look_vnoise(p * 1.3 + 5.1), look_vnoise(p * 1.3 + 23.9), look_vnoise(p * 1.3 + 41.3));
+  return p + cross(g, n) * 0.22;
+}
+float look_riverField(vec3 pw) { return look_fbm(pw * 0.8 + 2.0, 3, 0.0, 0.5); }
+
+// The sea's surface temperature (K) at unit point q. Seen from orbit (the reference frame) the molten sea is a dark disk
+// with a few EMISSIVE rivers: smooth, low-frequency meanders (the zero set of a 3-octave field of a gently warped
+// position), each with a hot core fading through a wide soft halo into the dark metal. The brightness profile across a
+// river comes from the analytic distance to its centre line (|f| / |grad f|, the gradient by finite differences in world
+// space), so it is smooth at any render scale: no coverage mask, no screen derivatives, no stair-steps.
 float look_seaTemp(vec3 q, float fp, float land) {
   float t = uTime * 0.003 * (1.0 - uStill);
   vec3 p = q * (look_uRg / 700.0);
   float fpq = fp / 700.0;
-  vec3 pw = look_eddy(p + vec3(t, 0.0, -t), q, fpq);
-  // tangent directions for the gradient
   vec3 tA = normalize(cross(q, abs(q.y) < 0.95 ? vec3(0, 1, 0) : vec3(1, 0, 0))), tB = cross(q, tA);
-  // currents: the main streams (field units: 1 = 700 air km); half-width ~5 km
-  float hh = max(fpq * 0.7, 0.0015);
-  float f1 = look_fbm(pw * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
-  float f1a = look_fbm((pw + tA * hh) * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
-  float f1b = look_fbm((pw + tB * hh) * 0.8 + 2.0, 7, fpq * 0.8, 0.5);
-  float g1 = length(vec2(f1a - f1, f1b - f1)) / hh;
-  // broad, soft rivers as in the reference: a brighter core several km wide fading out over a wide warm halo (the heat
-  // spreading into the slower metal), so the disk reads as molten rather than mapped
-  float c1 = look_lineA(f1, g1, 0.022, fpq);
-  float d1 = abs(f1) / max(g1, 1e-4);
-  float halo = exp(-d1 / max(0.09, fpq * 2.0));
-  // filaments, clustered along the currents: a band in the field's own units, anti-aliased analytically (gradient
-  // ~ its frequency), never by screen derivatives
-  float f2 = look_fbm(pw * 2.6 + 5.0, 7, fpq * 2.6, 0.5);
-  float c2 = look_lineA(f2, 1.6, 0.0035, fpq) * exp(-abs(f1) * 7.0);
-  // threads
-  float f3 = look_fbm(pw * 8.0 + 9.0, 6, fpq * 8.0, 0.5);
-  float c3 = look_lineA(f3, 4.5, 0.0018, fpq) * exp(-abs(f1) * 12.0);
-  // a soft warm wake around each current (heat diffusing into the dark water) and a dim body glow, so the disc reads
-  float near = exp(-abs(f1) * 10.0);
+  vec3 pw = look_meander(p + vec3(t, 0.0, -t), q);
+  float hh = max(fpq, 0.002);
+  float f = look_riverField(pw);
+  float fa = look_riverField(look_meander(p + tA * hh + vec3(t, 0.0, -t), q));
+  float fb = look_riverField(look_meander(p + tB * hh + vec3(t, 0.0, -t), q));
+  // floored: where the field is flat (saddles) a raw ratio threw thin spikes out of the river
+  float g = max(length(vec2(fa - f, fb - f)) / hh, 0.6);
+  float d = abs(f) / g;                       // distance to the river's centre line, field units (1 = 700 air km)
+  // a footprint-widened profile (energy kept: a far river gets wider and fainter, never aliased)
+  float wc = max(0.026, fpq * 1.2);
+  float core = exp(-(d * d) / (wc * wc)) * (0.026 / wc);
+  float wh = max(0.08, fpq * 2.0);
+  float halo = exp(-d / wh);
+  // a second, fainter family of lazy channels
+  float f2 = look_riverField(pw * 1.9 + 7.0);
+  float h2 = exp(-abs(f2) / max(0.02, fpq * 1.5)) * smoothstep(0.35, 0.0, abs(f));
   float broad = look_fbm(p * 0.3 + 9.0, 3, fpq * 0.3, 0.5);
-  float T = 1060.0 + 15.0 * broad + 15.0 * near + 125.0 * halo + 85.0 * c1 + 45.0 * c2 + 25.0 * c3;
+  float T = 1060.0 + 15.0 * broad + 120.0 * halo + 110.0 * core + 55.0 * h2;
   T += 110.0 * exp(-max(0.0, -land) * 22.0);
   return T + look_uHeat * 520.0;
 }
