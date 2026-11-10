@@ -3,6 +3,7 @@ import { expect, test, type Page } from '@playwright/test';
 const pages = [
   { path: '/', h1: /Intelligence, alloyed/ },
   { path: '/sites', h1: /actually looks good/ },
+  { path: '/work', h1: /Out of the\s*crucible/ },
 ];
 
 async function loadClean(page: Page, path: string) {

@@ -23,7 +23,7 @@ Search the code for `TODO(jakob)`. The ones that matter:
 |---|---|
 | Contact email (currently `jacob@crucibleinnovation.com`) | `data/site.ts` |
 | FAQ answers | `data/faq.ts` |
-| Client sites: fill in and uncomment each of the three slots once that site is live (see "Adding a client site") | `data/work.ts` |
+| Client sites: Norma Custom Carpentry is live and on `/work`; add each of the others once it is live too (see "Adding a client site") | `data/work.ts` |
 
 ## Editing content
 
@@ -37,11 +37,12 @@ Copy lives in `data/*.ts`, so most changes are one edit:
 
 Once a client's site is live and they're happy for it to be shown:
 
-1. Screenshot it: `node scripts/shoot-client.mjs <slug> <url>` writes `public/work/<slug>.webp` (desktop) and `-phone.webp`.
-2. In `data/work.ts`, fill in one of the slots in `clientSites` (name, type, one or two sentences, URL, `image: '/work/<slug>.webp'`) and uncomment it.
-3. Check the site can be framed (most can; if `/work` shows it blank, set `embed: false` and the screenshot is shown instead).
+1. Screenshot it: `node scripts/shoot-client.mjs <slug> <url>` writes `public/work/<slug>.webp` (desktop, with `-960` and `-640`) and `<slug>-phone.webp` (with `-390`).
+2. In `data/work.ts`, add an entry to `clientSites` (name, type, a one-line blurb, one or two sentences, URL, `image: '/work/<slug>.webp'`). Use only facts from the client's own site.
+3. Check the site can be framed (`curl -sI <url>`: no `X-Frame-Options` and no `frame-ancestors`). If it can, set `embed: true` and `/work` shows the live site in a browser frame.
+4. If it can't (Norma's can't), set `embed: false` and give it `moments`: add `<key>=<selector>@<fraction>` arguments to the screenshot command, one per moment down the page (the Norma entry has its command in a comment), and list them with a one-line caption each. `/work` then plays them as a film in a browser and a phone as the visitor scrolls.
 
-It then appears first on `/work` (live, in a browser frame, with a link) and first in the `/sites` work grid, where it takes a concept's place. The copy about client work arriving "as it ships" switches over by itself.
+It then appears first on `/work` (with a link to the live site) and first in the `/sites` work grid, where it takes a concept's place.
 
 The Split Ring's machine half can be squares or dots: `<SplitRing pixel="dot" />` (geometry is in `lib/splitRing.ts`).
 
@@ -114,7 +115,7 @@ The root `index.html` is the old "coming soon" page. It is only shown while Page
   - `TryIt`: the visitor types their business name and picks a trade; the live concept site is recast with it on a laptop and a phone. Nothing leaves the browser.
   - The before/after rests centred; the first time it is in view the divider sweeps to one side, then the other, and back to the centre. Then it can be dragged (or moved with the arrow keys).
   - `Process`: seven days you can scrub, while a site is made by hand from a blank page in the frame beside it.
-- **`/work`:** on wide screens each group is a pinned stack, one site at a time (the next rises over the previous with a hot edge); a list on phones, short screens, reduced motion and without JS.
+- **`/work`** ("Out of the crucible"): live client work first. On wide screens each group is a pinned stack, one site at a time (the next rises over the previous with a hot edge); a list on phones, short screens, reduced motion and without JS. A client site that can't be embedded plays as a film of real screenshots: on wide screens its plate holds the screen while the scroll moves through the moments in both frames; on phones the phone frame pins under the nav.
 - **Everywhere:**
   - Primary buttons lean slightly toward the cursor, and the nav has a reading-progress hairline. The nav is opaque, with no backdrop blur (through any translucency a bright thing under it showed as a grey box), and fits 360 px phones. On phones the nav has a menu (a native dialog).
   - Selected text gets a light Ember tint and keeps its colour. Canvases, images and SVG can't be selected or dragged, and a mouse drag that starts on the liquid itself makes waves without selecting anything (`components/Liquid.tsx`); a sideways finger drag makes waves instead of swiping back in history (`overscroll-behavior-x`).

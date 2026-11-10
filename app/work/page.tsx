@@ -3,7 +3,19 @@ import { Footer } from '@/components/Footer';
 import { ArrowRight } from '@/components/Icons';
 import { Nav } from '@/components/Nav';
 import { WordReveal } from '@/components/WordReveal';
-import { CardPair, ClientFrame, ConceptDevices, MarkPlate, Plate, ShotDevices, Stack, type CardSide, type Shot } from '@/components/Work';
+import {
+  CardPair,
+  ClientFilm,
+  ClientFrame,
+  ConceptDevices,
+  MarkPlate,
+  Plate,
+  ShotDevices,
+  Stack,
+  filmPlates,
+  type CardSide,
+  type Shot,
+} from '@/components/Work';
 import { clientSites, work } from '@/data/work';
 import { conceptFonts } from '@/lib/conceptFonts';
 import '@/components/Ventures.css'; // .vf-link and .vf-mould, shared with the venture pages
@@ -11,9 +23,13 @@ import '@/components/Ventures.css'; // .vf-link and .vf-mould, shared with the v
 import cardBack from '@/brand/business-card-back.png';
 import cardFront from '@/brand/business-card-front.png';
 
-const title = 'Work · Crucible';
-const description =
-  'Everything Crucible has made so far: client sites as they launch, three concept sites built as real pages, this website, the business card and the Split Ring mark.';
+// The nav calls the page "Work"; its headline is "Out of the crucible". Live client work leads, then the concepts,
+// then what Crucible made for itself.
+const live = clientSites.map((c) => c.name);
+const title = 'Out of the crucible: work by Crucible';
+const description = `${
+  live.length ? `Live client work (${live.join(', ')}), then` : 'Client sites as they launch,'
+} three concept sites built as real pages, and Crucible’s own website, business card and mark.`;
 
 export const metadata: Metadata = {
   title,
@@ -30,7 +46,7 @@ const site: Record<'desktop' | 'phone', Shot> = {
     widths: [960, 1440],
     width: 1440,
     height: 900,
-    alt: 'The crucibleinnovation.com home page on a desktop: the Split Ring above the headline “Intelligence, alloyed”.',
+    alt: 'The crucibleinnovation.com home page on a desktop: the mark hung round a glowing sun over a molten sea, and the headline “Intelligence, alloyed”.',
   },
   phone: {
     src: '/work/crucible-site-phone.webp',
@@ -53,30 +69,46 @@ const card: Record<'front' | 'back', CardSide> = {
 
 export default function WorkPage() {
   const clients = clientSites.length > 0;
+  // A client site that can't be embedded plays as a film and holds its plate for it (components/Work.tsx).
+  const stack = filmPlates(clientSites);
   return (
     <>
       <Nav />
       {/* The concept sites bring their own faces (lib/conceptFonts.ts). */}
       <main id="main" className={conceptFonts}>
         <header className="container-x wk-head">
-          <WordReveal as="h1" immediate segments={[{ t: 'Work' }]} className="h-display wk-title" />
+          <WordReveal as="h1" immediate segments={[{ t: 'Out of the' }, { br: true }, { t: 'crucible' }]} className="h-display wk-title" />
           {/* Near the top, so it isn't held back for a reveal (it would delay the first paint of real content). */}
           <div className="wk-lede">
-            <p>Everything Crucible has made so far.</p>
-            {!clients && <p className="mt-3">The first client sites launch soon and will appear here as they go live.</p>}
+            {clients ? (
+              <>
+                <p>
+                  Live client work comes first: <span className="text-bone">{live.join(', ')}</span>,{' '}
+                  {live.length > 1 ? 'sites' : 'a site'} you can visit today.
+                </p>
+                <p className="mt-3">Then three concept sites built as real pages, and what Crucible made for itself.</p>
+              </>
+            ) : (
+              <>
+                <p>Three concept sites built as real pages, and what Crucible made for itself.</p>
+                <p className="mt-3">The first client sites launch soon and will appear here as they go live.</p>
+              </>
+            )}
           </div>
         </header>
 
         {clients && (
           <section aria-labelledby="clients-h" className="wk-section">
             <div className="container-x wk-group">
-              <WordReveal id="clients-h" segments={[{ t: 'Client sites' }]} className="wk-h2" />
+              <WordReveal id="clients-h" segments={[{ t: 'Client work' }]} className="wk-h2" />
             </div>
-            <Stack n={clientSites.length}>
-              {clientSites.map((c, i) => (
+            <Stack n={stack.n}>
+              {stack.plates.map(({ c, at, film }, i) => (
                 <Plate
                   key={c.slug}
                   i={i}
+                  at={at}
+                  film={film}
                   id={`client-${c.slug}`}
                   label={
                     <>
@@ -97,7 +129,7 @@ export default function WorkPage() {
                     </>
                   }
                 >
-                  <ClientFrame c={c} />
+                  {c.moments?.length && !c.embed ? <ClientFilm c={c} /> : <ClientFrame c={c} />}
                 </Plate>
               ))}
             </Stack>
@@ -130,8 +162,8 @@ export default function WorkPage() {
               name="This site"
               note={
                 <p>
-                  It opens with a pour: molten metal fills a mould of the mark and sets. Real-time WebGL on every device, with a still
-                  version for reduced motion.
+                  The home page is one lap round a molten planet: a day passes as you scroll, and the bottom of the page flows back into
+                  the top. Real-time WebGL, with a still version for reduced motion.
                 </p>
               }
             >

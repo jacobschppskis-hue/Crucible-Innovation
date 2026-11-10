@@ -82,7 +82,7 @@ export default function SitesPage() {
         </section>
 
         {/* 5. Work: live client sites first (data/work.ts clientSites), then concepts to fill the row. */}
-        <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1360px', '--h-lg': '620px' } as React.CSSProperties}>
+        <section id="work" className="cv-auto container-x pb-24 sm:pb-32" style={{ '--h-sm': '1355px', '--h-lg': '625px' } as React.CSSProperties}>
           <SectionHead
             title={[{ t: 'Think in kelvin' }]}
             sub={
@@ -111,7 +111,11 @@ export default function SitesPage() {
                     </a>
                   </h3>
                   <p className="mt-1 text-bone-dim">
-                    {c.type}. {c.description} <span className="text-bone">Live</span>
+                    {c.type}. {c.blurb}{' '}
+                    <span className="whitespace-nowrap text-bone">
+                      <span aria-hidden className="live-dot mr-1.5 inline-block size-1.5 rounded-full bg-ember align-middle" />
+                      Live
+                    </span>
                   </p>
                 </article>
               </Reveal>

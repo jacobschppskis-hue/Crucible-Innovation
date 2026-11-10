@@ -9,9 +9,15 @@ import './Work.css';
  * nav; the next rises from below with a hot leading edge, and the one before steps back, dims and is wiped away above
  * that edge, so two plates never show over each other (--p from data-scroll="pin" on the stack). On phones, short
  * screens, with reduced motion and without JS it's a plain list. Styles: components/Work.css.
+ *
+ * A live client site leads the page. One that can be framed is embedded (ClientFrame); one that can't is shown as a
+ * film of real screenshots that the scroll plays (ClientFilm).
  */
 
-/** A group of plates. Wide screens with motion: a pinned scene, `n` plates long. Otherwise a plain list. */
+/**
+ * A group of plates. Wide screens with motion: a pinned scene, `n` plates long (one screen of scroll from each plate
+ * to the next, plus however long a plate holds the screen for its film: `filmPlates`). Otherwise a plain list.
+ */
 export function Stack({ n, children }: { n: number; children: React.ReactNode }) {
   return (
     <div data-scroll="pin" className="wk-stack" style={{ '--n': n } as React.CSSProperties}>
@@ -23,6 +29,10 @@ export function Stack({ n, children }: { n: number; children: React.ReactNode })
 type PlateProps = {
   /** Position in its stack (0-based): which stretch of the stack's scroll it holds, and its layer. */
   i: number;
+  /** Where its stretch starts, in screens of scroll, when plates before it hold the screen for longer (default `i`). */
+  at?: number;
+  /** Screens of scroll it holds the pinned screen for while its film plays (ClientFilm). */
+  film?: number;
   id: string;
   label: React.ReactNode;
   name: string;
@@ -30,9 +40,9 @@ type PlateProps = {
   children: React.ReactNode;
 };
 
-export function Plate({ i, id, label, name, note, children }: PlateProps) {
+export function Plate({ i, at = i, film = 0, id, label, name, note, children }: PlateProps) {
   return (
-    <article aria-labelledby={id} className="wk-plate" style={{ '--i': i } as React.CSSProperties}>
+    <article aria-labelledby={id} className="wk-plate" style={{ '--i': at, '--z': i, '--m': film } as React.CSSProperties}>
       <div className="container-x">
         <div className="wk-cap">
           <div>
@@ -218,17 +228,132 @@ export function MarkPlate() {
   );
 }
 
+/** The sizes scripts/shoot-client.mjs writes: name.webp (1440) with -960 and -640; name-phone.webp (780) with -390. */
+const sized = (src: string, w: number) => src.replace(/\.webp$/, `-${w}.webp`);
+const desktopSet = (src: string) => `${sized(src, 640)} 640w, ${sized(src, 960)} 960w, ${src} 1440w`;
+const phoneOf = (src: string) => src.replace(/\.webp$/, '-phone.webp');
+const phoneSet = (src: string) => `${sized(phoneOf(src), 390)} 390w, ${phoneOf(src)} 780w`;
+const hostOf = (url: string) => new URL(url).hostname.replace(/^www\./, '');
+
+/** Screens of scroll a film holds its plate for on wide screens: half a screen for each step between two moments. */
+const filmLength = (c: ClientSite) => (c.embed ? 0 : Math.max(0, (c.moments?.length ?? 0) - 1) * 0.5);
+
+/** Where each client plate starts in its stack, and the stack's length (Stack `n`), with the films' lengths counted. */
+export function filmPlates(sites: ClientSite[]) {
+  let at = 0;
+  const plates = sites.map((c) => {
+    const plate = { c, at, film: filmLength(c) };
+    at += 1 + plate.film;
+    return plate;
+  });
+  return { plates, n: at };
+}
+
+/**
+ * A client site that can't be embedded, as a film: moments down its page (data/work.ts `moments`), real screenshots
+ * of it on a desktop and on a phone, played by the visitor's scroll with a one-line caption each.
+ *
+ * Wide screens: the plate holds the pinned screen while the film plays in both frames (--f from the stack's scroll,
+ * Work.css). Phones: the browser shows the top of the page, then the phone frame pins under the nav and the film plays
+ * in it (`.wk-reel` is its own pinned scene). Reduced motion, no JS, short screens: both frames show the top of the
+ * page and the other moments follow as captioned stills. Every image is lazy and sized; a visitor loads one width.
+ */
+export function ClientFilm({ c }: { c: ClientSite }) {
+  const moments = c.moments ?? [];
+  const k = (i: number) => ({ '--k': i }) as React.CSSProperties;
+  return (
+    <div className="wk-film" style={{ '--mo': moments.length } as React.CSSProperties}>
+      <div className="wk-browser">
+        <Chrome host={hostOf(c.url)} />
+        <div className="wk-screen">
+          {moments.map((m, i) => (
+            <img
+              key={m.image}
+              src={m.image}
+              srcSet={desktopSet(m.image)}
+              sizes="(min-width: 1024px) 56rem, 92vw"
+              width={1440}
+              height={900}
+              alt={m.alt}
+              loading="lazy"
+              decoding="async"
+              className="wk-shot wk-mo"
+              style={k(i)}
+            />
+          ))}
+          <Edges n={moments.length} />
+        </div>
+      </div>
+      <div data-scroll="pin" className="wk-reel">
+        <div className="wk-stage">
+          <div className="wk-phone">
+            <div className="wk-phone-screen">
+              {moments.map((m, i) => (
+                <img
+                  key={m.image}
+                  src={phoneOf(m.image)}
+                  srcSet={phoneSet(m.image)}
+                  sizes="(min-width: 640px) 22rem, 18rem"
+                  width={780}
+                  height={1688}
+                  alt={i ? '' : `${c.name} on a phone.`}
+                  loading="lazy"
+                  decoding="async"
+                  className="wk-shot wk-mo"
+                  style={k(i)}
+                />
+              ))}
+              <Edges n={moments.length} />
+            </div>
+            <span aria-hidden className="wk-island" />
+          </div>
+          <ol data-float="none" className="wk-moments">
+            {moments.map((m, i) => (
+              <li key={m.image} className="wk-moment" style={k(i)}>
+                <img src={sized(m.image, 640)} width={640} height={400} alt="" loading="lazy" decoding="async" className="wk-thumb" />
+                <p>{m.caption}</p>
+              </li>
+            ))}
+          </ol>
+          <span aria-hidden className="wk-ticks">
+            {moments.map((m, i) => (
+              <i key={m.image} style={k(i)} />
+            ))}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The leading edge of each moment after the first: an Ember hairline while that moment is on its way up, gone at rest. */
+function Edges({ n }: { n: number }) {
+  return Array.from({ length: Math.max(0, n - 1) }, (_, i) => <i key={i} aria-hidden className="wk-edge" style={{ '--k': i + 1 } as React.CSSProperties} />);
+}
+
 /**
  * A published client site in a browser: the live site itself when it can be framed (`embed`), else its screenshot.
  * The screenshot also sits under the frame as a poster while the live site loads.
  */
 export function ClientFrame({ c }: { c: ClientSite }) {
-  const host = new URL(c.url).hostname.replace(/^www\./, '');
+  const host = hostOf(c.url);
   return (
     <div className="wk-browser wk-browser-solo">
       <Chrome host={host} />
       <div className={`wk-screen ${c.embed ? 'wk-screen-live' : ''}`}>
-        {c.image && <img src={c.image} alt={c.embed ? '' : `The ${c.name} website`} loading="lazy" decoding="async" className="wk-shot" />}
+        {c.image && (
+          <img
+            src={c.image}
+            srcSet={desktopSet(c.image)}
+            sizes="(min-width: 1024px) 72rem, 92vw"
+            width={1440}
+            height={900}
+            alt={c.embed ? '' : `The ${c.name} website`}
+            loading="lazy"
+            decoding="async"
+            className="wk-shot"
+          />
+        )}
         {c.embed ? (
           <iframe
             src={c.url}
