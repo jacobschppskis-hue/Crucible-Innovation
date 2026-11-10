@@ -13,7 +13,7 @@
 // The sand is not geometry: it is the sea's own sphere with another material, set through the sea hook (cold, still,
 // a little rough: a flat of wet black sand that mirrors the dusk like the sea does, with the lava's own Fresnel and
 // sky). No raymarch, no silhouettes, nothing to stair-step; every edge is filtered by the pixel's footprint. The sand
-// is a crescent whose cape touches the travel line ~1000 units before the hero and whose horns sweep away from it, so
+// is a crescent whose cape comes beside the travel line ~1000 units before the hero and whose horns sweep away, so
 // from the hero (and from the loop's last key) all of it is under the horizon.
 // - the surf: smooth crests running in to the waterline, shoaling as they come in (shape only: they show in the sun's
 //   glitter and the mirrored sky), the sea a little hotter and calmer in the shallows;
@@ -299,10 +299,10 @@ export function shoreKeys(R: number): Key[] {
   const P = {
     s: [186, 232, 275, 312, 338, ((LAP - 940) / LAP) * 360], // degrees round the planet
     h: [3200, 3000, 2400, 1300, 200, 16].map(Math.log),
-    yaw: [0, 28, 68, 108, 148, 169],
+    yaw: [0, 28, 68, 108, 146, 167],
     yD: [0.78, 0.78, 0.76, 0.72, 0.69, 0.68], // the limb's place in the frame, desktop
     yP: [0.57, 0.56, 0.56, 0.6, 0.62, 0.56], // and on phones
-    az: [-12, -3, 6, 9, 11, 11], // the sun, degrees right of the heading
+    az: [-12, -3, 6, 9, 12, 13], // the sun, degrees right of the heading (at the cape: straight back down the travel line)
     el: [8, 8, 7.5, 5.5, 2.8, 4], // and over the limb (desktop: the giant wordmark fills the sky down to mid-frame)
     elP: [13, 13.5, 11, 6, 2.8, 4], // (phones: the wordmark is small, the sun can stand higher over the limb)
     roll: [0, -9, -11, -7, -2, 0], // banking into the turn
@@ -347,8 +347,8 @@ export function shoreKeys(R: number): Key[] {
     key(['shore', 1], deg(160.5), 1500, 0, 0.79, 0.79, 5, 2.3, { ...ORBIT, ease: 'out' }),
     // dawn (the wordmark): the day side, high and fast, flying with the sun, then the turn and the descent past the cape
     ...run,
-    // beside the black sand, looking back along its waterline to the setting sun: a slow pull back
-    key(['dawn', 1], LAP - 870, 14, 170, 0.68, 0.56, 10, 4, HOME, 62),
+    // beside the black sand, looking back along its waterline to the setting sun: a slow pull back, panning to the sun
+    key(['dawn', 1], LAP - 850, 13, 170, 0.68, 0.56, 10, 4, HOME, 62),
   ];
 }
 
