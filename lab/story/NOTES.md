@@ -152,3 +152,12 @@ to make the biography pages look better".
 4. **Length.** Phone 390: 6306 px before, 6188 after (360: 6548 -> 6120). 1440: 4548 -> ~5700, longer: one column
    instead of tube-beside-text, and the lifts. Tooling for this round is in the session scratchpad (layout strips with
    JS off, a per-band contrast estimate on frames).
+5. **Moves happen between scenes, not behind sentences.** The climb out of the swoop (story 0.35 -> 1) is 12 dense
+   keys on the old path (s, yaw, fov evenly, h in log space, the sun round to dusk(170), smooth ease): with two keys
+   the limb rose to mid-frame half way up (the dip grows with sqrt(h), the pitch fell evenly), through the PayPal
+   paragraph. The swing from PayPal's view into story-2 ends 0.45 of a screen before the place starts (`dy: -0.45`),
+   so the break-out sentence comes up beside a limb that already stands still.
+6. Checked: `tests/world.spec.ts` (Jacob's line once), `tests/pages.spec.ts` (CRT portraits), `unslop: /`, phone and
+   desktop; JS off (all text visible); reveals while scrolling at 360 / 390 reduced motion / 820 / 1024 / 1440 (nothing
+   in view stays hidden); no horizontal scroll at 360. Contrast estimate on the phone frames: every 28 px band of text
+   is at 4.9:1 or better against the brightest 2% of what is behind it (before: 3.9 to 4.5 where the band crossed).

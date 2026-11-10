@@ -154,6 +154,9 @@ export function keys(): Key[] {
     // 900 px high, and the column has the left half (Story.css keeps it there). `quiet`: look dims the rivers under
     // the few lines that do cross the disk (phones: the lines coming in at the bottom; wide screens: none until the
     // camera levels out in story-3). 'look.stars' 0.5: fewer specks between the letters
+    // the swing from PayPal's view into this one is over 0.45 of a screen BEFORE the place starts, in the gap between
+    // the two scenes: by the time Jacob's break-out sentence comes up, the limb already stands where it stays
+    { at: ['story-2', 0], dy: -0.45, s: deg(31.4), h: 3340, yaw: 0, pitch: -37.5, roll: -82, fov: 46, quiet: 0.25, 'look.stars': 0.5, ...duskSun(deg(31.4), 3340, 0), ph: { fov: 60, pitch: -25.8, roll: 0, quiet: 1 } },
     { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -37.8, roll: -82, fov: 46, quiet: 0.25, 'look.stars': 0.5, ...duskSun(deg(32), 3400, 0), ph: { fov: 60, pitch: -26.1, roll: 0, quiet: 1 } },
     { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -30.5, roll: -82, fov: 46, quiet: 0.25, 'look.stars': 0.5, ...duskSun(deg(80), 2200, 8), ph: { fov: 60, pitch: -18.8, roll: 0, quiet: 1 } },
     // story-3 (Charlie): coming down slowly over the night side, dusk still on the limb; it stays above ~300 (lower,
