@@ -64,9 +64,11 @@ export function thesisHeat(f: Frame): { k: number; w: number; dim: number } {
   const ps = f.places['shore'];
   if (pt && ps) {
     const y1 = pt.top + pt.h - f.h;
-    if (ps.top > y1 + 1) away = 1 - smooth(seg(f.y, y1, y1 + 0.6 * (ps.top - y1)));
+    // (lead) it starts a little before the pin lets go and is done a third of a screen after: the footer's heading
+    // comes in at the bottom the moment the pin ends, and at 60% of the way it was still over an orange sea
+    if (ps.top > y1 + 1) away = 1 - smooth(seg(f.y, y1 - 0.15 * (ps.top - y1), y1 + 0.3 * (ps.top - y1)));
   }
-  const w = p > 0 ? (p < 1 ? 1 : away) : into;
+  const w = p > 0 ? (p < 0.9 ? 1 : away) : into;
   return { k, w, dim: p > 0 ? w : dim };
 }
 
