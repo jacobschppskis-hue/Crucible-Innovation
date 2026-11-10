@@ -1,8 +1,9 @@
 // The ventures in the world: three cast-metal monoliths rise out of the lava as the journey reaches them
-// (place `ventures`, skimming the night sea). Module `ventures` (ARCHITECTURE.md): GLSL hooks hit / shade / env / sea in
-// lib/world/glsl/monolith.glsl; this file computes their poses on the CPU every frame, owns the section's behaviour
-// (hover, focus, touch and press heat a monolith; each link's hit area is laid over its monolith's projection, so the
-// monolith and its words are one link that works by tap), and queues a ripple for the lava on a press.
+// (place `ventures`, low over the night sea). Module `ventures` (ARCHITECTURE.md): GLSL hooks hit / shade / sea / crisp
+// in lib/world/glsl/monolith.glsl; this file computes their poses on the CPU every frame, owns the camera through the
+// place (venturesKeys: a low camera, a long lens, one slow push and arc), the section's behaviour (hover, focus, touch
+// and press heat a monolith; each link's hit area is laid over its monolith's projection, so the monolith and its
+// words are one link that works by tap), and queues a ripple for the lava on a press.
 // Framework-free (no React). The section's markup is components/world/Ventures.tsx (static).
 
 import type { WorldModule } from './modules';
@@ -11,31 +12,49 @@ import { V, clamp } from './frame';
 import type { Uniforms } from './gl';
 import { haptic } from '@/lib/haptic';
 import monolithGlsl from './glsl/monolith.glsl';
-import { keys, type Key } from './journey';
+import type { Key } from './journey';
 
 export type Vec3 = V3;
 
-/** Half width, half height, half depth, fillet radius: a monolith is 10 units tall, times SCALE world units. */
-export const MONO_E: [number, number, number, number] = [1.6, 5.0, 0.42, 0.12];
-/** World units (~m) per monolith unit: 11 makes them 110 m tall, against a camera 3 m above the sea. */
-const SCALE = 11;
-/** Where they stand: this far along the circle past the ventures place's first key, and the layouts in
- * monolith units in the place's frame (x right, z toward the camera), yaw offsets from the hero angle (rad). */
-const AHEAD = 30 + 420;
+/** World units (~m) per monolith unit: the live casting is 10 units = 150 m tall and stands 600-750 m from the camera,
+ * filmed low and through a long lens (venturesKeys): three monuments on the horizon, not three props on a table. */
+const SCALE = 15;
+/** Each casting's own shape, monolith units: half width, half height, half depth, arris radius. Three castings, not
+ * three copies: Crucible Sites the tall machined stele, Verge narrower with a softer cast fillet, Trellis shorter and
+ * thicker. */
+export const MONO_SHAPE: [number, number, number, number][] = [
+  [1.6, 5.0, 0.44, 0.06],
+  [1.36, 4.6, 0.52, 0.15],
+  [1.5, 4.25, 0.6, 0.105],
+];
+/** The live casting's shape (for callers that want one size). */
+export const MONO_E = MONO_SHAPE[0];
+/** Finish: base roughness of the broad faces (machined satin, as-cast, dressed). */
+const FINISH = [0.22, 0.28, 0.2];
+/** Where they stand: the place's origin this far along the circle past the ventures place's first key, and each
+ * casting's position in metres in the place's frame (x right, z back toward the camera). */
+const AHEAD = 760;
+/** The camera's ground position at the shot's peak (venturesKeys, f 0.84), metres past the first key: the castings
+ * face it (plus their own turn), fixed in the world, so the camera's arc moves the light across their faces. */
+const PEAK = 116;
 const LAYOUT = {
-  // desktop: right of the heading, at about 42%, 62% and 82% of the width, the two still forging a little further back
-  wide: { pos: [[-3.4, 0], [5.6, -3], [14.6, -1]] as const, aim: [-0.075, 0.075, -0.11] },
-  // phones: the live one in front, centred; the two forging ones behind it to either side
-  narrow: { pos: [[0.4, 11], [-5.0, -1], [5.0, -12]] as const, aim: [-0.06, 0.08, -0.1] },
+  // desktop: right of the heading, at about 44%, 63% and 82% of the width, the two still forging a little further back
+  wide: { pos: [[-29, 0], [70, -70], [162, -24]] as const },
+  // phones: the live one in front, centred; the two forging ones well behind it to either side (haze between)
+  narrow: { pos: [[0, 22], [-62, -205], [52, -265]] as const },
 };
+/** Each face's turn away from the camera's peak position (rad, + = toward the right): the moon stands behind the
+ * camera's left shoulder, so a face turned left carries its sheen, one turned right stays dark and reads by its edges. */
+const AIM = [-0.13, -0.02, -0.4];
+/** Forward lean toward the camera beyond the camera's own vertical (rad): the faces mirror the horizon and a strip of
+ * the glowing sea under it, not only the night sky. */
+const LEAN = [0.004, -0.039, -0.049];
 const KINDS = [0, 1, 1];
 /** The monoliths' own light (heat, the pool, the lava-lit air) in the world's radiance unit. */
 const GAIN = 4;
 /** What the faces mirror of the lava (the sea, the pool at the foot, the lava-lit air), kept low so above the foot the
  * metal reads as bare metal under the moon, not as a glowing slab. */
 const ENVK = 1.4;
-/** Forward lean of each monolith (rad, toward the camera). */
-const LEAN = [0.05, 0.035, 0.06]; // Crucible Sites cooled (live), Verge and Trellis still forging
 
 // ---- state fed by the DOM -------------------------------------------------------------------------------------------
 const S = {
@@ -48,24 +67,11 @@ const S = {
 };
 /** Screen boxes (CSS px, viewport) of each monolith's part above the sea, and its rise; written every frame. */
 export const ventureBoxes = [0, 1, 2].map(() => ({ x: 0, y: 0, w: 0, h: 0, vis: false, rise: 0 }));
+/** The same boxes widened by the sea's bulge while a casting rises: what the crisp pass must cover. */
+const drawBoxes = [0, 1, 2].map(() => ({ x0: 0, y0: 0, x1: 0, y1: 0, vis: false }));
 /** Ripple requests for the lava (world position on the sea, strength 0..1); lava drains this queue. */
 export const ventureRipples: { p: V3; k: number }[] = [];
 const feet: V3[] = [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
-
-/** The monoliths' reflections in the sea, for lava's crisp pass: per monolith from its waterline down to 1.2x its
- * visible height (or the screen bottom), a little wider for the ripples; the union, viewport CSS px, or null. */
-export function ventureReflectBoxes(f: Frame): [number, number, number, number] | null {
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (const b of ventureBoxes) {
-    if (!b.vis) continue;
-    const pad = b.w * 0.08 + 4;
-    x0 = Math.min(x0, b.x - pad);
-    x1 = Math.max(x1, b.x + b.w + pad);
-    y0 = Math.min(y0, b.y + b.h - 4);
-    y1 = Math.max(y1, Math.min(f.h, b.y + b.h + 1.2 * b.h));
-  }
-  return x1 > x0 && y1 > y0 ? [Math.max(0, x0), Math.max(0, y0), Math.min(f.w, x1), y1] : null;
-}
 
 export function setVentureHover(i: number, on: boolean) {
   S.hoverT[i] = on ? 1 : 0;
@@ -76,10 +82,17 @@ export function pressVenture(i: number) {
   if (ventureRipples.length > 8) ventureRipples.shift();
 }
 
-/** The rise of monolith i for the section's pin progress p: one after another over the first ~65% of the pin. */
+/** The rise of monolith i for the section's pin progress p: one after another, each over 36% of the pin (150 m of
+ * metal coming up through a sea is slow), all three standing by 0.6. */
 export const riseAt = (p: number, i: number) => {
-  const c = clamp((p - (0.0 + i * 0.05)) / 0.16);
+  const c = clamp((p - (0.015 + i * 0.1)) / 0.36);
   return c * c * (3 - 2 * c);
+};
+/** The sea's bulge over a rising casting (monolith units): it swells before the top breaks through, then drains away. */
+const domeAt = (rise: number) => {
+  const a = clamp(rise / 0.035),
+    b = clamp((rise - 0.05) / 0.3);
+  return 0.95 * a * a * (3 - 2 * a) * (1 - b * b * (3 - 2 * b));
 };
 
 function spring(x: number, v: number, to: number, dt: number, tau: number): [number, number] {
@@ -106,124 +119,113 @@ const U = {
   P: new Float32Array(12),
   M: new Float32Array(27),
   K: new Float32Array(12),
-  E: new Float32Array(4),
+  E: new Float32Array(12),
+  D: new Float32Array(12),
 };
 
-// the ventures place's first key along the circle (journey.ts), so the monoliths follow wherever the lead puts it
+// the ventures place's first key along the circle, so the monoliths follow wherever the camera's path starts
 let s0: number | null = null;
 function placeS() {
-  if (s0 === null) s0 = (keys().find((k) => k.at[0] === 'ventures' && k.at[1] === 0)?.s as number | undefined) ?? (150 * Math.PI) / 180 * 6000;
+  if (s0 === null) s0 = venturesKeys(6000)[0].s as number;
   return s0;
-}
-
-function moonDir(f: Frame): V3 {
-  if (!((f.ch['look.moon'] ?? 0) > 0)) return f.sun.dir;
-  const up = f.cam.up, fw = f.cam.f;
-  const h = V.norm(V.madd(fw, up, -V.dot(fw, up)));
-  const side = V.cross(up, h);
-  const az = ((f.ch['look.moonAz'] ?? 150) * Math.PI) / 180,
-    el = ((f.ch['look.moonEl'] ?? 14) * Math.PI) / 180;
-  return V.norm(V.madd(V.mul(V.add(V.mul(h, Math.cos(az)), V.mul(side, Math.sin(az))), Math.cos(el)), up, Math.sin(el)));
 }
 
 function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
   // they sink back into the sea over the end of their own pin, so the thesis opens on an empty sea (continuous,
   // reversible; the words leave with them)
-  const th = clamp((p - 0.84) / 0.12);
+  const th = clamp((p - 0.885) / 0.1);
   const sinkK = 1 - th * th * (3 - 2 * th);
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;
-  const H = 2 * MONO_E[1];
   const v0 = placeS() + AHEAD;
   const origin = f.surf(0, v0, 0);
   const up = V.norm(origin);
-  // the place's frame: z toward the camera's side (back along the circle), x to the right as seen from the camera
+  // the place's frame: z back toward the camera's side (against the travel), x to the right as seen from the camera
   const along = V.norm(V.sub(f.surf(0, v0 + 1, 0), origin));
   const z = V.mul(along, -1);
   const x = V.cross(up, z);
-  U.E.set([MONO_E[0] * s, MONO_E[1] * s, MONO_E[2] * s, MONO_E[3] * s]);
+  // where the camera stands at the shot's peak (on the sea): the castings face it, fixed in the world
+  const ref = f.surf(0, placeS() + PEAK, 0);
   const dt = f.still ? 0 : f.dt;
-  const t = f.still ? 0 : f.t;
   let any = false;
   for (let i = 0; i < 3; i++) {
+    const E = MONO_SHAPE[i];
+    const H = 2 * E[1];
+    U.E.set([E[0] * s, E[1] * s, E[2] * s, E[3] * s], i * 4);
     [S.hover[i], S.hoverV[i]] = spring(S.hover[i], S.hoverV[i], S.hoverT[i], dt, 0.12);
     S.press[i] *= dt > 0 ? Math.exp(-dt / 0.35) : 1;
     // the camera is far from them anywhere else on the journey: risen only inside their own pin
     const rise = riseAt(p, i) * sinkK;
-    const liftTo = S.hover[i] * 0.22 - S.press[i] * 0.3;
+    // a monument does not bob: hover and press show as heat (and a breath of lift, a few tenths of a metre)
+    const liftTo = S.hover[i] * 0.03 - S.press[i] * 0.05;
     [S.lift[i], S.liftV[i]] = spring(S.lift[i], S.liftV[i], liftTo, dt, 0.16);
-    const bob = Math.sin(t * 0.6 + i * 2.1) * 0.035 * rise;
-    const lift = (-(1 - rise) * (H + 0.6) + S.lift[i] + bob) * s;
+    const lift = (-(1 - rise) * (H + 0.6) + S.lift[i] * rise) * s;
     const [px, pz] = L.pos[i];
-    const foot = V.add(origin, V.add(V.mul(x, px * s), V.mul(z, pz * s)));
+    const foot = V.add(origin, V.add(V.mul(x, px), V.mul(z, pz)));
     const fup = V.norm(foot);
     feet[i] = foot;
-    const vis = rise > 0.001;
+    const vis = rise > 0.0005;
     any ||= vis;
     U.P.set([foot[0], foot[1], foot[2], vis ? 1 : 0], i * 4);
-    // the hero angle: the face turned so its normal sits just off the half vector between the camera and the sun, so
-    // the crown of the cast face carries a vertical highlight band (never the whole face lit, never all dark)
-    const toCam = V.sub(f.cam.pos, foot);
-    const hc = V.norm(V.madd(toCam, fup, -V.dot(toCam, fup)));
-    // the light the faces are aimed at: look's moon at this place (the same direction look computes), else the sun
-    const sd = moonDir(f);
-    const hs = V.madd(sd, fup, -V.dot(sd, fup));
-    const hh = V.norm(V.add(hc, V.mul(V.norm(hs), clamp(V.dot(sd, fup) * 6 + 1, 0, 1))));
-    const zx = V.dot(hh, x),
-      zz = V.dot(hh, z);
-    const yaw = Math.atan2(zx, zz) + L.aim[i] + Math.sin(t * 0.21 + i) * 0.006;
-    const Zf = V.norm(V.add(V.mul(z, Math.cos(yaw)), V.mul(x, Math.sin(yaw))));
-    const Xf0 = V.cross(fup, Zf);
-    const tilt = Math.sin(t * 0.37 + i * 1.7) * 0.004 * rise;
-    // each leans a few degrees toward the viewer, as if set down by the sea that cast it: a face tipped forward mirrors
-    // the glowing sea (the reflected horizon crosses it about two thirds up) instead of the black night sky above
-    const Y = V.norm(V.madd(V.madd(fup, Xf0, tilt), Zf, LEAN[i]));
-    const Z = V.norm(V.cross(Xf0, Y));
-    const X = V.cross(Y, Z);
+    // the face looks at the camera's peak position, turned by its own angle; fixed in the world, so the camera's arc
+    // and push move the moon's sheen and the reflected horizon across it
+    const toRef = V.sub(ref, foot);
+    const dist = V.len(toRef);
+    const hc = V.norm(V.madd(toRef, fup, -V.dot(toRef, fup)));
+    const side = V.cross(fup, hc);
+    const Zf = V.norm(V.add(V.mul(hc, Math.cos(AIM[i])), V.mul(side, Math.sin(AIM[i]))));
+    // upright as the camera sees it (the planet's curve tips a far thing away by dist / R: taken out, as an architect's
+    // lens would), plus a degree or two toward the viewer
+    const Y = V.norm(V.madd(fup, hc, Math.tan(dist / f.R + LEAN[i])));
+    const X = V.norm(V.cross(Y, Zf));
+    const Z = V.cross(X, Y);
     U.M.set([...X, ...Y, ...Z], i * 9);
     U.K.set([lift, S.hover[i], KINDS[i], S.press[i]], i * 4);
+    // (the sea domes up over a casting that pushes up through it; over one going down it just closes)
+    const dome = th > 0 ? 0 : domeAt(rise) * s;
+    U.D.set([dome, rise, FINISH[i], 0], i * 4);
 
-    // the screen box of the part above the sea
-    const b = ventureBoxes[i];
+    // the screen box of the part above the sea (the link's hit area), and the box the crisp pass draws in (the same,
+    // plus the sea's bulge over the casting while it rises)
+    const b = ventureBoxes[i],
+      d = drawBoxes[i];
     b.rise = rise;
-    b.vis = false;
+    b.vis = d.vis = false;
     if (!vis) continue;
     const base = V.madd(foot, Y, lift);
     const lo = Math.max(-lift, -0.3 * H * s),
       hi = H * s;
-    if (hi <= lo) continue;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    for (const sx of [-1, 1])
-      for (const sz of [-1, 1])
-        for (const hy of [lo, hi]) {
-          const q = f.project(V.add(base, V.add(V.add(V.mul(X, sx * MONO_E[0] * s), V.mul(Z, sz * MONO_E[2] * s)), V.mul(Y, hy))));
-          if (!q) continue;
-          x0 = Math.min(x0, q[0]); x1 = Math.max(x1, q[0]);
-          y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]);
-        }
+    const corner = (q: V3) => {
+      const c = f.project(q);
+      if (!c) return;
+      x0 = Math.min(x0, c[0]); x1 = Math.max(x1, c[0]);
+      y0 = Math.min(y0, c[1]); y1 = Math.max(y1, c[1]);
+    };
+    if (hi > lo)
+      for (const sx of [-1, 1])
+        for (const sz of [-1, 1])
+          for (const hy of [lo, hi]) corner(V.add(base, V.add(V.add(V.mul(X, sx * E[0] * s), V.mul(Z, sz * E[2] * s)), V.mul(Y, hy))));
     // clipped to the viewport, so a hit area never reaches over the nav or off screen
-    x0 = Math.max(x0, 0); y0 = Math.max(y0, 0); x1 = Math.min(x1, f.w); y1 = Math.min(y1, f.h);
-    if (x1 > x0 && y1 > y0) Object.assign(b, { x: x0, y: y0, w: x1 - x0, h: y1 - y0, vis: true });
+    const bx0 = Math.max(x0, 0), by0 = Math.max(y0, 0), bx1 = Math.min(x1, f.w), by1 = Math.min(y1, f.h);
+    if (bx1 > bx0 && by1 > by0) Object.assign(b, { x: bx0, y: by0, w: bx1 - bx0, h: by1 - by0, vis: true });
+    if (dome > 0)
+      for (const sx of [-1, 1])
+        for (const hy of [-0.2 * dome, dome * 1.05]) corner(V.add(foot, V.add(V.mul(X, sx * E[0] * s * 2.3), V.mul(Y, hy))));
+    if (x1 > x0 && y1 > y0) Object.assign(d, { x0, y0, x1, y1, vis: true });
   }
   // only near the place: elsewhere on the journey they are behind the planet, and every ray would still test them
-  const near = V.len(V.sub(f.cam.pos, origin)) < 8000;
+  const near = V.len(V.sub(f.cam.pos, origin)) < 9000;
   if (!near) for (let i = 0; i < 3; i++) U.P[i * 4 + 3] = 0;
   any &&= near;
   u.set('ventures_uOn', any ? 1 : 0);
   u.set('ventures_uGain', GAIN);
-  // the near sea cools through the place (fades in and out at the pin's ends, so the neighbours are untouched)
-  // V2 (never black): the near sea is no longer cooled here; the words stay AA as solid bone over the night sea
-  u.set('ventures_uCool', 0);
   u.set('ventures_uP', U.P);
   u.set('ventures_uM', U.M);
   u.set('ventures_uK', U.K);
   u.set('ventures_uE', U.E);
-  // the analytic environment (only what the sea's reflections of the monoliths see): night over a glowing sea, and
-  // the sun's radiance for the direct lobe (irradiance ~3 from a disc of the engine's size)
-  const sr = Math.max(f.sun.rad, 1e-3);
-  const sunK = 3 / (Math.PI * sr * sr);
-  u.set('ventures_uSunL', [sunK, sunK * 0.62, sunK * 0.36]);
+  u.set('ventures_uD', U.D);
   // night over a molten sea: the low air over the horizon is lit from below by the lava (a warm band), the zenith is
   // black; the band is what the metal mirrors as its bright line
   u.set('ventures_uZen', [0.0025, 0.003, 0.0055]);
@@ -240,7 +242,6 @@ let hits: HTMLElement[] = [];
 let items: HTMLElement[] = [];
 let parents: DOMRect[] = [];
 let armed = false;
-let lastFrame: Frame | null = null;
 let view = { w: 0, narrow: true };
 const offs: (() => void)[] = [];
 
@@ -273,19 +274,29 @@ function bindDom(root: HTMLElement) {
   });
 }
 
-/** The camera through the ventures place: the lead's path (same s, h, sun) with the horizon lower in frame, so the
- * monoliths stand in the middle of the screen between the heading and the list (phones look up a little). */
+/**
+ * The camera through the ventures place: one shot. It comes in low over the night sea with a long lens (the castings
+ * are 150 m tall and 600-750 m away: the lens, not a small world, makes them fill the frame), sinks lower and pushes in
+ * while they rise, arcing a little from left to right so the moon's sheen and the reflected horizon travel across the
+ * faces; they sink again on the long lens, and over the last 7% it lifts and widens into the first key of the thesis'
+ * climb (thesisKeys: keep the last key here equal to that one). Phones: a narrower frame, the live casting centred between the heading and the list.
+ */
 export function venturesKeys(R: number): Key[] {
   const deg = (a: number) => (a * Math.PI * R) / 180;
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
-  // look's cold moon, low behind the camera's shoulder (fades in from story-3 and out into the thesis)
-  const MOON = { 'look.moon': 1.2, 'look.moonAz': 150, 'look.moonEl': 12 };
+  // look's cold moon, low behind the camera's left shoulder (fades in from story-3 and out into the thesis)
+  // (it drifts round and down through the shot, as the camera's arc would have it: the sheen passes from Trellis to
+  // Crucible Sites and sinks down their faces)
+  const MOON = { 'look.moon': 0.5, 'look.moonAz': 141, 'look.moonEl': 8.5 };
+  const MOON2 = { 'look.moon': 0.5, 'look.moonAz': 158, 'look.moonEl': 5.8 };
+  const s = deg(150);
   return [
-    { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5 } },
-    // phones travel half as far through the place, so the live monolith grows less and stays clear of the lede
-    { at: ['ventures', 0.85], s: deg(150) + 51, h: 3.37, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 11.5, h: 1.5, s: deg(150) + 25.5 } },
-    // as they sink, phones tip down a little so the glowing horizon band holds the frame (never black)
-    { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -3, fov: 50, ...FAR, ...MOON, ph: { fov: 58, pitch: 5, h: 1.5, s: deg(150) + 30 } },
+    { at: ['ventures', 0], s, h: 24, x: -30, yaw: 2.3, pitch: 0.4, fov: 30, ...FAR, ...MOON, ph: { fov: 31, pitch: 4.4, x: -24, yaw: 1.9 } },
+    { at: ['ventures', 0.84], s: s + PEAK, h: 14, x: 30, yaw: -2.6, pitch: 0.85, fov: 26, ...FAR, ...MOON2, ph: { fov: 25, pitch: 3.7, x: 24, yaw: -2.2 } },
+    // they go back under while the lens is still long (the sinking is seen at full size): the camera only breathes
+    { at: ['ventures', 0.93], s: s + PEAK + 8, h: 16, x: 26, yaw: -2.25, pitch: 0.76, fov: 27, ...FAR, ...MOON2, ph: { fov: 26.5, pitch: 3.9, x: 21, yaw: -1.9 } },
+    // = the thesis' first key (lib/world/thesis.ts): the lift and the widening lens are the start of its climb
+    { at: ['ventures', 1], s: deg(151.5), h: 30, x: 0, yaw: 0, pitch: -2, fov: 50, ...FAR, ...MOON2, ph: { fov: 64, pitch: -3, x: 0, yaw: 0 } },
   ];
 }
 
@@ -293,20 +304,17 @@ export const ventures: WorldModule = {
   id: 'ventures',
   keys: venturesKeys,
   glsl: monolithGlsl,
-  hooks: ['hit', 'shade', 'env', 'sea', 'crisp'],
-  // the crisp pass's box: the union of the monoliths' screen boxes, a few px wider for the anti-aliased edges
+  hooks: ['hit', 'shade', 'sea', 'crisp'],
+  // the crisp pass's box: the union of the monoliths' screen boxes, a few px wider for the anti-aliased edges (their
+  // reflections are soft and belong to the sea: the scene pass draws them)
   crispBox(f) {
-    lastFrame = f;
     let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-    for (const b of ventureBoxes) {
+    for (const b of drawBoxes) {
       if (!b.vis) continue;
-      x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.w); y1 = Math.max(y1, b.y + b.h);
+      x0 = Math.min(x0, b.x0); y0 = Math.min(y0, b.y0); x1 = Math.max(x1, b.x1); y1 = Math.max(y1, b.y1);
     }
-    if (!(x1 > x0)) return null;
-    // ...and their reflections below (drawn in the crisp pass too)
-    const r = lastFrame ? ventureReflectBoxes(lastFrame) : null;
-    if (r) { x0 = Math.min(x0, r[0]); y0 = Math.min(y0, r[1]); x1 = Math.max(x1, r[2]); y1 = Math.max(y1, r[3]); }
-    return [x0 - 4, y0 - 4, x1 + 4, y1 + 4];
+    x0 = Math.max(x0 - 4, 0); y0 = Math.max(y0 - 4, 0); x1 = Math.min(x1 + 4, f.w); y1 = Math.min(y1 + 4, f.h);
+    return x1 > x0 && y1 > y0 ? [x0, y0, x1, y1] : null;
   },
   init({ root }) {
     bindDom(root);
@@ -340,7 +348,7 @@ export const ventures: WorldModule = {
         it = items[i];
       if (!h || !it) return;
       it.style.setProperty('--r', b.rise.toFixed(3));
-      it.style.pointerEvents = !armed || b.rise > 0.6 ? '' : 'none';
+      it.style.pointerEvents = !armed || b.rise > 0.5 ? '' : 'none';
       if (!b.vis || !r) {
         h.style.visibility = 'hidden';
         return;
@@ -355,5 +363,6 @@ export const ventures: WorldModule = {
   dispose() {
     offs.splice(0).forEach((fn) => fn());
     sec?.removeAttribute('data-armed');
+    armed = false;
   },
 };
