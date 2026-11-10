@@ -24,6 +24,7 @@
 // The camera for this place is `paypalKeys()`.
 
 import { cameraFrom, rayAt, seaT } from './camera';
+import planetGlsl from './glsl/planet.glsl';
 import type { Channels, Frame, V3 } from './frame';
 import type { Uniforms } from './gl';
 import type { Key } from './journey';
@@ -133,7 +134,10 @@ export function vent(p: number) {
   let flash = 0;
   for (const s of SITES) flash += Math.exp(-(((p - s.launch) / 0.012) ** 2));
   const spent = smooth(0.52, 0.86, p);
-  return { heat: warm * mix(1, 0.5, spent) * gone(p), flash: 0.55 * flash, grow: smooth(0, 0.1, p) };
+  // every throw takes some of it: the vent opens the scene twice the size of a spring and ends no bigger than one
+  let thrown = 0;
+  for (const s of SITES) thrown += smooth(s.launch - 0.005, s.launch + 0.04, p) / SITES.length;
+  return { heat: warm * mix(1, 0.5, spent) * gone(p), flash: 0.55 * flash, grow: smooth(0, 0.1, p), size: mix(2.2, 1.15, thrown) };
 }
 
 // ---------------------------------------------------------------- the camera
@@ -201,7 +205,7 @@ export function arcPos(R: number, th: Throw, u: number): V3 {
   return mul(dirAt(th.o, th.t, th.range * u), R * (1 + 4 * th.apex * u * (1 - u)));
 }
 /** A river from a place. `head`: the unit tangent it leaves along by design (the layout); `far`: where the layout
- * alone would end it; `j`: the point on one of look's own rivers it runs to (found and followed in `joinRivers`). */
+ * alone would end it; `j`: the point on one of look's own rivers it runs to (found and followed in `joinRiver`). */
 type River = { head: V3; far: V3; j: V3 | null; wait: number; e: V3; len: number; amp: number; phase: number; k: number; seed: number };
 const RIVERS: River[] = [0, 1, 2, 3, 4, 5, 6].map((i) => ({
   head: [0, 0, 1], far: [0, 1, 0], j: null, wait: 0, e: [0, 0, 1], len: 0,
@@ -258,6 +262,10 @@ export function layout(R: number, narrow: boolean, w: number, h: number) {
 // on the CPU (the same hash, value noise, meander and 3 octaves; double precision differs from the GPU's by far less
 // than a river's width), so each new river can be run to the nearest of look's rivers and follow it as it drifts:
 // the join is real, not a lucky overlap. Keep in step with planet.glsl if look changes its field.
+/** How fast look's network drifts (field units per second of uTime). Read off planet.glsl's own text, so the join
+ * holds whether look_seaTemp advects the field (`look_meander(p + vec3(t, 0.0, -t), q)`, t = uTime * 0.003) or lets
+ * the network stand still (`look_meander(p, q)`). */
+export const LOOK_DRIFT = /look_meander\(\s*p\s*\+\s*vec3\(\s*t\s*,/.test(planetGlsl) ? 0.003 : 0;
 const fr = (x: number) => x - Math.floor(x);
 function h13(x: number, y: number, z: number) {
   let a = fr(x * 0.1031), b = fr(y * 0.1031), c = fr(z * 0.1031);
@@ -274,7 +282,7 @@ function vnoise(x: number, y: number, z: number) {
     l(l(h13(ix, iy, iz + dz), h13(ix + 1, iy, iz + dz), ux), l(h13(ix, iy + 1, iz + dz), h13(ix + 1, iy + 1, iz + dz), ux), uy);
   return l(n(0), n(1), uz) * 2 - 1;
 }
-/** look_riverField(look_meander(q * Rg / 700 + (t, 0, -t), q)) at unit point q; ts = uTime * 0.003. */
+/** look_riverField(look_meander(q * Rg / 700 + (ts, 0, -ts), q)) at unit point q; ts = uTime * LOOK_DRIFT. */
 export function lookField(q: V3, ts: number): number {
   let px = q[0] * (2000 / 700) + ts, py = q[1] * (2000 / 700), pz = q[2] * (2000 / 700) - ts;
   let g: V3 = [vnoise(px * 0.7, py * 0.7, pz * 0.7), vnoise(px * 0.7 + 17.3, py * 0.7 + 17.3, pz * 0.7 + 17.3), vnoise(px * 0.7 + 31.7, py * 0.7 + 31.7, pz * 0.7 + 31.7)];
@@ -335,7 +343,8 @@ function joinRiver(i: number, from: V3, ts: number, shown: boolean) {
   const end = rv.j ?? rv.far;
   const c = clamp(dot(from, end), -1, 1);
   rv.e = norm(sub(end, mul(from, c)));
-  rv.len = Math.acos(c);
+  // (a meeting point that has drifted far while its river was showing: the river ends short of it, tapering out)
+  rv.len = Math.min(Math.acos(c), 0.36);
 }
 
 // ---------------------------------------------------------------- per frame: the trails texture
@@ -460,7 +469,7 @@ export const PAYPAL_GLSL = /* glsl */ `
 uniform float paypal_uOn;       // 0: nothing of the beat is on screen (every hook returns at once)
 uniform float paypal_uT;        // the clock, for the rivers' slow flow
 uniform vec4 paypal_uSpot[7];   // xyz unit direction of the place (0 = PayPal), w heat 0..1
-uniform vec4 paypal_uSpotB[7];  // x ring radius (rad), y ring strength, z flash, w how far its river has run (0..1)
+uniform vec4 paypal_uSpotB[7];  // x ring radius (rad; PayPal: its size), y ring strength, z flash, w how far its river has run (0..1)
 uniform vec4 paypal_uRiv[7];    // xyz the river's heading at the place (unit tangent), w its length (rad)
 uniform vec4 paypal_uRivB[7];   // x meander amplitude (of its length), y phase, z turns, w flow phase
 uniform vec4 paypal_uJoin[7];   // xyz where its river meets one of look's (unit), w how much it feeds it (0..1)
@@ -471,6 +480,9 @@ uniform float paypal_uMinPxCrisp; // thinnest line in the crisp pass (canvas px)
 uniform highp sampler2D paypal_uTrail;
 uniform vec4 paypal_uBox[${ROWS}]; // each row's screen box (tangent space x0, y0, x1, y1), so a pixel only reads rows it is inside
 #define PAYPAL_ROWS ${ROWS}
+// One gain on every kelvin the beat adds to the sea: the place to rebalance it if look's sea gets hotter or cooler
+// (Planck: +-10% here is about a factor 2 in the springs' radiance).
+const float PAYPAL_HEAT = 1.0;
 
 // blackbody: linear sRGB chroma (unit luminance) x a compressed power curve relative to 1500 K
 vec3 paypal_bbChroma(float K){
@@ -498,7 +510,7 @@ float paypal_kelvin(vec3 q, float fpr){
     if (cs < 0.9) continue;                       // beyond ~26 deg nothing of this place reaches
     vec3 d = q - sp.xyz * cs;
     float rr = length(d);
-    float big = i == 0 ? 1.7 : 1.;
+    float big = i == 0 ? sb.x : 1.;                // the vent's size (it has no ring: x is free)
     float rc = 0.0058 * big, rcE = max(rc, 1.2 * fpr);
     float core = exp(-rr*rr/(rcE*rcE)) * (rc/rcE);
     float pool = exp(-rr/(0.021 * big)) * (1. - smoothstep(0.08, 0.2, rr));
@@ -542,7 +554,7 @@ float paypal_kelvin(vec3 q, float fpr){
       }
     }
   }
-  return K + 34. * (1. - exp(-fed));
+  return (K + 34. * (1. - exp(-fed))) * PAYPAL_HEAT;
 }
 
 void paypal_sea(Ray r, Sea s, inout SeaMod m){
@@ -697,7 +709,7 @@ export const paypal: WorldModule = {
     const v = vent(p);
     const breathe = 1 + 0.035 * Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1);
     SPOT.set([...VENT.dir, v.heat * breathe], 0);
-    SPOTB.set([0, 0, v.flash * out, v.grow], 0);
+    SPOTB.set([v.size, 0, v.flash * out, v.grow], 0);
     SITES.forEach((s, i) => {
       const age = p - s.land;
       const lit = smooth(-0.004, 0.03, age) * out * (1 + 0.03 * Math.sin(t * 0.8 + s.seed * 20));
@@ -711,7 +723,7 @@ export const paypal: WorldModule = {
       SPOTB.set([ringR, ringS, flash, 1 - (1 - g) ** 2.5], (i + 1) * 4);
     });
     RIVERS.forEach((rv, i) => {
-      joinRiver(i, i ? SITES[i - 1].dir : VENT.dir, t * 0.003, SPOTB[i * 4 + 3] > 0.001 && SPOT[i * 4 + 3] > 0.001);
+      joinRiver(i, i ? SITES[i - 1].dir : VENT.dir, t * LOOK_DRIFT, SPOTB[i * 4 + 3] > 0.001 && SPOT[i * 4 + 3] > 0.001);
       RIV.set([...rv.e, rv.len], i * 4);
       RIVB.set([rv.amp, rv.phase, rv.k, rv.seed], i * 4);
       // it feeds the network once it has arrived (the last fifth of its run)
@@ -767,7 +779,7 @@ export const paypal: WorldModule = {
           const hit = f.hitSea(cx + dx * tw, cy);
           if (!hit) { sc = Math.min(sc, 0.05); continue; }
           const q = norm(hit.p);
-          sc = Math.min(sc, Math.abs(lookField(q, t * 0.003)));
+          sc = Math.min(sc, Math.abs(lookField(q, t * LOOK_DRIFT)));
           for (let m = 1; m <= 4; m++) if (dot(q, dirAt(from, rv.e, (rv.len * m) / 4)) > Math.cos(0.035)) sc -= 1;
         }
         sc -= 0.04 * n;

@@ -17,6 +17,14 @@ sparks, six places, the captions in order) and every part of the execution is no
   The river is drawn analytically (a meander between the two ends, distance from the centre line in closed form: no
   loops, no texture), finer than look's rivers at the spring and their width at the confluence, where its own heat
   tapers so two rivers do not add up to a white knot. **If look changes its river field, change `lookField` too.**
+  The drift is read off planet.glsl's own text (`LOOK_DRIFT`: 0.003 while look_seaTemp advects the field by uTime,
+  0 once the network stands still, which the planet role's Nov 10 branch does), so that one change needs nothing here.
+  `PAYPAL_HEAT` (GLSL const, 1.0) scales every kelvin the beat adds: the place to rebalance if look's sea gets hotter.
+- **The vent gives itself away.** It opens the scene 2.2x the size of a spring and every throw takes some of it; by
+  the heading it is no bigger than the six, and then it cools ("long after PayPal itself was gone").
+- **Life at rest:** slow pulses of hotter metal run down every new river, the vent and springs breathe a few percent,
+  the beads shimmer; a bead in the air lights the sea under it (inverse square). Two frames a second apart differ in
+  ~19% of their pixels.
 - **Throws seen side-on.** A throw straight away from the camera is a straight line however high it goes (V2's
   "beam"). The vent now sits to one side and throws across the frame, so every arc reads as an arc; height shows only
   where the surface is seen at an angle (the far half of the planet), which is where the long throws go. SpaceX peaks
