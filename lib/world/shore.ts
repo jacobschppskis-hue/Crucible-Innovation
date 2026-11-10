@@ -348,7 +348,7 @@ export function shoreKeys(R: number): Key[] {
     // dawn (the wordmark): the day side, high and fast, flying with the sun, then the turn and the descent past the cape
     ...run,
     // beside the black sand, looking back along its waterline to the setting sun: a slow pull back, panning to the sun
-    key(['dawn', 1], LAP - 850, 13, 170, 0.68, 0.56, 10, 4, HOME, 62),
+    key(['dawn', 1], LAP - 895, 13, 170, 0.68, 0.56, 10, 4, HOME, 62),
   ];
 }
 
