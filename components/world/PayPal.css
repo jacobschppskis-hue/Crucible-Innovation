@@ -76,6 +76,8 @@
 }
 .w-pp-names span {
   position: absolute;
+  /* the hairline draws out from the place first (--in 0..1, written by the module), then the name comes up */
+  opacity: calc(var(--in, 1) * 2.5 - 1.5);
 }
 .w-pp-names [data-pos='r'] i,
 .w-pp-names [data-pos='l'] i {
@@ -85,9 +87,13 @@
 }
 .w-pp-names [data-pos='r'] i {
   left: var(--gap);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--in, 1));
 }
 .w-pp-names [data-pos='l'] i {
   right: var(--gap);
+  transform-origin: 100% 50%;
+  transform: scaleX(var(--in, 1));
 }
 .w-pp-names [data-pos='r'] i::before,
 .w-pp-names [data-pos='l'] i::before {
@@ -119,9 +125,13 @@
 }
 .w-pp-names [data-pos='u'] i {
   bottom: var(--gap);
+  transform-origin: 50% 100%;
+  transform: scaleY(var(--in, 1));
 }
 .w-pp-names [data-pos='d'] i {
   top: var(--gap);
+  transform-origin: 50% 0;
+  transform: scaleY(var(--in, 1));
 }
 .w-pp-names [data-pos='u'] i::before,
 .w-pp-names [data-pos='d'] i::before {

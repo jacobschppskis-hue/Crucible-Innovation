@@ -50,9 +50,9 @@ const D2R = Math.PI / 180;
  * index 3 is the display line (the section's heading): it holds for over a fifth of the pin, with all six burning. */
 export const CAPTION_AT: [number, number][] = [
   [0.012, 0.092],
-  [0.108, 0.385],
-  [0.402, 0.622],
-  [0.64, 0.868],
+  [0.108, 0.372],
+  [0.388, 0.6],
+  [0.616, 0.868],
   [0.884, 0.992], // gone just before the pin releases (it would otherwise ride up under the nav)
 ];
 const CAP_FADE = 0.022;
@@ -103,10 +103,10 @@ export const SITES: Site[] = [
   site('YouTube', [0.43, 0.78], [0.56, 0.83], 0.1, 0.13, 0.75, 0.13, 'dl', 'd', [0.12, 0.02], [0.08, 0.02]),
   site('LinkedIn', [0.7, 0.475], [0.6, 0.61], 0.135, 0.15, 0.8, 0.75, 'r', 'r', [0.02, 0.08], [0.0, 0.08]),
   site('Yelp', [0.83, 0.655], [0.75, 0.68], 0.17, 0.15, 0.7, 0.37, 'dl', 'rd', [-0.06, 0.12], [0.08, 0.03]),
-  site('Palantir', [0.68, 0.85], [0.72, 0.87], 0.205, 0.13, 0.6, 0.99, 'rd', 'rd', [-0.08, 0.1], [0.08, 0.06]),
+  site('Palantir', [0.68, 0.85], [0.72, 0.87], 0.205, 0.13, 0.48, 0.99, 'rd', 'rd', [-0.08, 0.1], [0.08, 0.06]),
   // Elon's share: SpaceX first and highest (it clears the atmosphere); Tesla later and short
-  site('SpaceX', [0.5, 0.405], [0.88, 0.72], 0.4, 0.19, 0.9, 0.61, 'rl', 'dl', [0.1, 0.0], [0.06, 0.05]),
-  site('Tesla', [0.15, 0.85], [0.33, 0.86], 0.49, 0.11, 0.3, 0.23, 'rd', 'ld', [0.1, 0.08], [-0.07, 0.07]),
+  site('SpaceX', [0.5, 0.405], [0.88, 0.72], 0.385, 0.19, 0.9, 0.61, 'rl', 'dl', [0.1, 0.0], [0.06, 0.05]),
+  site('Tesla', [0.15, 0.85], [0.33, 0.86], 0.47, 0.11, 0.3, 0.23, 'rd', 'ld', [0.1, 0.08], [-0.07, 0.07]),
 ];
 /** PayPal's vent: where it sits at REF_P, its name's side, where its own river runs. */
 const VENT = {
@@ -116,7 +116,7 @@ const VENT = {
   dir: [0, 1, 0] as V3,
 };
 /** Wide screens see the throws far more side-on (a shallower look at the planet): lower them there. */
-const LOFT_WIDE = 0.72;
+const LOFT_WIDE = 0.64;
 /** The frame the layout is composed for: the heading's held moment. */
 export const REF_P = 0.74;
 const TAU_HOT = 0.027; // p: the head's white-gold cools to orange
@@ -143,7 +143,8 @@ const CAMS = {
   ph: { s0: 18.4, s1: 24.2, h0: 3500, h1: 2650, fov: 60, limb0: 0.35, limb1: 0.3, roll: 0, aspect: 390 / 844 },
   dt: { s0: 17.4, s1: 24.6, h0: 2950, h1: 2300, fov: 44, limb0: 0.5, limb1: 0.46, roll: -7, aspect: 1440 / 900 },
 };
-/** The move's own time: constant speed, eased in and out over the first and last 7% (it meets its neighbours at rest). */
+/** The move's own time (0..1 over MOVE): constant speed, eased in and out over its first and last 7% (it meets its
+ * neighbours' segments at rest). */
 export function drive(f: number) {
   const r = 0.07;
   const ramp = (x: number) => {
@@ -155,35 +156,40 @@ export function drive(f: number) {
 }
 /** The vertical field of view cameraFrom() ends up with (portrait screens keep the frame's width). */
 const effFov = (fov: number, aspect: number) => (aspect < 0.6 ? (2 * Math.atan((Math.tan(0.5 * fov * D2R) * 0.6) / aspect)) / D2R : fov);
-/** The beat's camera as journey channels. */
+/** The move runs over this part of the pin. Before it the camera is still arriving from the story's climb and after
+ * it it is already leaving for the next place: the module sets no keys there, so each neighbour's one eased segment
+ * spans its gap AND that stretch of the pin (about 1.4 viewports each instead of a 1-viewport lurch). */
+const MOVE: [number, number] = [0.1, 0.9];
+/** The beat's camera as journey channels (f inside MOVE; clamped outside). */
 export function beatChannels(f: number, narrow: boolean, R: number): Channels {
   const C = narrow ? CAMS.ph : CAMS.dt;
-  const k = drive(clamp(f));
+  const k = drive(clamp((f - MOVE[0]) / (MOVE[1] - MOVE[0])));
   const h = Math.exp(mix(Math.log(C.h0), Math.log(C.h1), k));
   const dip = Math.acos(R / (R + h));
   const L = mix(C.limb0, C.limb1, k);
   const pitch = -(dip + Math.atan((1 - 2 * L) * Math.tan(0.5 * effFov(C.fov, C.aspect) * D2R))) / D2R;
   // a slight bank on wide screens (the limb rises to the right, the captions have the sky on the left); it comes and
-  // goes inside the place, since the next places' keys do not set a roll
-  const roll = C.roll * smooth(0, 0.25, f) * (1 - smooth(0.82, 1, f));
+  // goes inside the move, since the neighbours' keys do not set a roll
+  const roll = C.roll * smooth(MOVE[0], 0.3, f) * (1 - smooth(0.72, MOVE[1], f));
   return { s: R * D2R * mix(C.s0, C.s1, k), h, yaw: 0, pitch, roll, fov: C.fov };
 }
 /** Journey keys for the `paypal` place (desktop values, phones in `ph`): the move, sampled densely (no kinks). */
 export function paypalKeys(R: number): Key[] {
   const out: Key[] = [];
-  const fs = [0, 0.0175, 0.035, 0.0525, 0.07];
-  for (let k = 1; k <= 17; k++) fs.push(0.07 + (0.86 * k) / 17);
-  fs.push(0.9475, 0.965, 0.9825, 1);
-  for (const f of fs) {
+  const us = [0, 0.0175, 0.035, 0.0525, 0.07];
+  for (let k = 1; k <= 17; k++) us.push(0.07 + (0.86 * k) / 17);
+  us.push(0.9475, 0.965, 0.9825, 1);
+  us.forEach((u, n) => {
+    const f = mix(MOVE[0], MOVE[1], u);
     const d = beatChannels(f, false, R), m = beatChannels(f, true, R);
     const k: Key = {
       // quiet: look's own rivers at about half their radiance, so the six new sources are what burns on the night side
       at: ['paypal', f], s: d.s, h: d.h, yaw: d.yaw, pitch: d.pitch, roll: d.roll, fov: d.fov, quiet: 0.5,
       ph: { s: m.s, h: m.h, yaw: m.yaw, pitch: m.pitch, roll: m.roll, fov: m.fov },
     };
-    if (f > 0) k.ease = 'linear';
+    if (n > 0) k.ease = 'linear';
     out.push(k);
-  }
+  });
   return out;
 }
 
@@ -457,6 +463,7 @@ uniform vec4 paypal_uSpot[7];   // xyz unit direction of the place (0 = PayPal),
 uniform vec4 paypal_uSpotB[7];  // x ring radius (rad), y ring strength, z flash, w how far its river has run (0..1)
 uniform vec4 paypal_uRiv[7];    // xyz the river's heading at the place (unit tangent), w its length (rad)
 uniform vec4 paypal_uRivB[7];   // x meander amplitude (of its length), y phase, z turns, w flow phase
+uniform vec4 paypal_uJoin[7];   // xyz where its river meets one of look's (unit), w how much it feeds it (0..1)
 uniform vec4 paypal_uHead[6];   // the beads in the air: xyz relative to the camera, w intensity
 uniform float paypal_uRows;     // rows used in the trails texture
 uniform float paypal_uMinPx;    // thinnest line (render px)
@@ -482,7 +489,7 @@ vec3 paypal_bb(float K){ return paypal_bbChroma(max(K, 700.)) * pow(K/1500., 4.5
 // kept), so nothing aliases toward the limb. No sprite, no outline: only temperature, which look's Planck curve turns
 // into light.
 float paypal_kelvin(vec3 q, float fpr){
-  float K = 0.;
+  float K = 0., fed = 0.;
   for (int i = 0; i < 7; i++){
     vec4 sp = paypal_uSpot[i];
     vec4 sb = paypal_uSpotB[i];
@@ -496,11 +503,19 @@ float paypal_kelvin(vec3 q, float fpr){
     float core = exp(-rr*rr/(rcE*rcE)) * (rc/rcE);
     float pool = exp(-rr/(0.021 * big)) * (1. - smoothstep(0.08, 0.2, rr));
     K += sp.w * ((i == 0 ? 560. : 400.) * core + 125. * big * pool);
-    K += sb.z * 240. * exp(-rr*rr/(0.018*0.018));           // the landing (or the throw): a brief wide flush
+    K += sb.z * 210. * exp(-rr*rr/(0.012*0.012));           // the landing (or the throw): a brief wide flush
     if (sb.y > 0.001){                                       // the ring of heat running out
       float rw = max(0.007 + 0.34 * sb.x, 1.5 * fpr);
       float x = (rr - sb.x) / rw;
       K += sb.y * 105. * exp(-x*x);
+    }
+    // where its river has reached one of look's, the sea is a little warmer for a stretch: Planck's law does the rest
+    // (the dark sea barely shows 30 K, a river already glowing gains a third), so the network itself burns a little
+    // hotter round every confluence; several close together saturate (fed, below) instead of adding up to a blaze
+    vec4 jn = paypal_uJoin[i];
+    if (jn.w > 0.001){
+      float dj = 2. * (1. - dot(q, jn.xyz));               // squared chord to the meeting point
+      fed += jn.w * exp(-dj / (0.06*0.06));
     }
     vec4 rv = paypal_uRiv[i];
     float L = rv.w;
@@ -527,7 +542,7 @@ float paypal_kelvin(vec3 q, float fpr){
       }
     }
   }
-  return K;
+  return K + 34. * (1. - exp(-fed));
 }
 
 void paypal_sea(Ray r, Sea s, inout SeaMod m){
@@ -543,7 +558,7 @@ void paypal_sea(Ray r, Sea s, inout SeaMod m){
       vec3 v = hd.xyz - P;
       float d2 = dot(v, v);
       if (d2 > 6.0e6) continue;
-      m.emit += paypal_bb(1750.) * hd.w * 2800. * max(dot(v, s.up), 0.) / ((d2 + 1.2e5) * sqrt(d2 + 1.));
+      m.emit += paypal_bb(1750.) * hd.w * 1300. * max(dot(v, s.up), 0.) / ((d2 + 1.6e5) * sqrt(d2 + 1.));
     }
   }
 }
@@ -632,7 +647,7 @@ const S = {
   section: null as HTMLElement | null,
   caps: [] as HTMLElement[],
   names: [] as HTMLElement[],
-  labels: [0, 1, 2, 3, 4, 5, 6].map(() => ({ x: 0, y: 0, o: 0, po: 0 })), // [PayPal, ...SITES]; po: o of the frame before
+  labels: [0, 1, 2, 3, 4, 5, 6].map(() => ({ x: 0, y: 0, o: 0, po: 0, a: 0 })), // [PayPal, ...SITES]; o = a (how far it has come in) x the beat's fade-out; po: o of the frame before
   caps01: [0, 0, 0, 0, 0],
   rows: 0,
   ver: 0,
@@ -640,7 +655,7 @@ const S = {
   posVer: -1,
   box: null as DOMRect | null,
 };
-const SPOT = new Float32Array(28), SPOTB = new Float32Array(28), RIV = new Float32Array(28), RIVB = new Float32Array(28); // reused every frame
+const SPOT = new Float32Array(28), SPOTB = new Float32Array(28), RIV = new Float32Array(28), RIVB = new Float32Array(28), JOIN = new Float32Array(28); // reused every frame
 /** The beat's labels, captions and trail rows of the last frame (tests, lab). */
 export const paypalDebug = () => ({ rows: S.rows, labels: S.labels.map((l) => ({ ...l })), caps: [...S.caps01], box: [...cssBox] });
 
@@ -699,7 +714,11 @@ export const paypal: WorldModule = {
       joinRiver(i, i ? SITES[i - 1].dir : VENT.dir, t * 0.003, SPOTB[i * 4 + 3] > 0.001 && SPOT[i * 4 + 3] > 0.001);
       RIV.set([...rv.e, rv.len], i * 4);
       RIVB.set([rv.amp, rv.phase, rv.k, rv.seed], i * 4);
+      // it feeds the network once it has arrived (the last fifth of its run)
+      const end = rv.j ?? rv.far;
+      JOIN.set([end[0], end[1], end[2], rv.j ? smooth(0.8, 1, SPOTB[i * 4 + 3]) * SPOT[i * 4 + 3] : 0], i * 4);
     });
+    u.set('paypal_uJoin', JOIN);
     u.set('paypal_uSpot', SPOT);
     u.set('paypal_uSpotB', SPOTB);
     u.set('paypal_uRiv', RIV);
@@ -720,14 +739,16 @@ export const paypal: WorldModule = {
     u.set('paypal_uMinPxCrisp', 1.6); // canvas px: ~0.55 CSS px at dpr 3, a hairline that stays solid
     // read layout here, before any module writes the DOM this frame (a read in after() would force a layout)
     S.box = S.names[0]?.parentElement?.getBoundingClientRect() ?? null;
-    const lab = (dir: V3, o: number, k: number) => {
+    const labOut = 1 - smooth(0.9, 0.985, p);
+    const lab = (dir: V3, a: number, k: number) => {
       const pr = f.project(mul(dir, R));
       const L = S.labels[k];
       L.po = L.o;
       if (pr) {
         L.x = pr[0];
         L.y = pr[1];
-        L.o = o;
+        L.a = a;
+        L.o = a * labOut;
       } else L.o = 0;
     };
     // a name that is not showing yet takes, of the sides no throw crosses, the one that lies darkest: away from look's
@@ -754,10 +775,9 @@ export const paypal: WorldModule = {
       }
       if (pick !== LAB_POS[k]) { LAB_POS[k] = pick; layoutVer++; }
     };
-    const labOut = 1 - smooth(0.9, 0.985, p);
-    lab(VENT.dir, smooth(0.012, 0.05, p) * labOut, 0);
+    lab(VENT.dir, smooth(0.012, 0.05, p), 0);
     SITES.forEach((s, i) => {
-      lab(s.dir, DBG_ALL ? 1 : smooth(s.land + 0.03, s.land + 0.075, p) * labOut, i + 1);
+      lab(s.dir, DBG_ALL ? 1 : smooth(s.land + 0.03, s.land + 0.085, p), i + 1);
       side(i + 1, s.dir);
     });
   },
@@ -782,9 +802,11 @@ export const paypal: WorldModule = {
     S.names.forEach((n, i) => {
       const L = S.labels[i];
       if (!L) return;
-      const o = L.o * leave;
+      const o = L.o * leave, a = L.o > 0 ? L.a : 0;
       n.style.translate = `${snap(L.x - ox)}px ${snap(L.y - oy)}px`;
-      n.style.opacity = o.toFixed(3);
+      // the hairline draws out over the first 60% of the fade, the whole annotation dims as one on the way out
+      n.style.opacity = (a > 0 ? Math.min(1, a * 2.5) * (o / a) : 0).toFixed(3);
+      n.style.setProperty('--in', a.toFixed(3));
       n.style.visibility = o > 0.001 ? 'visible' : 'hidden';
     });
   },
@@ -799,6 +821,7 @@ export const paypal: WorldModule = {
       n.style.opacity = '';
       n.style.translate = '';
       n.style.visibility = '';
+      n.style.removeProperty('--in');
     });
   },
 };
