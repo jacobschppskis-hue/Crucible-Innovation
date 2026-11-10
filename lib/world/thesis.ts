@@ -71,10 +71,10 @@ export function thesisKeys(R: number): Key[] {
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
   return [
     // the climb out of ventures ends here: already in low orbit (the screen of scroll before the pin is the climb)
-    { at: ['thesis', 0], s: deg(152.2), h: 800, yaw: -26, pitch: -21, fov: 48, ...FAR, ph: { fov: 60, pitch: -18.7 } },
-    { at: ['thesis', 0.45], s: deg(154.2), h: 1400, yaw: -26, pitch: -28.9, fov: 47, ...FAR, ph: { fov: 60, pitch: -26.4 } },
+    { at: ['thesis', 0], s: deg(152.2), h: 800, yaw: -32, pitch: -21, fov: 48, ...FAR, ph: { fov: 60, pitch: -18.7 } },
+    { at: ['thesis', 0.45], s: deg(154.2), h: 1400, yaw: -32, pitch: -28.9, fov: 47, ...FAR, ph: { fov: 60, pitch: -26.4 } },
     // (the shore's first key is at h 900, turned toward the sunrise: the camera comes down into it as the sea cools)
-    { at: ['thesis', 1], s: deg(156.5), h: 1800, yaw: -26, pitch: -32.9, fov: 46, ...FAR, ph: { fov: 60, pitch: -30.3 } },
+    { at: ['thesis', 1], s: deg(156.5), h: 1800, yaw: -32, pitch: -32.9, fov: 46, ...FAR, ph: { fov: 60, pitch: -30.3 } },
   ];
 }
 

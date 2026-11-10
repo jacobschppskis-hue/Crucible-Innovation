@@ -62,7 +62,8 @@ float look_thesisT(float T0, float bas, float riv, float af, float st) {
   // the heated zone widens from the banks outward (af is the way from the nearest river); at the end the valleys the
   // rivers run through are the hottest sea and the hearts of the basins the coolest: one convecting sea, not a ball
   float sp = 1.0 - smoothstep(0.02, 0.5, af / max(ms, 0.03));
-  float Tt = T0 - 55.0 + riv * mix(0.6, 0.96, mr) * mix(1.0, 0.74, mb) + bas * 1.5 + 150.0 * sp + 125.0 * mb + 9.0 * st * mb;
+  // (cold, the basins read a little stronger: on a dark sea they are what shows the sphere under the rivers)
+  float Tt = T0 - 28.0 + riv * mix(0.6, 0.96, mr) * mix(1.0, 0.74, mb) + bas * mix(2.2, 1.5, ms) + 150.0 * sp + 125.0 * mb + 9.0 * st * mb;
   return mix(T, Tt, c);
 }
 
@@ -172,7 +173,8 @@ float look_ggx(float nh, float a) {
 float look_farMix(Sea s) { return max(smoothstep(250.0, 1400.0, s.t), smoothstep(60.0, 200.0, uCamH)); }
 
 // Radiance leaving the planet's surface at s toward the camera (before the air in between: look_atmo adds that).
-vec3 look_planetFarT(Ray r, Sea s, float dT) {
+// mirror: the sea also mirrors its own sky (primary rays; a constant false compiles the march out of reflections).
+vec3 look_planetFarX(Ray r, Sea s, float dT, bool mirror) {
   vec3 q = s.q;
   // s.fw is the footprint's long (grazing) axis; isotropic noise filtered by it blurs a far sea to mush. Use the
   // geometric mean of the two axes (what anisotropic filtering approximates), so detail survives toward the horizon.
@@ -245,7 +247,7 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   // the glossy sea mirrors its own sky: toward the limb (Fresnel) it picks up the air above it, the dusk band along
   // the terminator, the airglow line on the night side, the furnace glow of the heated air in the thesis. Four samples
   // of the same air the limb is drawn with, only where the mirror is strong enough to show.
-  if (r.depth == 0 && W > 0.0 && uQ > 0.4 && fres > 0.07 && land < 1.0) {
+  if (mirror && r.depth == 0 && W > 0.0 && uQ > 0.4 && fres > 0.07 && land < 1.0) {
     vec3 Lr, Tr;
     look_march(q * (look_uRg + 0.02), reflect(r.rd, q), 1e9, 4, 0.5, Lr, Tr);
     col += Lr * (fres * W * (1.0 - land));
@@ -254,6 +256,8 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   return col;
 }
 
-vec3 look_planetFar(Ray r, Sea s) { return look_planetFarT(r, s, 0.0); }
+vec3 look_planetFarT(Ray r, Sea s, float dT) { return look_planetFarX(r, s, dT, true); }
+// the planet in reflections (lava_env)
+vec3 look_planetFar(Ray r, Sea s) { return look_planetFarX(r, s, 0.0, false); }
 // with the sea hooks' modifications: heat (lava's 0..1 scale, ~400 K per unit) and emitted radiance
-vec3 look_planetFarMod(Ray r, Sea s, SeaMod m) { return look_planetFarT(r, s, m.heat * 400.0) + m.emit; }
+vec3 look_planetFarMod(Ray r, Sea s, SeaMod m) { return look_planetFarX(r, s, m.heat * 400.0, true) + m.emit; }
