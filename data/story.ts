@@ -6,6 +6,9 @@ export type FounderStory = {
   role: string;
   /** CRT portrait (public/team/*-crt.webp, made by scripts/crt-portraits.py): a bone phosphor screen on transparent. */
   portrait: string;
+  /** The founder's own poster (made by Jacob and Charlie), cropped so the two share no panels: the chapter's title card.
+   * `src` is the 1080 px file; a 540 px one sits beside it (public/team/poster-<name>-{540,1080}.webp). */
+  poster: { src: string; w: number; h: number; alt: string };
   paragraphs: string[];
   /** One sentence of a paragraph set at display size where it stands: the paragraph flows into it and continues after,
    * so it is read once, in order. `sentence` must appear exactly once in `paragraphs[paragraph]`. */
@@ -17,6 +20,7 @@ export const stories: FounderStory[] = [
     name: 'Jacob Schopp',
     role: 'Co-founder, Crucible',
     portrait: '/team/jacob-crt.webp',
+    poster: { src: '/team/poster-jacob-1080.webp', w: 1080, h: 913, alt: 'Jacob Schopp at his laptop in a Mathews Archery cap, a poster Jacob and Charlie made' },
     paragraphs: [
       'My name is Jacob Schopp, and I am still in high school. Crucible, which I co-founded with Charlie Rochford, is the name we build our ventures under.',
       'Crucible started with a car ride, when my dad put on the audiobook of Walter Isaacson’s biography of Elon Musk. Most of what I took from it concerned Elon himself, but part of the book covers PayPal and the people who worked there before eBay bought the company in 2002. After the sale, members of that group went on to found YouTube, LinkedIn, Yelp and Palantir, while Elon used much of his share of the money to fund SpaceX and later to invest in Tesla. People call them the PayPal Mafia. It is interesting that so much came out of a single company, and I do not believe it was luck, the members being exceptional people who found each other early and continued to back one another long after PayPal itself was gone. When Jeremy Stoppelman and Russel Simmons set out to start Yelp, it was their former PayPal colleague Max Levchin who put up the first million dollars.',
@@ -31,6 +35,7 @@ export const stories: FounderStory[] = [
     name: 'Charles Rochford',
     role: 'Co-founder, Crucible',
     portrait: '/team/charlie-crt.webp',
+    poster: { src: '/team/poster-charlie-1080.webp', w: 1080, h: 1251, alt: 'Charles Rochford at his laptop among equations and a 45 lb plate, a poster Jacob and Charlie made' },
     paragraphs: [
       'I’m Charles Rochford, a young entrepreneur, developer, and co-founder of Crucible Innovation. I’ve always been fascinated by technology, entrepreneurship, and the potential for new ideas to change the world. My passion comes from a desire to create something meaningful, challenge conventional thinking, and contribute to a future that’s better than the world we live in today.',
       'My interest in entrepreneurship began with a curiosity about how businesses operate and how technology can be used to solve real-world problems. Since then, I’ve spent much of my time exploring new ideas, developing technical skills, and learning what it takes to turn a concept into something valuable. Through my experiences in software development, business strategy, and entrepreneurship, I’ve come to appreciate both the creativity and persistence required to build something from the ground up.',

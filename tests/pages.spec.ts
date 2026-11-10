@@ -81,14 +81,29 @@ test('/work without motion: the client site is still there, top of the page plus
   await ctx.close();
 });
 
-test('no alloy beat and CRT portraits on / and /sites', async ({ page }) => {
+test('no alloy beat; the founders\' posters on /, CRT portraits with faces on /sites', async ({ page }) => {
   for (const path of ['/', '/sites']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('.alloy, [class*="AlloyBeat"], [data-alloy]')).toHaveCount(0);
+    if (path === '/') {
+      // each chapter opens on its founder's own poster, lazy and sized, both sizes there
+      const posters = page.locator('.wch-poster img');
+      await expect(posters).toHaveCount(2);
+      for (const img of await posters.all()) {
+        expect(await img.getAttribute('loading')).toBe('lazy');
+        expect(Number(await img.getAttribute('width'))).toBeGreaterThan(0);
+        for (const url of (await img.getAttribute('srcset'))!.split(',').map((x) => x.trim().split(' ')[0])) {
+          expect((await page.request.get(url)).status(), url).toBe(200);
+        }
+      }
+    }
     const portraits = page.locator('img[alt^="CRT "]');
     const n = await portraits.count();
-    if (path === '/') expect(n).toBeGreaterThan(0);
-    for (let i = 0; i < n; i++) expect(await portraits.nth(i).getAttribute('src')).toMatch(/-crt\.webp/);
+    if (path === '/sites') expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) {
+      expect(await portraits.nth(i).getAttribute('src')).toMatch(/-crt\.webp/);
+      expect(await portraits.nth(i).getAttribute('alt'), 'a face, not the "No signal" placeholder').toMatch(/^CRT portrait of /);
+    }
     // Straight on the page, not on a bone card.
     await expect(page.locator('img[alt^="CRT "]').locator('xpath=ancestor::*[contains(@class,"bg-bone")]')).toHaveCount(0);
   }

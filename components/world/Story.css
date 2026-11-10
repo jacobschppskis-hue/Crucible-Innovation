@@ -40,15 +40,25 @@
   padding-bottom: clamp(4.5rem, 13vh, 8rem);
 }
 
-/* the title card: the tube, small, and the name at display size on two lines, standing on the tube's base line */
+/* the title card: the founder's own poster (two different crops, so the pair never reads as one template twice), then
+   the name at display size on two lines. The poster is a print laid on the sky: its own dark ground, a hairline edge,
+   nothing behind it. */
 .wch-title {
   display: grid;
-  grid-template-columns: 7rem minmax(0, 1fr);
-  gap: 1.125rem;
-  align-items: end;
+  gap: 1.5rem;
 }
-.wch-tube {
+.wch-poster {
+  margin: 0;
   width: 100%;
+  max-width: 26rem;
+}
+.wch-poster img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--line);
+  user-select: none;
 }
 .wch-name {
   font-family: var(--font-display);
@@ -168,7 +178,6 @@
     font-size: 1.25rem;
   }
   .wch-title {
-    grid-template-columns: 9.5rem minmax(0, 1fr);
     gap: 2rem;
   }
   .wch-name {
@@ -208,39 +217,5 @@
 @media (min-width: 1280px) {
   .wch-p {
     font-size: 1.1875rem;
-  }
-}
-
-/* ---------- the tube ---------- */
-/* The CRT as a small object in the world, not a panel on the sky: a dark glass face, a curved-glass highlight from the
-   sky above, and the rim of the bezel catching the warm light of the sea below. All on the tube itself, nothing
-   behind it. A real CRT portrait (same file names, 5:6) drops into the same frame. */
-.wch-tube .crt {
-  border-radius: 7% / 6%;
-}
-.wch-tube .crt-scan {
-  /* the tube's own light, scaled to its size */
-  box-shadow: 0 0 1.25rem 0 color-mix(in oklab, var(--ember-hot) 9%, transparent);
-}
-.wch-tube .crt::after {
-  content: '';
-  position: absolute;
-  inset: 3.5%;
-  border-radius: 6% / 5%;
-  pointer-events: none;
-  /* the glass bulges: a soft sky reflection across its upper half, falling off toward the edges */
-  background: radial-gradient(120% 70% at 30% 8%, color-mix(in oklab, var(--bone) 10%, transparent), transparent 55%);
-  /* the bezel's rim: cool from the sky on top, warm from the sea underneath */
-  box-shadow:
-    inset 0 0 0 1px var(--line-strong),
-    inset 0 1px 0 color-mix(in oklab, var(--bone) 22%, transparent),
-    inset 0 -1px 0 color-mix(in oklab, var(--ember) 45%, transparent);
-}
-@media (prefers-reduced-motion: no-preference) {
-  .js .wch-tube .crt:not([data-on])::after {
-    opacity: 0.4;
-  }
-  .js .wch-tube .crt:not([data-on]) .crt-scan {
-    box-shadow: none;
   }
 }

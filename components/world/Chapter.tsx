@@ -1,6 +1,5 @@
 import type { StoryLift } from '@/data/home';
 import type { FounderStory } from '@/data/story';
-import { Portrait } from '@/components/Builders';
 import './Story.css';
 
 type Run = { t: string; size?: 'lead' | 'title' | 'display' };
@@ -10,7 +9,7 @@ type Run = { t: string; size?: 'lead' | 'title' | 'display' };
  * on the dark sky (the world keeps the planet's limb low on phones and to the right on wide screens: journey.ts);
  * nothing is put behind it: no scrim, no box, no shadow.
  *
- * It opens with a title card: the founder's CRT tube, small, beside the name at display size. `intro` comes before it
+ * It opens with a title card: the founder's own poster (data/story.ts `poster`), then the name at display size. `intro` comes before it
  * (the section's heading), inside the same place. `interlude` is a scene rendered in the middle of the account, after
  * paragraph `after` (Jacob's: PayPal, right after the paragraph that tells it); the account then picks up where it
  * stopped under a small running name, so his display break-out lands straight after the six sparks. `lifts` are
@@ -48,9 +47,20 @@ export function Chapter({
       <div className="wch-part container-x" data-place={place[0]}>
         {intro}
         <header className="wch-title">
-          <div className="wch-tube">
-            <Portrait name={s.name} src={s.portrait} sizes="(min-width: 900px) 10rem, 7rem" />
-          </div>
+          <figure className="wch-poster" data-reveal="">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a static export: the two sizes are listed here */}
+            <img
+              src={s.poster.src}
+              srcSet={`${s.poster.src.replace('-1080', '-540')} 540w, ${s.poster.src} 1080w`}
+              sizes="(min-width: 900px) 26rem, calc(100vw - 2.5rem)"
+              width={s.poster.w}
+              height={s.poster.h}
+              alt={s.poster.alt}
+              loading="lazy"
+              decoding="async"
+              draggable={false}
+            />
+          </figure>
           <div className="wch-who">
             <h3 id={id} className="wch-name wide words" data-words="">
               {s.name.split(' ').map((w, k, all) => (
