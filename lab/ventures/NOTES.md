@@ -118,5 +118,28 @@ The reviewer: small on phones, a plain CG chrome gradient, a tiny soft mark, fra
   construction; the crisp box is now only the castings.
 - **The last key equals thesisKeys' first** (s 151.5 deg, h 30, fov 50 / 64): no cut at the boundary. If the thesis'
   first key changes, change `['ventures', 1]` with it.
-- The stills harness (`lab/ventures/still.html`, `scripts/monolith-stills.mjs`) still speaks the old interface
-  (`ventures_uE` as one vec4, `ventures_skyA`, `ventures_uSunL`): it needs porting before the stills are re-rendered.
+
+## Nov 10 (morning): the stills are the home page's own frame
+`public/film/monoliths/<slug>-{600,1200,2400}.webp` (the /ventures pages, the no-WebGL / no-JS home page) and the
+share images made from them (`node scripts/venture-og.mjs`) were still the old bronze slab. Now:
+- **`lab/ventures/still.html` is not a studio any more.** It holds `FRAME`: the world's state at the settled shot
+  (place `ventures`, f 0.6, 1440 x 900), captured from the built site by `node scripts/monolith-stills.mjs --capture`
+  (it records every uniform the world sets, by name, and reads back look's sky-view LUT: at night the sky does not
+  vary with azimuth, so one column of the rows above the sea is the whole sky). On that state it runs the real
+  `monolith.glsl` (its SDF and `ventures_surface`) and the real tone curve (`post.glsl`, AgX), one casting standing.
+- **A shift lens, not a new camera:** the same camera position and rays as the home page, magnified and re-centred on
+  the casting, so every highlight lies where it lies there (Sites pale under the moon, Verge blue-grey, Trellis turned
+  away and dark, read by its cold arris, its warm flank and its foot). All three at the same px per metre (Crucible
+  Sites spans 10.5% to 89.4% of the frame, as the old stills did; Verge and Trellis are shorter on the same waterline).
+- **Left out on purpose:** the sea, the sky, bloom, grain, and the world's haze (it mixes the foot toward the sky
+  behind; a still has no sky). The casting is cut at its waterline. Its reflection (`ventures_streak`, alpha =
+  brightness) was tried under it (`?refl=0.45..1`): it read as a glowing pad, a halo. Off.
+- **Its own march:** `ventures_traceCov` stops after 32 steps; at this magnification a ray grazing a side face needs
+  about 70 and the upper half of Sites' flank went missing (a notch in the silhouette). `still_trace` is the same
+  bound, SDF and closest-approach coverage with 240 steps. 4 x 4 supersamples; premultiplied in display space (no
+  fringe: the dark lines on the left and top edges are the castings' own arrises, as on the home page).
+- Re-run after any change to `lib/world/ventures.ts`, its keys, `monolith.glsl` or look's night:
+  `npm run build && node scripts/monolith-stills.mjs --capture && node scripts/venture-og.mjs` (about a minute a
+  casting under software GL). Without `--capture` it renders from the stored frame.
+- Weak: Trellis' upper face is nearly as dark as the page it stands on (true to the home page; it reads by its
+  edges). At 2400 px the cut's lit lower lips show two or three tone steps.
