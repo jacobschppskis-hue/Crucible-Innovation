@@ -65,16 +65,18 @@ export function thesisHeat(f: Frame): { k: number; w: number; dim: number } {
 
 /** Camera keys for the Thesis: in orbit from its first frame, the planet large under the type. The limb sits ~61% down
  * a phone and ~64% down a desktop the whole way (pitch = -(dip - offset), dip = acos(R / (R + h))), while the camera
- * climbs and drifts on, so the heating sea slides slowly under it. */
+ * climbs and drifts on, so the heating sea slides slowly under it. It looks left of the track (phones 32 deg, toward
+ * a river system; desktop 48 deg: from this high the limb straight ahead is already past the morning terminator, and
+ * the first sliver of the shore's sunrise showed there as a broken dash; the shore then pans right to reveal it). */
 export function thesisKeys(R: number): Key[] {
   const deg = (a: number) => (a * Math.PI * R) / 180;
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
   return [
     // the climb out of ventures ends here: already in low orbit (the screen of scroll before the pin is the climb)
-    { at: ['thesis', 0], s: deg(152.2), h: 800, yaw: -32, pitch: -21, fov: 48, ...FAR, ph: { fov: 60, pitch: -18.7 } },
-    { at: ['thesis', 0.45], s: deg(154.2), h: 1400, yaw: -32, pitch: -28.9, fov: 47, ...FAR, ph: { fov: 60, pitch: -26.4 } },
+    { at: ['thesis', 0], s: deg(152.2), h: 800, yaw: -48, pitch: -21, fov: 48, ...FAR, ph: { fov: 60, pitch: -18.7, yaw: -32 } },
+    { at: ['thesis', 0.45], s: deg(154.2), h: 1400, yaw: -48, pitch: -28.9, fov: 47, ...FAR, ph: { fov: 60, pitch: -26.4, yaw: -32 } },
     // (the shore's first key is at h 900, turned toward the sunrise: the camera comes down into it as the sea cools)
-    { at: ['thesis', 1], s: deg(156.5), h: 1800, yaw: -32, pitch: -32.9, fov: 46, ...FAR, ph: { fov: 60, pitch: -30.3 } },
+    { at: ['thesis', 1], s: deg(156.5), h: 1800, yaw: -48, pitch: -32.9, fov: 46, ...FAR, ph: { fov: 60, pitch: -30.3, yaw: -32 } },
   ];
 }
 
