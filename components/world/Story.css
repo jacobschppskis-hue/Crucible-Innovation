@@ -15,7 +15,7 @@
   padding-bottom: clamp(4.5rem, 13vh, 8rem);
 }
 .wstory-h {
-  font-size: clamp(3.25rem, 15vw, 8.5rem);
+  font-size: clamp(3.25rem, min(15vw, 22vh), 8.5rem);
   letter-spacing: -0.02em;
 }
 .wstory-sub {
