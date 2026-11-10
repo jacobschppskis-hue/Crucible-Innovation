@@ -130,8 +130,8 @@ export function keys(): Key[] {
   }
   return [
     // hero: low over the molten sea at sunset, the mark floating over its reflection, its core the sun; stars above
-    { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } }, // mark: phone core right of the type, so the glitter column never crosses it
-    { at: ['hero', 1], s: 4, h: 1.8, yaw: 162, pitch: 0, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4, yaw: 169.7 } },
+    { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 170.3, sunR: 3.55 } }, // mark: phone core right of the type, so the glitter column never crosses it
+    { at: ['hero', 1], s: 4, h: 1.8, yaw: 162, pitch: 0, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4, yaw: 170.3, sunR: 3.55 } },
     // stronger together: still on the sunset, a slow rise so the mark has the sky
     { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2 } },
     { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 1, fov: 46, ...NEAR, ph: { fov: 62, pitch: 0 } },
@@ -180,9 +180,14 @@ export function keys(): Key[] {
     // own move (pulling back from the sun, low over the sea), so the seam is inside one continuous motion, and the core
     // comes in from the far sky along its own line of sight to hang over the sea again
     { at: ['dawn', 0], s: deg(235), h: 4600, yaw: 25, pitch: -38, fov: 46, ...FAR2, ph: { fov: 60 } },
-    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: -1.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -3, yaw: 172 } },
+    // (mark) the sun here is still the far star, but as large in the sky as the near core will be (sunR 2.32e4 at 1e6):
+    // through the last 0.6 screen it comes in along its own line of sight without changing size, behind its own glare
+    // (lib/world/mark.ts presence()), and the mark resolves round it as the glare settles
+    // (pitch 2 on wide screens: the camera is nearer the core here than in the hero, so the mark is a third larger; tipped
+    // up a little it resolves clear of the nav)
+    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: 2, fov: 46, ...FAR2, sunR: 2.32e4, ph: { fov: 62, pitch: -3, yaw: 172, sunR: 2.06e4 } },
     // loop: exactly the hero's first key, one lap on
-    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } },
+    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 170.3, sunR: 3.55 } },
   ];
 }
 
@@ -232,6 +237,14 @@ export function resolve(
     prev = ch;
     out.push({ y, key: k, ch });
   }
+  // The loop's seam (mark): the last key, on the `loop` place, IS the first key one lap on. Channels carry over from key
+  // to key, so anything a place keyed on the way round and never set back (lava.heat at dawn: a sea 60 K hotter; the
+  // ventures' moon) would still be there at progress 1 and pop at the wrap. So the seam key takes the first key's value
+  // for every channel but the two that are a lap further on (s, sunV).
+  const first = out[0],
+    last = out[out.length - 1];
+  if (first && last && last !== first && last.key.at[0] === 'loop' && !last.key.dy)
+    for (const n in first.ch) if (n !== 's' && n !== 'sunV') last.ch[n] = first.ch[n];
   // keys at the same position: keep them a pixel apart (no cuts)
   for (let i = 1; i < out.length; i++) if (out[i].y <= out[i - 1].y) out[i].y = out[i - 1].y + 1;
   return out;

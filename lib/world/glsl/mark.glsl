@@ -4,28 +4,32 @@
 //
 // Geometry: lib/splitRing.ts exactly (64-unit box, centred on the core, y up here): rings r 26.667 and 16, stroke
 // 3.467, squares 4.267 (7 on the outer ring 22.5 deg apart, 4 on the inner 36 deg apart, after one empty step), core
-// 4.8; each arc a half circle ending on the core's centre line. Extruded 2.4 deep with a rounded 0.5 bevel (lib/gl3d
-// logoPieces), ray-marched inside its slab box only (two squares per ring evaluated, by angle).
+// 4.8; each arc a half circle ending on the core's centre line. Extruded 2.4 deep with a rounded 0.8 bevel (a cast
+// edge, inside the outline: the silhouette is the 2D mark exactly), ray-marched inside its slab box only (two squares
+// per ring evaluated, by angle).
 //
 // The mark hangs round the sun, which is a world point (lib/world/mark.ts centres it on frame.sun.pos, scaled so the
 // core is exactly the sun's sphere): near over the sea in the hero (real parallax, its reflection on the sea), a far
-// star elsewhere. This file draws the core (look's disc is off where the mark shows) and lights the pieces with it (a
-// sphere light: GGX with the representative point, soft shadows of the pieces toward it with a penumbra from its
-// size); the beat's flare brightens the core and its glow in the sky (sky hook).
+// star elsewhere. This file draws the core (an incandescent body: Planck from a yellow-white heart to an Ember limb;
+// look's disc is off) and lights the pieces with it (a sphere light: GGX with the representative point, inverse-square
+// falloff, the inner ring's shadow on the outer ring, analytic).
 //
-// Physically based, linear HDR radiance: cold, bone cast metal (a broad diffuse part, a bone-tinted sheen) filled by
-// the sky above and the glowing sea below (stronger on the lower pieces) and a thin starlit line on the top bevels; no
-// grain or normal noise (at this scale it read as specks and mottling). Hot, blackbody (Planck at three wavelengths,
-// 750-3000 K, perceptual brightness), emitted through an emissivity that falls at grazing angles so glowing pieces keep
-// their form; the liquid skin is glossy and nearly black but for its own light.
+// Linear HDR radiance. Sand-cast bone metal: a pale conductor under a rough cast skin, the faces a little pillowed, the
+// bevels worn smoother; lit by the core and by the world it mirrors (the night above, the sea's glow below, the
+// afterglow behind it), all analytic. No grain or normal noise (at this scale it read as specks and mottling).
+//
+// The loop's arrival: on the way home the sun is a blaze (mark_glare, a lens's veil over everything) that draws in to
+// the core as the exposure settles; the mark resolves out of it from the outside in (mark_reveal). Driven by
+// presence() in lib/world/mark.ts; exactly off at the seam.
 //
 // Hooks: hit (secondary rays only: the sea's reflections), env (cheap shade for those), over (camera rays: the mark is
-// composited here, so its silhouette is anti-aliased and it can fade), sky (the core's flare on the sun disc).
+// composited here, so its silhouette is anti-aliased; and the glare's veil), sky (the glare as the sea mirrors it),
+// sea (the rivers), crisp (the mark at the screen's resolution).
 // The confluence timeline is lib/world/together.ts (fronts and flash arrive as uniforms).
 
 uniform vec4 mark_uC;     // xyz: the core's centre (world); w: world units per mark unit
 uniform mat3 mark_uB;     // mark -> world (columns: right, up, toward the viewer)
-uniform vec4 mark_uBeat;  // x: beat 0..1 (scroll), y: weld flash 0..1, z: core flare 0..1, w: clock (s)
+uniform vec4 mark_uBeat;  // x: beat 0..1 (scroll), y, z: unused, w: clock (s)
 uniform vec4 mark_uLook;  // x: visibility 0..1, y: size (1 = the core is the sun), z: shadow quality 0..1, w: unused
 uniform vec3 mark_uSky;   // fill radiance from the sky above (cool)
 uniform vec3 mark_uSea;   // fill radiance from the glowing sea below (warm)
@@ -34,10 +38,10 @@ uniform vec4 mark_uRiv;   // the confluence: x the along-coord origin (world v a
                           // 0..1, z joined river's front 0..1, w the meeting flash 0..1
 uniform vec2 mark_uRivT;  // x: clock (s), y: on (0/1)
 uniform float mark_uBrand; // 0..1: the Split Ring -> the brand mark (small on screen)
+uniform vec3 mark_uGlow;  // the afterglow along the horizon behind the mark (what its rims mirror)
+uniform vec4 mark_uGlare; // the sun's glare on the way home (the loop's arrival): x amount 0..1, y its width (1 = full)
 
-vec3 mark_envDir(vec3 d);
-
-const float MARK_RO = 26.6667, MARK_RI = 16.0, MARK_HS = 1.73333, MARK_HP = 2.13333, MARK_RC = 4.8, MARK_HD = 1.2, MARK_BEV = 0.5;
+const float MARK_RO = 26.6667, MARK_RI = 16.0, MARK_HS = 1.73333, MARK_HP = 2.13333, MARK_RC = 4.8, MARK_HD = 1.2, MARK_BEV = 0.8;
 
 float mark_hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 float mark_hash13(vec3 p3) { p3 = fract(p3 * .1031); p3 += dot(p3, p3.zyx + 31.32); return fract((p3.x + p3.y) * p3.z); }
@@ -110,64 +114,75 @@ vec3 mark_normal(vec3 p, float e) {
   const vec2 k = vec2(1, -1);
   return normalize(k.xyy * mark_sdf(p + k.xyy * e).x + k.yyx * mark_sdf(p + k.yyx * e).x + k.yxy * mark_sdf(p + k.yxy * e).x + k.xxx * mark_sdf(p + k.xxx * e).x);
 }
-float mark_shadow(vec3 p, vec3 n) { // soft shadow toward the core (a sphere light of radius MARK_RC at the origin)
-  if (mark_uLook.z <= 0.) return 1.;
-  vec3 L = -p; float dl = length(L); vec3 l = L / dl;
-  if (dot(n, l) < -0.3) return 1.;
-  float sa = MARK_RC / dl, res = 1., t = 0.15;
-  vec3 o = p + n * 0.06;
-  for (int i = 0; i < 20; i++) {
-    float h = mark_sdf(o + l * t).x;
-    res = min(res, h / (sa * t));
-    t += clamp(h, 0.12, 2.0);
-    if (res < -1. || t > dl - MARK_RC) break;
-  }
-  res = clamp(res, -1., 1.);
-  return mix(1., 0.25 * (1. + res) * (1. + res) * (2. - res), mark_uLook.z);
+// The inner ring's shadow on the outer ring, from the core: analytic, one 2D distance where the line to the core
+// crosses the inner ring's radius (was a 20-step march). The penumbra is the core's size; the core stands taller than
+// the pieces, so its cap still shines over the inner ring onto the faces turned to the viewer.
+float mark_shadow(vec3 p, vec3 n) {
+  float l = length(p.xy);
+  if (mark_uLook.z <= 0. || mark_gGeom == 1 || l < MARK_RI + MARK_HP + 1.2) return 1.;
+  vec2 q = p.xy * (MARK_RI / l);
+  float d = mark_arc(q, MARK_RI);
+  if (q.x > -MARK_HP - 1.) d = min(d, mark_ringSq(q, MARK_RI, 4., 9.).x);
+  float s = smoothstep(-1.5, 1.1, d);
+  float over = mix(0.3, 0.8, smoothstep(0.3, 0.95, abs(n.z)));
+  return mix(1., mix(over, 1., s), mark_uLook.z);
 }
 
 // ---------------------------------------------------------------- shading
 float mark_ggx(float nh, float a) { float a2 = a * a; float d = nh * nh * (a2 - 1.) + 1.; return a2 / (PI * d * d); }
 float mark_vis(float nv, float nl, float a) { float k = a * 0.5; return 0.25 / ((nv * (1. - k) + k) * (nl * (1. - k) + k)); }
-vec3 mark_coreL() { return mark_uCoreL * (1. + 1.0 * mark_uBeat.z); }
+vec3 mark_coreL() { return mark_uCoreL; }
 vec3 mark_corePos() { return mark_uC.xyz; }
 vec3 mark_toWorld(vec3 v) { return mark_uB * v; }
 
+// A casting shrinks toward its middle as it cools: the faces are a little pillowed (a smooth dome across each square,
+// a soft crown across each stroke), so every face mirrors a spread of the world and takes the core's light on the side
+// turned to it. `face`: 1 on the cast faces, 0 on the bevels and walls.
+vec3 mark_faceN(vec3 p, vec3 n, float id, out float face) {
+  face = smoothstep(0.72, 0.985, abs(n.z));
+  if (face <= 0. || id > 19.5) return n;
+  vec2 o;
+  if (id < 1.5) { float l = max(length(p.xy), 1e-4); o = p.xy / l * clamp((l - (id < 0.5 ? MARK_RO : MARK_RI)) / MARK_HS, -1., 1.); }
+  else { float th, R; o = clamp((p.xy - mark_cellOf(id, th, R)) / MARK_HP, -1., 1.); }
+  return normalize(n + vec3(o * (0.22 * face), 0.));
+}
+
+// The world as the metal mirrors it, blurred by the skin's roughness (analytic: no sky lookup, no stars to glint as
+// specks): the night above, the sea's glow below, the afterglow along the horizon, strongest behind the mark where the
+// sun sets (so the rims that turn away from the viewer catch it).
+vec3 mark_envSoft(vec3 dW, float rough) {
+  float e = dot(dW, mark_uB[1]);
+  float w = 0.07 + 0.8 * rough;
+  float toSun = 0.5 - 0.5 * dot(dW, mark_uB[2]);
+  vec3 sky = mark_uSky * mix(1., 0.7, smoothstep(0., 0.9, e));
+  vec3 sea = mark_uSea * mix(0.12, 1., toSun);
+  vec3 glow = mark_uGlow * exp(-e * e / (w * w * 0.6 + 0.012)) * mix(0.03, 1., toSun * toSun);
+  return mix(sea, sky, smoothstep(-w, w, e)) + glow;
+}
+
+// Sand-cast bone metal lit by its own core. A pale conductor (bone-tinted F0) under a rough cast skin on the faces,
+// worn smoother on the bevels, which catch the light as lines. The core is a sphere light at the origin: its light
+// falls off with the square of the distance (the inner ring glows, the outer ring keeps to bone), crosses each pillowed
+// face from its core side to its far side, mirrors as a hot rim on the bevels turned to it, and is shadowed by the
+// inner ring. Everything else is the world mirrored: night on the top bevels, the sea's glow on the lower ones.
 vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
-  vec3 n = mark_normal(p, clamp(px * 1.1, 0.01, 0.45));
+  vec3 n0 = mark_normal(p, clamp(px * 1.1, 0.01, 0.45));
+  float face;
+  vec3 n = mark_faceN(p, n0, id, face);
   vec3 v = -rd;
-  vec2 H = vec2(0.); // the mark is always cast and cooled: the beat lives on the sea now (mark_sea)
-  float T = H.x, wet = H.y;
-  // in the liquid: hotter along the middle of a stroke or square (thicker, it holds its heat), cooler at its edges; and
-  // faint streamlines drawn out along the flow (smooth, stretched along the run: never specks)
-  if (wet > 0.01) {
-    float edge;
-    if (id < 1.5) edge = abs(length(p.xy) - (id < 0.5 ? MARK_RO : MARK_RI)) / MARK_HS;
-    else { float thc, R; vec2 c = mark_cellOf(id, thc, R); vec2 q = abs(p.xy - c) / MARK_HP; edge = max(q.x, q.y); }
-    float th = PI - abs(atan(p.x, -p.y));
-    float along = th * length(p.xy);
-    float across = id < 1.5 ? (length(p.xy) - (id < 0.5 ? MARK_RO : MARK_RI)) : p.x;
-    float stream = mark_noise(vec3(along * 0.22 - mark_uBeat.w * 0.9, across * 2.4, mark_uBeat.w * 0.15)) - 0.5;
-    T *= 1. - 0.16 * edge * edge;
-    T = clamp(T + stream * 0.07 * wet * smoothstep(0.15, 0.4, T), 0., 1.);
-  }
-  // cold: bone cast metal; hot: a glossy liquid skin, nearly black but for its own light
-  // a cast skin at this scale: roughness and tone drift slowly across each face (one or two gentle changes per piece,
-  // never a pattern, never specks), so the light's sheen breaks up a little as it would on a real casting
-  float skinV = mark_noise(vec3(p.xy * 0.11, id * 1.7)) * 0.65 + mark_noise(vec3(p.xy * 0.27, id * 3.1 + 5.)) * 0.35;
-  float rough = mix(0.27 + 0.10 * (1. - abs(n.z)) + 0.09 * (skinV - 0.5), 0.06, wet);
-  float a = rough * rough;
-  vec3 bone = vec3(0.80, 0.77, 0.69) * (0.97 + 0.06 * mark_hash12(vec2(id, 3.1))) * (0.96 + 0.08 * skinV);
-  float liq = smoothstep(0.0, 0.3, wet);
-  vec3 F0 = mix(bone * 0.62, vec3(0.32, 0.30, 0.28), liq);   // liquid metal is a mirror too
-  vec3 alb = bone * 0.55 * (1. - liq) * (1. - smoothstep(0.05, 0.35, T));
   float nv = max(dot(n, v), 1e-3);
-  vec3 col = vec3(0.);
-  // the core: a sphere light at the origin
+  // the skin drifts slowly in roughness and tone across each piece (one or two gentle changes, never a pattern)
+  float skinV = cheap ? 0.5 : mark_noise(vec3(p.xy * 0.11, id * 1.7)) * 0.65 + mark_noise(vec3(p.xy * 0.27, id * 3.1 + 5.)) * 0.35;
+  float rough = mix(0.2, 0.42, face) + 0.08 * (skinV - 0.5);
+  float a = rough * rough;
+  vec3 bone = vec3(0.84, 0.79, 0.69) * (0.95 + 0.1 * skinV);
+  vec3 F0 = bone * 0.78;
+  vec3 alb = bone * mix(0.24, 0.55, face);
+  // the core
   vec3 L = -p; float dl = length(L); vec3 l = L / dl;
-  float sh = cheap ? 1. : mark_shadow(p, n);
+  float sh = cheap ? 1. : mark_shadow(p, n0);
   float sa = MARK_RC / dl, sa2 = sa * sa;
-  float nlS = clamp((dot(n, l) + sa) / (1. + sa), 0., 1.); nlS *= nlS;  // its cap above a face still lights it
+  float nlS = clamp((dot(n, l) + sa) / (1. + sa), 0., 1.);            // its cap above a face still lights it
   vec3 r = reflect(-v, n);
   vec3 cr = dot(L, r) * r - L; vec3 cp = L + cr * clamp(MARK_RC / max(length(cr), 1e-4), 0., 1.); vec3 ls = normalize(cp);
   vec3 hv = normalize(ls + v);
@@ -175,39 +190,44 @@ vec3 mark_shadeL(vec3 p, vec3 rd, float id, float px, bool cheap) {
   float aS = clamp(a + 0.5 * sa, 0., 1.);
   vec3 F = F0 + (1. - F0) * pow(1. - max(dot(hv, v), 0.), 5.);
   vec3 spec = F * mark_ggx(max(dot(n, hv), 0.), aS) * mark_vis(nv, nls, a) * nls * (a * a) / (aS * aS);
-  col += mark_coreL() * PI * sa2 * (spec + alb / PI * nlS) * sh;
-  // fill: the sky above, the glowing sea below, the afterglow ahead; mirrored and diffuse
+  // (the body takes the core's light with a gain: the rough skin scatters the grazing light a smooth plate would lose,
+  // and warms it to gold rather than the core's own orange: the skin is pale)
+  vec3 col = mark_coreL() * PI * sa2 * (spec + alb / PI * nlS * 6.5 * vec3(1., 1.25, 1.6)) * sh;
+  // the world: the skin's body lit by the hemisphere it faces, and the mirror
   vec3 nW = mark_toWorld(n);
-  float up = 0.5 + 0.5 * dot(nW, mark_uB[1]);
-  // the sea's light is stronger on the lower pieces (nearer it) and the sky's on the upper ones: a slow gradient down
-  // the whole structure, warm at its foot, which is what makes it read as big and lit from below
-  float hgt = clamp(p.y / 31. * 0.5 + 0.5, 0., 1.);
-  vec3 irr = 0.75 * PI * (mark_uSky * up * up * mix(0.8, 1.2, hgt) + mark_uSea * (1. - up) * (1. - up) * 1.4 * mix(1.35, 0.6, hgt));
-  col += alb / PI * irr;
-  // the core's glow falls across the front faces: warm near it, so every face shades from its core side to its far
-  // side and the inner ring is lit more than the outer (a near light's falloff, which reads as size)
-  col += alb * vec3(1.0, 0.80, 0.58) * 0.55 * exp(-dl / 13.) * smoothstep(-0.2, 0.8, n.z) * (1. + mark_uBeat.z);
-  vec3 rW = mark_toWorld(r);
-  float ru = dot(rW, mark_uB[1]);
-  // what it mirrors: the real sky (sharp on the liquid, blurred toward the fills on the rough cast skin)
-  vec3 blur = mix(mark_uSea * 0.5, mark_uSky * 0.7, smoothstep(-0.3, 0.3, ru));
-  vec3 e1 = cheap ? blur : mark_envDir(rW);
-  vec3 Fe = F0 + (1. - F0) * pow(1. - nv, 5.) * 0.8;
-  col += Fe * mix(e1, blur, smoothstep(0.08, 0.4, a));
+  col += alb * mark_envSoft(nW, 1.);
+  vec3 Fe = F0 + (1. - F0) * pow(1. - nv, 5.) * (1. - 0.6 * rough);
+  col += Fe * mark_envSoft(mark_toWorld(r), rough);
   // starlight: a thin cool line where a bevel turns up to the night
-  col += vec3(0.10, 0.13, 0.20) * pow(max(dot(nW, mark_uB[1]), 0.), 6.) * (1. - abs(n.z)) * 0.6 * (1. - wet);
-  // heat: emission dominates while hot; emissivity falls at grazing angles, so the glowing pieces keep their form
-  col *= 1. - 0.55 * smoothstep(0.05, 0.45, T);
+  col += vec3(0.07, 0.09, 0.15) * pow(max(dot(nW, mark_uB[1]), 0.), 6.) * (1. - face);
   return col;
 }
 
-
-// what the metal mirrors in a world direction: the real sky above the horizon, the sea's glow below it
-vec3 mark_envDir(vec3 d) {
-  float e = dot(d, uCamUp);
-  if (e < 0.) return mark_uSea * 0.6;
-  Ray q; q.ro = uCamPos; q.rd = d; q.pa = 0.01; q.depth = 1;
-  return look_sky(q);
+// ---------------------------------------------------------------- the glare (the loop's arrival)
+// On the way home the camera comes down out of the day onto the evening sea facing the sun, and the sun is a blaze: a
+// hot heart over the core and a long veil round it, as a lens gives any light far brighter than the scene. As the
+// exposure settles the blaze draws in to the core, and what it veiled resolves from the outside in: the mark, whole,
+// hanging round the core. x: distance from the core in core radii; returns the veil's radiance (linear).
+vec3 mark_glareX(float x) {
+  float g = mark_uGlare.x;
+  float xs = x / max(mark_uGlare.y, 0.05);
+  float heart = exp(-xs * xs * 0.2);
+  float skirt = 1. / (1. + xs * xs * 0.08);
+  float fade = exp(-xs / 20.);                              // a long soft tail: no edge anywhere
+  return (vec3(1.0, 0.64, 0.3) * (6. * heart) + vec3(1.0, 0.4, 0.11) * (2.6 * skirt * fade)) * g * g;
+}
+vec3 mark_glare(vec3 rd) {
+  if (mark_uGlare.x <= 0.001) return vec3(0.);
+  float c = dot(rd, uSunDir);
+  if (c < 0.5) return vec3(0.);
+  return mark_glareX(acos(clamp(c, -1., 1.)) / max(uSunRad, 1e-4));
+}
+// how much of the mark shows through the glare at a point (local): nothing where the veil is far brighter than the
+// metal, all of it once the veil has thinned
+float mark_reveal(vec3 pL) {
+  if (mark_uGlare.x <= 0.001) return 1.;
+  vec3 gl = mark_glareX(length(pL.xy) / MARK_RC);
+  return 1. - smoothstep(0.02, 0.25, dot(gl, vec3(0.2126, 0.7152, 0.0722)));
 }
 
 bool mark_boxHit(vec3 ro, vec3 rd, vec3 b, out float t0, out float t1) {
@@ -217,16 +237,18 @@ bool mark_boxHit(vec3 ro, vec3 rd, vec3 b, out float t0, out float t1) {
   return t1 > max(t0, 0.);
 }
 
-// The core: a sphere emitter (a yellow-white heart under an orange skin, a deep limb, a slow boil of large cells; no
-// small-scale noise), flaring with the beat. Radiance in the mark's own HDR scale (its light on the pieces matches).
+// The core: an incandescent body. We see deeper, hotter layers face-on and the cooler skin at the edge, so it rolls
+// off continuously from a yellow-white heart to an Ember limb (temperature, then Planck: no painted rings), with a slow
+// boil of large cells a few percent warmer or cooler (never a dark mark). Radiance in the mark's own HDR scale.
 vec3 mark_coreShade(vec3 p, vec3 rd) {
   vec3 n = normalize(p);
   float mu = max(dot(n, -rd), 0.);
   float t = mark_uBeat.w;
-  float boil = mark_noise(n * 3.0 + vec3(0., 0., t * 0.05)) * 0.6 + mark_noise(n * 7.0 - vec3(t * 0.08)) * 0.4;
-  vec3 c = mix(vec3(1.1, 0.17, 0.025), vec3(3.4, 0.95, 0.20), smoothstep(0.0, 0.45, mu));
-  c = mix(c, vec3(6.5, 3.9, 1.8), smoothstep(0.72, 1.0, mu) * (0.8 + 0.4 * boil));
-  return c * (0.9 + 0.2 * boil) * (1. + 1.3 * mark_uBeat.z);
+  float boil = mark_noise(n * 2.6 + vec3(0., t * 0.04, 0.)) * 0.6 + mark_noise(n * 5.5 - vec3(t * 0.06)) * 0.4;
+  float k = mu * mu * (0.55 + 0.45 * mu);                   // a sphere's heart: it falls off all the way across the disc
+  float T = mix(1150., 2100., k) * (1. + 0.05 * (boil - 0.5) * smoothstep(0.05, 0.6, mu));
+  float I = 2.0 * pow(T / 2100., 4.6) + 0.06;
+  return look_bbColor(T) * I;
 }
 // The core along a local ray: t of the hit (or of the closest approach within a pixel), and its coverage.
 vec2 mark_coreHit(vec3 ro, vec3 rd, float pa) {
@@ -315,13 +337,13 @@ vec3 mark_shade(Ray r, Hit h) { return vec3(0.); } // never: camera rays are com
 vec3 mark_env(Ray r, Hit h) {
   mark_gGeom = mark_uBrand > 0.5 ? 1 : 0;
   vec3 ro, rd; mark_local(r, ro, rd);
-  if (h.id == MARK_ID + 1) return mark_coreShade(h.data.xyz, rd) * mark_uLook.x;
-  return mark_shadeL(h.data.xyz, rd, h.data.w, 0.05, true) * mark_uLook.x;
+  if (h.id == MARK_ID + 1) return mark_coreShade(h.data.xyz, rd) * mark_uLook.x + mark_glare(r.rd) * 0.6;
+  // (under the glare the mirrored pieces give way to the mirrored blaze, as the pieces themselves do)
+  return mark_shadeL(h.data.xyz, rd, h.data.w, 0.05, true) * mark_uLook.x * mark_reveal(h.data.xyz) + mark_glare(r.rd) * 0.6;
 }
 
 // Camera rays: composited over whatever is behind (the sky; the sea where it is nearer wins), anti-aliased, fading.
-void mark_over(Ray r, Hit h, inout vec3 col) {
-  if (mark_uLook.x <= 0.002 || uCrispOn > 0.5) return; // the crisp pass draws it at the screen's resolution
+void mark_overMark(Ray r, Hit h, inout vec3 col) {
   mark_gGeom = mark_uBrand > 0.5 ? 1 : 0;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, r.pa);
@@ -346,19 +368,21 @@ void mark_over(Ray r, Hit h, inout vec3 col) {
       acc += mark_shadeL(pk, rk, mk.y, mk.x * r.pa, false) * mk.w;
       cs += mk.w;
     }
-    if (cs > 0.) col = mix(col, acc / cs, cs * 0.25 * mark_uLook.x);
+    if (cs > 0.) col = mix(col, acc / cs, cs * 0.25 * mark_uLook.x * mark_reveal(pL));
     return;
   }
   vec3 s = mark_shadeL(pL, rd, m.y, m.x * r.pa, false);
-  col = mix(col, s, m.w * mark_uLook.x);
+  col = mix(col, s, m.w * mark_uLook.x * mark_reveal(pL));
+}
+void mark_over(Ray r, Hit h, inout vec3 col) {
+  // the crisp pass draws the mark at the screen's resolution; here only where there is none
+  if (mark_uLook.x > 0.002 && uCrispOn < 0.5) mark_overMark(r, h, col);
+  col += mark_glare(r.rd);   // the lens's veil lies over everything
 }
 
-// The core is the sun: it flares with the blaze (look draws the disc; this brightens it and its glow).
+// The sky hook: the sun's blaze as the sea mirrors it (camera rays get the lens's veil in mark_over instead).
 void mark_sky(Ray r, inout vec3 col) {
-  float f = mark_uBeat.z; // 0 since V2 (no flare); kept so the hook list is stable
-  if (f <= 0.001 || mark_uLook.x <= 0.002) return;
-  float x = acos(clamp(dot(r.rd, uSunDir), -1., 1.)) / max(uSunRad, 1e-4);
-  col += vec3(1.0, 0.55, 0.22) * f * mark_uLook.x * 0.9 * exp(-(x - 1.) * 1.5) * step(1., x);
+  if (r.depth > 0) col += mark_glare(r.rd) * 0.6;
 }
 
 // ---------------------------------------------------------------- the confluence (stronger together)
@@ -366,63 +390,76 @@ void mark_sky(Ray r, inout vec3 col) {
 // yellow: colour is temperature). Drawn as heat added to lava's own sea (SeaMod.heat; lava turns it into blackbody
 // light under its skin), so it is the world's own material. Local coords in world units on the surface: x across (u),
 // y ahead of the together start (origin - v), the camera looking toward +y and down onto it.
-// distance from p to a quadratic Bezier (a, c, b) by a 12-segment polyline; t = where along it (0..1)
-float mark_bez(vec2 p, vec2 a, vec2 c, vec2 b, out float t) {
-  float best = 1e9; t = 0.;
+// distance from p to a quadratic Bezier (a, c, b) by an 8-segment polyline; t = where along it (0..1), sd = the
+// distance signed by the side of the course p is on
+float mark_bez(vec2 p, vec2 a, vec2 c, vec2 b, out float t, out float sd) {
+  float best = 1e9; t = 0.; sd = 1e9;
   vec2 q0 = a;
-  for (int i = 1; i <= 12; i++) {
-    float s1 = float(i) / 12.;
+  for (int i = 1; i <= 8; i++) {
+    float s1 = float(i) / 8.;
     vec2 q1 = mix(mix(a, c, s1), mix(c, b, s1), s1);
     vec2 e = q1 - q0; float h = clamp(dot(p - q0, e) / dot(e, e), 0., 1.);
-    float d = length(p - q0 - e * h);
-    if (d < best) { best = d; t = (float(i - 1) + h) / 12.; }
+    vec2 dv = p - q0 - e * h;
+    float d = length(dv);
+    if (d < best) { best = d; t = (float(i - 1) + h) / 8.; sd = d * sign(e.x * dv.y - e.y * dv.x); }
     q0 = q1;
   }
   return best;
 }
-// one river: heat at p for a river (a, c, b) of mean half-width w that has run as far as `front` (0..1) from a. Like the
-// rivers in the reference frame: it meanders (the caller warps p), its width breathes along its course, its heat falls
-// off softly from the centre line (no hard bank: a glow seen through the skin, with a faint wider warmth beneath),
-// and its front thins to a point as it advances (never a rounded cap).
-float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, float seed, out float along) {
-  float t; float d = mark_bez(p, a, c, b, t);
-  along = t;
+// One river: heat at p for a river (a, c, b) of mean half-width w that has run as far as `front` (0..1) from a.
+// Molten metal in a channel, not a glowing line: a broad surface that is hottest along a thread wandering from bank to
+// bank (the fastest water), cooler toward the banks, with a wide faint warmth in the sea beside it; its width breathes
+// along the course; long, soft drifts of hotter and cooler metal ride downstream (stretched along the flow: never
+// specks; faded where a pixel can't resolve them); the front thins to a point as it advances (never a rounded cap).
+// `stir` (added to): the flowing metal stirs the sea's skin along its course, so the sun's glitter gives way there
+// and the river reads against a quiet margin instead of fighting the sun's path.
+float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, float seed, inout float stir) {
+  float t, sd; float d = mark_bez(p, a, c, b, t, sd);
   if (front <= 0.) return 0.;
   float len = length(c - a) + length(b - c);
   float behind = (front - t) * len;                       // world units behind the tip
-  if (behind < -2. * w) return 0.;
-  float wk = w * (0.75 + 0.5 * world_noise(vec2(t * len * 0.035 + seed, seed * 3.1)));
+  if (behind < -2. * w || d > 9. * w + 2. * fw) return 0.;
+  float u = t * len;
+  float wk = w * (0.68 + 0.64 * world_noise(vec2(u * 0.035 + seed, seed * 3.1)));
   wk *= smoothstep(0., 9. * w, behind) * 0.85 + 0.15 * step(0., behind); // the front tapers to a thread
   wk = max(wk, fw * 0.7);
-  float x = d / wk;
-  float core = exp(-x * x * 1.6);                          // the molten channel, soft-edged
-  float under = 0.22 * exp(-x * x * 0.18);                 // warmth under the skin beside it
+  // the channel snakes a little inside its course (long S-bends; none at the confluence, so the three meet cleanly)
+  sd += w * 0.95 * sin(u * 0.17 + seed * 1.7) * smoothstep(0., 14., min(u, len - u));
+  float x = sd / wk, x2 = x * x;
+  float time = mark_uRivT.x;
+  float fine = smoothstep(1.2, 0.25, fw / wk);              // detail the pixel can resolve
+  float thread = (world_noise(vec2(u * 0.045 - time * 0.07 + seed * 2.3, seed)) - 0.5) * 1.2 * fine;
+  // the channel's surface: hottest mid-stream (the fastest metal), cooling toward banks you can see
+  float body = (1. - 0.38 * min(x2, 1.6)) * exp(-x2 * x2 * x2 * 0.7);
+  float hot = exp(-(x - thread) * (x - thread) * 7.);       // the hot thread
+  float bank = exp(-x2 * 0.2);                              // warmth in the sea beside it
+  float drift = world_noise(vec2(u * 0.09 - time * 0.26, x * 1.7 + seed * 5.)) - 0.5
+              + 0.6 * (world_noise(vec2(u * 0.24 - time * 0.4, x * 3.3 - seed)) - 0.5);
   float on = smoothstep(-0.5 * w, 1.5 * w, behind);        // the tip's heat fades in, no hard end
-  return (core + under) * on * T;
+  stir = max(stir, on * exp(-x2 * 0.07));
+  return T * on * ((0.78 * body + 0.42 * hot * body) * (1. + 0.34 * drift * fine) + 0.1 * bank);
 }
 void mark_sea(Ray r, Sea s, inout SeaMod m) {
-  if (mark_uRivT.y < 0.5) return;
+  if (mark_uRivT.y < 0.001) return;
   vec2 p = vec2(s.w.x, mark_uRiv.x - s.w.y);
   if (p.y < -60. || p.y > 420. || abs(p.x) > 340.) return;
-  // meanders: a slow, smooth warp of the plane (two octaves, large: bends, never wiggles)
+  // meanders: a slow, smooth warp of the plane (large: bends, never wiggles), gentler near the viewer
   vec2 q = p * 0.018;
-  vec2 warp = vec2(world_noise(q + 3.7) - 0.5, world_noise(q * 1.9 + 8.1) - 0.5) * 22. + vec2(world_noise(q * 3.3 + 1.3) - 0.5, 0.) * 6.;
+  vec2 warp = vec2(world_noise(q + 3.7) - 0.5, world_noise(q * 1.9 + 8.1) - 0.5) * 20. * smoothstep(0., 110., p.y);
   vec2 pw = p + warp;
   float fw = s.fw;
-  vec2 J = vec2(-6., 82.);
-  float aL, aR, aJ;
-  float hL = mark_river(pw, vec2(-160., 215.), vec2(-40., 160.), J, 2.4, mark_uRiv.y, fw, 0.27, 1.3, aL);
-  float hR = mark_river(pw, vec2(165., 225.), vec2(70., 120.), J, 2.4, mark_uRiv.y, fw, 0.27, 7.9, aR);
-  float hJ = mark_river(pw, J, vec2(18., 45.), vec2(-30., -20.), 3.4, mark_uRiv.z, fw, 0.52, 4.4, aJ);
+  vec2 J = vec2(7., 48.);   // (+x is screen-left: the camera looks back along the travel)
+  float stir = 0.;
+  float hL = mark_river(pw, vec2(190., 215.), vec2(46., 104.), J, 1.5, mark_uRiv.y, fw, 0.22, 1.3, stir);
+  float hR = mark_river(pw, vec2(-185., 230.), vec2(-60., 118.), J, 1.5, mark_uRiv.y, fw, 0.22, 7.9, stir);
+  float hJ = mark_river(pw, J, vec2(-0.5, 16.), vec2(-19., -34.), 1.8, mark_uRiv.z, fw, 0.325, 4.4, stir);
+  m.rough = max(m.rough, 0.3 * stir * mark_uRivT.y);
   // where they meet: a brief brightening that spreads into the joined river (soft, no disc)
-  float pool = mark_uRiv.w * 0.22 * exp(-dot(pw - J, pw - J) / 90.);
+  float pool = mark_uRiv.w * 0.16 * exp(-dot(pw - J, pw - J) / 40.);
   // the joined river carries both: its heat sits on top of the two it came from, never a seam at the junction
   float h = max(max(hL, hR), hJ) + pool;
   if (h <= 0.002) return;
-  // the metal flows: slow, smooth brighter drifts carried downstream (large and soft: never specks)
-  float flow = world_noise(vec2((aL + aR + aJ) * 30. - mark_uRivT.x * 0.6, length(pw) * 0.015));
-  h *= 0.9 + 0.18 * flow;
-  m.heat = max(m.heat, h);
+  m.heat = max(m.heat, h * mark_uRivT.y);
 }
 
 // ---------------------------------------------------------------- the crisp pass (V2): the mark at the screen's resolution
@@ -434,7 +471,8 @@ vec4 mark_crispGeom(vec3 ro, vec3 rd, float pa, float tS, int geom) {
   vec3 pL;
   vec4 m = mark_march(ro, rd, pa, 24 + int(24. * uQ), pL, 1.25);
   if (m.w <= 0. || m.x * mark_uC.w >= tS) return vec4(0.);
-  return vec4(mark_shadeL(pL, rd, m.y, m.x * pa, false) * m.w, m.w);
+  float cov = m.w * mark_reveal(pL);
+  return vec4(mark_shadeL(pL, rd, m.y, m.x * pa, false) * cov, cov);
 }
 vec4 mark_crisp(Ray r, float tS) {
   if (mark_uLook.x <= 0.002) return vec4(0.);
@@ -446,6 +484,7 @@ vec4 mark_crisp(Ray r, float tS) {
   vec4 m = vec4(0.);
   if (k < 0.999) m += mark_crispGeom(ro, rd, r.pa, tS, 0) * (1. - k);
   if (k > 0.001) m += mark_crispGeom(ro, rd, r.pa, tS, 1) * k;
-  acc = m + acc * (1. - m.a);
-  return acc * mark_uLook.x;
+  acc = (m + acc * (1. - m.a)) * mark_uLook.x;
+  acc.rgb += mark_glare(r.rd) * acc.a;   // the veil lies over the mark too (the scene under it already carries it)
+  return acc;
 }

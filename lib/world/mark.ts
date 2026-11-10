@@ -2,7 +2,9 @@
 // structure: the core IS the sun, a world point the journey places (frame.sun: near over the sea in the hero, with real
 // parallax and its reflection under it; a far star elsewhere), so the mark is centred on it and scaled so its core is
 // exactly the sun's sphere (scale = sun.R / 4.8 mark units). This module draws the core (look's own disc is turned off
-// with look.sunDisc 0 wherever the mark shows). The mark is always whole, cast and still. "Stronger together"
+// with look.sunDisc 0 wherever the mark shows). The mark is always whole, cast and still: it is there through the hero
+// and "stronger together", leaves the frame by the camera's turn into the story, and on the way home resolves out of
+// the sun's glare (presence(), below: a pure function of the scroll, the same at progress 0 and 1). "Stronger together"
 // (lib/world/together.ts) is a confluence on the sea below: two molten rivers join into one hotter river, drawn as heat
 // in lava's sea through the `sea` hook, on the `together` place's pin progress, with one line of copy.
 //
@@ -45,6 +47,43 @@ function follow(target: number, dt: number) {
   return shown;
 }
 
+const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x);
+const sstep = (a: number, b: number, x: number) => {
+  const t = clamp01((x - a) / (b - a));
+  return t * t * (3 - 2 * t);
+};
+
+/**
+ * The arrival home: 0 where the last screen before the loop place begins (the end of `dawn`), 1 at the seam, where the
+ * loop place fills the viewport and the journey is the hero's first frame again. -1 when the page does not loop.
+ */
+export function arrival(f: Frame) {
+  const lp = f.places.loop;
+  if (!lp || !(f.loopLen > 0)) return -1;
+  return clamp01((f.y - (lp.top - f.h)) / f.h);
+}
+
+/**
+ * What the mark shows of itself, a pure function of the scroll that is the same at progress 0 and 1 (the loop):
+ * - `vis`: whole through the hero and "stronger together"; it leaves the frame by the camera's own turn into the
+ *   story (and is switched off only once it is off screen); through the rest of the lap it is not drawn; on the way
+ *   home it is back, whole, behind the sun's glare.
+ * - `glare`: the sun's blaze on the way home. It swells as the camera turns down onto the evening sea facing the sun,
+ *   then settles through the last half screen: the blaze draws in to the core and the mark resolves out of it, from
+ *   the outside in. Exactly 0 (and vis exactly 1) at the seam.
+ */
+export function presence(f: Frame) {
+  const x = arrival(f);
+  if (x > 0) {
+    const up = sstep(0, 0.3, x);
+    const down = 1 - sstep(0.42, 1, x);
+    const glare = up * down;
+    return { vis: sstep(0.28, 0.4, x), glare, width: 0.4 + 0.6 * Math.sqrt(glare) };
+  }
+  const st = f.places.story ? f.at('story') : 0;
+  return { vis: 1 - sstep(0, 0.08, st), glare: 0, width: 1 };
+}
+
 let lines: HTMLElement[] = [];
 let stage: HTMLElement | null = null;
 let box = '';
@@ -57,7 +96,7 @@ export const mark: WorldModule = {
   // the crisp pass draws the mark at the screen's own resolution (up to dpr 3 on phones) inside this box
   crispBox(f: Frame) {
     const b = screenBox(f);
-    if (!b || (f.ch['mark.vis'] ?? 1) <= 0.002) return null;
+    if (!b || (f.ch['mark.vis'] ?? 1) * presence(f).vis <= 0.002) return null;
     const r = b.r * 1.08 + 6;
     if (b.x + r < 0 || b.x - r > f.w || b.y + r < 0 || b.y - r > f.h) return null;
     return [b.x - r, b.y - r, b.x + r, b.y + r];
@@ -71,7 +110,8 @@ export const mark: WorldModule = {
   },
   update(f: Frame, u: Uniforms) {
     const b = f.still ? 0.97 : follow(beatOf(f), f.dt);
-    const vis = f.ch['mark.vis'] ?? 1;
+    const pr = presence(f);
+    const vis = (f.ch['mark.vis'] ?? 1) * pr.vis;
     const size = f.ch['mark.size'] ?? 1;
     const k = f.ch['mark.light'] ?? 1;
     const fill = f.ch['mark.fill'] ?? 1;
@@ -90,8 +130,11 @@ export const mark: WorldModule = {
     u.set('mark_uRiv', [8, sourceFront(b), joinedFront(b), meetFlash(b)]);
     u.set('mark_uRivT', [f.t, on]);
     u.set('mark_uLook', [vis, size, f.quality.q >= 0.45 ? 1 : f.quality.q > 0.2 ? 0.6 : 0, 0]);
-    u.set('mark_uSky', [0.2 * fill, 0.22 * fill, 0.27 * fill]);
-    u.set('mark_uSea', [0.95 * fill, 0.66 * fill, 0.44 * fill]);
+    // the world the metal mirrors (radiance): the dusk sky above, the sea's glow below, the afterglow on the horizon
+    u.set('mark_uSky', [0.195 * fill, 0.2 * fill, 0.225 * fill]);
+    u.set('mark_uSea', [0.4 * fill, 0.15 * fill, 0.05 * fill]);
+    u.set('mark_uGlow', [0.6 * fill, 0.3 * fill, 0.13 * fill]);
+    u.set('mark_uGlare', [pr.glare, pr.width, 0, 0]);
     u.set('mark_uCoreL', [CORE_L[0] * k, CORE_L[1] * k, CORE_L[2] * k]);
 
     // the mark's screen box (centre, outer radius incl. the squares)

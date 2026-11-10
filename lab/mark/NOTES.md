@@ -85,3 +85,29 @@ cast object, which we can make look like film.
 - No grain or normal noise on the metal: tried twice, at this scale it only read as specks and mottling.
 - The sea reflection is no longer drawn here (lava/world own it).
 - Shots: `shots/A2-iphone-beat.webp` (iPhone 15: beat 0 .2 .4 .55 / .62 .68 .8 .97), `shots/A2-desk-beat.webp`.
+
+## Overnight Nov 10: the loop arrival, cast metal, together recomposed
+- **The seam.** `together.ts` keyed `mark.vis` to 0 and channels carry over, so the mark and the core were gone for the
+  rest of the lap and popped in at the wrap. `mark.vis` is no longer keyed: `presence()` in `lib/world/mark.ts` makes the
+  mark's visibility and the sun's glare a pure function of the scroll, the same at progress 0 and 1. The mark is whole
+  through the hero and together, leaves by the camera's turn into the story (switched off only once off screen, over the
+  first 8% of story's pin: if the story camera ever keeps the sun in frame there, move that fade), and on the last screen
+  before the seam the sun is a blaze (a lens veil, `mark_glare`) that draws in to the core while the mark resolves out
+  of it from the outside in (`mark_reveal`). The approach key (`loop`, dy -0.6) keeps the far sun at the near core's
+  angular size (sunR 2.32e4 at 1e6), so the mark never changes size as it comes in.
+- `journey.ts resolve()`: the seam key takes the first key's value for every channel but s and sunV. `lava.heat` (keyed
+  at dawn, never set back) made the sea 60 K hotter at progress 1 than at 0.
+- `lava.glsl`/`lava.ts` (two small edits): the hero's glint ceiling now moves in stops (a linear mix only bit in the
+  last thousandth of `lava_uTight`: the sun's path popped at the seam and blew out under the headline at hero f 0.85),
+  is held through the hero's whole pin and released while the headline slides away.
+- **Material.** Tried and kept: pillowed faces (a dome across each square, a crown across each stroke), a 0.8 bevel, a
+  pale conductor with a rough cast skin, the core as an inverse-square sphere light with an analytic inner-ring shadow
+  (one 2D distance instead of a 20-step march), an analytic mirrored world (night above, sea glow below, afterglow
+  behind) instead of a sky lookup per pixel. First pass with physically low fill read as dark copper, not bone: the sky
+  fill is deliberately brighter than the dusk sky really is, and the body takes the core's light with a gain and a gold
+  tint. The core: temperature by mu (1150 K limb to 2100 K heart), Planck, I ~ T^4.6; brighter than ~2 it tone-maps flat.
+- **Together.** The camera stays low (h 15-19) so the mark hangs whole in the sky under the nav and never fades; the
+  rivers are channels (flat-topped body cooling to the banks, a hot thread that wanders, long drifts carried downstream);
+  heat above ~0.36 tone-maps to a flat orange tape, 0.33 with the thread reads as flow. +x in the river coords is
+  screen-left (the camera looks back along the travel).
+- Shooting: `next dev -p <port>` + a shooter pointed at it saves the build per iteration (HMR picks up .glsl edits).

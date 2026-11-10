@@ -2,7 +2,8 @@
 //
 // A confluence on the molten sea: two rivers of molten metal run toward each other across the sea below the camera and
 // join into one river that runs on hotter, so it glows brighter and more yellow (colour means temperature: the joined
-// river is literally the stronger one). The logo stays whole and still in the sky; nothing goes round in a circle.
+// river is literally the stronger one). The logo stays whole and still in the sky above them; nothing goes round in a
+// circle.
 // The rivers are heat added to lava's own sea (the `sea` hook in lib/world/glsl/mark.glsl, SeaMod.heat), so they are
 // the world's own material. Everything is a pure function of the `together` place's pin progress (reversible), with
 // one line of copy when they meet.
@@ -43,16 +44,16 @@ export function lineOpacity(i: number, b: number) {
   return L ? smooth(L.from, L.in, b) : 0;
 }
 
-/** The together camera: from the hero's last framing it rises and tips down onto the sea, so the rivers below are
- *  seen whole (the zoomed-in sea Jacob likes just past the headline), then holds while they join. */
+/** The together camera: from the hero's last framing it rises a little and tips down, and holds: the mark hangs whole
+ *  in the sky under the nav (it never fades and is never cut: it leaves only by the camera's own turn into the story),
+ *  the sun's path runs down the sea under it (the glitter sea Jacob likes just past the headline), the two rivers come
+ *  in from the sides beyond and the joined river runs toward the viewer through the lower third, to the right of the
+ *  line. Low enough (h < ~20) that the mark stays against the sky, above the horizon. */
 const NEAR = { sunU: 0, sunV: -170, sunY: 34, sunR: 4.0 };
 export function togetherKeys(): Key[] {
   return [
-    // the mark fades as the camera tips down off it (it would otherwise slide up half under the nav), and comes back
-    // round the far sun as the journey climbs into story
-    { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, 'mark.vis': 1, ph: { fov: 62, pitch: -2 } },
-    { at: ['together', 0.22], s: 12, h: 18, yaw: 180, pitch: -16, fov: 48, ...NEAR, 'mark.vis': 0, ph: { fov: 63, pitch: -20 } },
-    { at: ['together', 0.3], s: 14, h: 30, yaw: 180, pitch: -26, fov: 50, ...NEAR, 'mark.vis': 0, ph: { fov: 64, pitch: -31 } },
-    { at: ['together', 1], s: 22, h: 44, yaw: 180, pitch: -29, fov: 50, ...NEAR, 'mark.vis': 0, ease: 'linear', ph: { fov: 64, pitch: -34 } },
+    { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2, sunR: 3.55 } },
+    { at: ['together', 0.3], s: 12, h: 15, yaw: 180, pitch: -7, fov: 48, ...NEAR, ph: { fov: 63, pitch: -19.5, sunR: 3.55 } },
+    { at: ['together', 1], s: 20, h: 19, yaw: 180, pitch: -8, fov: 48, ...NEAR, ease: 'linear', ph: { fov: 63, pitch: -21, sunR: 3.55 } },
   ];
 }
