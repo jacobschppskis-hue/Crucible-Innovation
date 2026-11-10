@@ -109,6 +109,25 @@ export function keys(): Key[] {
   // under the limb straight ahead, so the atmosphere lights a sunset band along it: over longitude L, a camera at angle
   // th and height h sees it at elevation 90 - (L - th), the limb at -acos(R / (R + h)); L = th + 94 + dip.
   const dusk = (lonDeg: number) => ({ ...FAR, sunV: deg(lonDeg) });
+  // story: the climb out of the swoop up to PayPal's orbit, written densely (like paypal's own keys: no kinks) so the
+  // limb can be HELD low in the frame all the way up. Two keys alone let it rise to mid-frame half way (the dip grows
+  // with sqrt(h) while the pitch falls evenly), straight through the paragraph being read. Same path as before: s,
+  // yaw and fov evenly, h in log space, the sun round to dusk(170), all on the smooth ease; only the pitch follows
+  // the limb (phones: 79% -> 87% down a 390 x 844 frame, whose fov is width-locked; wide screens 78% -> 86%)
+  const climb: Key[] = [];
+  for (let k = 1; k <= 12; k++) {
+    const e = EASE.smooth(k / 12);
+    const mix = (a: number, b: number) => a + (b - a) * e;
+    const h = 6 * Math.pow(1300 / 6, e);
+    const pitchFor = (y: number, fov: number) => (Math.atan((y - 0.5) * 2 * Math.tan(0.5 * fov * D2R)) - Math.acos(R / (R + h))) / D2R;
+    const phFov = mix(64, 62);
+    climb.push({
+      at: ['story', 0.35 + (0.65 * k) / 12], ease: 'linear',
+      s: mix(360, deg(14)), h, yaw: mix(80, 6), fov: mix(50, 48), pitch: pitchFor(mix(0.78, 0.86), mix(50, 48)),
+      ...FAR, sunV: k === 12 ? deg(170) : -deg(80 + 110 * e),
+      ph: { fov: phFov, pitch: pitchFor(mix(0.79, 0.87), (2 * Math.atan((Math.tan(0.5 * phFov * D2R) * 0.6 * 844) / 390)) / D2R) },
+    });
+  }
   return [
     // hero: low over the molten sea at sunset, the mark floating over its reflection, its core the sun; stars above
     { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } }, // mark: phone core right of the type, so the glitter column never crosses it
@@ -118,21 +137,34 @@ export function keys(): Key[] {
     { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 1, fov: 46, ...NEAR, ph: { fov: 62, pitch: 0 } },
     // story: the core recedes into the sky and sets as the camera turns to the night and climbs
     // ... and swoops low over the night sea while Jacob's first paragraphs are read: the visitor's cursor and finger
-    // make wakes here (lava: full wakes below h 14); the horizon sits low, the type has the dark sky
-    { at: ['story', 0], s: 90, h: 7, yaw: 118, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
-    { at: ['story', 0.35], s: 360, h: 6, yaw: 80, pitch: 7, fov: 50, ...FAR, ph: { fov: 64, pitch: 8 } },
-    // V2: one slow climb from the swoop straight up to PayPal's orbit (no zoom onto the vent's glowing patch)
-    { at: ['story', 1], s: deg(14), h: 1300, yaw: 6, pitch: -26, fov: 48, ...dusk(170), ph: { fov: 62, pitch: -22 } },
+    // make wakes here (lava: full wakes below h 14). Film titles: the type has the dark sky, the horizon runs low in
+    // the frame (phones ~79% down, wide screens ~78%), so the glow on it never passes behind the lines being read
+    { at: ['story', 0], s: 90, h: 7, yaw: 118, pitch: 12, fov: 50, ...FAR, ph: { fov: 64, pitch: 22.4 } },
+    { at: ['story', 0.35], s: 360, h: 6, yaw: 80, pitch: 12, fov: 50, ...FAR, ph: { fov: 64, pitch: 22.6 } },
+    // V2: one slow climb from the swoop straight up to PayPal's orbit (no zoom onto the vent's glowing patch); it ends
+    // with the limb ~87% down (the last lines leave upward, away from it)
+    ...climb,
     // paypal: high orbit over the night side, looking down at the planet (cosmic scale)
     { at: ['paypal', 0], s: deg(28), h: 2600, yaw: 0, pitch: -36, fov: 42, ...FAR, ph: { fov: 58, pitch: -46 } },
     { at: ['paypal', 1], s: deg(38), h: 2900, yaw: 0, pitch: -38, fov: 42, ...FAR, ph: { fov: 58, pitch: -48 } },
-    // story-2 (the rest of Jacob's account): long text, so the planet fills only the lower ~40% (the limb ~60% down:
-    // pitch = 7 - dip; dip = acos(R / (R + h))), dusk ahead, and `quiet` 1 so look dims the rivers under running text
-    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -45.5, fov: 46, quiet: 1, ...duskSun(deg(32), 3400, 0), ph: { fov: 60, pitch: -43 } },
-    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -38, fov: 46, quiet: 1, ...duskSun(deg(80), 2200, 8), ph: { fov: 60, pitch: -36 } },
-    // story-3 (Charlie): coming down over the night side
-    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -44, fov: 48, quiet: 1, ...duskSun(deg(100), 900, 0), ph: { fov: 62, pitch: -50 } },
-    { at: ['story-3', 1], s: deg(146), h: 60, yaw: -6, pitch: 0, fov: 48, quiet: 0, ...FAR, ph: { fov: 62, pitch: 3 } },
+    // story-2 (the rest of Jacob's account) and story-3 (Charlie): long text, read like film titles over the planet,
+    // dusk on the limb. The limb never stands behind the lines being read (pitch = the limb's angle off the axis -
+    // dip; dip = acos(R / (R + h))): on phones it lies ~80% down the frame, the type above it on the sky; on wide
+    // screens the camera banks (roll -82) so the planet stands on the RIGHT, its limb ~235 px right of centre at
+    // 900 px high, and the column has the left half (Story.css keeps it there). `quiet`: look dims the rivers under
+    // the few lines that do cross the disk (phones: the lines coming in at the bottom; wide screens: none until the
+    // camera levels out in story-3). 'look.stars' 0.5: fewer specks between the letters
+    // the swing from PayPal's view into this one is over 0.45 of a screen BEFORE the place starts, in the gap between
+    // the two scenes: by the time Jacob's break-out sentence comes up, the limb already stands where it stays
+    { at: ['story-2', 0], dy: -0.45, s: deg(31.4), h: 3340, yaw: 0, pitch: -37.5, roll: -82, fov: 46, quiet: 0.25, 'look.stars': 0.5, ...duskSun(deg(31.4), 3340, 0), ph: { fov: 60, pitch: -25.8, roll: 0, quiet: 1 } },
+    { at: ['story-2', 0], s: deg(32), h: 3400, yaw: 0, pitch: -37.8, roll: -82, fov: 46, quiet: 0.25, 'look.stars': 0.5, ...duskSun(deg(32), 3400, 0), ph: { fov: 60, pitch: -26.1, roll: 0, quiet: 1 } },
+    { at: ['story-2', 1], s: deg(80), h: 2200, yaw: 8, pitch: -30.5, roll: -82, fov: 46, quiet: 0.25, 'look.stars': 0.5, ...duskSun(deg(80), 2200, 8), ph: { fov: 60, pitch: -18.8, roll: 0, quiet: 1 } },
+    // story-3 (Charlie): coming down slowly over the night side, dusk still on the limb; it stays above ~300 (lower,
+    // the air's blue band grows tall enough to stand behind the lines). On wide screens the camera levels out as it
+    // comes down: the limb swings from the right down to a low horizon, never through the upper left where the lines
+    // are read. The stars are back to full by the end (the channel carries on into the ventures)
+    { at: ['story-3', 0], s: deg(100), h: 900, yaw: 0, pitch: -16.5, roll: -82, fov: 48, quiet: 0.6, 'look.stars': 0.5, ...duskSun(deg(100), 900, 0), ph: { fov: 62, pitch: -4.5, roll: 0, quiet: 1 } },
+    { at: ['story-3', 1], s: deg(146), h: 320, yaw: -6, pitch: 0.4, roll: 0, fov: 48, quiet: 0, 'look.stars': 1, ...duskSun(deg(146), 320, -6), ph: { fov: 62, pitch: 11 } },
     // ventures: skimming the night sea before dawn, monoliths rising out of it; cursor and finger waves here
     { at: ['ventures', 0], s: deg(150), h: 3.2, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
     { at: ['ventures', 1], s: deg(150) + 60, h: 3.4, yaw: 0, pitch: -5, fov: 50, ...FAR, ph: { fov: 64, pitch: -7 } },
