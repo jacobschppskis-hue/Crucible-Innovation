@@ -123,3 +123,32 @@ owns the sea so the night sea after ventures never reads black; in over the last
 0-0.45); its own camera keys (from the sea at h 30 into an orbit view like the reference, the limb at ~73% on phones,
 the type above it in the sky); the two lines cross-fade over a longer, eased window (0.26-0.6 of the pin). Shore's
 phone pitch follows on (-10/-8.5) so the planet stays in frame. Frames: `shots/v2/` (iPhone, q 4).
+
+## Nov 10: the chapters as film titles over the planet
+Reviewer: "walls of 16 px text, about 7,000 px on phone", the blue band and orange limb passing behind paragraphs,
+"No signal" boxes that read as broken images, stars as specks between the letters. Jacob (R3): "come up with some ideas
+to make the biography pages look better".
+
+1. **Composition first (journey.ts, the story / story-2 / story-3 keys).** The limb never stands behind the lines being
+   read. Phones: the horizon / limb lies ~80% down the frame through all three places (pitch = the limb's angle off the
+   axis - dip, for the phone's width-locked fov), the type above it on the sky; only the lines coming in at the bottom
+   cross the disk, with `quiet` 1. Wide screens: the camera banks (roll -82) in story-2 and the start of story-3, so the
+   planet stands on the RIGHT (limb ~235 px right of centre at 900 px high, it scales with the height) and the column
+   has the left half; it levels out as it comes down through Charlie's account. story-3 now ends at h 320 with dusk
+   still on the limb (below ~300 the air's blue band grows tall enough to stand behind half a screen of text; that was
+   the old story-3-85 frame). 'look.stars' 0.5 in story-2 / story-3, back to 1 on the last key (channels carry on).
+   The end of each place has the limb LOW, because the text leaves upward: the next place's camera move then pulls
+   the world up behind it, away from the last lines.
+2. **Type (Story.css).** Phone body 17.5 px / 1.6 (17 px under 375), lead 23.8 px / 1.3 at weight 450; wide screens
+   19 px in a 40rem column (~67 characters) that always ends ~64 px right of centre: `min(40rem, 50vw + 2rem)`.
+   Sentences set larger WHERE THEY STAND (`storyIntro.lifts` in data/home.ts; the words in data/story.ts are untouched
+   and nothing is repeated): "People call them the PayPal Mafia." (it leads into the PayPal scene), the sentence about
+   the name as the lead of its paragraph, Jacob's last sentence as his closing card, Charlie's "Ultimately, I want to
+   spend my life building things that matter." Jacob's break-out stays the one sentence at full display size.
+3. **Title cards.** "Why Crucible" at 15vw (two lines on a phone). Each founder: the tube small (7rem phones, 9.5rem
+   wide screens) beside the name on two lines at display size, standing on the tube's base line. The sticky side column
+   and the reading line are gone (the planet has that side now); after PayPal a small running name says whose words
+   carry on.
+4. **Length.** Phone 390: 6306 px before, 6188 after (360: 6548 -> 6120). 1440: 4548 -> ~5700, longer: one column
+   instead of tube-beside-text, and the lifts. Tooling for this round is in the session scratchpad (layout strips with
+   JS off, a per-band contrast estimate on frames).

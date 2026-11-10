@@ -1,27 +1,29 @@
-/* "Why Crucible" in the world (components/world/Story.tsx, Chapter.tsx). The type sits straight on the world: no
-   background, scrim, mask, halo or text-shadow anywhere in this file. Legibility comes from where the camera puts the
-   sea (low in frame, cooled, at night). Body copy is solid (no dimmed reading state): the glowing sea can pass under
-   any line, and solid bone keeps AA over it. */
+/* "Why Crucible" in the world (components/world/Story.tsx, Chapter.tsx): the founders' accounts set like the titles of
+   a film over the planet. The type sits straight on the world: no background, scrim, mask, halo or text-shadow
+   anywhere in this file. Legibility comes from composition: the journey (lib/world/journey.ts, the story places) keeps
+   the planet's limb low in the frame on phones and to the right of the column on wide screens, so the lines being
+   read stand on the dark sky. Hierarchy is Archivo's size, weight and width only.
+
+   "Wide" below is the engine's own split (engine.ts `narrow`): the wide camera runs from 900 px, or from 761 px in
+   landscape, so the column and the limb always belong to the same composition. */
 .wstory {
   position: relative;
 }
+
+/* ---------- the section's title card ---------- */
 .wstory-head {
-  padding-bottom: clamp(4rem, 12vh, 8rem);
+  padding-bottom: clamp(4.5rem, 13vh, 8rem);
 }
-/* wide screens: the heading arrives once the camera has turned from the sunset to the night sky (it stood on the
-   bright afterglow before: 1.67:1) */
-@media (min-width: 1024px) {
-  .wstory-head {
-    padding-top: 38vh;
-  }
+.wstory-h {
+  font-size: clamp(3.25rem, 15vw, 8.5rem);
+  letter-spacing: -0.02em;
 }
 .wstory-sub {
   margin-top: 1.5rem;
-  max-width: 26rem;
+  max-width: 20rem;
   font-size: 1.125rem;
-  line-height: 1.55;
-  color: var(--bone);
-  opacity: 0.86;
+  line-height: 1.5;
+  color: var(--bone-dim);
 }
 
 /* ---------- a chapter ---------- */
@@ -29,177 +31,196 @@
   position: relative;
 }
 .wch-part {
-  padding-top: clamp(5rem, 14vh, 9rem);
+  padding-top: clamp(5rem, 16vh, 9rem);
+  padding-bottom: clamp(4rem, 13vh, 7rem);
 }
-.wch-grid {
+/* after the interlude the account carries on under a small running name: less air than a title card */
+.wch-part-cont {
+  padding-top: clamp(3.5rem, 11vh, 6rem);
+  padding-bottom: clamp(4.5rem, 13vh, 8rem);
+}
+
+/* the title card: the tube, small, and the name at display size on two lines, standing on the tube's base line */
+.wch-title {
   display: grid;
-  gap: 2.5rem;
-}
-@media (min-width: 1024px) {
-  .wch-grid {
-    grid-template-columns: minmax(0, 20rem) minmax(0, 1fr);
-    gap: 5rem;
-  }
-  .wch-side {
-    position: sticky;
-    top: calc(var(--nav-h) + 3rem);
-    align-self: start;
-  }
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 1.125rem;
+  align-items: end;
 }
 .wch-tube {
   width: 100%;
-  max-width: 16rem;
-}
-@media (min-width: 1024px) {
-  .wch-tube {
-    max-width: none;
-  }
 }
 .wch-name {
-  margin-top: 1.5rem;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 1.875rem;
-  line-height: 1;
-  letter-spacing: -0.015em;
+  font-size: clamp(2rem, 9.6vw, 3rem);
+  line-height: 0.96;
   color: var(--bone);
 }
-.wch-grid-cont .wch-name {
-  margin-top: 0;
+.wch-name-line {
+  display: block;
 }
 .wch-role {
-  margin-top: 0.5rem;
+  margin-top: 0.625rem;
+  line-height: 1.2;
   color: var(--bone-dim);
 }
-/* after the interlude the side column only carries the name and the reading line, on wide screens */
-@media (max-width: 1023px) {
-  .wch-grid-cont .wch-side {
-    display: none;
-  }
+.wch-running {
+  margin-bottom: 1.5rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.9375rem;
+  line-height: 1.2;
+  color: var(--bone-dim);
 }
 
-/* how far this chapter has been read: Ember while it is being read (--p from data-scroll="read" on the grid), bone once
-   it has been read to the end */
-.wch-read {
-  display: block;
-  position: relative;
-  width: 100%;
-  max-width: 16rem;
-  height: 2px;
-  margin-top: 1.5rem;
-  background: var(--line-strong);
-  overflow: hidden;
-}
-.wch-read::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  transform-origin: 0 50%;
-  transform: scaleX(var(--p, 1));
-  background: color-mix(in oklab, var(--ember) calc((1 - clamp(0, (var(--p, 1) - 0.985) * 70, 1)) * 100%), var(--bone-dim));
-}
-@media (max-width: 1023px) {
-  .wch-read {
-    display: none;
-  }
-}
-
+/* ---------- the account ---------- */
 .wch-text {
   min-width: 0;
+  margin-top: clamp(2.25rem, 6vh, 3.5rem);
 }
+.wch-part-cont .wch-text {
+  margin-top: 0;
+}
+/* a tablet held upright has the phone's camera and a wide page: the measure stays a reading measure */
 .wch-text > p,
-.wch-break > .wch-p {
-  max-width: 40rem;
+.wch-break > p {
+  max-width: 36rem;
 }
-/* wide screens: reading size, not caption size (20 px body, ~68 characters a line) */
-@media (min-width: 1024px) {
+/* the opening paragraph, and a long sentence that opens its paragraph: larger and tighter */
+.wch-lead {
+  font-size: clamp(1.3125rem, 6.1vw, 1.5rem);
+  line-height: 1.3;
+  font-weight: 450;
+  color: var(--bone);
+}
+.wch-p {
+  margin-top: 1.625rem;
+  font-size: 1.09375rem;
+  line-height: 1.6;
+  color: var(--bone);
+}
+@media (max-width: 374px) {
+  .wch-p {
+    font-size: 1.0625rem;
+  }
+}
+.wch-break > .wch-lead {
+  margin-top: 2.5rem;
+}
+.wch-break > .wch-lead + .wch-p {
+  margin-top: 1.25rem;
+}
+.wch-text > :first-child,
+.wch-text > .wch-break:first-child > :first-child {
+  margin-top: 0;
+}
+
+/* a short sentence set as a title where it stands: the paragraph runs into it and carries on after it */
+.wch-lift {
+  margin: 2.25rem 0 2rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.625rem, 7.4vw, 2.25rem);
+  line-height: 1.08;
+  text-wrap: balance;
+  color: var(--bone);
+}
+.wch-break > .wch-lift:last-child {
+  margin-bottom: 0;
+}
+.wch-break > .wch-lift:first-child {
+  margin-top: 2.75rem;
+}
+
+/* Jacob's sentence, once, in place, at full display size */
+.wch-break-line {
+  margin: 3rem 0 2.75rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.25rem, 10.2vw, 3.75rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+
+/* Charlie's closing line, as he wrote it, given the room it asks for */
+.wch-statement {
+  margin: 0;
+  padding: clamp(0.5rem, 3vh, 2.5rem) 0 clamp(5rem, 15vh, 9rem);
+}
+.wch-statement p {
+  max-width: 16em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.875rem, 8.4vw, 3.5rem);
+  line-height: 1.04;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+  color: var(--bone);
+}
+
+/* ---------- wide screens: the column keeps to the left half, the planet's limb has the right ---------- */
+@media (min-width: 900px), (min-width: 761px) and (orientation: landscape) {
+  .wstory-sub {
+    max-width: 24rem;
+    font-size: 1.25rem;
+  }
+  .wch-title {
+    grid-template-columns: 9.5rem minmax(0, 1fr);
+    gap: 2rem;
+  }
+  .wch-name {
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    letter-spacing: -0.02em;
+  }
+  .wch-role {
+    margin-top: 0.875rem;
+    font-size: 1.125rem;
+  }
+  /* the limb stands right of centre (journey.ts): the column ends a little past the middle at every width */
   .wch-text > p,
-  .wch-break > .wch-p {
-    max-width: 44rem;
+  .wch-break > p {
+    max-width: min(40rem, calc(50vw + 2rem));
   }
   .wch-lead {
     font-size: 1.75rem;
-    line-height: 1.45;
+    line-height: 1.32;
   }
   .wch-p {
-    font-size: 1.25rem;
-    line-height: 1.65;
+    margin-top: 1.75rem;
+    font-size: 1.125rem;
   }
-  .wstory-sub {
-    font-size: 1.25rem;
+  .wch-lift {
+    margin: 3.25rem 0 3rem;
+    font-size: clamp(2rem, 3.2vw, 2.75rem);
   }
-}
-.wch-lead {
-  font-size: 1.375rem;
-  line-height: 1.5;
-  color: var(--bone);
-}
-@media (min-width: 640px) {
-  .wch-lead {
-    font-size: 1.5rem;
+  .wch-break > .wch-break-line {
+    max-width: min(46rem, calc(50vw + 5rem));
+    margin: 4.5rem 0 4rem;
+    font-size: clamp(2.75rem, 4vw, 3.75rem);
   }
-}
-.wch-p {
-  margin-top: 2rem;
-  font-size: 1.125rem;
-  line-height: 1.7;
-  color: var(--bone);
-  opacity: 0.88;
-}
-.wch-grid-cont .wch-text > :first-child > .wch-p:first-child,
-.wch-grid-cont .wch-text > .wch-p:first-child {
-  margin-top: 0;
-}
-
-/* Jacob's sentence, once, in place: the paragraph runs into it and carries on after it. Display size, bone, as wide as
-   the text column allows (the side column keeps the name pinned, so it never reaches over it). */
-.wch-break-line {
-  margin: 2.5rem 0;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(2.125rem, 9.2vw, 5rem);
-  line-height: 1;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-  color: var(--bone);
-}
-@media (min-width: 1024px) {
-  .wch-break-line {
-    margin: 4rem 0;
-    max-width: 13em;
-    font-size: clamp(3rem, 4.6vw, 4.5rem);
-  }
-}
-
-/* Charlie's closing line, as he wrote it, given the whole width */
-.wch-statement {
-  margin: 0;
-  padding: clamp(4rem, 12vh, 8rem) 0 clamp(6rem, 18vh, 12rem);
-}
-.wch-statement p {
-  max-width: 15em;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: clamp(2rem, 5.6vw, 5rem);
-  line-height: 1.02;
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-  color: var(--bone);
-}
-@media (min-width: 1024px) {
   .wch-statement p {
-    margin-left: -0.06em;
+    font-size: clamp(2.5rem, 4.4vw, 4.25rem);
+  }
+}
+@media (min-width: 1280px) {
+  .wch-p {
+    font-size: 1.1875rem;
   }
 }
 
-/* The CRT placeholder as an object in the world, not a panel on the sky: a dark glass face (no signal: the raster is
-   dim, the phosphor name glows), a curved-glass highlight from the sky above, and the rim of the tube's bezel catching
-   the warm light of the sea below. All on the tube itself, nothing behind it. */
+/* ---------- the tube ---------- */
+/* The CRT as a small object in the world, not a panel on the sky: a dark glass face, a curved-glass highlight from the
+   sky above, and the rim of the bezel catching the warm light of the sea below. All on the tube itself, nothing
+   behind it. A real CRT portrait (same file names, 5:6) drops into the same frame. */
 .wch-tube .crt {
   border-radius: 7% / 6%;
 }
-.wch-tube .crt-img {
-  filter: brightness(0.62) contrast(1.25);
+.wch-tube .crt-scan {
+  /* the tube's own light, scaled to its size */
+  box-shadow: 0 0 1.25rem 0 color-mix(in oklab, var(--ember-hot) 9%, transparent);
 }
 .wch-tube .crt::after {
   content: '';
@@ -208,14 +229,18 @@
   border-radius: 6% / 5%;
   pointer-events: none;
   /* the glass bulges: a soft sky reflection across its upper half, falling off toward the edges */
-  background: radial-gradient(120% 70% at 30% 8%, color-mix(in oklab, var(--bone) 9%, transparent), transparent 55%);
+  background: radial-gradient(120% 70% at 30% 8%, color-mix(in oklab, var(--bone) 10%, transparent), transparent 55%);
   /* the bezel's rim: cool from the sky on top, warm from the sea underneath */
   box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--bone) 14%, transparent),
-    inset 0 -1px 0 color-mix(in oklab, var(--ember) 30%, transparent);
+    inset 0 0 0 1px var(--line-strong),
+    inset 0 1px 0 color-mix(in oklab, var(--bone) 22%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--ember) 45%, transparent);
 }
 @media (prefers-reduced-motion: no-preference) {
   .js .wch-tube .crt:not([data-on])::after {
     opacity: 0.4;
+  }
+  .js .wch-tube .crt:not([data-on]) .crt-scan {
+    box-shadow: none;
   }
 }
