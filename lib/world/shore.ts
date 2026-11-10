@@ -289,7 +289,7 @@ export function shoreKeys(R: number): Key[] {
   // in orbit the sun is the sky's own disc (look), not the mark: it rises through the air, with its glare in the lens,
   // the limb igniting round it and its glitter path on the sea. On the way down the mark comes back round it.
   const ORBIT = { 'mark.vis': 0, 'look.sunDisc': 0.3, 'shore.glare': 1, 'shore.ignite': 1, 'shore.path': 1, roll: 0 };
-  const HOME = { 'mark.vis': 1, 'look.sunDisc': 0, 'shore.glare': 0, 'shore.ignite': 0, 'shore.path': 0, 'lava.heat': 0, roll: 0 };
+  const HOME = { 'mark.vis': 1, 'look.sunDisc': 0.3, 'shore.glare': 0, 'shore.ignite': 0, 'shore.path': 0, 'lava.heat': 0, roll: 0 };
 
   // dawn's run home, 0 .. RUN of the place: one smooth path, sampled into keys close enough together that the sun
   // (which slerps between world directions) stays where each key puts it. tau runs 0..1 along the path, easing out of
@@ -326,7 +326,7 @@ export function shoreKeys(R: number): Key[] {
         c('el'),
         {
           'mark.vis': low,
-          'look.sunDisc': 0.3 * (1 - low),
+          'look.sunDisc': 0.3, // the sky's own disc all the way down: the mark is back only behind the arrival's glare (mark.ts presence())
           'shore.glare': 1 - sstep(0.6, 0.95, tau),
           'shore.ignite': 1 - sstep(0.7, 0.92, tau),
           'shore.path': 1 - sstep(0.7, 0.9, tau),

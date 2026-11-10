@@ -250,7 +250,11 @@ function makeLook(): WorldModule {
       // reads dim once upscaled) and are a little more present on phones (Jacob: 'slightly more prevalent for iPhone')
       const sc = f.quality.scale || 1;
       u.set('look_uStarGain', (ch['look.stars'] ?? 1) * UNIT * Math.min(2.5, Math.pow(1.25 / Math.min(sc, 1.25), 0.8)) * (f.narrow ? 1.35 : 1));
-      u.set('look_uSunDisc', ch['look.sunDisc'] ?? 1);
+      // on the last screen before the loop the sun comes near again (the mark's core): the sky's far disc and the near
+      // core part ways there, so the disc goes out under the arrival's glare as it swells (mark.ts presence())
+      const lp = f.places.loop;
+      const home = lp && f.loopLen > 0 ? Math.min(1, Math.max(0, (f.y - (lp.top - f.h)) / f.h)) : 0;
+      u.set('look_uSunDisc', (ch['look.sunDisc'] ?? 1) * (1 - sstep(0.02, 0.16, home)));
       u.set('look_uSunBoost', SUN.boost);
       u.set('look_uSunTemp', SUN.disc);
       u.set('look_uSunLimbT', SUN.limb);
