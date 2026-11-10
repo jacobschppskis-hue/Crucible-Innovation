@@ -381,7 +381,7 @@ vec3 ventures_surface(VenturesHit h, vec3 rd, float pixAng) {
   float film = smoothstep(0.02, 0.5, th) * (1.0 - onTop * (1.0 - melt));
   // (the coating: dull red where it has thinned, orange at the waterline; the bulge itself hottest at its crown)
   float Tfilm = (770.0 + 410.0 * pow(th, 0.8)) * smoothstep(0.015, 0.16, th);
-  Tfilm = mix(Tfilm, 960.0 + 230.0 * ventures_sat(hs / max(ventures_uD[i].x, 1.0)) + 40.0 * st, melt);
+  Tfilm = mix(Tfilm, 1000.0 + 250.0 * ventures_sat(hs / max(ventures_uD[i].x, 1.0)) + 40.0 * st, melt);
   T = max(T, Tfilm);
   rough = mix(rough, 0.09, film * 0.75);                // the melt is glossy
   float a = rough * rough;
@@ -517,7 +517,7 @@ float ventures_seaGlow(vec3 p) {
     float rr = length(max(abs(lc.xz) - ventures_uE[i].xz, 0.0)) / ventures_uE[i].x;
     float rise = ventures_uD[i].y;
     float fresh = 1.0 - smoothstep(0.3, 1.0, rise);
-    g += exp(-rr * 1.5 / (1.0 + 1.2 * fresh)) * (0.6 + 0.4 * ventures_uK[i].z + 0.5 * fresh) * smoothstep(0.0, 0.04, rise)
+    g += exp(-rr * 1.5 / (1.0 + 1.2 * fresh)) * (0.6 + 0.4 * ventures_uK[i].z + 0.5 * fresh) * smoothstep(0.0, 0.02, rise)
        * (1.0 + ventures_uK[i].y * 0.8 + ventures_uK[i].w);
     // ...and the sea is a little hotter for a few hundred metres round each standing casting: they stand in a
     // clearing of brighter metal, the foreground darker (depth across the sea)

@@ -23,14 +23,14 @@ const SCALE = 15;
  * three copies: Crucible Sites the tall machined stele, Verge narrower with a softer cast fillet, Trellis shorter and
  * thicker. */
 export const MONO_SHAPE: [number, number, number, number][] = [
-  [1.6, 5.0, 0.44, 0.075],
+  [1.6, 5.0, 0.44, 0.06],
   [1.36, 4.6, 0.52, 0.15],
   [1.5, 4.25, 0.6, 0.105],
 ];
 /** The live casting's shape (for callers that want one size). */
 export const MONO_E = MONO_SHAPE[0];
 /** Finish: base roughness of the broad faces (machined satin, as-cast, dressed). */
-const FINISH = [0.22, 0.33, 0.2];
+const FINISH = [0.22, 0.28, 0.2];
 /** Where they stand: the place's origin this far along the circle past the ventures place's first key, and each
  * casting's position in metres in the place's frame (x right, z back toward the camera). */
 const AHEAD = 760;
@@ -286,8 +286,8 @@ export function venturesKeys(R: number): Key[] {
   // look's cold moon, low behind the camera's left shoulder (fades in from story-3 and out into the thesis)
   // (it drifts round and down through the shot, as the camera's arc would have it: the sheen passes from Trellis to
   // Crucible Sites and sinks down their faces)
-  const MOON = { 'look.moon': 0.6, 'look.moonAz': 141, 'look.moonEl': 8.5 };
-  const MOON2 = { 'look.moon': 0.6, 'look.moonAz': 158, 'look.moonEl': 5.8 };
+  const MOON = { 'look.moon': 0.5, 'look.moonAz': 141, 'look.moonEl': 8.5 };
+  const MOON2 = { 'look.moon': 0.5, 'look.moonAz': 158, 'look.moonEl': 5.8 };
   const s = deg(150);
   return [
     { at: ['ventures', 0], s, h: 24, x: -30, yaw: 2.3, pitch: 0.4, fov: 30, ...FAR, ...MOON, ph: { fov: 31, pitch: 4.4, x: -24, yaw: 1.9 } },
