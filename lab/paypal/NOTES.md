@@ -1,5 +1,60 @@
 # PayPal beat: notes (role `paypal`)
 
+## V3 (Nov 10, overnight): made of the planet's own material — current
+The reviewer's verdict on V2: "map pins on a game globe", a camera static for two-thirds of the pin, a streak through
+the PayPal label on desktop. Jacob's own warning: it "is very easy for you to mess up. It ends up looking very dumb, it
+doesn't fit with the website, and it doesn't fit with the look of the planet." So the idea stays (one source, six
+sparks, six places, the captions in order) and every part of the execution is now the planet's material:
+
+- **Temperature, not sprites.** Everything on the sea is Kelvin added through `SeaMod.heat`; look's own Planck curve
+  turns it into light. A place is a spring (hot core, cooling pool), the broad ring of heat its landing sends out
+  (it fades in ~0.15 of the pin) and a river. PayPal is the same thing, bigger and hotter, and it cools once it has
+  given everything away ("long after PayPal itself was gone"). At the end all of it cools back to the planet's look.
+- **The new rivers really join look's.** `lookField()` is look's river field (planet.glsl `look_seaTemp`) on the CPU:
+  the same hash, value noise, meander and 3 octaves. `joinRiver()` walks from a point ahead of each place (Newton steps
+  on the field) to the nearest of look's rivers, keeps new rivers between 0.075 and 0.3 rad long, and then FOLLOWS that
+  meeting point every frame as look's rivers drift (continuous; it only picks a new one while the river is not showing).
+  The river is drawn analytically (a meander between the two ends, distance from the centre line in closed form: no
+  loops, no texture), finer than look's rivers at the spring and their width at the confluence, where its own heat
+  tapers so two rivers do not add up to a white knot. **If look changes its river field, change `lookField` too.**
+  The drift is read off planet.glsl's own text (`LOOK_DRIFT`: 0.003 while look_seaTemp advects the field by uTime,
+  0 once the network stands still, which the planet role's Nov 10 branch does), so that one change needs nothing here.
+  `PAYPAL_HEAT` (GLSL const, 1.0) scales every kelvin the beat adds: the place to rebalance if look's sea gets hotter.
+- **The vent gives itself away.** It opens the scene 2.2x the size of a spring and every throw takes some of it; by
+  the heading it is no bigger than the six, and then it cools ("long after PayPal itself was gone").
+- **Life at rest:** slow pulses of hotter metal run down every new river, the vent and springs breathe a few percent,
+  the beads shimmer; a bead in the air lights the sea under it (inverse square). Two frames a second apart differ in
+  ~19% of their pixels.
+- **Throws seen side-on.** A throw straight away from the camera is a straight line however high it goes (V2's
+  "beam"). The vent now sits to one side and throws across the frame, so every arc reads as an arc; height shows only
+  where the surface is seen at an angle (the far half of the planet), which is where the long throws go. SpaceX peaks
+  above the limb, against the black sky, below the caption. Tails are short (they cool in ~0.1 of the pin), thick and
+  yellow by the bead and a thin dull-red thread behind: a thrown bead, not a line drawn to a company. Each bead lights
+  the sea under it (inverse square), which is what tells the eye how high it is.
+- **Names are annotations.** 13 px Archivo 560 at the end of a 1 px bone hairline with a tick, sides `l r u d`. Each
+  place lists the sides no throw crosses (`labP` / `labD`); while a name is not showing yet the module picks, of
+  those, the side that lies darkest (`|lookField|` under the text, and not on the place's own river).
+- **Camera.** `beatChannels()`: constant-speed orbital drift (s) and push (h, log) through the pin, eased over its
+  first and last 7%; the pitch follows so the limb keeps its line (phones: 35% -> 30% of the frame). The module's keys
+  cover f 0.1-0.9 only (`MOVE`): before and after, each neighbour's ONE eased segment spans its 1-viewport gap plus a
+  tenth of the pin (the camera is still arriving under the first caption and already leaving under the last one),
+  which is far gentler than a 1-viewport lurch up to orbit and never stops dead at the pin's edge. Wide screens bank
+  7 degrees (the limb rises to the right, captions have the sky on the left); the roll comes and goes inside the move.
+  `quiet` 0.5 in these keys: look's rivers at about half their radiance, so the new sources are what burns.
+- **Pin** 5.2 viewports (PayPal.css overrides World.css's 4.2). Timeline (p): vent warms 0-0.05; throws 0.10 0.135
+  0.17 0.205 (landing 0.23-0.335); SpaceX 0.385 -> 0.575, Tesla 0.47 -> 0.58; heading 0.616-0.868; last line and the
+  cooling 0.885-1.
+- **Layout tool:** `lab/paypal/stage.html?ppall` draws every throw whole and every name, to check that no arc crosses
+  a name, a caption or the heading. Sites are screen targets at `REF_P` (0.74) cast onto the sphere, per layout.
+- `modules.ts`: the `paypal` entry takes all of the module's keys again (V2 filtered them to f >= 0.4).
+
+Still weak / next: the first frame (the lone vent) is plain; the springs are small from orbit on phones; where look's
+rivers happen to bunch (they drift) the lower part of the phone frame gets busy; nothing shows the network itself
+glowing hotter downstream of a confluence (it would need look's field per pixel: ~9 noise taps).
+
+---
+# Earlier rounds (history)
+
 ## The idea
 Seen from high over the night side of the molten planet, PayPal is one hot vent. eBay buys it, the pressure builds, and
 it erupts: four molten embers are thrown on real ballistic arcs over the planet's curve, the way a long exposure of
