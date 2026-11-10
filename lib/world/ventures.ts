@@ -182,7 +182,8 @@ function frameUpdate(f: Frame, u: Uniforms) {
     const Z = V.cross(X, Y);
     U.M.set([...X, ...Y, ...Z], i * 9);
     U.K.set([lift, S.hover[i], KINDS[i], S.press[i]], i * 4);
-    const dome = domeAt(rise) * s;
+    // (the sea domes up over a casting that pushes up through it; over one going down it just closes)
+    const dome = th > 0 ? 0 : domeAt(rise) * s;
     U.D.set([dome, rise, FINISH[i], 0], i * 4);
 
     // the screen box of the part above the sea (the link's hit area), and the box the crisp pass draws in (the same,
