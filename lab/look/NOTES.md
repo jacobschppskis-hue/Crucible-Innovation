@@ -110,3 +110,6 @@ was brighter than Planck at the sea's 1060 K, so every sea pixel outside a river
   deg left (toward a river system, and toward the shore's own yaw), the limb ~61% down a phone.
 - Lab tip: `node world/build-preview.mjs` rebuilds the world bundle in 0.1 s; shoot `world/dist/crucible.html`
   instead of rebuilding `out/` for every shader edit.
+- Exit: the planet cools as the pin lets go (normal again 60% of the way to the shore's first frame; it used to last to
+  shore 0.45): the footer's lines scroll in over the lower frame right behind the thesis, and bone type on a
+  yellow-white sea does not read.

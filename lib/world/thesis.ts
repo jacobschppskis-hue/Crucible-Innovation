@@ -17,8 +17,8 @@
 //   own glow by the same heat).
 // - the camera (keys below) is in orbit from the first frame of the pin: the limb ~60% down, the planet large under the
 //   type, the type in the black sky above it, so the type never sits on the hot disk.
-// The world cools over the climb out of ventures and eases back to the normal planet by shore 0.45 (as the sunrise arc
-// begins), so the loop is untouched.
+// The world cools over the climb out of ventures and is the normal planet again 60% of the way from the pin's end to
+// the shore (before the footer's lines are over it), so the loop is untouched.
 // The DOM (readout, the two lines' crossfade) is written here too, so the single-file preview behaves like the site.
 
 import type { WorldModule } from './modules';
@@ -57,8 +57,15 @@ export function thesisHeat(f: Frame): { k: number; w: number; dim: number } {
     // the air's glow from below goes first (the first 40% of the climb), so the climb is through a clear dark sky
     dim = pt.top > y0 + 1 ? smooth(seg(f.y, y0, y0 + 0.4 * (pt.top - y0))) : into;
   }
-  // ... and is the normal planet again by the time the sunrise arc begins in the shore
-  const away = 1 - smooth(seg(f.at('shore'), 0, 0.45));
+  // ... and cools back to the normal planet as the pin lets go: the footer's lines scroll in over the lower frame right
+  // behind the thesis, and bone type on a yellow-white sea does not read. Done 60% of the way to the shore's first
+  // frame (it used to last until shore 0.45, when the hot sea was a dull orange), so the loop is untouched.
+  let away = 1 - smooth(seg(f.at('shore'), 0, 0.45));
+  const ps = f.places['shore'];
+  if (pt && ps) {
+    const y1 = pt.top + pt.h - f.h;
+    if (ps.top > y1 + 1) away = 1 - smooth(seg(f.y, y1, y1 + 0.6 * (ps.top - y1)));
+  }
   const w = p > 0 ? (p < 1 ? 1 : away) : into;
   return { k, w, dim: p > 0 ? w : dim };
 }
