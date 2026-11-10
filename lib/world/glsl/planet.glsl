@@ -118,7 +118,7 @@ float look_seaTemp(vec3 q, float fp, float land) {
     float wv = (0.7 + 0.6 * (0.5 + 0.5 * look_vnoise(p * 2.3 + 13.0))) * (1.0 + 0.35 * look_uCold * smoothstep(0.0, 0.5, look_uMelt));
     // flow: a noise carried along the level sets of f (the river's own direction), two phases half a period apart
     vec3 v = (tA * gr.y - tB * gr.x) / g;
-    float tt = uTime * (1.0 - uStill) / 22.0;
+    float tt = uTime * (1.0 - uStill) / 18.0;
     float ph1 = fract(tt), ph2 = fract(tt + 0.5);
     float w1 = 1.0 - abs(2.0 * ph1 - 1.0);
     vec3 pf = pw * 6.5;
@@ -129,7 +129,7 @@ float look_seaTemp(vec3 q, float fp, float land) {
       fl += 0.5 * fine * (1.0 - smoothstep(0.002, 0.005, e));
     }
     float bank = 110.0 * exp(-d / sqrt(0.0016 * wv * wv + e * e));
-    float hot = (look_hot(d, 0.011 * wv, 170.0, e) + look_hot(d, 0.0028 * wv, 110.0, e)) * (0.86 + 0.3 * fl);
+    float hot = (look_hot(d, 0.011 * wv, 170.0, e) + look_hot(d, 0.0028 * wv, 110.0, e)) * (0.84 + 0.42 * fl);
     // tributaries: thinner and fainter away from the rivers they feed
     float near = 1.0 - smoothstep(0.03, 0.28, af);
     vec3 p2 = pw * 1.9 + 7.0;

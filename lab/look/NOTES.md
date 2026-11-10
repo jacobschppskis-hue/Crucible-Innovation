@@ -94,7 +94,7 @@ was brighter than Planck at the sea's 1060 K, so every sea pixel outside a river
   frequency) and warm river valleys; a river is banks (110 K) + a core (170 K) + a white-yellow thread (110 K) on the
   analytic distance to its centre line, its width breathing along the course, pooling at the field's saddles; three
   footprint-gated families of thinner tributaries near the rivers; a brightness variation carried ALONG the river
-  (noise advected along the level sets of the river field, two blended phases, period 22 s: no pop, still when the
+  (noise advected along the level sets of the river field, two blended phases, period 18 s: no pop, still when the
   clock is). `look_hot` keeps a sub-pixel line's radiance (Planck: -80 K per e-fold of widening), so far threads stay.
 - The network no longer drifts (it slid ~3 km/s under everything, the hero included).
 - `look_planetFarT`: the sea is seen through its skin (up to -75 K at the limb: limb darkening), and mirrors its own
