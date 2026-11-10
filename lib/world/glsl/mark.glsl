@@ -245,9 +245,9 @@ vec3 mark_coreShade(vec3 p, vec3 rd) {
   float mu = max(dot(n, -rd), 0.);
   float t = mark_uBeat.w;
   float boil = mark_noise(n * 2.6 + vec3(0., t * 0.04, 0.)) * 0.6 + mark_noise(n * 5.5 - vec3(t * 0.06)) * 0.4;
-  float k = pow(mu, 0.9);
+  float k = mu * mu * (0.55 + 0.45 * mu);                   // a sphere's heart: it falls off all the way across the disc
   float T = mix(1150., 2100., k) * (1. + 0.05 * (boil - 0.5) * smoothstep(0.05, 0.6, mu));
-  float I = 1.7 * pow(T / 2100., 4.6) + 0.06;
+  float I = 2.0 * pow(T / 2100., 4.6) + 0.06;
   return look_bbColor(T) * I;
 }
 // The core along a local ray: t of the hit (or of the closest approach within a pixel), and its coverage.
