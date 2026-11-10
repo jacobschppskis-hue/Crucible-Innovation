@@ -151,7 +151,9 @@ export function keys(): Key[] {
     // (mark) the sun here is still the far star, but as large in the sky as the near core will be (sunR 2.32e4 at 1e6):
     // through the last 0.6 screen it comes in along its own line of sight without changing size, behind its own glare
     // (lib/world/mark.ts presence()), and the mark resolves round it as the glare settles
-    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: -1.5, fov: 46, ...FAR2, sunR: 2.32e4, ph: { fov: 62, pitch: -3, yaw: 172, sunR: 2.06e4 } },
+    // (pitch 2 on wide screens: the camera is nearer the core here than in the hero, so the mark is a third larger; tipped
+    // up a little it resolves clear of the nav)
+    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: 2, fov: 46, ...FAR2, sunR: 2.32e4, ph: { fov: 62, pitch: -3, yaw: 172, sunR: 2.06e4 } },
     // loop: exactly the hero's first key, one lap on
     { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 170.3, sunR: 3.55 } },
   ];
@@ -203,6 +205,14 @@ export function resolve(
     prev = ch;
     out.push({ y, key: k, ch });
   }
+  // The loop's seam (mark): the last key, on the `loop` place, IS the first key one lap on. Channels carry over from key
+  // to key, so anything a place keyed on the way round and never set back (lava.heat at dawn: a sea 60 K hotter; the
+  // ventures' moon) would still be there at progress 1 and pop at the wrap. So the seam key takes the first key's value
+  // for every channel but the two that are a lap further on (s, sunV).
+  const first = out[0],
+    last = out[out.length - 1];
+  if (first && last && last !== first && last.key.at[0] === 'loop' && !last.key.dy)
+    for (const n in first.ch) if (n !== 's' && n !== 'sunV') last.ch[n] = first.ch[n];
   // keys at the same position: keep them a pixel apart (no cuts)
   for (let i = 1; i < out.length; i++) if (out[i].y <= out[i - 1].y) out[i].y = out[i - 1].y + 1;
   return out;

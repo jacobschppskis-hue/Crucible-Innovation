@@ -4,28 +4,32 @@
 //
 // Geometry: lib/splitRing.ts exactly (64-unit box, centred on the core, y up here): rings r 26.667 and 16, stroke
 // 3.467, squares 4.267 (7 on the outer ring 22.5 deg apart, 4 on the inner 36 deg apart, after one empty step), core
-// 4.8; each arc a half circle ending on the core's centre line. Extruded 2.4 deep with a rounded 0.5 bevel (lib/gl3d
-// logoPieces), ray-marched inside its slab box only (two squares per ring evaluated, by angle).
+// 4.8; each arc a half circle ending on the core's centre line. Extruded 2.4 deep with a rounded 0.8 bevel (a cast
+// edge, inside the outline: the silhouette is the 2D mark exactly), ray-marched inside its slab box only (two squares
+// per ring evaluated, by angle).
 //
 // The mark hangs round the sun, which is a world point (lib/world/mark.ts centres it on frame.sun.pos, scaled so the
 // core is exactly the sun's sphere): near over the sea in the hero (real parallax, its reflection on the sea), a far
-// star elsewhere. This file draws the core (look's disc is off where the mark shows) and lights the pieces with it (a
-// sphere light: GGX with the representative point, soft shadows of the pieces toward it with a penumbra from its
-// size); the beat's flare brightens the core and its glow in the sky (sky hook).
+// star elsewhere. This file draws the core (an incandescent body: Planck from a yellow-white heart to an Ember limb;
+// look's disc is off) and lights the pieces with it (a sphere light: GGX with the representative point, inverse-square
+// falloff, the inner ring's shadow on the outer ring, analytic).
 //
-// Physically based, linear HDR radiance: cold, bone cast metal (a broad diffuse part, a bone-tinted sheen) filled by
-// the sky above and the glowing sea below (stronger on the lower pieces) and a thin starlit line on the top bevels; no
-// grain or normal noise (at this scale it read as specks and mottling). Hot, blackbody (Planck at three wavelengths,
-// 750-3000 K, perceptual brightness), emitted through an emissivity that falls at grazing angles so glowing pieces keep
-// their form; the liquid skin is glossy and nearly black but for its own light.
+// Linear HDR radiance. Sand-cast bone metal: a pale conductor under a rough cast skin, the faces a little pillowed, the
+// bevels worn smoother; lit by the core and by the world it mirrors (the night above, the sea's glow below, the
+// afterglow behind it), all analytic. No grain or normal noise (at this scale it read as specks and mottling).
+//
+// The loop's arrival: on the way home the sun is a blaze (mark_glare, a lens's veil over everything) that draws in to
+// the core as the exposure settles; the mark resolves out of it from the outside in (mark_reveal). Driven by
+// presence() in lib/world/mark.ts; exactly off at the seam.
 //
 // Hooks: hit (secondary rays only: the sea's reflections), env (cheap shade for those), over (camera rays: the mark is
-// composited here, so its silhouette is anti-aliased and it can fade), sky (the core's flare on the sun disc).
+// composited here, so its silhouette is anti-aliased; and the glare's veil), sky (the glare as the sea mirrors it),
+// sea (the rivers), crisp (the mark at the screen's resolution).
 // The confluence timeline is lib/world/together.ts (fronts and flash arrive as uniforms).
 
 uniform vec4 mark_uC;     // xyz: the core's centre (world); w: world units per mark unit
 uniform mat3 mark_uB;     // mark -> world (columns: right, up, toward the viewer)
-uniform vec4 mark_uBeat;  // x: beat 0..1 (scroll), y: weld flash 0..1, z: core flare 0..1, w: clock (s)
+uniform vec4 mark_uBeat;  // x: beat 0..1 (scroll), y, z: unused, w: clock (s)
 uniform vec4 mark_uLook;  // x: visibility 0..1, y: size (1 = the core is the sun), z: shadow quality 0..1, w: unused
 uniform vec3 mark_uSky;   // fill radiance from the sky above (cool)
 uniform vec3 mark_uSea;   // fill radiance from the glowing sea below (warm)
@@ -209,7 +213,7 @@ vec3 mark_glareX(float x) {
   float xs = x / max(mark_uGlare.y, 0.05);
   float heart = exp(-xs * xs * 0.2);
   float skirt = 1. / (1. + xs * xs * 0.08);
-  float fade = smoothstep(26., 5., xs);
+  float fade = exp(-xs / 20.);                              // a long soft tail: no edge anywhere
   return (vec3(1.0, 0.64, 0.3) * (6. * heart) + vec3(1.0, 0.4, 0.11) * (2.6 * skirt * fade)) * g * g;
 }
 vec3 mark_glare(vec3 rd) {
@@ -444,7 +448,7 @@ void mark_sea(Ray r, Sea s, inout SeaMod m) {
   float aL, aR, aJ;
   float hL = mark_river(pw, vec2(190., 215.), vec2(46., 104.), J, 1.5, mark_uRiv.y, fw, 0.22, 1.3, aL);
   float hR = mark_river(pw, vec2(-185., 230.), vec2(-60., 118.), J, 1.5, mark_uRiv.y, fw, 0.22, 7.9, aR);
-  float hJ = mark_river(pw, J, vec2(1., 16.), vec2(-17., -34.), 1.7, mark_uRiv.z, fw, 0.32, 4.4, aJ);
+  float hJ = mark_river(pw, J, vec2(1., 16.), vec2(-17., -34.), 2.0, mark_uRiv.z, fw, 0.335, 4.4, aJ);
   // where they meet: a brief brightening that spreads into the joined river (soft, no disc)
   float pool = mark_uRiv.w * 0.16 * exp(-dot(pw - J, pw - J) / 40.);
   // the joined river carries both: its heat sits on top of the two it came from, never a seam at the junction

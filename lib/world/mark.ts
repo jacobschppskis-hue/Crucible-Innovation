@@ -2,7 +2,9 @@
 // structure: the core IS the sun, a world point the journey places (frame.sun: near over the sea in the hero, with real
 // parallax and its reflection under it; a far star elsewhere), so the mark is centred on it and scaled so its core is
 // exactly the sun's sphere (scale = sun.R / 4.8 mark units). This module draws the core (look's own disc is turned off
-// with look.sunDisc 0 wherever the mark shows). The mark is always whole, cast and still. "Stronger together"
+// with look.sunDisc 0 wherever the mark shows). The mark is always whole, cast and still: it is there through the hero
+// and "stronger together", leaves the frame by the camera's turn into the story, and on the way home resolves out of
+// the sun's glare (presence(), below: a pure function of the scroll, the same at progress 0 and 1). "Stronger together"
 // (lib/world/together.ts) is a confluence on the sea below: two molten rivers join into one hotter river, drawn as heat
 // in lava's sea through the `sea` hook, on the `together` place's pin progress, with one line of copy.
 //

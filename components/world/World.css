@@ -185,7 +185,7 @@ html[data-loop] [data-place='loop'] {
   padding-block: 1rem;
 }
 
-/* Phones (mark): the core sits right of centre (journey ph yaw 169), so the headline and paragraph keep left of the
+/* Phones (mark): the core sits right of centre (journey ph yaw 170.3), so the headline and paragraph keep left of the
    sun's glitter column on the sea */
 @media (max-width: 760px) {
   .w-hero-title {
