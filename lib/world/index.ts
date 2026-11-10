@@ -60,8 +60,11 @@ export async function startWorld(root: HTMLElement, opts: WorldOpts = {}): Promi
     onFail: (why) => {
       de.setAttribute('data-world-fail', why);
       de.removeAttribute('data-world-on');
+      de.removeAttribute('data-world-shown');
       opts.onFail?.(why);
     },
+    // the canvas fades in over the still once a real frame is on it (engine.ts): never a black or mismatched cut
+    onShown: () => de.setAttribute('data-world-shown', ''),
   });
   if (!engine) {
     if (!opts.canvas) canvas.remove();
@@ -119,6 +122,7 @@ export async function startWorld(root: HTMLElement, opts: WorldOpts = {}): Promi
     engine.stop();
     if (!opts.canvas) canvas.remove();
     de.removeAttribute('data-world-on');
+    de.removeAttribute('data-world-shown');
     if (window.__world === api) delete window.__world;
   };
 }

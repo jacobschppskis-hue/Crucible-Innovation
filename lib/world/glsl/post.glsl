@@ -9,6 +9,7 @@ uniform float look_uBloomAmt;  // 0.03..0.08
 uniform float look_uPunch;     // 0..1
 uniform float look_uGrain;     // ~0.02
 uniform float look_uVignette;  // 0..1
+uniform float look_uHalation;  // ~0.06: the red-orange halo film gives its brightest highlights (0 = off)
 
 const mat3 LOOK_AGX_IN = mat3(0.842479062253094, 0.0423282422610123, 0.0423756549057051,
                               0.0784335999999992, 0.878468636469772, 0.0784336,
@@ -58,7 +59,11 @@ vec3 look_sceneCR(vec2 uv) {
 
 vec3 look_post(vec2 uv, vec2 fc) {
   vec3 c = world_crisp(look_sceneCR(uv), uv); // the crisp pass (world) over the upscaled scene
-  if (uBloomOn > 0.5) c = mix(c, texture(uBloom, uv).rgb * 0.2, look_uBloomAmt); // 5 levels summed -> mean
+  if (uBloomOn > 0.5) {
+    vec3 b = texture(uBloom, uv).rgb * 0.2; // 5 levels summed -> mean
+    c = mix(c, b, look_uBloomAmt);
+    c += b * vec3(1.0, 0.27, 0.06) * look_uHalation; // halation: the wide glow again, red-orange, added
+  }
   vec2 d = (uv - 0.5) * vec2(uCanvas.x / uCanvas.y, 1.0);
   float r2 = dot(d, d) / (0.25 * (uCanvas.x * uCanvas.x / (uCanvas.y * uCanvas.y) + 1.0));
   float vg = 1.0 / (1.0 + r2 * 0.35);

@@ -10,6 +10,11 @@ canvas.world {
   pointer-events: none;
   user-select: none;
   display: block;
+  /* hidden until its first frame is on screen; the engine then fades it in over the hero still (engine.ts, onShown) */
+  opacity: 0;
+}
+html[data-world-shown] canvas.world {
+  opacity: 1;
 }
 
 /* The page liquid (lib/liquid) is the other pages' ground; on the home page the world replaces it. */
@@ -36,7 +41,8 @@ html:has([data-world-root]) {
     background-image: url('/world/hero-portrait.webp');
   }
 }
-html[data-world-on] .w-root::before {
+/* the still stays under the canvas while it fades in, then goes */
+html[data-world-shown] .w-root::before {
   display: none;
 }
 /* a sideways finger drag makes waves, never Chrome's swipe-back (x only: iOS's own edge swipe stays) */
@@ -185,7 +191,7 @@ html[data-loop] [data-place='loop'] {
   padding-block: 1rem;
 }
 
-/* Phones (mark): the core sits right of centre (journey ph yaw 169), so the headline and paragraph keep left of the
+/* Phones (mark): the core sits right of centre (journey ph yaw 170.3), so the headline and paragraph keep left of the
    sun's glitter column on the sea */
 @media (max-width: 760px) {
   .w-hero-title {

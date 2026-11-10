@@ -29,14 +29,81 @@ test('every other page ends on a dark footer, and no page has a bone one', async
   }
 });
 
-test('no alloy beat and CRT portraits on / and /sites', async ({ page }) => {
+// It scrolls /work, which starts the page liquid: software GL queues frames here, so a browser of its own (tests/gl.ts).
+worldTest('/work leads with the live client site: a real link, and its film plays with the scroll', async ({ page, request }) => {
+  await page.goto('/work', { waitUntil: 'networkidle' });
+  await expect(page.locator('h1')).toHaveText(/Out of the\s*crucible/);
+  const plate = page.locator('article.wk-plate').first();
+  await expect(plate.locator('h3')).toHaveText('Norma Custom Carpentry');
+  await expect(plate.getByRole('link', { name: /Visit the site/ })).toHaveAttribute('href', 'https://normacustomcarpentry.com');
+  await expect(plate.locator('.wk-url')).toHaveText('normacustomcarpentry.com');
+
+  // Every screenshot is lazy, sized, and served at widths that exist.
+  const imgs = await plate.locator('img').evaluateAll((els) =>
+    (els as HTMLImageElement[]).map((el) => ({ lazy: el.loading, sized: !!el.getAttribute('width') && !!el.getAttribute('height'), urls: [el.getAttribute('src')!, ...el.srcset.split(',').map((s) => s.trim().split(' ')[0])].filter(Boolean) })),
+  );
+  expect(imgs.length).toBeGreaterThan(2);
+  for (const img of imgs) expect(img.lazy === 'lazy' && img.sized, JSON.stringify(img)).toBe(true);
+  for (const url of new Set(imgs.flatMap((i) => i.urls))) expect((await request.get(url)).status(), url).toBe(200);
+
+  // Halfway through the film the middle moment is the one on screen, in the phone frame and in the caption.
+  const film = plate.locator('.wk-film');
+  const n = await film.locator('.wk-phone .wk-mo').count();
+  expect(n).toBeGreaterThanOrEqual(3);
+  await page.evaluate(() => {
+    const el = document.querySelector<HTMLElement>(innerWidth >= 1024 ? '.wk-stack' : '.wk-reel')!;
+    const r = el.getBoundingClientRect();
+    scrollTo(0, r.top + scrollY + (r.height - innerHeight) / 2);
+  });
+  const mid = (n - 1) / 2;
+  // A moment wipes up from the bottom of the screen: how much of its top is still clipped away, in percent.
+  const clipped = (k: number) =>
+    film.locator('.wk-phone .wk-mo').nth(k).evaluate((el) => parseFloat(/inset\(([\d.]+)%/.exec(getComputedStyle(el).clipPath)?.[1] ?? 'NaN'));
+  const opacity = (k: number) => film.locator('.wk-moment').nth(k).evaluate((el) => Number(getComputedStyle(el).opacity));
+  await expect.poll(() => clipped(mid)).toBe(0);
+  expect(await clipped(mid + 1)).toBe(100);
+  await expect.poll(() => opacity(mid)).toBe(1);
+  expect(await opacity(0)).toBe(0);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+  expect(overflow, 'horizontal scroll').toBeLessThanOrEqual(0);
+});
+
+test('/work without motion: the client site is still there, top of the page plus its other moments as stills', async ({ browser }) => {
+  const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+  const page = await ctx.newPage();
+  await page.goto('/work', { waitUntil: 'networkidle' });
+  const film = page.locator('.wk-film').first();
+  await film.scrollIntoViewIfNeeded();
+  const n = await film.locator('.wk-moment').count();
+  await expect(film.locator('.wk-browser .wk-mo:visible')).toHaveCount(1);
+  await expect(film.locator('.wk-thumb:visible')).toHaveCount(n - 1);
+  await expect(film.locator('.wk-moment:visible p')).toHaveCount(n - 1);
+  await ctx.close();
+});
+
+test('no alloy beat; the founders\' posters on /, CRT portraits with faces on /sites', async ({ page }) => {
   for (const path of ['/', '/sites']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });
     await expect(page.locator('.alloy, [class*="AlloyBeat"], [data-alloy]')).toHaveCount(0);
+    if (path === '/') {
+      // each chapter opens on its founder's own poster, lazy and sized, both sizes there
+      const posters = page.locator('.wch-poster img');
+      await expect(posters).toHaveCount(2);
+      for (const img of await posters.all()) {
+        expect(await img.getAttribute('loading')).toBe('lazy');
+        expect(Number(await img.getAttribute('width'))).toBeGreaterThan(0);
+        for (const url of (await img.getAttribute('srcset'))!.split(',').map((x) => x.trim().split(' ')[0])) {
+          expect((await page.request.get(url)).status(), url).toBe(200);
+        }
+      }
+    }
     const portraits = page.locator('img[alt^="CRT "]');
     const n = await portraits.count();
-    if (path === '/') expect(n).toBeGreaterThan(0);
-    for (let i = 0; i < n; i++) expect(await portraits.nth(i).getAttribute('src')).toMatch(/-crt\.webp/);
+    if (path === '/sites') expect(n).toBeGreaterThan(0);
+    for (let i = 0; i < n; i++) {
+      expect(await portraits.nth(i).getAttribute('src')).toMatch(/-crt\.webp/);
+      expect(await portraits.nth(i).getAttribute('alt'), 'a face, not the "No signal" placeholder').toMatch(/^CRT portrait of /);
+    }
     // Straight on the page, not on a bone card.
     await expect(page.locator('img[alt^="CRT "]').locator('xpath=ancestor::*[contains(@class,"bg-bone")]')).toHaveCount(0);
   }

@@ -12,7 +12,7 @@ import { defaultLava } from './defaults/lava';
 import { thesis } from './thesis'; // story
 import { shore } from './shore'; // story
 import { look } from './look';
-import { paypal, paypalKeys } from './paypal'; // paypal
+import { paypal } from './paypal'; // paypal
 import { ventures } from './ventures'; // ventures
 import { mark } from './mark';
 
@@ -66,9 +66,9 @@ export const MODULES: WorldModule[] = [
   lava, // lava: the molten sea, its swell and the visitor's wakes
   mark, // mark: the hero's mark round the sun and the stronger-together beat (lib/world/mark.ts)
   // together: import { together } from './together'; together,
-  // paypal: PayPal -> six companies, with its own camera from the orbit on (V2: its low start by the vent, the zoom onto
-  // a glowing patch Jacob called out, is dropped; the story's climb meets it at orbit)
-  { ...paypal, keys: (R: number) => paypalKeys(R).filter((k) => k.at[1] >= 0.4) },
+  // paypal: PayPal -> six companies, with its own camera through the whole pin (an orbital drift and push from orbit;
+  // the story's climb meets its first key)
+  paypal,
   ventures, // ventures: the metal monoliths
   // type (story, lib/world/type.ts): display type reflected in the sea; off: it read as glyph noise, not a reflection
   thesis, // story: the whole planet heats 293 K -> 1811 K, with its own camera

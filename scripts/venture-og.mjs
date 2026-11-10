@@ -20,7 +20,7 @@ for (const [slug, name] of Object.entries(pages)) {
   const { width = 0 } = await sharp(mono).metadata();
   await sharp({ create: { width: 1200, height: 630, channels: 3, background: '#0d0d0b' } })
     .composite([{ input: mono, left: Math.round((1200 - width) / 2), top: 35 }])
-    .jpeg({ quality: 86, mozjpeg: true })
+    .jpeg({ quality: 92, chromaSubsampling: '4:4:4', mozjpeg: true }) // 4:4:4: the dark red faces band under subsampled chroma
     .toFile(out);
   console.log(`wrote ${out.slice(root.length + 1)}`);
 }

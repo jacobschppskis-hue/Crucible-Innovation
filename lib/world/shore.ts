@@ -1,280 +1,380 @@
-// The shore (owner: story): the end of the journey. A black-sand beach with molten surf breaking on it, under the giant
-// wordmark (components/world/Footer.tsx, place `dawn`). Jacob's one footer "like": "waves breaking on a shoreline,
-// except glowing" (the old footer furnace, lib/gl/furnaceGL.ts).
+// The shore (owner: shore): the last stretch of the lap, from the footer to the hero.
 //
-// Where: across the travel direction, 1200 units before the hero (v = SHORE_V), land on the far side (v < shoreline).
-// The hero camera stands at v = 0, 1.6 up, looking toward -v: the beach is below its horizon (curvature hides anything
-// lower than ~90 units at 1200), so the hero is untouched. At the end of `dawn` the camera hangs over the sea just off
-// the beach, facing the land with the setting sun off to one side; the loop's own keys (world) then pull it back over
-// open sea into the hero, and the beach sinks below the horizon behind the move.
+// 1. `shore` (the footer): first light. The camera climbs in orbit just short of the morning terminator while the sun
+//    comes up over the limb ahead: the limb's thin line ignites (ember, gold, white where the sun breaks through, the
+//    blue of the upper air), then the sun's glare stands over it. The footer's text sits in the dark sky above.
+// 2. `dawn` (the giant wordmark): the day side, crossed high and fast, flying with the sun: it stands low over the limb
+//    under the wordmark and slides across the frame as the camera banks into its turn, its warm path on the sea under
+//    it; then the descent to the evening sea, where the mark gathers round the sun again.
+// 3. The black-sand shore (Jacob: "a dark sand, like a black sand shoreline. The waves are going to be lapping against
+//    the shore constantly"; "waves breaking on a shoreline, except glowing"): the camera comes down past a cape of wet
+//    black sand and pulls back from it toward the hero, looking along its waterline at the setting sun.
 //
-// What it draws (all smooth, glossy molten metal; no crust, no foam specks):
-// - the sea hook: breaking crests running in to the shoreline (a long back slope, a steep front), shoaling as they come
-//   in, with a white-hot rolling lip only where they break; same lava material (heat + emit into SeaMod);
-// - the hit/shade hooks: the sand (a gentle beach rising to low dunes), black with a fine sheen, warm light from the
-//   surf on it; the swash: a thin molten sheet that runs up the sand fast and drains slowly, its leading lip bright;
-//   the sand it leaves glows and cools to black; wet sand mirrors the sky.
-// The wave clock is one shared phase, so crests arrive exactly when each swash starts.
+// The sand is not geometry: it is the sea's own sphere with another material, set through the sea hook (cold, still,
+// a little rough: a flat of wet black sand that mirrors the dusk like the sea does, with the lava's own Fresnel and
+// sky). No raymarch, no silhouettes, nothing to stair-step; every edge is filtered by the pixel's footprint. The sand
+// is a crescent whose cape comes beside the travel line ~1000 units before the hero and whose horns sweep away, so
+// from the hero (and from the loop's last key) all of it is under the horizon.
+// - the surf: smooth crests running in to the waterline, shoaling as they come in (shape only: they show in the sun's
+//   glitter and the mirrored sky), the sea a little hotter and calmer in the shallows;
+// - the swash: each wave sends a thin molten sheet up the sand, fast up and slow to drain, its front scalloped; the
+//   front is a thin bright thread, the sand it leaves glows and cools to black; one wave clock for crests and swash.
 
 import type { WorldModule } from './modules';
-import { duskSun, type Key } from './journey';
-
-/** Shoreline position along the travel direction (surface units, relative to the hero at v = 0). */
-export const SHORE_V = -1200;
+import type { Channels } from './frame';
+import type { Key } from './journey';
+import { cameraFrom, surfOf } from './camera';
 
 const GLSL = /* glsl */ `
 // the lava's glow (look's Planck radiance x the lava gain), as lava.glsl lights its sea
 vec3 shore_planck(float T){ return look_planck(T) * look_uLavaGain; }
-uniform float shore_uOn;   // 0 far away (all work skipped), 1 near the beach
-uniform float shore_uT;    // the surf's clock (s)
-const float SHORE_V = ${SHORE_V.toFixed(1)};
-const float SHORE_PER = 6.2;   // seconds per wave
-const float SHORE_C = 7.5;     // crest speed toward the shore (units/s)
+uniform float shore_uOn;    // 0 far away (all work skipped) .. 1 on the run home
+uniform float shore_uT;     // the surf's clock (s)
+uniform vec4 shore_uGlare;  // x: the sun's glare in the lens (strength x how much of its disc stands over the limb);
+                            // y: the limb igniting round the sun; z: 0 while the sun is under the limb .. 1 over it; w: 0 .. 1 as it climbs clear
+uniform float shore_uPath;  // the sun's long glitter path on the sea seen from orbit (gain, 0 = off)
+const float SHORE_PER = 9.0;    // seconds per wave (slow: the sea is big)
+const float SHORE_LAM = 30.0;   // crest spacing (units)
+const float SHORE_W = 520.0;    // width of the sand flat (molten sea again behind it)
+const float SHORE_V0 = -1000.0; // where the cape comes nearest the travel line (u = 0)
 
-// the shoreline (v of the waterline) along u, and its slope dv/du
-float shore_line(float u){ return SHORE_V + 16.0 * sin(u * 0.011) + 5.0 * sin(u * 0.037 + 1.0); }
-float shore_lineD(float u){ return 16.0 * 0.011 * cos(u * 0.011) + 5.0 * 0.037 * cos(u * 0.037 + 1.0); }
-// surface coords of a world point
-vec3 shore_uvy(vec3 P){
-  float r = length(P);
-  return vec3(uR * asin(clamp(-P.x / r, -1.0, 1.0)), uR * atan(P.z, P.y), r - uR);
+// the waterline: u = shore_c(v), sand on the +u side: a crescent of sand whose rounded cape comes within ~20 units of
+// the travel line at SHORE_V0 (the sun's glitter column, straight down the travel line, stays on open sea beside it)
+// and whose horns sweep away from it (toward the hero it stays > 500 units from the loop's last key, under
+// its horizon; on the way down the camera comes in over the sea beside it, never over the sand)
+float shore_c(float v){
+  float q = v - SHORE_V0;
+  return 22.0 + 0.0011 * q * q + 10.0 * sin(q * 0.0052) + 3.5 * sin(q * 0.0143);
 }
-// inland distance x (>0 on land), from the waterline
-float shore_x(vec2 w){ return shore_line(w.x) - w.y; }
-// sand height above the sea at inland distance x: a gentle beach, then low dunes
-// The land is a bar of black sand ~420 units wide (molten sea again behind it), so the run home never flies over a
-// plain of unlit dunes
-float shore_sand(vec2 w, float x){
-  float beach = x * 0.055 - 0.25;
-  float dune = smoothstep(45.0, 150.0, x) * (5.0 + 3.0 * sin(w.x * 0.021 + x * 0.013) + 2.0 * sin(w.x * 0.047 - x * 0.031));
-  return min(beach + dune, (430.0 - x) * 0.06 - 0.25);
-}
-// the wave phase along the shore (each stretch of beach a little out of step), 0..1
-float shore_phase(float u){
-  return fract(shore_uT / SHORE_PER + 0.11 * sin(u * 0.019) + 0.06 * sin(u * 0.053 + 2.0));
-}
-// how far up the sand the swash reaches at phase ph: fast up, slow drain; and its run-up length
-float shore_runL(float u){ return 15.0 + 4.0 * sin(u * 0.029 + 0.7); }
-float shore_front(float ph, float L){
-  return ph < 0.28 ? L * sin(ph / 0.28 * 1.5707963) : L * pow(1.0 - (ph - 0.28) / 0.72, 1.7);
-}
-// seconds since the sand at inland distance x was uncovered by the draining swash this cycle (-1: covered or untouched)
-float shore_age(float ph, float x, float L){
-  if (x <= 0.0 || x >= L) return -1.0;
-  float phx = 0.28 + 0.72 * (1.0 - pow(x / L, 1.0 / 1.7));
-  return ph > phx ? (ph - phx) * SHORE_PER : -1.0;
+float shore_cD(float v){
+  float q = v - SHORE_V0;
+  return 0.0022 * q + 10.0 * 0.0052 * cos(q * 0.0052) + 3.5 * 0.0143 * cos(q * 0.0143);
 }
 
-// ---- the sea: breaking crests running in ----
+// the shore at a sea point: where it is across the shore and in the wave cycle, how much of the pixel is bare sand
+struct ShoreK {
+  float x;      // inland distance from the waterline (> 0 on the sand)
+  vec2 nS;      // unit, landward, in (u, v)
+  float fN;     // the pixel's footprint across the shore (units): every edge is filtered by it
+  float tph;    // the wave clock here (cycles)
+  float wobD;   // d(tph)/dv
+  float edge;   // 1 .. 0 where the flat tapers out
+  float ph;     // 0 when a crest reaches the waterline
+  float L;      // how far this wave's sheet runs up the sand
+  float xf;     // the sheet's front now
+  float land;   // bare sand (1) vs the sheet and the sea (0)
+  float a1, a2; // how much of the front's along-shore detail the pixel resolves
+  float e1;     // the soft width of the sheet's edge
+};
+bool shore_k(Ray r, Sea s, out ShoreK k){
+  vec2 w = s.w;
+  if (w.y > 150.0 || w.y < -2500.0 || w.x < -320.0 || w.x > 2400.0) return false;
+  float cd = shore_cD(w.y);
+  float nrm = inversesqrt(1.0 + cd * cd);
+  k.x = (w.x - shore_c(w.y)) * nrm;
+  float W = SHORE_W * smoothstep(-2400.0, -1700.0, w.y) * smoothstep(130.0, -500.0, w.y);
+  if (k.x < -300.0 || k.x > W + 60.0) return false;
+  vec2 dl = vec2(dot(r.rd, s.eU), dot(r.rd, s.eV));
+  float l = length(dl);
+  vec2 al = l > 1e-5 ? dl / l : vec2(0.0, 1.0);
+  k.nS = vec2(1.0, -cd) * nrm;
+  k.fN = r.pa * s.t * length(vec2(dot(vec2(-al.y, al.x), k.nS), dot(al, k.nS) / s.graz));
+  vec2 tS = vec2(-k.nS.y, k.nS.x);           // along the shore
+  float fT = r.pa * s.t * length(vec2(dot(vec2(-al.y, al.x), tS), dot(al, tS) / s.graz));
+  k.a1 = 1.0 - smoothstep(4.0, 16.0, fT);    // how much of the front's lobes (37 units) the pixel resolves along the shore
+  k.a2 = 1.0 - smoothstep(2.5, 9.0, fT);     // and of its finer wander (20 units and less)
+  // one wave clock: each stretch of coast a little out of step, so crests come in slightly oblique and bowed
+  k.wobD = 0.3 * 0.021 * cos(w.y * 0.021 + 1.3) + 0.18 * 0.0063 * cos(w.y * 0.0063) + 0.05 * 0.071 * cos(w.y * 0.071 + 0.4);
+  k.tph = shore_uT / SHORE_PER + 0.3 * sin(w.y * 0.021 + 1.3) + 0.18 * sin(w.y * 0.0063) + 0.05 * sin(w.y * 0.071 + 0.4);
+  k.edge = smoothstep(0.0, 40.0, W);
+  k.ph = fract(k.tph);
+  // every wave runs up a different distance, its front scalloped (overlapping lobes, never a ruler line)
+  float hw = world_hash12(vec2(floor(k.tph), 7.0));
+  // (lobes the pixel cannot resolve along the shore fade to their mean and soften the edge instead: no zigzag far off)
+  k.L = (11.0 + 4.0 * sin(w.y * 0.017 + 0.7)) * (0.7 + 0.5 * hw)
+      * (0.72 + 0.42 * mix(0.6366, abs(sin(w.y * 0.085 + 6.2831853 * hw)), k.a1) + 0.1 * sin(w.y * 0.31 + 4.0 * hw) * k.a2);
+  k.xf = k.ph < 0.25 ? k.L * sin(k.ph * 6.2831853) : k.L * pow(1.0 - (k.ph - 0.25) / 0.75, 1.6);
+  k.e1 = max(0.2, k.fN * 0.75) + 0.2 * k.xf * (1.0 - k.a1);
+  float e1 = k.e1, e2 = max(4.0, k.fN);
+  k.land = smoothstep(-e1, e1, k.x - k.xf) * (1.0 - smoothstep(W - e2, W + e2, k.x)) * k.edge;
+  return true;
+}
+
 void shore_sea(Ray r, Sea s, inout SeaMod m){
-  if (shore_uOn <= 0.0) return;
-  float d = s.w.y - shore_line(s.w.x); // seaward distance from the waterline
-  // landward of the line the sea still shows over the submerged foot of the beach (sand below sea level up to
-  // x = 0.25 / 0.055): that shallow strip is the swash zone, as bright as the edge (else it read as a dark line)
-  if (d < -12.0 || d > 420.0) return;
-  d = max(d, 0.0);
-  float ph = shore_phase(s.w.x);
-  float lam = SHORE_C * SHORE_PER;     // crest spacing
-  float cph = fract(ph + max(d, 0.0) / lam);
-  // the crest at cph = 0: seaward of it (cph small) the long back slope, shoreward (cph near 1) the steep face
-  float back = exp(-cph * 5.0), face = exp(-(1.0 - cph) * 18.0);
-  float shoal = smoothstep(140.0, 40.0, d) * (1.0 - 0.6 * smoothstep(8.0, 0.0, d));
-  float A = 0.22 * shoal * shore_uOn;
-  float hgt = A * (back + face) - A * 0.25;
-  float dh = A * (-5.0 * back + 18.0 * face) / lam; // d(height)/d(d)
-  // footprint: crests finer than a pixel fade to their mean (no shimmer at the horizon)
-  float att = 1.0 - smoothstep(0.5, 2.0, s.fw / 1.5);
-  m.g += vec3(hgt, -dh * shore_lineD(s.w.x), dh) * att;
-  // the rolling lip where it breaks: the crest line, white-hot, a little wider than a pixel at most
-  float dc = min(cph, 1.0 - cph) * lam;
-  float sig = max(0.6, s.fw * 0.8);
-  float lip = exp(-dc * dc / (2.0 * sig * sig)) * (0.6 / sig);
-  float brk = smoothstep(45.0, 12.0, d) * smoothstep(-1.0, 3.0, d);
-  // the surf zone reads like the old footer furnace: dark molten troughs between the incoming crests, the crests' faces
-  // warm, the breaking lips white-hot; the zone fades into the open sea's own glow seaward
-  float zone = smoothstep(420.0, 60.0, d);
-  float ridge = back * 0.35 + face;                     // 0 in the trough .. 1 at the crest
-  float glowD = 0.55 * lip * brk + 0.45 * ridge * shoal;
-  // The surf glows in its own right, at absolute temperatures (whatever the open sea around it is doing): the zone a
-  // dull molten red, the crests' faces orange, the breaking lips white-hot, the water's edge bright (the swash sheet).
-  // (look_planck is a true Planck curve: a few hundred kelvin is the whole range from ember to white.)
-  float F = 0.05;
-  vec3 e = shore_planck(1100.0 + 40.0 * zone) * zone * 0.6
-         + shore_planck(1260.0) * ridge * shoal * 0.8
-         + shore_planck(1550.0 + 150.0 * brk) * lip * brk * 0.9
-         + shore_planck(1300.0) * smoothstep(8.0, 0.0, d) * 0.8;
-  m.emit += e * (1.0 - F) * shore_uOn;
-  m.heat += 0.05 * zone * shore_uOn;
-  m.rough += 0.0 * glowD;
-}
+  // ---- from orbit: the sun's glitter path. A sea too far to resolve is a rough mirror (slope variance ~0.03): the low
+  // sun lies on it as a warm path from the limb toward the camera, reddening into the terminator (look_sunLight)
+  if (shore_uPath > 0.0) {
+    vec3 v = -r.rd, hv = normalize(uSunDir + v);
+    float nh = max(dot(s.up, hv), 1e-3), nl = dot(s.up, uSunDir), nv = max(dot(s.up, v), 0.0);
+    float nh2 = nh * nh;
+    float D = exp(-(1.0 - nh2) / (nh2 * 0.03)) / (PI * 0.03 * nh2 * nh2);
+    float F = 0.05 + 0.95 * pow(1.0 - max(dot(v, hv), 0.0), 5.0);
+    float G = smoothstep(0.0, 0.05, nl) * smoothstep(0.0, 0.06, nv);
+    m.emit += look_sunLight(s.p) * vec3(1.0, 0.8, 0.55) * (shore_uPath * D * F * G / (4.0 * (nv + 0.12)));
+  }
+  float on = shore_uOn;
+  if (on <= 0.0) return;
+  ShoreK k;
+  if (!shore_k(r, s, k)) return;
+  vec2 w = s.w;
+  float x = k.x;
+  // the planet's rivers drift (look_seaTemp): one passing through would light the whole bay orange and drown the
+  // swash's thin lines, so beside the sand the sea keeps its resting temperature (the rivers carry on further out)
+  float low = 1.0 - smoothstep(60.0, 300.0, uCamH);
+  if (low > 0.0) {
+    float ex = look_seaTemp(s.q, s.fw / look_uK, -1.0) - 1075.0;
+    m.heat -= max(ex, 0.0) / 850.0 * (0.9 * low * on * k.edge * smoothstep(-300.0, -140.0, x));
+  }
 
-// ---- the sand ----
-void shore_hit(Ray r, inout Hit h){
-  if (shore_uOn <= 0.0) return;
-  // only rays from near the beach: march the height field from the camera out to the sea hit (or the dunes' reach)
-  vec3 o = shore_uvy(r.ro);
-  if (abs(shore_x(o.xy)) > 1500.0 || o.z > 600.0) return;
-  float tMax = min(h.t, 2500.0);
-  float t = 0.05;
-  int N = uQ > 0.5 ? 96 : 56;
-  float prev = 1e9, tp = 0.0;
-  for (int i = 0; i < 96; i++){
-    if (i >= N || t > tMax) break;
-    vec3 P = r.ro + r.rd * t;
-    vec3 q = shore_uvy(P);
-    float x = shore_x(q.xy);
-    if (x > 450.0 && q.z < 1.0) { // over the sea behind the bar: skip ahead toward it
-      t += max(0.5, min((x - 440.0) * 0.7, 40.0 + t * 0.02));
-      continue;
+  // ---- the sea: crests running in ----
+  if (x < 2.0) {
+    float d = max(-x, 0.0);                    // seaward distance
+    float cyc = k.tph + d / SHORE_LAM;
+    float idx = floor(cyc + 0.5);
+    // a smooth, peaked crest (no cusp: a kink in the slope is a hard line in the glint), its landward face steeper
+    float th = fract(cyc) * 6.2831853;
+    float thw = th + 0.6 * (cos(th) - 1.0);
+    float c = 0.5 + 0.5 * cos(thw), c4 = c * c * c * c;
+    float shoal = smoothstep(260.0, 50.0, d) * (1.0 - 0.75 * smoothstep(9.0, 0.0, d)) * k.edge;
+    float A = 0.6 * shoal * on * (0.65 + 0.35 * sin(idx * 2.4 + w.y * 0.011));
+    float att = 1.0 - smoothstep(0.6, 2.4, k.fN);           // crests finer than a pixel fade to their mean
+    float hc = A * 5.0 * c4 * (-0.5 * sin(thw)) * (1.0 - 0.6 * sin(th)) * 6.2831853;   // d(height)/d(cycle)
+    m.g += vec3(A * (c4 * c - 0.25), hc * (-k.nS / SHORE_LAM + vec2(0.0, k.wobD))) * att;
+    // the shallows: a thinner skin, a little hotter, and calmer water
+    m.heat += 0.07 * smoothstep(110.0, 0.0, d) * on * k.edge;
+    m.calm = max(m.calm, 0.6 * on * smoothstep(-30.0, 0.0, x) * k.edge);
+  }
+
+  // ---- the sand and the swash ----
+  if (x > -1.0) {
+    float ph = k.ph, L = k.L, xf = k.xf, land = k.land;
+    // a tidal flat: mirror-wet by the water, damp all the way up (it mirrors the dusk, more softly the further up)
+    float wet = 1.0 - 0.75 * smoothstep(L, L * 1.2 + 120.0, x);
+    // black sand: cold (no glow) and still
+    m.heat -= 0.55 * land * on;
+    m.calm = max(m.calm, on * k.edge * smoothstep(-1.0, 0.5, x));
+    m.rough += land * on * mix(0.24, 0.03, wet);
+    // long, low undulations of the flat (they only show in what the sand mirrors)
+    float und = (1.0 - smoothstep(6.0, 20.0, s.fw)) * land * on * (1.0 - 0.5 * wet);
+    m.g.y += 0.03 * und * cos(w.x * 0.11 + 2.0 * sin(w.y * 0.013));
+    m.g.z += 0.02 * und * cos(w.y * 0.07 + w.x * 0.03);
+    // the sheet: a thin molten film, hottest behind its front while it runs up, cooling as it drains
+    float e1 = k.e1;
+    float inS = smoothstep(-e1, e1, x) * (1.0 - smoothstep(-e1, e1, x - xf));
+    float upk = 1.0 - 0.55 * smoothstep(0.2, 0.42, ph);
+    float lipd = max(xf - x, 0.0);
+    vec3 e = shore_planck(1085.0 + 75.0 * exp(-lipd / 1.5) * upk - 30.0 * smoothstep(0.25, 1.0, ph)) * inS;
+    float sg = max(0.3, k.fN * 0.9) + 0.5 * (e1 - max(0.2, k.fN * 0.75));
+    float dx = x - xf;
+    float thr = mix(0.78, 0.55 + 0.45 * world_noise(vec2(w.y * 0.11, floor(k.tph) * 1.7)), k.a2);   // the thread's brightness wanders along it
+    // (a hot thin core in a cooler, wider glow: never a tube)
+    e += (shore_planck(1270.0 + 70.0 * upk * thr) * exp(-dx * dx / (2.0 * sg * sg)) * min(1.0, 0.3 / sg)
+        + shore_planck(1190.0) * exp(-dx * dx / (18.0 * sg * sg)) * 0.5) * upk * thr * smoothstep(-1.0, 0.3, x);
+    // the sand the sheet just left glows and cools
+    if (x > 0.0 && x < L) {
+      float phx = 0.25 + 0.75 * (1.0 - pow(x / L, 0.625));
+      float age = (ph >= phx ? ph - phx : ph + 1.0 - phx) * SHORE_PER;
+      e += shore_planck(1160.0 - 60.0 * age) * exp(-age / 2.0) * land * 0.8;
     }
-    if (x < -2.0 && q.z < 1.0) { // over the sea: skip ahead toward the shoreline
-      float dv = -x;
-      t += max(0.5, min(dv * 0.7, 40.0 + t * 0.02));
-      continue;
-    }
-    if (abs(q.x) > 2000.0 || q.z > 60.0 && dot(r.rd, normalize(P)) > 0.0) break;
-    float dy = q.z - shore_sand(q.xy, x);
-    if (dy < 0.0) {
-      // refine between the last two samples
-      float a = tp, b = t;
-      for (int k = 0; k < 6; k++){
-        float c = 0.5 * (a + b);
-        vec3 Q = shore_uvy(r.ro + r.rd * c);
-        if (Q.z - shore_sand(Q.xy, shore_x(Q.xy)) < 0.0) b = c; else a = c;
-      }
-      t = b;
-      vec3 Pq = r.ro + r.rd * t;
-      vec3 Q = shore_uvy(Pq);
-      float xq = shore_x(Q.xy);
-      if (xq < -0.5) return; // under the sea: the sea's own hit stands
-      h.t = t; h.id = SHORE_ID; h.p = Pq;
-      // normal from the height field (central differences in surface units)
-      float e = max(0.05, r.pa * t);
-      float hx = shore_sand(Q.xy + vec2(e, 0.0), shore_x(Q.xy + vec2(e, 0.0))) - shore_sand(Q.xy - vec2(e, 0.0), shore_x(Q.xy - vec2(e, 0.0)));
-      float hv = shore_sand(Q.xy + vec2(0.0, e), shore_x(Q.xy + vec2(0.0, e))) - shore_sand(Q.xy - vec2(0.0, e), shore_x(Q.xy - vec2(0.0, e)));
-      vec3 up = normalize(Pq);
-      vec3 eu = normalize(vec3(-cos(Q.x / uR), -sin(Q.x / uR) * cos(Q.y / uR), -sin(Q.x / uR) * sin(Q.y / uR)));
-      vec3 ev = normalize(vec3(0.0, -sin(Q.y / uR), cos(Q.y / uR)));
-      h.n = normalize(up - (hx / (2.0 * e)) * eu - (hv / (2.0 * e)) * ev);
-      h.data = vec4(Q.xy, xq, Q.z);
-      return;
-    }
-    tp = t;
-    t += clamp(dy * 0.6, 0.04 + t * 0.002, 25.0);
+    m.emit += e * on * k.edge;
   }
 }
 
-// the sand's look at a point (shared by shade and env); refl: what a wet mirror would see (vec3(0) in env)
-vec3 shore_sandCol(Ray r, Hit h, out vec3 rdir, out float rw){
-  rw = 0.0; rdir = vec3(0.0, 1.0, 0.0);
-  vec2 w = h.data.xy; float x = h.data.z;
-  vec3 n = h.n, v = -r.rd;
-  float NoV = max(dot(n, v), 1e-3);
-  float ph = shore_phase(w.x), L = shore_runL(w.x);
-  float xf = shore_front(ph, L);
-  vec3 col = vec3(0.0);
-  // the sun on black sand: dark, slightly glossy grains (a broad sheen, no sparkle noise)
-  vec3 Ls = uSunDir;
-  float NoL = max(dot(n, Ls), 0.0);
-  vec3 sunE = look_sunLight(h.p);                        // irradiance from the disc (look)
-  col += sunE * NoL * 0.035 / PI;
-  vec3 hh = normalize(Ls + v);
-  col += sunE * 0.02 * pow(max(dot(n, hh), 0.0), 40.0) * NoL;
-  // the surf's warm light on the sand near it, falling off inland
-  col += shore_planck(1250.0) * 0.04 * exp(-max(x, 0.0) / 9.0);
-  // the sky's cool fill from above
-  col += vec3(0.004, 0.005, 0.008) * max(n.y * 0.0 + dot(n, normalize(h.p)), 0.0);
-  if (x < xf) {
-    // under the swash: a thin molten sheet running up (or draining), its leading lip brightest
-    float lipd = xf - x;
-    // the lip is at least ~1.5 px wide where the sand is seen at a grazing angle (no stair-steps), its energy kept
-    float graz = max(dot(-r.rd, normalize(h.p)), 0.05);
-    float fpx = r.pa * h.t / graz;
-    float ls = max(0.8, fpx * 1.5);
-    float lip = exp(-lipd * lipd / (2.0 * ls * ls)) * (0.8 / ls);
-    float up = ph < 0.28 ? 1.0 : 0.55;           // brighter while it surges up
-    float T = 1190.0 + 300.0 * lip * up + 60.0 * smoothstep(L, 0.0, x);
-    // a thin, rippled sheet: rough-surface Fresnel (it never turns into a mirror at grazing, which read as a dark line)
-    float F = min(0.04 + 0.96 * pow(1.0 - NoV, 5.0), 0.3);
-    col = shore_planck(T) * (1.0 - F) * (0.55 + 0.45 * smoothstep(0.0, 0.6, lipd + lip));
-    rdir = reflect(r.rd, normalize(h.p)); rw = F * 0.8;
-    return col;
+void shore_over(Ray r, Hit h, inout vec3 col){
+  // black sand does not glow: take the molten sea's ember floor (lava.glsl) back out of the bare sand, which leaves
+  // what it mirrors and the sun's sheen
+  if (shore_uOn > 0.0 && h.id == ID_SEA && uCamH < 400.0) {
+    ShoreK k;
+    // (and give its grains the dusk sky's faint cool fill: charcoal, not a hole)
+    if (shore_k(r, world_seaAt(r, h.t), k))
+      col = max(col - vec3(0.055, 0.0095, 0.0016) * (look_uLavaGain / 3.0) * (0.85 * k.land * shore_uOn * (1.0 - smoothstep(250.0, 400.0, uCamH))), vec3(0.0)) + vec3(0.0042, 0.0043, 0.0058) * (k.land * shore_uOn);
   }
-  // the front's glow spills a little past it onto the dry sand, so the edge of the sheet is soft at any footprint
-  {
-    float graz = max(dot(-r.rd, normalize(h.p)), 0.05);
-    float ls = max(0.8, r.pa * h.t / graz * 1.5);
-    float dd = x - xf;
-    col += shore_planck(1350.0) * 0.5 * exp(-dd * dd / (2.0 * ls * ls)) * (0.8 / ls);
-    // the waterline itself (where the beach leaves the sea, sand height 0): always wet and lit by the molten edge
-    // beside it, so the sea never meets the sand in a dark line
-    float xw = 0.25 / 0.055;
-    float dw = max(x - xw, 0.0);
-    col += shore_planck(1280.0) * 0.6 * exp(-dw / max(1.2, ls));
+  if (shore_uGlare.x + shore_uGlare.y <= 0.0) return;
+  float ang = acos(clamp(dot(r.rd, uSunDir), -1.0, 1.0));
+  // the sun's glare in the lens when it stands over the limb: a white heart that rolls off into a wide warm skirt, in
+  // front of everything, in the sun's own colour after the air
+  if (shore_uGlare.x > 0.0) {
+    float a = ang / max(uSunRad, 1e-4), a2 = a * a;
+    vec3 T = look_Tray(uCamPos / look_uK, uSunDir);
+    vec3 g = vec3(6.0 * exp(-0.5 * a2)) + vec3(1.0, 0.86, 0.66) / (1.0 + 0.5 * a2) + vec3(1.0, 0.62, 0.34) * (0.032 / (1.0 + 0.012 * a2));
+    col += look_uSunE * T * g * shore_uGlare.x;
   }
-  // the wet sand the drain just left: it glows and cools to black, mirroring the sky while wet
-  float age = shore_age(ph, x, L);
-  float wet = smoothstep(L + 2.0, 0.0, x);
-  if (age >= 0.0) col += shore_planck(1120.0 - 120.0 * min(age, 3.0)) * 0.7 * exp(-age / 1.3);
-  if (wet > 0.0) { rdir = reflect(r.rd, n); rw = (0.02 + 0.98 * pow(1.0 - NoV, 5.0)) * wet * 0.7; }
-  return col;
+  // the limb igniting where the sun comes up behind it: sunlight scattered forward through the air's long grazing
+  // column. By the height the ray passes over the sea: ember lowest (the longest, reddest path), gold, white, then the
+  // blue of the thin upper air; hottest toward the sun, a long thin line either side. Analytic in that height, so the
+  // line is smooth at any render scale; it carries on a pixel or two inside the limb (the same air in front of the sea)
+  if (shore_uGlare.y > 0.0) {
+    float b = dot(r.ro, r.rd);
+    // closest approach above the sea (units), < 0: a hit; a ray heading up and away is closest where it starts
+    float ht = b > 0.0 ? uCamH : sqrt(max(dot(r.ro, r.ro) - b * b, 0.0)) - uR;
+    float px = r.pa * sqrt(uCamH * (2.0 * uR + uCamH)) / look_uK;  // one pixel at the limb, in air km
+    float xk = ht / look_uK;
+    float inside = xk < 0.0 ? exp(xk / max(1.5, 1.5 * px)) : 1.0;
+    xk = max(xk, 0.0);
+    // along the limb the line is measured by azimuth from the sun (so it stays lit under a sun that has climbed); the
+    // white heart only where the sun itself is
+    vec3 sh = uSunDir - uCamUp * dot(uSunDir, uCamUp), rh = r.rd - uCamUp * dot(r.rd, uCamUp);
+    float da = acos(clamp(dot(sh, rh) * inversesqrt(max(dot(sh, sh) * dot(rh, rh), 1e-12)), -1.0, 1.0));
+    float pn = 1.0 / (1.0 + ang * ang / 0.0009), pw = 1.0 / (1.0 + da * da / 0.0256), pv = 1.0 / (1.0 + da * da / 0.25);
+    float wr = max(2.5, 1.2 * px), wg = max(4.5, 1.5 * px);
+    vec3 L = vec3(1.0, 0.16, 0.02) * exp(-xk / wr) * (0.9 * pw + 0.22 * pv);
+    L += vec3(1.0, 0.55, 0.16) * exp(-(xk - 5.0) * (xk - 5.0) / (wg * wg)) * (1.5 * pw + 0.1 * pv);
+    L += vec3(1.0, 0.92, 0.8) * exp(-(xk - 11.0) * (xk - 11.0) / 49.0) * (5.0 * pn * shore_uGlare.z + 1.3 * pw * shore_uGlare.w);
+    L += vec3(0.3, 0.5, 1.0) * exp(-(xk - 24.0) * (xk - 24.0) / 169.0) * (0.55 * pw + 0.1 * pv) * shore_uGlare.z;
+    col += look_uSunE * L * (shore_uGlare.y * inside);
+  }
 }
-vec3 shore_shade(Ray r, Hit h){
-  vec3 rdir; float rw;
-  vec3 col = shore_sandCol(r, h, rdir, rw);
-  if (rw > 0.0) {
-    float up = dot(rdir, normalize(h.p));
-    if (up < 0.002) rdir = normalize(rdir + normalize(h.p) * (0.002 - up));
-    Ray rr; rr.ro = h.p + normalize(h.p) * 0.03; rr.rd = rdir; rr.pa = r.pa + 0.06; rr.depth = 1;
-    col += world_env(rr) * rw;
-  }
-  return col;
-}
-vec3 shore_env(Ray r, Hit h){ vec3 rdir; float rw; return shore_sandCol(r, h, rdir, rw); }
 `;
+
+const D2R = Math.PI / 180;
+const sstep = (a: number, b: number, x: number) => {
+  const t = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+/** A smooth curve through (xs[i], ys[i]) (cubic Hermite, finite-difference tangents). */
+function curve(xs: number[], ys: number[], x: number): number {
+  const n = xs.length;
+  let i = 0;
+  while (i < n - 2 && x > xs[i + 1]) i++;
+  const m = (j: number) => (j === 0 ? (ys[1] - ys[0]) / (xs[1] - xs[0]) : j === n - 1 ? (ys[n - 1] - ys[n - 2]) / (xs[n - 1] - xs[n - 2]) : (ys[j + 1] - ys[j - 1]) / (xs[j + 1] - xs[j - 1]));
+  const hh = xs[i + 1] - xs[i];
+  const t = Math.min(1, Math.max(0, (x - xs[i]) / hh));
+  const t2 = t * t, t3 = t2 * t;
+  return (2 * t3 - 3 * t2 + 1) * ys[i] + (t3 - 2 * t2 + t) * hh * m(i) + (-2 * t3 + 3 * t2) * ys[i + 1] + (t3 - t2) * hh * m(i + 1);
+}
 
 /** Camera keys for the footer places (they replace the lead's keys for `shore` and `dawn`). */
 export function shoreKeys(R: number): Key[] {
   const LAP = 2 * Math.PI * R;
-  const deg = (a: number) => (a * Math.PI * R) / 180;
-  const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
-  const FAR2 = { ...FAR, sunV: deg(280) };
-  const beach = LAP + SHORE_V; // the waterline, one lap on (the run home)
+  const deg = (a: number) => a * D2R * R;
+  const dip = (h: number) => Math.acos(R / (R + h)) / D2R;
+  // tan(fov / 2) as the camera resolves it: desktop keeps the key's vertical fov; a 390 x 844 phone keeps its width
+  // (camera.ts: aspect < 0.6)
+  const tanD = (fov: number) => Math.tan(0.5 * fov * D2R);
+  const tanP = (fov: number) => (Math.tan(0.5 * fov * D2R) * 0.6) / (390 / 844);
+  /** The pitch that puts the limb (the sea's horizon) at fraction y of the frame's height (0 top .. 1 bottom). */
+  const limb = (h: number, y: number, tanHalf: number) => -dip(h) + Math.atan((2 * y - 1) * tanHalf) / D2R;
+  /** The far sun `el` degrees above the limb, `az` degrees to the right of the heading `yaw`, for a camera at s, h. */
+  const sun = (s: number, h: number, yaw: number, az: number, el: number): Channels => {
+    const cam = cameraFrom(R, { s, h, yaw: yaw + az, pitch: 0, fov: 50 }, 1, 1);
+    const e = (el - dip(h)) * D2R;
+    const p = [0, 1, 2].map((i) => cam.pos[i] + (cam.f[i] * Math.cos(e) + cam.up[i] * Math.sin(e)) * 1e6) as [number, number, number];
+    const [u, v, y] = surfOf(R, p);
+    return { sunU: u, sunV: v, sunY: y, sunR: 1.2e4 };
+  };
+  // one camera position per key: s, h, yaw, then where the limb sits (desktop, phone), the sun (az, el over the limb)
+  const key = (
+    at: [string, number],
+    s: number,
+    h: number,
+    yaw: number,
+    yD: number,
+    yP: number,
+    az: number,
+    el: number,
+    rest: Record<string, number | string> = {},
+    fovP = 60,
+    elP = el, // the sun's height over the limb on phones, when it differs
+  ): Key => ({
+    at,
+    s,
+    h,
+    yaw,
+    pitch: limb(h, yD, tanD(46)),
+    fov: 46,
+    ...sun(s, h, yaw, az, el),
+    ...rest,
+    ph: { fov: fovP, pitch: limb(h, yP, tanP(fovP)), ...(elP === el ? {} : sun(s, h, yaw, az, elP)) },
+  });
+  // in orbit the sun is the sky's own disc (look), not the mark: it rises through the air, with its glare in the lens,
+  // the limb igniting round it and its glitter path on the sea. On the way down the mark comes back round it.
+  const ORBIT = { 'mark.vis': 0, 'look.sunDisc': 0.3, 'shore.glare': 1, 'shore.ignite': 1, 'shore.path': 1, roll: 0 };
+  const HOME = { 'mark.vis': 1, 'look.sunDisc': 0.3, 'shore.glare': 0, 'shore.ignite': 0, 'shore.path': 0, 'lava.heat': 0, roll: 0 };
+
+  // dawn's run home, 0 .. RUN of the place: one smooth path, sampled into keys close enough together that the sun
+  // (which slerps between world directions) stays where each key puts it. tau runs 0..1 along the path, easing out of
+  // the shore's still and into the beach's.
+  const RUN = 0.7;
+  const T = [0, 0.3, 0.55, 0.75, 0.9, 1];
+  const P = {
+    s: [186, 232, 275, 312, 338, ((LAP - 940) / LAP) * 360], // degrees round the planet
+    h: [3200, 3000, 2400, 1300, 200, 16].map(Math.log),
+    yaw: [0, 28, 68, 108, 146, 167],
+    yD: [0.78, 0.78, 0.76, 0.72, 0.69, 0.68], // the limb's place in the frame, desktop
+    yP: [0.57, 0.56, 0.56, 0.6, 0.62, 0.56], // and on phones
+    az: [-12, -3, 6, 9, 12, 13], // the sun, degrees right of the heading (at the cape: straight back down the travel line)
+    el: [8, 8, 7.5, 5.5, 2.8, 4], // and over the limb (desktop: the giant wordmark fills the sky down to mid-frame)
+    elP: [13, 13.5, 11, 6, 2.8, 4], // (phones: the wordmark is small, the sun can stand higher over the limb)
+    roll: [0, -9, -11, -7, -2, 0], // banking into the turn
+  };
+  const run: Key[] = [];
+  const N = 19;
+  for (let i = 0; i <= N; i++) {
+    const f = (RUN * i) / N;
+    const tau = sstep(0, 1, i / N);
+    const c = (k: keyof typeof P) => curve(T, P[k], tau);
+    const low = sstep(0.6, 0.86, tau); // the mark takes the sun back from the sky's disc while the camera is still high
+    run.push(
+      key(
+        ['dawn', f],
+        deg(c('s')),
+        Math.exp(c('h')),
+        c('yaw'),
+        c('yD'),
+        c('yP'),
+        c('az'),
+        c('el'),
+        {
+          'mark.vis': low,
+          'look.sunDisc': 0.3, // the sky's own disc all the way down: the mark is back only behind the arrival's glare (mark.ts presence())
+          'shore.glare': 1 - sstep(0.6, 0.95, tau),
+          'shore.ignite': 1 - sstep(0.7, 0.92, tau),
+          'shore.path': 1 - sstep(0.7, 0.9, tau),
+          'lava.heat': 0.05 * (1 - sstep(0.8, 1, tau)),
+          roll: c('roll'),
+          ...(i ? { ease: 'linear' } : {}),
+        },
+        60 + 2 * sstep(0.75, 1, tau),
+        c('elP'),
+      ),
+    );
+  }
   return [
-    // shore: the sunrise over the limb, made by the climb: the sun is a far star ahead; as the camera climbs and moves
-    // on, it comes up over the limb (just under it at the start, its core cresting it by the end; the mark around it stays low, in the corner). Phones: the limb low (~90%), the
-    // sun coming up in the free corner under the pinned contact; desktop: the limb in the lower
-    // third (look's thin orange-to-steel arc lies along it); turned a little left so the sun comes up at the right edge,
-    // clear of the pinned contact
-    { at: ['shore', 0], s: deg(157.5), h: 900, yaw: -30, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -26, pitch: -10 } },
-    { at: ['shore', 1], s: deg(159.5), h: 1100, yaw: -29, pitch: -17, fov: 46, ...FAR, ph: { fov: 60, yaw: -25, pitch: -8.5 } },
-    // dawn (4 screens): the run home. From the end of the shore to the beach the camera orbits ~190 deg and turns
-    // ~160 deg; both are shared out at ONE constant rate of view rotation (~20 deg per 100 px of scroll): it eases out
-    // of the shore's still ('in'), runs linear through the middle keys (their values lie on the same line, so the speed
-    // never changes at a key), eases into the beach ('out', starting at the same speed), then holds on the surf with
-    // the wordmark. Descent in log-h along the way.
-    // V2 (world): dusk framing over the day side too: the sun just behind the limb ahead, the planet filling the frame
-    { at: ['dawn', 0], ease: 'in', s: deg(183.9), h: 2800, yaw: -0.4, pitch: -42, fov: 46, ...duskSun(deg(183.9), 2800, -0.4), ph: { fov: 60, pitch: -45 } },
-    { at: ['dawn', 0.35], ease: 'linear', s: deg(260.6), h: 1800, yaw: 61.3, pitch: -47, fov: 46, 'lava.heat': 0.06, ...duskSun(deg(260.6), 1800, 61.3), ph: { fov: 60, pitch: -55 } },
-    { at: ['dawn', 0.698], ease: 'linear', s: deg(337.4), h: 140, yaw: 123, pitch: -7, fov: 46, 'lava.heat': 0.1, ...duskSun(deg(337.4), 140, 123, -2), ph: { fov: 60, pitch: -8 } },
-    // over the surf, facing the land with the setting sun off to the right (no glitter path in frame): the sky and the
-    // dark dunes carry the wordmark, the surf breaks across the lower half
-    { at: ['dawn', 0.85], ease: 'out', s: beach + 75, h: 22, yaw: 140, pitch: -8, fov: 46, 'lava.heat': 0.08, ...FAR2, ph: { fov: 62, pitch: -9 } },
-    { at: ['dawn', 1], s: beach + 92, h: 24, yaw: 146, pitch: -7.5, fov: 46, 'lava.heat': 0.07, ...FAR2, ph: { fov: 62, pitch: -8.5 } },
+    // shore (the footer): first light. A slow climb; the sun comes up over the limb ahead, a little right of centre,
+    // under the footer's last line
+    key(['shore', 0], deg(157.5), 900, -4, 0.8, 0.8, 5, -3.6, ORBIT),
+    key(['shore', 0.5], deg(159), 1150, -2, 0.8, 0.8, 5, -0.5, { ...ORBIT, ease: 'linear' }),
+    key(['shore', 1], deg(160.5), 1500, 0, 0.79, 0.79, 5, 2.3, { ...ORBIT, ease: 'out' }),
+    // dawn (the wordmark): the day side, high and fast, flying with the sun, then the turn and the descent past the cape
+    ...run,
+    // beside the black sand, looking back along its waterline to the setting sun: a slow pull back, panning to the sun
+    key(['dawn', 1], LAP - 895, 13, 170, 0.68, 0.56, 10, 4, HOME, 62),
   ];
 }
 
 export const shore: WorldModule & { keys: (R: number) => Key[] } = {
   id: 'shore',
   glsl: GLSL,
-  hooks: ['sea', 'hit', 'shade', 'env'],
+  hooks: ['sea', 'over'],
+  channels: { 'shore.glare': 0, 'shore.ignite': 0, 'shore.path': 0 },
   keys: shoreKeys,
   update(f, u) {
-    // on only from the descent to the beach until the seam (at the seam the beach is below the hero's horizon, so turning
-    // it off there is invisible); the march is skipped everywhere else
-    const name = f.place.name;
-    const on = (name === 'dawn' && f.at('dawn') > 0.6) || name === 'loop' ? 1 : 0;
+    // on from the descent until the seam (the coast is beyond the horizon on the day side when it comes on, and under
+    // the hero's horizon at the seam: neither switch can be seen)
+    const on = f.place.name === 'loop' ? 1 : f.places.dawn ? sstep(0.3, 0.4, f.at('dawn')) : 0;
     u.set('shore_uOn', on);
     u.set('shore_uT', f.still ? 2.2 : f.t);
+    const g = f.ch['shore.glare'] ?? 0;
+    const ig = f.ch['shore.ignite'] ?? 0;
+    if (g > 0 || ig > 0) {
+      // the sun's elevation over the limb (rad)
+      const d = f.sun.dir, up = f.cam.up;
+      const el = Math.asin(Math.max(-1, Math.min(1, d[0] * up[0] + d[1] * up[1] + d[2] * up[2]))) + Math.acos(f.R / (f.R + f.cam.h));
+      // the line lights up from 5 deg under the limb, is hottest as the sun breaks over it, then settles
+      const s = sstep(-5 * D2R, 0.3 * D2R, el) * (1 - 0.35 * sstep(1 * D2R, 9 * D2R, el));
+      u.set('shore_uGlare', [g * sstep(-f.sun.rad, f.sun.rad * 1.5, el), ig * s * sstep(150, 450, f.cam.h), sstep(-2 * D2R, 0.5 * D2R, el), sstep(1 * D2R, 7 * D2R, el)]);
+    } else u.set('shore_uGlare', [0, 0, 0, 0]);
+    // the glitter path belongs to the orbit view (low over the sea the lava has its own glint)
+    u.set('shore_uPath', (f.ch['shore.path'] ?? 0) * sstep(300, 1200, f.cam.h));
   },
 };

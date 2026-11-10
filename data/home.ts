@@ -14,9 +14,27 @@ export const together = {
   lines: ['Stronger together'],
 };
 
+/** A sentence of a founder's account set larger WHERE IT STANDS (never repeated; the words in data/story.ts are
+ * untouched). `lead`: the opening-paragraph size (a long sentence that opens its paragraph). `title`: display type,
+ * for a short sentence. Jacob's break-out (data/story.ts `breakOut`) is the one sentence at full display size. */
+export type StoryLift = { paragraph: number; sentence: string; size: 'lead' | 'title' };
+
 export const storyIntro = {
   heading: 'Why Crucible',
-  lede: 'Jacob Schopp and Charles Rochford, co-founders, each in their own words.',
+  lede: 'The two co-founders, each in their own words.',
+  /** By founder, in the order of data/story.ts `stories`. A sentence that is not found in its paragraph is ignored. */
+  lifts: [
+    [
+      { paragraph: 1, sentence: 'People call them the PayPal Mafia.', size: 'title' },
+      {
+        paragraph: 3,
+        sentence: 'The name comes from what a crucible actually is, a vessel built to hold metal as it melts, in which separate metals can be combined into an alloy.',
+        size: 'lead',
+      },
+      { paragraph: 5, sentence: 'I intend to find out, and maybe, years from now, the people who build it with me will have a name too.', size: 'title' },
+    ],
+    [{ paragraph: 4, sentence: 'Ultimately, I want to spend my life building things that matter.', size: 'title' }],
+  ] as StoryLift[][],
 };
 
 /** PayPal, step by step: every caption is a fact from Jacob's paragraph 2 (data/story.ts), shortened. `paypal` owns.

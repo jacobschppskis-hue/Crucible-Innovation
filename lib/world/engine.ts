@@ -26,6 +26,8 @@ export type EngineOpts = {
   still?: boolean;
   /** Called if the world can't run (no WebGL2, shader error, context lost): the page keeps its still look. */
   onFail?: (why: string) => void;
+  /** Called once the canvas has faded in over the hero still (fully opaque): the still can go. */
+  onShown?: () => void;
 };
 
 export type Engine = {
@@ -485,6 +487,19 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     }
     engineUniforms();
     draw();
+    // the hand-over from the hero still: from the frame after the first one (so a real frame is on screen) the canvas
+    // fades in over the still in 0.9 s of wall-clock time, however long frames take (CSS's own transition only
+    // advances when the page draws, and stalls on slow frames); at once when the clock is held (tests) or still
+    if (drawn >= 0 && ++drawn >= 2) {
+      if (drawn === 2) fadeT0 = performance.now();
+      const k = clockHeld() || opts.still ? 1 : Math.min(1, (performance.now() - fadeT0) / 900);
+      canvas.style.opacity = String(1 - (1 - k) ** 3);
+      if (k >= 1) {
+        drawn = -1;
+        opts.onShown?.();
+        canvas.style.removeProperty('opacity');
+      }
+    }
     for (const m of mods) m.after?.(f);
     rend.done(t);
     const moving = Math.abs(f.scroll - lastScroll) > 0.5;
@@ -492,6 +507,8 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     if (quality.feed(dt, moving)) resizeTargets();
   }
 
+  let drawn = 0, // frames drawn, until the canvas has faded in (then -1)
+    fadeT0 = 0;
   measure();
   const ro = new ResizeObserver(() => measure());
   ro.observe(root);

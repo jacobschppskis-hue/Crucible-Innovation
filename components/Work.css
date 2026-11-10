@@ -7,13 +7,14 @@
   padding-top: calc(var(--nav-h) + 4rem);
   padding-bottom: 2rem;
 }
+/* "Out of the / crucible": two lines, the longer one as wide as a 360 px phone allows. */
 .wk-title {
-  font-size: min(30vw, 18rem);
-  line-height: 0.8;
+  font-size: min(15.5vw, 11.5rem);
+  line-height: 0.86;
 }
 .wk-lede {
   margin-top: 2rem;
-  max-width: 22rem;
+  max-width: 24rem;
   font-size: 1.125rem;
   line-height: 1.6;
   color: var(--bone-dim);
@@ -227,6 +228,48 @@
   flex: 1 0 auto;
 }
 
+/* ---------- A client site's film (ClientFilm) ----------
+   Real screenshots of a live site at moments down its page, on a desktop and on a phone. These are the still rules:
+   both frames show the top of the page (the first moment) and the other moments follow as captioned stills. Where
+   there is JS, room and motion is welcome the scroll plays the moments inside the frames instead (see "The film" at
+   the end): --f runs 0 → 1 over the film and --v = --f × (moments − 1) is the moment on screen. */
+.wk-film {
+  display: grid;
+  gap: 2rem;
+}
+.wk-reel,
+.wk-stage {
+  display: contents;
+}
+.wk-mo:not(:first-child) {
+  display: none;
+}
+.wk-moments {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.75rem 1rem;
+}
+.wk-moment:first-child {
+  display: none;
+}
+.wk-thumb {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line-strong);
+  border-radius: 0.5rem;
+}
+.wk-moment p {
+  margin-top: 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--bone-dim);
+}
+.wk-ticks,
+.wk-edge {
+  display: none;
+}
+
 /* ---------- The business card ---------- */
 /* Front and back at the same size, edges aligned. Each image is the print render with its 0.125 in bleed; the frame
    is the 3.5 × 2 in trim and the image overhangs it by the bleed (0.125 / 3.5 of the width on every side). */
@@ -280,7 +323,7 @@
   /* The word as a poster across the page, the caption tucked under its right end. */
   .wk-head {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
     padding-top: calc(var(--nav-h) + 5rem);
   }
   .wk-title {
@@ -365,6 +408,29 @@
     aspect-ratio: auto;
     height: 100%;
   }
+  /* A film: the browser and the phone in the media row (--dh high), the other moments in a row of stills below. */
+  .wk-media:has(> .wk-film) {
+    height: auto;
+  }
+  .wk-film {
+    --dh: var(--mh);
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: var(--dh) auto;
+    gap: 2.5rem;
+  }
+  .wk-film .wk-browser {
+    grid-area: 1 / 1;
+    width: calc((var(--dh) - 2.25rem - 2px) * 1.6);
+    height: 100%;
+  }
+  .wk-film .wk-phone {
+    grid-area: 1 / 3;
+  }
+  .wk-moments {
+    grid-area: 2 / 1 / 3 / -1;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 2.5rem;
+  }
 }
 
 /* ---------- The stack: where the plate fits the screen, JS runs and motion is welcome ----------
@@ -372,7 +438,9 @@
    scrolling and its plates lie on top of each other under the nav. --u runs 0 → n − 1; plate i holds the screen around
    u = i. Between two plates the next one rises from the bottom (--e, eased --ee), its top edge hot while it moves, and
    the one before steps back and dims (--x) and is clipped at that edge, so nothing ever shows through it. Each end of
-   a step holds still for --h of it. Without JS --p never moves, so the stack only exists under .js. */
+   a step holds still for --h of it. Without JS --p never moves, so the stack only exists under .js.
+   A plate with a film (--m screens long, ClientFilm) holds the screen from u = i to u = i + m while --f runs 0 → 1,
+   and only then steps back; the plate after it starts at i + m + 1 (filmPlates in Work.tsx). --z is its layer. */
 @media (min-width: 1024px) and (min-height: 680px) and (prefers-reduced-motion: no-preference) {
   .js .wk-stack {
     --d: 100svh;
@@ -394,13 +462,14 @@
   .js .wk-plate {
     --u: calc(var(--p, 0) * (var(--n) - 1));
     --e: clamp(0, (var(--u) - var(--i) + 1 - var(--h)) / (1 - 2 * var(--h)), 1);
-    --x: clamp(0, (var(--u) - var(--i) - var(--h)) / (1 - 2 * var(--h)), 1);
+    --x: clamp(0, (var(--u) - var(--i) - var(--m, 0) - var(--h)) / (1 - 2 * var(--h)), 1);
+    --f: clamp(0, (var(--u) - var(--i)) / max(var(--m, 0), 0.001), 1);
     --ee: calc(1 - (1 - var(--e)) * (1 - var(--e)));
     --xe: calc(1 - (1 - var(--x)) * (1 - var(--x)));
     --s: calc(1 - 0.05 * var(--x));
     position: absolute;
     inset: var(--nav-h) 0 0;
-    z-index: calc(var(--i) + 1);
+    z-index: calc(var(--z, var(--i)) + 1);
     transform-origin: 50% 0;
     transform: translateY(calc((1 - var(--ee)) * 100%)) scale(var(--s));
     opacity: calc(1 - 0.55 * var(--x));
@@ -410,5 +479,145 @@
   /* The leading edge: Ember while the plate rises, gone once it has landed. */
   .js .wk-plate:not(:first-child) {
     border-top: 1px solid color-mix(in oklab, var(--ember) calc(min(1, (1 - var(--e)) * 1.6) * 100%), transparent);
+  }
+}
+
+/* ---------- The film: a client site's moments, played by the scroll ----------
+   Wide screens: the plate's --f (the stack, above). Phones: `.wk-reel` is a pinned scene of its own, the phone frame
+   stuck under the nav while its --p runs. Either way each moment after the first comes up over the one before from
+   the bottom of the screen, the way the next screen of a page does: a wipe with a clean edge (the site's own header
+   never moves), never a dissolve, so wherever the scroll rests there is no double exposure. Each end of a step holds
+   still for --fh of it; a moment's caption shows while it is the one on screen, and its tick lights. */
+@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) and (min-height: 680px),
+  (prefers-reduced-motion: no-preference) and (max-width: 1023.98px) and (min-height: 560px) {
+  .js .wk-mo,
+  .js .wk-edge,
+  .js .wk-moment,
+  .js .wk-ticks i {
+    --v: calc(var(--f, 0) * (var(--mo) - 1));
+    --fh: 0.25;
+    /* |v − k|: how far this moment is from the one on screen. */
+    --a: max(var(--v) - var(--k), var(--k) - var(--v));
+  }
+  /* The phone's moments in both layouts; the browser's only where it plays too (wide screens, below), so a phone
+     never loads the desktop shots it wouldn't show. */
+  .js .wk-reel .wk-mo:not(:first-child),
+  .js .wk-reel .wk-edge {
+    display: block;
+  }
+  /* --w: this moment's way up the screen, 0 → 1 over the step before it, eased at both ends (--ws). */
+  .js .wk-mo:not(:first-child),
+  .js .wk-edge {
+    --w: clamp(0, (var(--v) - var(--k) + 1 - var(--fh)) / (1 - 2 * var(--fh)), 1);
+    --ws: calc(var(--w) * var(--w) * (3 - 2 * var(--w)));
+  }
+  .js .wk-mo:not(:first-child) {
+    clip-path: inset(calc((1 - var(--ws)) * 100%) 0 0 0);
+  }
+  /* Its leading edge: hot while it moves (Ember = in progress), gone once it has landed. */
+  .js .wk-edge {
+    position: absolute;
+    inset-inline: 0;
+    top: calc((1 - var(--ws)) * 100%);
+    height: 1px;
+    background: var(--ember);
+    opacity: min(1, 8 * var(--w) * (1 - var(--w)));
+    pointer-events: none;
+  }
+  .js .wk-moments {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .js .wk-moment,
+  .js .wk-moment:first-child {
+    display: block;
+    grid-area: 1 / 1;
+    opacity: clamp(0, (0.47 - var(--a)) / 0.15, 1);
+  }
+  .js .wk-thumb {
+    display: none;
+  }
+  .js .wk-moment p {
+    margin: 0;
+    font-size: 0.9375rem;
+  }
+  .js .wk-ticks {
+    display: flex;
+    gap: 0.375rem;
+  }
+  .js .wk-ticks i {
+    width: 1.25rem;
+    height: 2px;
+    background: var(--bone);
+    opacity: calc(0.22 + 0.78 * clamp(0, (0.62 - var(--a)) / 0.24, 1));
+  }
+}
+
+/* Wide screens: in the stack the media row keeps its height; the caption and the ticks share a line under the frames. */
+@media (min-width: 1024px) and (min-height: 680px) and (prefers-reduced-motion: no-preference) {
+  /* --fmh: the frames at their full size (--mh) plus the caption line, where the screen is tall enough for both. */
+  .js .wk-media:has(> .wk-film) {
+    --fmh: min(var(--mh) + 3rem, 100svh - var(--nav-h) - 16.5rem);
+    height: var(--fmh);
+  }
+  .js .wk-film {
+    --dh: calc(var(--fmh) - 3rem);
+    grid-template-rows: var(--dh) minmax(0, 1fr);
+    gap: 0 2.5rem;
+    height: 100%;
+  }
+  .js .wk-browser .wk-mo:not(:first-child),
+  .js .wk-browser .wk-edge {
+    display: block;
+  }
+  .js .wk-moments {
+    grid-area: 2 / 1 / 3 / 3;
+    align-self: end;
+  }
+  .js .wk-moment p {
+    font-size: 1rem;
+  }
+  .js .wk-ticks {
+    grid-area: 2 / 3;
+    align-self: end;
+    justify-self: end;
+    padding-bottom: 0.6rem;
+  }
+}
+
+/* Phones: the browser shows the top of the page; then the phone pins under the nav for --step of scroll per moment
+   (the reel's own --p), its caption and ticks beneath it. The phone is as tall as the small viewport leaves room for. */
+@media (prefers-reduced-motion: no-preference) and (max-width: 1023.98px) and (min-height: 560px) {
+  .js .wk-reel {
+    --f: var(--p, 0);
+    --step: 46svh;
+    display: block;
+    height: calc(100svh - var(--nav-h) + (var(--mo) - 1) * var(--step));
+  }
+  .js .wk-stage {
+    position: sticky;
+    top: var(--nav-h);
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    gap: 1rem;
+    height: calc(100svh - var(--nav-h));
+    padding: 0.75rem 0 1.25rem;
+  }
+  .js .wk-film .wk-phone {
+    --pw: min(72vw, 18rem);
+    width: auto;
+    height: min(100svh - var(--nav-h) - 9.25rem, var(--pw) * 19 / 9);
+  }
+  @media (min-width: 640px) {
+    .js .wk-film .wk-phone {
+      --pw: 22rem;
+    }
+  }
+  .js .wk-moments {
+    width: 100%;
+    max-width: 21rem;
+    min-height: 2.75rem;
+    text-align: center;
   }
 }

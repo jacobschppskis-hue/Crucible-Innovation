@@ -175,7 +175,7 @@
 }
 /* each venture's words arrive as its monolith clears the sea; hidden ones take no clicks */
 .wv[data-armed] .wv-item {
-  opacity: clamp(0, calc((var(--r, 0) - 0.45) * 3), 1);
+  opacity: clamp(0, calc((var(--r, 0) - 0.3) * 2.5), 1);
 }
 /* phones: a compact list at the foot of the screen (status, name, arrow); the monoliths have the middle */
 .wv[data-armed] .wv-list {

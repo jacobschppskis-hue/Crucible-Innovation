@@ -4,9 +4,9 @@ import { PortraitImg } from './PortraitImg';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
-// TODO(jakob): the photos. Until they are in public/team/src/ and run through scripts/crt-portraits.py, the tubes show
-// "No signal" and the name; set this to false once they show faces.
-const NO_SIGNAL = true;
+// The tubes show faces (cropped from the founders' own posters, run through scripts/crt-portraits.py). Set this back to
+// true only if a portrait is replaced by the "No signal" placeholder again.
+const NO_SIGNAL = false;
 
 /** A builder's CRT portrait: a bone phosphor tube straight on the page (no card) that powers on as it comes into
  * view (Crt.css), or the Split Ring when there is none. Also used by the home page Story. */

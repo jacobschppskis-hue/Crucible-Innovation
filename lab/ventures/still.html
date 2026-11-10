@@ -8,95 +8,198 @@
 <body>
 <canvas id="c"></canvas>
 <script type="module">
-// One monolith on a transparent ground, for the /ventures pages and the reduced-motion home: the real shader
-// (lib/world/glsl/monolith.glsl) with a studio stand-in for the world around it (a dusk sky, a warm low sun behind the
-// camera's shoulder, the molten sea it stands in). Cut at the waterline, where it glows. 3x3 supersampled.
-// ?i=0|1|2 (Crucible Sites, Verge, Trellis)  ?w=1200  (height is 1.5 w)
+// One venture casting on a transparent ground, for the /ventures pages and the reduced-motion / no-WebGL home page.
+// Not a studio stand-in: the home page's own frame. FRAME below is the world's state at its settled shot (place
+// `ventures`, f 0.6, 1440 x 900), captured from the built site by `node scripts/monolith-stills.mjs --capture`: the
+// camera, the castings' poses, shapes and finishes (lib/world/ventures.ts), look's moon and night sky, the lava-lit air.
+// This page runs the real shader (lib/world/glsl/monolith.glsl: its SDF and ventures_surface, as the crisp pass draws them)
+// and the real tone curve (lib/world/glsl/post.glsl: AgX) on that state, with one casting standing and the other two
+// switched off, through a shift lens: the same camera position and the same rays as the home page, magnified and
+// re-centred on the casting (a crop of the home page's picture, so every highlight lies where it lies there). All
+// three are drawn at the same scale (px per metre), so each keeps its own height and width.
+// What is left out, because a still stands on the page's own liquid: the sea, the sky, bloom and grain, and the
+// world's haze (it mixes the foot toward the sky behind it; there is no sky here).
+// The casting is cut at its waterline, where it glows; nothing is drawn under it. (?refl=<k> adds its reflection in the
+// liquid, ventures_streak, as light only, alpha = brightness, fading to nothing before the frame ends. Off: at k 0.45
+// to 1 it read as a glowing pad, a halo, under the foot.)
+// ?i=0|1|2 (Crucible Sites, Verge, Trellis)  ?w=2400 (height is 1.5 w)  ?ss=4 (supersamples per axis)
 const P = new URLSearchParams(location.search);
-const I = +(P.get('i') ?? 0), W = +(P.get('w') ?? 1200), H = Math.round(W * 1.5);
+const I = +(P.get('i') ?? 0), W = +(P.get('w') ?? 1200), H = Math.round(W * 1.5), SS = +(P.get('ss') ?? 4);
+const REFL = +(P.get('refl') ?? 0);
+/* FRAME:begin */
+const FRAME = {"from":"place ventures f 0.60, 1440 x 900","u":{"look_uRg":2000,"look_uCam":[-7.121525,-1752.746,973.6718],"uRes":[1440,900],"uTime":6.3144,"uCamPos":[-21.36458,-5258.239,2921.015],"uCam":[-0.9994494,-0.01291598,-0.03056065,-0.004003311,-0.8674364,0.4975319,0.03293553,-0.4973803,-0.8669072],"uFocal":1905.173,"uR":6000,"uCamH":15.13658,"uCamUp":[-0.003551802,-0.8741679,0.4856108],"uSunDir":[0.00002115722,0.1782018,-0.9839939],"uExposure":0,"look_uMoonDir":[0.3812126,0.3503431,0.8555329],"look_uMoonE":[0.1088182,0.1914545,0.3628636],"ventures_uP[0]":[29,-5533.508,2319.545,1,-70,-5560.564,2254.985,1,-162,-5542.785,2297.41,1],"ventures_uM[0]":[-0.9963287,0.04181394,0.07470394,-0.0001779861,-0.8736168,0.4866146,0.08560989,0.4848148,0.8704169,-0.9930457,0.05619516,0.1034515,-0.003819154,-0.8936403,0.4487676,0.117667,0.4452516,0.8876404,-0.8027053,0.2712554,0.5311165,-0.01157593,-0.8974924,0.440878,0.5962636,0.3477469,0.7235619],"ventures_uK[0]":[0,0,0,0,0,0,1,0,0,0,1,0],"ventures_uE[0]":[24,75,6.6,0.9,20.4,69,7.8,2.25,22.5,63.75,9,1.575],"ventures_uD[0]":[0,1,0.22,0,0,1,0.28,0,0,1,0.2,0],"ventures_uZen":[0.0025,0.003,0.0055],"ventures_uHorW":[0.7,0.182,0.049],"ventures_uHorC":[0.588,0.154,0.042],"ventures_uSea":[0.2834469,0.02726794,0.000310943],"ventures_uGain":4,"ventures_uOn":1,"ventures_uPool":[2.938928,0.7021691,0.04341913]},"sky":[[0.003408,0.001592,0.0007715],[0.003855,0.001798,0.0008683],[0.004481,0.002087,0.001003],[0.005417,0.002516,0.001201],[0.006962,0.003218,0.001519],[0.009987,0.004574,0.002111],[0.01925,0.008542,0.003687],[0.2096,0.1001,0.05743],[0.147,0.08752,0.0849],[0.09119,0.0624,0.07135],[0.06409,0.04688,0.05679],[0.04908,0.0369,0.04598],[0.0397,0.03032,0.0383],[0.03333,0.02574,0.03268],[0.02878,0.02243,0.02855],[0.02547,0.01988,0.02548],[0.02292,0.01805,0.02305],[0.02098,0.01653,0.02113],[0.01945,0.01544,0.01976],[0.01834,0.01456,0.01857],[0.01752,0.0139,0.01782],[0.01688,0.01341,0.01718],[0.01648,0.01308,0.01669],[0.01628,0.0129,0.01654]],"skyRow0":84,"skyH":108};
+/* FRAME:end */
+const F = FRAME;
 const cv = document.getElementById('c');
 cv.width = W; cv.height = H; cv.style.width = W + 'px'; cv.style.height = H + 'px';
 const gl = cv.getContext('webgl2', { premultipliedAlpha: true, alpha: true, antialias: false, preserveDrawingBuffer: true });
-const mono = await (await fetch('../../lib/world/glsl/monolith.glsl')).text();
+const get = async (f) => (await fetch('../../lib/world/glsl/' + f)).text();
+const [mono, post] = await Promise.all([get('monolith.glsl'), get('post.glsl')]);
+const NS = F.sky.length;
 const fs = `#version 300 es
 precision highp float;
+// ---- what the world gives a module (lib/world/compose.ts), as far as monolith.glsl and post.glsl use it ----
 uniform vec2 uRes; uniform vec3 uCamPos; uniform mat3 uCam; uniform float uFocal;
-uniform float uTime; uniform vec3 uSunDir; uniform float uSunRad; uniform vec3 uSunE;
-const float PI = 3.14159265359;
+uniform float uTime; uniform vec3 uSunDir; uniform float uR; uniform float uCamH; uniform vec3 uCamUp;
+uniform float uStill; uniform float uCrispOn; uniform float uExposure;
+uniform sampler2D uScene; uniform sampler2D uBloom; uniform vec2 uCanvas; uniform float uBloomOn;
 const int VENTURES_ID = 16;
 struct Ray { vec3 ro; vec3 rd; float pa; int depth; };
 struct Hit { float t; int id; vec3 p; vec3 n; vec4 data; };
 struct Sea { vec3 p; vec3 up; vec3 q; vec3 eU; vec3 eV; vec2 w; float t; float fw; float graz; };
 struct SeaMod { vec3 g; float heat; vec3 emit; float calm; float rough; vec4 aux; };
-vec3 look_sky(Ray r);
-vec3 look_sunLight(vec3 p) { return uSunE; }
-vec3 look_moonLight() { return vec3(0.0); }
-vec3 look_moonDir() { return vec3(0.0, 1.0, 0.0); }
+vec3 world_scene(vec2 uv) { return vec3(0.0); }
+vec3 world_crisp(vec3 c, vec2 uv) { return c; }
+float world_seaT(Ray r){
+  float b = dot(r.ro, r.rd);
+  float c = r.depth == 0 ? uCamH * (2.0 * uR + uCamH) : dot(r.ro, r.ro) - uR * uR;
+  float d = b * b - c;
+  if (d < 0.0 || b > 0.0 || c < 0.0) return -1.0;
+  return c / (-b + sqrt(d));
+}
+// ---- look, as the castings see it: the moon, and the night sky (the sky-view LUT's rows above the sea; at night it
+// does not vary with azimuth, so one column of it is the whole sky). The mapping is atmosphere.glsl's look_skyUV. ----
+uniform vec3 look_uMoonDir; uniform vec3 look_uMoonE; uniform vec3 look_uCam; uniform float look_uRg;
+uniform vec3 still_uSky[${NS}]; uniform float still_uSkyRow0; uniform float still_uSkyH;
+vec3 look_moonLight() { return look_uMoonE; }
+vec3 look_moonDir() { return look_uMoonDir; }
+vec3 look_sunLight(vec3 p) { return vec3(0.0); }
+vec3 look_sky(Ray r) {
+  float rr = length(look_uCam);
+  vec3 up = look_uCam / rr;
+  float hz = -acos(clamp(sqrt(max(0.0, rr * rr - look_uRg * look_uRg)) / rr, -1.0, 1.0));
+  float l = asin(clamp(dot(r.rd, up), -1.0, 1.0)) - hz;
+  float v = l >= 0.0 ? 0.5 + 0.5 * sqrt(l / (1.5707963 - hz)) : 0.5 - 0.5 * sqrt(-l / (1.5707963 + hz));
+  float y = clamp(v * still_uSkyH - 0.5 - still_uSkyRow0, 0.0, float(${NS - 1}));
+  int i0 = int(floor(y)), i1 = min(i0 + 1, ${NS - 1});
+  return mix(still_uSky[i0], still_uSky[i1], y - floor(y));
+}
 ${mono}
-vec3 look_sky(Ray r) { return ventures_skyA(r.rd, vec3(0.0, 1.0, 0.0), r.pa); }
-vec3 agx(vec3 c){ c = max(c, 0.0); vec3 x = c / (c + 0.6); return pow(x, vec3(1.15)); }
+${post}
+// ---- the still ----
+uniform float still_uFocal; uniform vec2 still_uShift; uniform vec2 still_uAnchor; uniform int still_uI;
+uniform float still_uRefl; uniform float still_uPx;
 out vec4 o;
-void main(){
-  vec3 acc = vec3(0.0); float cov = 0.0;
-  for (int sy = 0; sy < 3; sy++) for (int sx = 0; sx < 3; sx++) {
-    vec2 fc = gl_FragCoord.xy + (vec2(sx, sy) - 1.0) / 3.0;
-    vec2 sp = (fc - 0.5 * uRes) / uFocal;
-    Ray r; r.ro = uCamPos; r.rd = normalize(uCam * vec3(sp, 1.0)); r.pa = 1.0 / uFocal; r.depth = 0;
-    Hit h; h.t = 1e30; h.id = 0; h.p = vec3(0.0); h.n = vec3(0.0); h.data = vec4(0.0);
-    ventures_hit(r, h);
-    if (h.id < VENTURES_ID) continue;
-    if (h.data.y + ventures_uK[0].x < 0.0) continue;  // under the waterline
-    acc += agx(ventures_shade(r, h)); cov += 1.0;
+// The crisp pass's march (ventures_traceCov) with room to finish: it stops after 32 steps, enough at the home page's
+// pixel size, but at this magnification a ray grazing a side face (4 degrees off it, starting on the untapered bound)
+// needs about 70, and the upper half of that face went missing. Same bound, same SDF, same closest-approach coverage.
+float still_trace(vec3 ro, vec3 rd, float pa, int i, out VenturesHit h) {
+  h.id = -1; h.t = 1e30; h.lp = vec3(0.0); h.wp = vec3(0.0);
+  mat3 M = ventures_uM[i];
+  vec3 o = (ro - ventures_origin(i)) * M, d = rd * M;
+  vec2 tb = ventures_bound(o, d, i);
+  if (tb.x > tb.y + 4.0 * pa * max(tb.y, 1.0) || tb.y < 0.0) return 0.0;
+  float t = max(tb.x, 0.0), best = 1e9, bt = t;
+  for (int s = 0; s < 240; s++) {
+    float dist = ventures_sdf(o + d * t, i);
+    float pxd = dist / max(t * pa, 1e-6);
+    if (pxd < best) { best = pxd; bt = t; }
+    if (dist < max(ventures_uE[i].x * 2e-4, t * pa * 0.05)) { h.id = i; h.t = t; h.lp = o + d * t; h.wp = ro + rd * t; return 1.0; }
+    t += max(dist, t * pa * 0.25);
+    if (t > tb.y) break;
   }
-  cov /= 9.0;
-  vec3 c = acc / 9.0;                                   // premultiplied by coverage already
-  c = pow(max(c, 0.0) / max(cov, 1e-4), vec3(1.0 / 2.2)) * cov;
-  o = vec4(c, cov);
+  if (best < 1.5) { h.id = i; h.t = bt; h.lp = o + d * bt; h.wp = ro + rd * bt; return clamp(0.5 - best, 0.0, 1.0); }
+  return 0.0;
+}
+float still_hash(vec2 p) { vec3 q = fract(vec3(p.xyx) * 0.1031); q += dot(q, q.yzx + 33.33); return fract((q.x + q.y) * q.z); }
+vec3 still_tone(vec3 c) { return look_srgb(look_agx(max(c, vec3(0.0)) * exp2(uExposure) * look_uGain, look_uPunch)); }
+void main(){
+  const int N = ${SS};
+  vec4 acc = vec4(0.0);
+  float pa = 1.0 / (still_uFocal * float(N));            // a subsample's footprint
+  for (int sy = 0; sy < N; sy++) for (int sx = 0; sx < N; sx++) {
+    vec2 fc = gl_FragCoord.xy + (vec2(sx, sy) + 0.5) / float(N) - 0.5;
+    vec2 sp = (fc - still_uAnchor) / still_uFocal + still_uShift;
+    Ray r; r.ro = uCamPos; r.rd = normalize(uCam * vec3(sp, 1.0)); r.pa = pa; r.depth = 0;
+    VenturesHit vh;
+    float cov = still_trace(r.ro, r.rd, pa, still_uI, vh);
+    float hs = cov > 0.0 ? vh.lp.y + ventures_uK[vh.id].x : 0.0;   // height above the sea
+    float above = cov > 0.0 ? clamp(hs / max(vh.t * pa, 1e-6) + 0.5, 0.0, 1.0) : 0.0;
+    cov *= above;
+    if (cov > 0.0) acc += vec4(still_tone(ventures_surface(vh, r.rd, pa)), 1.0) * cov;
+    if (cov < 1.0 && still_uRefl > 0.0) {
+      // the liquid under it: the casting's reflection, light only (alpha = its brightness)
+      float tS = world_seaT(r);
+      if (tS > 0.0) {
+        Sea s; s.t = tS; s.p = r.ro + r.rd * tS; s.up = normalize(s.p); s.q = s.up; s.eU = vec3(0.0); s.eV = vec3(0.0);
+        s.w = vec2(0.0); s.fw = 1e3; s.graz = max(dot(-r.rd, s.up), 0.0);
+        vec3 c = still_tone(ventures_streak(r, s) * still_uRefl);
+        // it runs out before the frame does (the still's lower margin), smoothly
+        c *= smoothstep(0.0, 1.0, clamp(fc.y / still_uAnchor.y, 0.0, 1.0));
+        float a = max(c.r, max(c.g, c.b));
+        acc += vec4(c, a) * (1.0 - cov);
+      }
+    }
+  }
+  acc /= float(N * N);
+  // +-1/2 LSB of dither on the colour (long dark gradients never band), none on the alpha
+  float d = (still_hash(gl_FragCoord.xy) + still_hash(gl_FragCoord.xy + 17.3) - 1.0) / 255.0;
+  acc.rgb = clamp(acc.rgb + d * acc.a, 0.0, acc.a);
+  o = acc;                                               // premultiplied
 }`;
 const vs = `#version 300 es
 in vec2 p; void main(){ gl_Position = vec4(p, 0.0, 1.0); }`;
 function sh(t, s) { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); if (!gl.getShaderParameter(x, gl.COMPILE_STATUS)) { window.__err = gl.getShaderInfoLog(x); throw new Error(window.__err); } return x; }
-const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr); gl.useProgram(pr);
+const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr);
+if (!gl.getProgramParameter(pr, gl.LINK_STATUS)) { window.__err = gl.getProgramInfoLog(pr); throw new Error(window.__err); }
+gl.useProgram(pr);
 const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
 gl.enableVertexAttribArray(0); gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
 const U = (n) => gl.getUniformLocation(pr, n);
-const n = (a) => { const l = Math.hypot(...a); return a.map((x) => x / l); };
-const x = (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-function bb(T) { const lam = [0.61, 0.55, 0.465]; const v = lam.map((l) => 1 / (l ** 5 * (Math.exp(14388 / (l * T)) - 1))); const k = (T / 1811) ** 6; return [k, (v[1] / v[0]) * k, (v[2] / v[0]) * k]; }
-// camera: a little below the middle, a three-quarter view, a long lens (monument, not a box)
-const E = [1.6, 5.0, 0.42, 0.12];
-const cam = [7.5, 2.2, 36];
-const at = [0, 5.0, 0];
-const f = n([at[0] - cam[0], at[1] - cam[1], at[2] - cam[2]]), rr = n(x(f, [0, 1, 0])), uu = x(rr, f);
-const fovY = 2 * Math.atan(6.3 / 36);
-gl.uniform2f(U('uRes'), W, H);
-gl.uniform3fv(U('uCamPos'), cam);
-gl.uniformMatrix3fv(U('uCam'), false, [...rr, ...uu, ...f]);
-gl.uniform1f(U('uFocal'), 0.5 * H / Math.tan(fovY / 2));
-gl.uniform1f(U('uTime'), 2.0);
-const sun = n([0.95, 0.1, 0.55]);
-gl.uniform3fv(U('uSunDir'), sun); gl.uniform1f(U('uSunRad'), 0.012);
-gl.uniform3fv(U('uSunE'), [1.1, 0.62, 0.34]);
-// the monolith, turned so its face sits just off the half vector between the camera and the sun
-const vc = n([cam[0], 0, cam[2]]), hh = n([vc[0] + sun[0], 0, vc[2] + sun[2]]);
-const yaw = Math.atan2(hh[0], hh[2]) + [-0.075, 0.075, -0.11][I];
-const Z = [Math.sin(yaw), 0, Math.cos(yaw)], Y = [0, 1, 0], X = x(Y, Z);
-gl.uniform4fv(U('ventures_uP'), [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]);
-gl.uniformMatrix3fv(U('ventures_uM'), false, [...X, ...Y, ...Z, 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 1]);
-gl.uniform4fv(U('ventures_uK'), [0, 0, I === 0 ? 0 : 1, 0, 0, 0, 1, 0, 0, 0, 1, 0]);
-gl.uniform4fv(U('ventures_uE'), E);
-gl.uniform1f(U('ventures_uOn'), 1);
-gl.uniform1f(U('ventures_uGain'), 1);
-gl.uniform3fv(U('ventures_uSunL'), [1, 0.62, 0.36]);
-gl.uniform3fv(U('ventures_uZen'), [0.006, 0.008, 0.016]);
-gl.uniform3fv(U('ventures_uHorW'), [0.55, 0.2, 0.06]);
-gl.uniform3fv(U('ventures_uHorC'), [0.08, 0.1, 0.16]);
-gl.uniform3fv(U('ventures_uSea'), bb(900).map((v) => v * 13.4));
-gl.uniform3fv(U('ventures_uPool'), bb(1320).map((v) => v * 14));
+
+// ---- the frame: the world's uniforms, as captured; only casting I stands ----
+const u = F.u;
+const set = (n, v) => {
+  const l = U(n); if (!l) return;
+  if (typeof v === 'number') gl.uniform1f(l, v);
+  else if (v.length === 2) gl.uniform2fv(l, v);
+  else if (v.length === 3) gl.uniform3fv(l, v);
+  else if (v.length === 9 && !n.includes('[')) gl.uniformMatrix3fv(l, false, v);
+  else if (n.startsWith('ventures_uM')) gl.uniformMatrix3fv(l, false, v);
+  else gl.uniform4fv(l, v);
+};
+const Pv = u['ventures_uP[0]'].slice();
+for (let i = 0; i < 3; i++) Pv[i * 4 + 3] = i === I ? 1 : 0;
+for (const [n, v] of Object.entries(u)) set(n, n === 'ventures_uP[0]' ? Pv : v);
+set('uStill', 1); set('uCrispOn', 1); set('uBloomOn', 0); set('uCanvas', [W, H]); set('uRes', [W, H]);
+set('look_uGain', 1); set('look_uPunch', 1);
+gl.uniform3fv(U('still_uSky'), F.sky.flat());
+set('still_uSkyRow0', F.skyRow0); set('still_uSkyH', F.skyH);
+
+// ---- the shift lens: where casting I stands in the home page's picture, and the window on it ----
+const cam = u.uCamPos, C = u.uCam, R = C.slice(0, 3), Up = C.slice(3, 6), Fw = C.slice(6, 9);
+const dot = (a, c) => a[0] * c[0] + a[1] * c[1] + a[2] * c[2];
+const box = (i) => {
+  const p = u['ventures_uP[0]'].slice(i * 4, i * 4 + 3), M = u['ventures_uM[0]'].slice(i * 9, i * 9 + 9);
+  const E = u['ventures_uE[0]'].slice(i * 4, i * 4 + 4), lift = u['ventures_uK[0]'][i * 4];
+  const o = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z: 0 };
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [-lift, 2 * E[1]]) {
+    const tap = 1 - 0.03 * Math.min(Math.max(y / (2 * E[1]), 0), 1);              // VENTURES_TAPER
+    const l = [sx * E[0] * tap, y + lift, sz * E[2] * tap];
+    const w = [0, 1, 2].map((k) => p[k] + M[k] * l[0] + M[3 + k] * l[1] + M[6 + k] * l[2] - cam[k]);
+    const z = dot(w, Fw), x = dot(w, R) / z, yy = dot(w, Up) / z;
+    o.x0 = Math.min(o.x0, x); o.x1 = Math.max(o.x1, x); o.y0 = Math.min(o.y0, yy); o.y1 = Math.max(o.y1, yy);
+  }
+  o.z = dot([0, 1, 2].map((k) => p[k] - cam[k]), Fw);
+  return o;
+};
+// Crucible Sites (the tallest) spans the frame from 10.5% to 89.4% down, as the stills always have; the other two
+// stand on the same waterline at the same px per metre
+const TOP = 0.105, FOOT = 0.894;
+const b0 = box(0), bi = box(I);
+const focal = ((FOOT - TOP) * H) / (b0.y1 - b0.y0) * (bi.z / b0.z);
+set('still_uFocal', focal);
+set('still_uShift', [(bi.x0 + bi.x1) / 2, bi.y0]);
+set('still_uAnchor', [W / 2, (1 - FOOT) * H]);
+set('still_uRefl', REFL);
+gl.uniform1i(U('still_uI'), I);
 gl.viewport(0, 0, W, H);
 gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT);
-gl.drawArrays(gl.TRIANGLES, 0, 3);
-gl.finish();
+// in bands, so a software GL never holds one draw for minutes
+const BAND = 64;
+gl.enable(gl.SCISSOR_TEST);
+for (let y = 0; y < H; y += BAND) { gl.scissor(0, y, W, BAND); gl.drawArrays(gl.TRIANGLES, 0, 3); gl.finish(); await new Promise((r) => setTimeout(r)); }
+gl.disable(gl.SCISSOR_TEST);
 window.__ready = true;
 </script>
 </body>

@@ -25,6 +25,12 @@
   display: none;
 }
 
+/* the pin: longer than World.css's 4.2 viewports, so six throws, their landings and the heading's held moment each
+   get room while the camera drifts through all of it */
+.w-place.w-paypal {
+  height: calc(var(--world-vh, 100svh) * 5.2);
+}
+
 /* the world runs: every caption in the same cell (one shows at a time, the layout never moves), names on the planet */
 .w-paypal[data-live] .w-pp-step {
   grid-area: 1 / 1;
@@ -40,20 +46,119 @@
   margin: 0;
   padding: 0;
 }
+/* A name is an annotation, not a pin: small type at the end of a one-pixel bone hairline with a tick at its place.
+   The li is a zero-size point the module moves onto the place (viewport px, snapped to the pixel grid); `data-pos`
+   (l, r, u, d: set by the module per layout) says which way the hairline runs. */
 .w-pp-names li {
+  --gap: 9px; /* from the place's hot core to the tick */
+  --lead: 20px;
   position: absolute;
   left: 0;
   top: 0;
-  transform: translate(-50%, -100%);
-  font-weight: 650;
-  font-size: 1rem;
+  width: 0;
+  height: 0;
+  font-weight: 560;
+  font-size: 0.8125rem;
+  line-height: 1;
   white-space: nowrap;
   color: var(--bone);
   opacity: 0;
 }
+.w-pp-names i {
+  position: absolute;
+  background: currentColor;
+  opacity: 0.62;
+}
+.w-pp-names i::before {
+  content: '';
+  position: absolute;
+  background: currentColor;
+}
+.w-pp-names span {
+  position: absolute;
+  /* the hairline draws out from the place first (--in 0..1, written by the module), then the name comes up */
+  opacity: calc(var(--in, 1) * 2.5 - 1.5);
+}
+.w-pp-names [data-pos='r'] i,
+.w-pp-names [data-pos='l'] i {
+  top: 0;
+  width: var(--lead);
+  height: 1px;
+}
+.w-pp-names [data-pos='r'] i {
+  left: var(--gap);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--in, 1));
+}
+.w-pp-names [data-pos='l'] i {
+  right: var(--gap);
+  transform-origin: 100% 50%;
+  transform: scaleX(var(--in, 1));
+}
+.w-pp-names [data-pos='r'] i::before,
+.w-pp-names [data-pos='l'] i::before {
+  top: -2px;
+  width: 1px;
+  height: 5px;
+}
+.w-pp-names [data-pos='r'] i::before {
+  left: 0;
+}
+.w-pp-names [data-pos='l'] i::before {
+  right: 0;
+}
+.w-pp-names [data-pos='r'] span {
+  left: calc(var(--gap) + var(--lead) + 6px);
+  top: 0;
+  transform: translateY(-50%);
+}
+.w-pp-names [data-pos='l'] span {
+  right: calc(var(--gap) + var(--lead) + 6px);
+  top: 0;
+  transform: translateY(-50%);
+}
+.w-pp-names [data-pos='u'] i,
+.w-pp-names [data-pos='d'] i {
+  left: 0;
+  width: 1px;
+  height: var(--lead);
+}
+.w-pp-names [data-pos='u'] i {
+  bottom: var(--gap);
+  transform-origin: 50% 100%;
+  transform: scaleY(var(--in, 1));
+}
+.w-pp-names [data-pos='d'] i {
+  top: var(--gap);
+  transform-origin: 50% 0;
+  transform: scaleY(var(--in, 1));
+}
+.w-pp-names [data-pos='u'] i::before,
+.w-pp-names [data-pos='d'] i::before {
+  left: -2px;
+  width: 5px;
+  height: 1px;
+}
+.w-pp-names [data-pos='u'] i::before {
+  bottom: 0;
+}
+.w-pp-names [data-pos='d'] i::before {
+  top: 0;
+}
+.w-pp-names [data-pos='u'] span {
+  left: 0;
+  bottom: calc(var(--gap) + var(--lead) + 6px);
+  transform: translateX(-50%);
+}
+.w-pp-names [data-pos='d'] span {
+  left: 0;
+  top: calc(var(--gap) + var(--lead) + 6px);
+  transform: translateX(-50%);
+}
 .w-pp-names .w-pp-root {
-  font-size: 1.125rem;
-  font-weight: 720;
+  --gap: 13px;
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 @media (min-width: 1024px) {
   .w-pp-caps {
@@ -68,9 +173,10 @@
     max-width: 16ch;
   }
   .w-pp-names li {
-    font-size: 1.125rem;
+    --lead: 28px;
+    font-size: 0.9375rem;
   }
   .w-pp-names .w-pp-root {
-    font-size: 1.3125rem;
+    font-size: 1rem;
   }
 }
