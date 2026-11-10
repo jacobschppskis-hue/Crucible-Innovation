@@ -124,7 +124,7 @@ float mark_shadow(vec3 p, vec3 n) {
   float d = mark_arc(q, MARK_RI);
   if (q.x > -MARK_HP - 1.) d = min(d, mark_ringSq(q, MARK_RI, 4., 9.).x);
   float s = smoothstep(-1.5, 1.1, d);
-  float over = mix(0.3, 0.72, smoothstep(0.3, 0.95, abs(n.z)));
+  float over = mix(0.3, 0.8, smoothstep(0.3, 0.95, abs(n.z)));
   return mix(1., mix(over, 1., s), mark_uLook.z);
 }
 
@@ -411,9 +411,10 @@ float mark_bez(vec2 p, vec2 a, vec2 c, vec2 b, out float t, out float sd) {
 // bank (the fastest water), cooler toward the banks, with a wide faint warmth in the sea beside it; its width breathes
 // along the course; long, soft drifts of hotter and cooler metal ride downstream (stretched along the flow: never
 // specks; faded where a pixel can't resolve them); the front thins to a point as it advances (never a rounded cap).
-float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, float seed, out float along) {
+// `stir` (added to): the flowing metal stirs the sea's skin along its course, so the sun's glitter gives way there
+// and the river reads against a quiet margin instead of fighting the sun's path.
+float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw, float T, float seed, inout float stir) {
   float t, sd; float d = mark_bez(p, a, c, b, t, sd);
-  along = t;
   if (front <= 0.) return 0.;
   float len = length(c - a) + length(b - c);
   float behind = (front - t) * len;                       // world units behind the tip
@@ -422,6 +423,8 @@ float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw,
   float wk = w * (0.68 + 0.64 * world_noise(vec2(u * 0.035 + seed, seed * 3.1)));
   wk *= smoothstep(0., 9. * w, behind) * 0.85 + 0.15 * step(0., behind); // the front tapers to a thread
   wk = max(wk, fw * 0.7);
+  // the channel snakes a little inside its course (long S-bends; none at the confluence, so the three meet cleanly)
+  sd += w * 0.95 * sin(u * 0.17 + seed * 1.7) * smoothstep(0., 14., min(u, len - u));
   float x = sd / wk, x2 = x * x;
   float time = mark_uRivT.x;
   float fine = smoothstep(1.2, 0.25, fw / wk);              // detail the pixel can resolve
@@ -433,6 +436,7 @@ float mark_river(vec2 p, vec2 a, vec2 c, vec2 b, float w, float front, float fw,
   float drift = world_noise(vec2(u * 0.09 - time * 0.26, x * 1.7 + seed * 5.)) - 0.5
               + 0.6 * (world_noise(vec2(u * 0.24 - time * 0.4, x * 3.3 - seed)) - 0.5);
   float on = smoothstep(-0.5 * w, 1.5 * w, behind);        // the tip's heat fades in, no hard end
+  stir = max(stir, on * exp(-x2 * 0.07));
   return T * on * ((0.78 * body + 0.42 * hot * body) * (1. + 0.34 * drift * fine) + 0.1 * bank);
 }
 void mark_sea(Ray r, Sea s, inout SeaMod m) {
@@ -445,10 +449,11 @@ void mark_sea(Ray r, Sea s, inout SeaMod m) {
   vec2 pw = p + warp;
   float fw = s.fw;
   vec2 J = vec2(7., 48.);   // (+x is screen-left: the camera looks back along the travel)
-  float aL, aR, aJ;
-  float hL = mark_river(pw, vec2(190., 215.), vec2(46., 104.), J, 1.5, mark_uRiv.y, fw, 0.22, 1.3, aL);
-  float hR = mark_river(pw, vec2(-185., 230.), vec2(-60., 118.), J, 1.5, mark_uRiv.y, fw, 0.22, 7.9, aR);
-  float hJ = mark_river(pw, J, vec2(1., 16.), vec2(-17., -34.), 2.0, mark_uRiv.z, fw, 0.335, 4.4, aJ);
+  float stir = 0.;
+  float hL = mark_river(pw, vec2(190., 215.), vec2(46., 104.), J, 1.5, mark_uRiv.y, fw, 0.22, 1.3, stir);
+  float hR = mark_river(pw, vec2(-185., 230.), vec2(-60., 118.), J, 1.5, mark_uRiv.y, fw, 0.22, 7.9, stir);
+  float hJ = mark_river(pw, J, vec2(-0.5, 16.), vec2(-19., -34.), 1.8, mark_uRiv.z, fw, 0.325, 4.4, stir);
+  m.rough = max(m.rough, 0.3 * stir * mark_uRivT.y);
   // where they meet: a brief brightening that spreads into the joined river (soft, no disc)
   float pool = mark_uRiv.w * 0.16 * exp(-dot(pw - J, pw - J) / 40.);
   // the joined river carries both: its heat sits on top of the two it came from, never a seam at the junction

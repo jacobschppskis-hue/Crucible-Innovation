@@ -131,7 +131,7 @@ export const mark: WorldModule = {
     u.set('mark_uRivT', [f.t, on]);
     u.set('mark_uLook', [vis, size, f.quality.q >= 0.45 ? 1 : f.quality.q > 0.2 ? 0.6 : 0, 0]);
     // the world the metal mirrors (radiance): the dusk sky above, the sea's glow below, the afterglow on the horizon
-    u.set('mark_uSky', [0.175 * fill, 0.18 * fill, 0.205 * fill]);
+    u.set('mark_uSky', [0.195 * fill, 0.2 * fill, 0.225 * fill]);
     u.set('mark_uSea', [0.4 * fill, 0.15 * fill, 0.05 * fill]);
     u.set('mark_uGlow', [0.6 * fill, 0.3 * fill, 0.13 * fill]);
     u.set('mark_uGlare', [pr.glare, pr.width, 0, 0]);
