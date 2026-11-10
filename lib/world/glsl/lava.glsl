@@ -256,7 +256,9 @@ vec3 lava_shade(Ray r, Sea s, SeaMod m) {
   // phones in the hero: the sun's (and the mark's) mirror image lands as far below the horizon as they stand above it,
   // right behind the headline. There the mirrored light rolls off softly to a ceiling (x / (1 + x / c)): the sun's path
   // still reads, brighter than the sea, but never blazes behind the title. Desktop and every other place: unchanged.
-  float cap = mix(1e4, 0.3, lava_uTight);
+  // (mark, for the loop seam: the ceiling moves in stops, 0.3 .. ~1e4, so it bites gradually; a linear mix only bit in
+  // the last thousandth of lava_uTight and the sun's path popped at the seam and as the hero left)
+  float cap = 0.3 * exp2(15. * (1. - lava_uTight));
   lit = lit / (1. + lit / cap);
   col += lit;
   return mix(col + m.emit, far, k);

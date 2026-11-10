@@ -194,9 +194,12 @@ export const lava: WorldModule = {
     // glint and the mirrored image are quieter there (1 -> 0 as the hero scrolls away)
     // (a function of the journey that is the same at progress 0 and 1, so the loop seam never shows: on in the hero, off
     // once it has scrolled away, back on over the last 3% as the camera comes round to the hero again)
-    const hero = f.places.hero ? f.at('hero') : 1;
-    const back = f.loopLen > 0 ? sstep(0.97, 1, f.progress) : 0;
-    u.set('lava_uTight', Math.max(1 - sstep(0.6, 1, hero), back));
+    // (mark: held through the hero's whole pin and released over the screen after it, while the headline slides away;
+    // back on over the middle of the last screen before the seam, before the loop copy's headline reaches the sea)
+    const hp = f.places.hero, lp = f.places.loop;
+    const gone = hp ? (f.y - (hp.top + hp.h - f.h)) / f.h : 1;
+    const back = f.loopLen > 0 && lp ? sstep(0.2, 0.62, (f.y - (lp.top - f.h)) / f.h) : 0;
+    u.set('lava_uTight', Math.max(1 - sstep(0.25, 0.95, gone), back));
   },
   dispose() {
     input?.destroy();

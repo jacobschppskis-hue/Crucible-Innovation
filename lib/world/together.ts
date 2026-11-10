@@ -50,9 +50,8 @@ export function togetherKeys(): Key[] {
   return [
     // the mark fades as the camera tips down off it (it would otherwise slide up half under the nav), and comes back
     // round the far sun as the journey climbs into story
-    { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, 'mark.vis': 1, ph: { fov: 62, pitch: -2 } },
-    { at: ['together', 0.22], s: 12, h: 18, yaw: 180, pitch: -16, fov: 48, ...NEAR, 'mark.vis': 0, ph: { fov: 63, pitch: -20 } },
-    { at: ['together', 0.3], s: 14, h: 30, yaw: 180, pitch: -26, fov: 50, ...NEAR, 'mark.vis': 0, ph: { fov: 64, pitch: -31 } },
-    { at: ['together', 1], s: 22, h: 44, yaw: 180, pitch: -29, fov: 50, ...NEAR, 'mark.vis': 0, ease: 'linear', ph: { fov: 64, pitch: -34 } },
+    { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2, sunR: 3.55 } },
+    { at: ['together', 0.3], s: 12, h: 15, yaw: 180, pitch: -7, fov: 48, ...NEAR, ph: { fov: 63, pitch: -19.5, sunR: 3.55 } },
+    { at: ['together', 1], s: 20, h: 19, yaw: 180, pitch: -8, fov: 48, ...NEAR, ease: 'linear', ph: { fov: 63, pitch: -21, sunR: 3.55 } },
   ];
 }

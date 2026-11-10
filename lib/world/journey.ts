@@ -111,8 +111,8 @@ export function keys(): Key[] {
   const dusk = (lonDeg: number) => ({ ...FAR, sunV: deg(lonDeg) });
   return [
     // hero: low over the molten sea at sunset, the mark floating over its reflection, its core the sun; stars above
-    { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } }, // mark: phone core right of the type, so the glitter column never crosses it
-    { at: ['hero', 1], s: 4, h: 1.8, yaw: 162, pitch: 0, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4, yaw: 169.7 } },
+    { at: ['hero', 0], s: 0, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.7, yaw: 170.3, sunR: 3.55 } }, // mark: phone core right of the type, so the glitter column never crosses it
+    { at: ['hero', 1], s: 4, h: 1.8, yaw: 162, pitch: 0, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2.4, yaw: 170.3, sunR: 3.55 } },
     // stronger together: still on the sunset, a slow rise so the mark has the sky
     { at: ['together', 0], s: 8, h: 2.2, yaw: 180, pitch: -0.5, fov: 46, ...NEAR, ph: { fov: 62, pitch: -2 } },
     { at: ['together', 1], s: 30, h: 7, yaw: 178, pitch: 1, fov: 46, ...NEAR, ph: { fov: 62, pitch: 0 } },
@@ -148,9 +148,12 @@ export function keys(): Key[] {
     // own move (pulling back from the sun, low over the sea), so the seam is inside one continuous motion, and the core
     // comes in from the far sky along its own line of sight to hang over the sea again
     { at: ['dawn', 0], s: deg(235), h: 4600, yaw: 25, pitch: -38, fov: 46, ...FAR2, ph: { fov: 60 } },
-    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: -1.5, fov: 46, ...FAR2, ph: { fov: 62, pitch: -3, yaw: 172 } },
+    // (mark) the sun here is still the far star, but as large in the sky as the near core will be (sunR 2.32e4 at 1e6):
+    // through the last 0.6 screen it comes in along its own line of sight without changing size, behind its own glare
+    // (lib/world/mark.ts presence()), and the mark resolves round it as the glare settles
+    { at: ['loop', 0], dy: -0.6, s: LAP - 40, h: 8, yaw: 168, pitch: -1.5, fov: 46, ...FAR2, sunR: 2.32e4, ph: { fov: 62, pitch: -3, yaw: 172, sunR: 2.06e4 } },
     // loop: exactly the hero's first key, one lap on
-    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 169.7 } },
+    { at: ['loop', 0], s: LAP, h: 1.6, yaw: 162, pitch: -0.2, fov: 46, ...NEAR, sunV: LAP - 170, ph: { fov: 62, pitch: -2.7, yaw: 170.3, sunR: 3.55 } },
   ];
 }
 
