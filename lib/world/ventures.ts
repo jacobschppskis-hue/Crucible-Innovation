@@ -134,7 +134,7 @@ function frameUpdate(f: Frame, u: Uniforms) {
   const p = f.at('ventures');
   // they sink back into the sea over the end of their own pin, so the thesis opens on an empty sea (continuous,
   // reversible; the words leave with them)
-  const th = clamp((p - 0.895) / 0.1);
+  const th = clamp((p - 0.885) / 0.1);
   const sinkK = 1 - th * th * (3 - 2 * th);
   const L = f.narrow ? LAYOUT.narrow : LAYOUT.wide;
   const s = SCALE;
@@ -277,8 +277,8 @@ function bindDom(root: HTMLElement) {
  * The camera through the ventures place: one shot. It comes in low over the night sea with a long lens (the castings
  * are 150 m tall and 600-750 m away: the lens, not a small world, makes them fill the frame), sinks lower and pushes in
  * while they rise, arcing a little from left to right so the moon's sheen and the reflected horizon travel across the
- * faces; over the last sixth it lifts and widens into the first key of the thesis' climb (thesisKeys: keep the last
- * key here equal to that one). Phones: a narrower frame, the live casting centred between the heading and the list.
+ * faces; they sink again on the long lens, and over the last 7% it lifts and widens into the first key of the thesis'
+ * climb (thesisKeys: keep the last key here equal to that one). Phones: a narrower frame, the live casting centred between the heading and the list.
  */
 export function venturesKeys(R: number): Key[] {
   const deg = (a: number) => (a * Math.PI * R) / 180;
@@ -292,6 +292,8 @@ export function venturesKeys(R: number): Key[] {
   return [
     { at: ['ventures', 0], s, h: 24, x: -30, yaw: 2.3, pitch: 0.4, fov: 30, ...FAR, ...MOON, ph: { fov: 31, pitch: 4.4, x: -24, yaw: 1.9 } },
     { at: ['ventures', 0.84], s: s + PEAK, h: 14, x: 30, yaw: -2.6, pitch: 0.85, fov: 26, ...FAR, ...MOON2, ph: { fov: 25, pitch: 3.7, x: 24, yaw: -2.2 } },
+    // they go back under while the lens is still long (the sinking is seen at full size): the camera only breathes
+    { at: ['ventures', 0.93], s: s + PEAK + 8, h: 16, x: 26, yaw: -2.25, pitch: 0.76, fov: 27, ...FAR, ...MOON2, ph: { fov: 26.5, pitch: 3.9, x: 21, yaw: -1.9 } },
     // = the thesis' first key (lib/world/thesis.ts): the lift and the widening lens are the start of its climb
     { at: ['ventures', 1], s: deg(151.5), h: 30, x: 0, yaw: 0, pitch: -2, fov: 50, ...FAR, ...MOON2, ph: { fov: 64, pitch: -3, x: 0, yaw: 0 } },
   ];
