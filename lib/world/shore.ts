@@ -30,8 +30,8 @@ const GLSL = /* glsl */ `
 vec3 shore_planck(float T){ return look_planck(T) * look_uLavaGain; }
 uniform float shore_uOn;    // 0 far away (all work skipped) .. 1 on the run home
 uniform float shore_uT;     // the surf's clock (s)
-uniform vec3 shore_uGlare;  // x: the sun's glare in the lens (strength x how much of its disc stands over the limb);
-                            // y: the limb igniting round the rising sun; z: 0 while the sun is under the limb .. 1 over it
+uniform vec4 shore_uGlare;  // x: the sun's glare in the lens (strength x how much of its disc stands over the limb);
+                            // y: the limb igniting round the sun; z: 0 while the sun is under the limb .. 1 over it; w: 0 .. 1 as it climbs clear
 uniform float shore_uPath;  // the sun's long glitter path on the sea seen from orbit (gain, 0 = off)
 const float SHORE_PER = 9.0;    // seconds per wave (slow: the sea is big)
 const float SHORE_LAM = 30.0;   // crest spacing (units)
@@ -109,7 +109,7 @@ void shore_sea(Ray r, Sea s, inout SeaMod m){
     float nh2 = nh * nh;
     float D = exp(-(1.0 - nh2) / (nh2 * 0.03)) / (PI * 0.03 * nh2 * nh2);
     float F = 0.05 + 0.95 * pow(1.0 - max(dot(v, hv), 0.0), 5.0);
-    float G = smoothstep(0.0, 0.12, nl) * smoothstep(0.0, 0.06, nv);
+    float G = smoothstep(0.0, 0.05, nl) * smoothstep(0.0, 0.06, nv);
     m.emit += look_sunLight(s.p) * vec3(1.0, 0.8, 0.55) * (shore_uPath * D * F * G / (4.0 * (nv + 0.12)));
   }
   float on = shore_uOn;
@@ -187,7 +187,7 @@ void shore_over(Ray r, Hit h, inout vec3 col){
     ShoreK k;
     // (and give its grains the dusk sky's faint cool fill: charcoal, not a hole)
     if (shore_k(r, world_seaAt(r, h.t), k))
-      col = max(col - vec3(0.055, 0.0095, 0.0016) * (look_uLavaGain / 3.0) * (0.85 * k.land * shore_uOn), vec3(0.0)) + vec3(0.0042, 0.0043, 0.0058) * (k.land * shore_uOn);
+      col = max(col - vec3(0.055, 0.0095, 0.0016) * (look_uLavaGain / 3.0) * (0.85 * k.land * shore_uOn * (1.0 - smoothstep(250.0, 400.0, uCamH))), vec3(0.0)) + vec3(0.0042, 0.0043, 0.0058) * (k.land * shore_uOn);
   }
   if (shore_uGlare.x + shore_uGlare.y <= 0.0) return;
   float ang = acos(clamp(dot(r.rd, uSunDir), -1.0, 1.0));
@@ -196,7 +196,7 @@ void shore_over(Ray r, Hit h, inout vec3 col){
   if (shore_uGlare.x > 0.0) {
     float a = ang / max(uSunRad, 1e-4), a2 = a * a;
     vec3 T = look_Tray(uCamPos / look_uK, uSunDir);
-    vec3 g = vec3(6.0 * exp(-0.5 * a2)) + vec3(1.0, 0.86, 0.66) / (1.0 + 0.5 * a2) + vec3(1.0, 0.6, 0.32) * (0.05 / (1.0 + 0.012 * a2));
+    vec3 g = vec3(6.0 * exp(-0.5 * a2)) + vec3(1.0, 0.86, 0.66) / (1.0 + 0.5 * a2) + vec3(1.0, 0.62, 0.34) * (0.032 / (1.0 + 0.012 * a2));
     col += look_uSunE * T * g * shore_uGlare.x;
   }
   // the limb igniting where the sun comes up behind it: sunlight scattered forward through the air's long grazing
@@ -205,16 +205,21 @@ void shore_over(Ray r, Hit h, inout vec3 col){
   // line is smooth at any render scale; it carries on a pixel or two inside the limb (the same air in front of the sea)
   if (shore_uGlare.y > 0.0) {
     float b = dot(r.ro, r.rd);
-    float ht = sqrt(max(dot(r.ro, r.ro) - b * b, 0.0)) - uR;       // closest approach above the sea (units), < 0: a hit
+    // closest approach above the sea (units), < 0: a hit; a ray heading up and away is closest where it starts
+    float ht = b > 0.0 ? uCamH : sqrt(max(dot(r.ro, r.ro) - b * b, 0.0)) - uR;
     float px = r.pa * sqrt(uCamH * (2.0 * uR + uCamH)) / look_uK;  // one pixel at the limb, in air km
     float xk = ht / look_uK;
     float inside = xk < 0.0 ? exp(xk / max(1.5, 1.5 * px)) : 1.0;
     xk = max(xk, 0.0);
-    float pn = 1.0 / (1.0 + ang * ang / 0.0009), pw = 1.0 / (1.0 + ang * ang / 0.0256), pv = 1.0 / (1.0 + ang * ang / 0.25);
+    // along the limb the line is measured by azimuth from the sun (so it stays lit under a sun that has climbed); the
+    // white heart only where the sun itself is
+    vec3 sh = uSunDir - uCamUp * dot(uSunDir, uCamUp), rh = r.rd - uCamUp * dot(r.rd, uCamUp);
+    float da = acos(clamp(dot(sh, rh) * inversesqrt(max(dot(sh, sh) * dot(rh, rh), 1e-12)), -1.0, 1.0));
+    float pn = 1.0 / (1.0 + ang * ang / 0.0009), pw = 1.0 / (1.0 + da * da / 0.0256), pv = 1.0 / (1.0 + da * da / 0.25);
     float wr = max(2.5, 1.2 * px), wg = max(4.5, 1.5 * px);
     vec3 L = vec3(1.0, 0.16, 0.02) * exp(-xk / wr) * (0.9 * pw + 0.22 * pv);
     L += vec3(1.0, 0.55, 0.16) * exp(-(xk - 5.0) * (xk - 5.0) / (wg * wg)) * (1.5 * pw + 0.1 * pv);
-    L += vec3(1.0, 0.92, 0.8) * exp(-(xk - 11.0) * (xk - 11.0) / 49.0) * 5.0 * pn * shore_uGlare.z;
+    L += vec3(1.0, 0.92, 0.8) * exp(-(xk - 11.0) * (xk - 11.0) / 49.0) * (5.0 * pn * shore_uGlare.z + 1.3 * pw * shore_uGlare.w);
     L += vec3(0.3, 0.5, 1.0) * exp(-(xk - 24.0) * (xk - 24.0) / 169.0) * (0.55 * pw + 0.1 * pv) * shore_uGlare.z;
     col += look_uSunE * L * (shore_uGlare.y * inside);
   }
@@ -269,6 +274,7 @@ export function shoreKeys(R: number): Key[] {
     el: number,
     rest: Record<string, number | string> = {},
     fovP = 60,
+    elP = el, // the sun's height over the limb on phones, when it differs
   ): Key => ({
     at,
     s,
@@ -278,26 +284,27 @@ export function shoreKeys(R: number): Key[] {
     fov: 46,
     ...sun(s, h, yaw, az, el),
     ...rest,
-    ph: { fov: fovP, pitch: limb(h, yP, tanP(fovP)) },
+    ph: { fov: fovP, pitch: limb(h, yP, tanP(fovP)), ...(elP === el ? {} : sun(s, h, yaw, az, elP)) },
   });
   // in orbit the sun is the sky's own disc (look), not the mark: it rises through the air, with its glare in the lens,
   // the limb igniting round it and its glitter path on the sea. On the way down the mark comes back round it.
-  const ORBIT = { 'mark.vis': 0, 'look.sunDisc': 0.3, 'shore.glare': 1, 'shore.ignite': 1, 'shore.path': 0.6, roll: 0 };
+  const ORBIT = { 'mark.vis': 0, 'look.sunDisc': 0.3, 'shore.glare': 1, 'shore.ignite': 1, 'shore.path': 1, roll: 0 };
   const HOME = { 'mark.vis': 1, 'look.sunDisc': 0, 'shore.glare': 0, 'shore.ignite': 0, 'shore.path': 0, 'lava.heat': 0, roll: 0 };
 
   // dawn's run home, 0 .. RUN of the place: one smooth path, sampled into keys close enough together that the sun
   // (which slerps between world directions) stays where each key puts it. tau runs 0..1 along the path, easing out of
   // the shore's still and into the beach's.
-  const RUN = 0.76;
+  const RUN = 0.7;
   const T = [0, 0.3, 0.55, 0.75, 0.9, 1];
   const P = {
     s: [186, 232, 275, 312, 338, ((LAP - 940) / LAP) * 360], // degrees round the planet
-    h: [3200, 2900, 1900, 700, 120, 16].map(Math.log),
+    h: [3200, 3000, 2400, 1300, 200, 16].map(Math.log),
     yaw: [0, 28, 68, 108, 148, 169],
-    yD: [0.66, 0.66, 0.64, 0.58, 0.54, 0.52], // the limb's place in the frame, desktop
-    yP: [0.56, 0.55, 0.55, 0.53, 0.52, 0.52], // and on phones
+    yD: [0.78, 0.78, 0.76, 0.72, 0.69, 0.68], // the limb's place in the frame, desktop
+    yP: [0.57, 0.56, 0.56, 0.6, 0.62, 0.56], // and on phones
     az: [-12, -3, 6, 9, 11, 11], // the sun, degrees right of the heading
-    el: [9, 9.5, 8, 5, 2.8, 4], // and over the limb
+    el: [8, 8, 7.5, 5.5, 2.8, 4], // and over the limb (desktop: the giant wordmark fills the sky down to mid-frame)
+    elP: [13, 13.5, 11, 6, 2.8, 4], // (phones: the wordmark is small, the sun can stand higher over the limb)
     roll: [0, -9, -11, -7, -2, 0], // banking into the turn
   };
   const run: Key[] = [];
@@ -322,25 +329,26 @@ export function shoreKeys(R: number): Key[] {
           'look.sunDisc': 0.3 * (1 - low),
           'shore.glare': 1 - sstep(0.6, 0.95, tau),
           'shore.ignite': 1 - sstep(0.7, 0.92, tau),
-          'shore.path': 0.6 * (1 - sstep(0.7, 0.9, tau)),
+          'shore.path': 1 - sstep(0.7, 0.9, tau),
           'lava.heat': 0.05 * (1 - sstep(0.8, 1, tau)),
           roll: c('roll'),
           ...(i ? { ease: 'linear' } : {}),
         },
         60 + 2 * sstep(0.75, 1, tau),
+        c('elP'),
       ),
     );
   }
   return [
     // shore (the footer): first light. A slow climb; the sun comes up over the limb ahead, a little right of centre,
     // under the footer's last line
-    key(['shore', 0], deg(157.5), 900, -4, 0.8, 0.73, 5, -3.6, ORBIT),
-    key(['shore', 0.5], deg(159), 1150, -2, 0.8, 0.73, 5, -0.5, { ...ORBIT, ease: 'linear' }),
-    key(['shore', 1], deg(160.5), 1500, 0, 0.79, 0.72, 5, 2.3, { ...ORBIT, ease: 'out' }),
+    key(['shore', 0], deg(157.5), 900, -4, 0.8, 0.8, 5, -3.6, ORBIT),
+    key(['shore', 0.5], deg(159), 1150, -2, 0.8, 0.8, 5, -0.5, { ...ORBIT, ease: 'linear' }),
+    key(['shore', 1], deg(160.5), 1500, 0, 0.79, 0.79, 5, 2.3, { ...ORBIT, ease: 'out' }),
     // dawn (the wordmark): the day side, high and fast, flying with the sun, then the turn and the descent past the cape
     ...run,
     // beside the black sand, looking back along its waterline to the setting sun: a slow pull back
-    key(['dawn', 1], LAP - 880, 14, 170, 0.52, 0.52, 10, 4, HOME, 62),
+    key(['dawn', 1], LAP - 870, 14, 170, 0.68, 0.56, 10, 4, HOME, 62),
   ];
 }
 
@@ -353,7 +361,7 @@ export const shore: WorldModule & { keys: (R: number) => Key[] } = {
   update(f, u) {
     // on from the descent until the seam (the coast is beyond the horizon on the day side when it comes on, and under
     // the hero's horizon at the seam: neither switch can be seen)
-    const on = f.place.name === 'loop' ? 1 : f.places.dawn ? sstep(0.36, 0.46, f.at('dawn')) : 0;
+    const on = f.place.name === 'loop' ? 1 : f.places.dawn ? sstep(0.3, 0.4, f.at('dawn')) : 0;
     u.set('shore_uOn', on);
     u.set('shore_uT', f.still ? 2.2 : f.t);
     const g = f.ch['shore.glare'] ?? 0;
@@ -363,10 +371,10 @@ export const shore: WorldModule & { keys: (R: number) => Key[] } = {
       const d = f.sun.dir, up = f.cam.up;
       const el = Math.asin(Math.max(-1, Math.min(1, d[0] * up[0] + d[1] * up[1] + d[2] * up[2]))) + Math.acos(f.R / (f.R + f.cam.h));
       // the line lights up from 5 deg under the limb, is hottest as the sun breaks over it, then settles
-      const s = sstep(-5 * D2R, 0.3 * D2R, el) * (1 - 0.6 * sstep(1 * D2R, 9 * D2R, el));
-      u.set('shore_uGlare', [g * sstep(-f.sun.rad, f.sun.rad * 1.5, el), ig * s, sstep(-2 * D2R, 0.5 * D2R, el)]);
-    } else u.set('shore_uGlare', [0, 0, 0]);
+      const s = sstep(-5 * D2R, 0.3 * D2R, el) * (1 - 0.35 * sstep(1 * D2R, 9 * D2R, el));
+      u.set('shore_uGlare', [g * sstep(-f.sun.rad, f.sun.rad * 1.5, el), ig * s * sstep(150, 450, f.cam.h), sstep(-2 * D2R, 0.5 * D2R, el), sstep(1 * D2R, 7 * D2R, el)]);
+    } else u.set('shore_uGlare', [0, 0, 0, 0]);
     // the glitter path belongs to the orbit view (low over the sea the lava has its own glint)
-    u.set('shore_uPath', (f.ch['shore.path'] ?? 0) * sstep(120, 500, f.cam.h));
+    u.set('shore_uPath', (f.ch['shore.path'] ?? 0) * sstep(300, 1200, f.cam.h));
   },
 };
