@@ -20,34 +20,6 @@
   justify-content: center;
   aspect-ratio: 4 / 3;
 }
-/* The ingot is a freestanding object on the page's own liquid: no floor, no box, no backdrop. The host keeps the 8:5
-   layout box; the still (transparent) and the live canvas lie over it and overhang it by 14% above and below (5:4), so
-   the bar can turn, bob and tilt without being clipped. The canvas takes over once it has drawn (data-on). */
-.ing {
-  position: relative;
-  display: block;
-  width: 100%;
-  aspect-ratio: 8 / 5;
-}
-.ing-still,
-.ing-canvas {
-  position: absolute;
-  left: 0;
-  top: -14%;
-  width: 100%;
-  height: 128%;
-  display: block;
-  pointer-events: none;
-}
-.ing-canvas {
-  visibility: hidden; /* a worker's canvas keeps compositing while hidden; it shows once it has drawn */
-}
-.ing[data-on] .ing-canvas {
-  visibility: visible;
-}
-.ing[data-on] .ing-still {
-  visibility: hidden;
-}
 .vf-name {
   margin-top: 1rem;
   font-family: var(--font-display);
@@ -56,6 +28,24 @@
   line-height: 0.92;
   letter-spacing: -0.02em;
   font-variation-settings: 'wdth' 125;
+}
+.vf-tag {
+  margin-top: 1.25rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.375rem, 1.9vw, 1.875rem);
+  line-height: 1.1;
+  font-variation-settings: 'wdth' 125;
+}
+.vf-blurb {
+  margin-top: 1rem;
+  max-width: 24rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--bone-dim);
+}
+.vf-tag + .vf-blurb {
+  margin-top: 0.5rem;
 }
 .vf-link {
   display: inline-flex;
@@ -75,7 +65,7 @@
   text-decoration-color: var(--ember);
 }
 
-/* The fallback (a venture without an ingot still): its mark. A live venture's has cooled; the rest still glow. */
+/* The fallback (a venture without a monolith still): its mark. A live venture's has cooled; the rest still glow. */
 .vf-mould {
   position: absolute;
   inset: 0;
@@ -94,7 +84,7 @@
   filter: drop-shadow(0 0 18px var(--ember)) drop-shadow(0 0 3px var(--ember-hot));
 }
 /* Still hot: the fallback mark breathes, only while the floor is on screen (InView sets data-live on [data-heat]).
-   (A 3D ingot's molten face breathes inside its scene.) */
+*/
 @media (prefers-reduced-motion: no-preference) {
   [data-hot] .vf-mark {
     animation: vf-smoulder 3.6s ease-in-out infinite paused;
@@ -146,9 +136,9 @@
     flex: none;
     width: 68vw;
     height: min(74svh, 44rem);
-    grid-template-columns: 1.3fr 1fr;
-    gap: 3.5vw;
-    align-items: end;
+    grid-template-columns: 1.35fr 1fr;
+    gap: 3vw;
+    align-items: center;
   }
   .js .vf-visual {
     aspect-ratio: auto;
@@ -160,5 +150,39 @@
   .vf-panel {
     grid-template-columns: 1.3fr 1fr;
     align-items: end;
+  }
+}
+
+/* The object is a way in too: the whole visual is a link (the text link is the one screen readers get). */
+.vf-visual,
+.vx-visual[href] {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- The monolith (a still from the home page's world, components/Ventures.tsx MonolithStill) ----------
+   Fills its frame's height, centred; it stands in the page's liquid with no floor or box. Hover (and keyboard focus on
+   the venture's link) lifts it out of the liquid a little; the glow at its waterline is in the still itself. */
+.vm {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  width: 100%;
+  height: 100%;
+}
+.vm-img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  transition: translate 900ms var(--ease-out);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .group:hover .vm-img,
+  .group:has(.vf-link:focus-visible) .vm-img {
+    translate: 0 -2.5%;
   }
 }

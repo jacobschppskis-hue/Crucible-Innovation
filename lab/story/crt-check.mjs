@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+import http from 'node:http'; import fs from 'node:fs'; import path from 'node:path';
+const srv = http.createServer((q, r) => { let f = path.join('out', decodeURIComponent(new URL(q.url, 'http://x').pathname)); if (fs.existsSync(f) && fs.statSync(f).isDirectory()) f = path.join(f, 'index.html'); if (!fs.existsSync(f)) return r.writeHead(404).end(); r.end(fs.readFileSync(f)); }).listen(8131);
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1243/chrome-linux64/chrome', args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+const p = await b.newPage({ viewport: { width: 1440, height: 900 } });
+await p.goto('http://localhost:8131/?t=6&q=4'); await p.mouse.move(5, 5);
+await p.waitForFunction(() => window.__world, null, { timeout: 30000 });
+await p.evaluate(() => window.__world.goPlace('story', 0.3)); await p.waitForTimeout(2500);
+console.log(await p.evaluate(() => [...document.querySelectorAll('.crt')].map((c) => { const i = c.querySelector('img'); return { on: c.hasAttribute('data-on'), src: i?.currentSrc, done: i?.complete, nw: i?.naturalWidth, op: i && getComputedStyle(i).opacity, js: document.documentElement.className }; })));
+await b.close(); srv.close();

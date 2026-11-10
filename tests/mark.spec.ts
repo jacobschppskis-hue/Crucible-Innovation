@@ -1,63 +1,44 @@
 import { expect, test } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RING, arcOutline, cells, dotsSvg, raster, splitRingSvg } from '../lib/splitRing';
+import { RING, arcOutline, cells, faviconSvg, splitRingSvg, step } from '../lib/splitRing';
 import { arcOutline3d, logoPieces } from '../lib/gl3d/geometry';
 
-// The Split Ring is the lattice ring (lib/splitRing.ts): one 3-unit lattice centred on the core, two filled bands that
-// end on the vertical grid line x = c + 1.5, and the machine half drawn as the same circles rasterised into upright
-// cells, every other one, the first welded into the band (one contour, tangent to the circle, no notch). It is upright, mirror-symmetric and centred on the core, and no cell
-// overlaps an arc anywhere. The SVG, the favicon, the brand pages and the 3D logo are all this one geometry.
+// The Split Ring (lib/splitRing.ts, Jacob's logo family): two filled half-bands on the circles r 20 and 12 (of a 48 grid,
+// carried into the 64 box) that end exactly on the core's centre line (x = c), and the machine half drawn as upright
+// squares centred ON the same circles, evenly spaced in angle (7 and 4), with one empty step between each band's end
+// and its first square. It is upright, mirror-symmetric and centred on the
+// core, and no square touches an arc, the core or another square. The SVG, the favicon, the brand pages and the 3D logo
+// are all this one geometry.
 
 const { c, px } = RING;
-const free = cells().filter((q) => !q.weld);
+const free = cells();
 
-test('cells are as big as the band is wide and sit on one lattice centred on the core', () => {
-  expect(RING.px).toBe(RING.stroke);
-  for (const { R, r } of RING.rings) expect(r).toBe(R * px); // each ring is a lattice circle
-  for (const q of cells()) {
-    expect(Number.isInteger(q.i) && Number.isInteger(q.j)).toBe(true);
-    expect(q.x).toBe(c + px * q.i);
-    expect(q.y).toBe(c + px * q.j);
-  }
-});
-
-test('the machine half is each circle rasterised, every other cell from the band, 20 cells', () => {
-  expect(cells()).toHaveLength(20);
-  RING.rings.forEach(({ R }, ring) => {
-    const half = raster(R);
-    // Gap-free and 8-connected from the top tip to the bottom tip, never more than half a cell off the true circle.
-    expect(half[0]).toEqual([1, -R]);
-    expect(half[half.length - 1]).toEqual([1, R]);
-    expect(half).toContainEqual([R, 0]);
-    for (let k = 1; k < half.length; k++) {
-      expect(Math.max(Math.abs(half[k][0] - half[k - 1][0]), Math.abs(half[k][1] - half[k - 1][1]))).toBe(1);
-    }
-    for (const [i, j] of half) {
-      expect(i).toBeGreaterThanOrEqual(1);
-      expect(Math.abs(Math.hypot(i, j) - R)).toBeLessThanOrEqual(0.5);
-    }
-    const mine = cells()
-      .filter((q) => q.ring === ring)
-      .map((q) => [q.i, q.j]);
-    expect(mine).toEqual(half.filter((_, k) => k % 2 === 0));
+test('the logo family proportions: 11 squares a little bigger than the band, centred on their circles, evenly spaced', () => {
+  const U = 4 / 3; // the family's 48-unit grid in the 64-unit box
+  for (const [v, want] of [[RING.stroke, 2.6], [RING.px, 3.2], [RING.core, 3.6], [RING.rings[0].r, 20], [RING.rings[1].r, 12]]) expect(v / U).toBeCloseTo(want, 9);
+  expect(RING.rings.map((q) => q.n)).toEqual([7, 4]);
+  expect(free).toHaveLength(11);
+  RING.rings.forEach(({ r, n }, ring) => {
+    const mine = free.filter((q) => q.ring === ring);
+    expect(mine).toHaveLength(n);
+    mine.forEach((q, i) => {
+      expect(Math.hypot(q.x - c, q.y - c)).toBeCloseTo(r, 9); // exactly on the circle
+      expect(q.x).toBeGreaterThan(c); // the right half only
+      expect(q.a).toBeCloseTo(-Math.PI / 2 + (i + 1) * step(n), 9); // evenly spaced, the band's end standing in for k = 0
+    });
+    // No column of squares (the old lattice stacked three at the far right): only a square and its mirror image may share
+    // an x, never three.
+    for (const q of mine) expect(mine.filter((o) => Math.abs(o.x - q.x) < 0.5).length).toBeLessThanOrEqual(2);
   });
 });
 
-test('only the first cell of each ring is welded, flush on the band’s end, in the arc’s own contour', () => {
-  const welded = cells().filter((q) => q.weld);
-  expect(welded.map((q) => [q.i, q.j])).toEqual([[1, -9], [1, 9], [1, -5], [1, 5]]);
-  for (const q of welded) {
-    const { r } = RING.rings[q.ring];
-    expect(q.x - px / 2).toBe(c + px / 2); // its left edge is the band's cut line
-    expect(Math.abs(q.y - c)).toBe(r); // and it spans the band's width exactly
-  }
+test('each band is one contour that stops on the core\u2019s centre line', () => {
   for (const { r } of RING.rings) {
-    // One closed contour per arc (so no anti-aliasing seam), ending on the welded cells' far edge.
     const d = arcOutline(r);
     expect(d.match(/M/g)).toHaveLength(1);
     expect(d.match(/Z/g)).toHaveLength(1);
-    expect(d.startsWith(`M${c + (3 * px) / 2} `)).toBe(true);
+    expect(d.startsWith(`M${c} `)).toBe(true);
   }
 });
 
@@ -68,18 +49,14 @@ test('the squares are never rotated', () => {
   for (const m of svg.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/g)) {
     expect(+m[3]).toBe(px);
     expect(+m[4]).toBe(px);
-    expect(Number.isInteger((+m[1] + px / 2 - c) / px)).toBe(true);
-    expect(Number.isInteger((+m[2] + px / 2 - c) / px)).toBe(true);
   }
-  expect(dotsSvg()).not.toMatch(/rotate\(|transform=/);
-  expect(dotsSvg().match(/h3m-3 1h3m-3 1h3/g)).toHaveLength(cells().length);
 });
 
 test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no cell overlapping an arc', async ({ page }) => {
   await page.setContent(`<!doctype html><body style="margin:0">${splitRingSvg()}</body>`);
   const out = await page.evaluate(
     ({ ring, outlines }) => {
-      const { c, px, core, rings } = ring;
+      const { c, px, stroke, core, rings } = ring;
       const svg = document.querySelector('svg')!;
       const arcs = [...svg.querySelectorAll('path')];
       const rects = [...svg.querySelectorAll('rect')];
@@ -87,41 +64,46 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
       const inArc = (x: number, y: number) => arcs.some((a) => a.isPointInFill(pt(x, y)));
       const bad: string[] = [];
       const box = rects.map((r) => ({ x: +r.getAttribute('x')!, y: +r.getAttribute('y')!, w: +r.getAttribute('width')!, h: +r.getAttribute('height')! }));
-      // Every free cell keeps at least one whole empty cell between it and the arcs (welded cells included), the core
-      // and every other cell: nothing touches, nothing overlaps.
+      // Every square keeps at least one whole empty square between it and the arcs and the core, and a clear gap to every
+      // other square: nothing touches, nothing overlaps.
       for (const b of box) {
         const m = px - 0.02;
         for (let x = b.x - m; x <= b.x + b.w + m; x += 0.25) for (let y = b.y - m; y <= b.y + b.h + m; y += 0.25) if (inArc(x, y)) bad.push(`cell ${b.x},${b.y} near an arc at ${x},${y}`);
         const dx = Math.max(0, Math.abs(b.x + b.w / 2 - c) - b.w / 2), dy = Math.max(0, Math.abs(b.y + b.h / 2 - c) - b.h / 2);
         if (Math.hypot(dx, dy) < core + px) bad.push(`cell ${b.x},${b.y} near the core`);
-        for (const o of box) if (o !== b && Math.max(Math.abs(o.x - b.x), Math.abs(o.y - b.y)) < 2 * px) bad.push(`cells ${b.x},${b.y} and ${o.x},${o.y} touch`);
+        // between any two squares, a clear gap of at least 2 units (the inner ring's diagonal neighbours are the closest)
+        for (const o of box) if (o !== b && Math.hypot(Math.max(0, Math.abs(o.x - b.x) - px), Math.max(0, Math.abs(o.y - b.y) - px)) < 2) bad.push(`cells ${b.x},${b.y} and ${o.x},${o.y} touch`);
       }
-      for (const { r } of rings) {
-        // Welded: the band runs straight on into its end cells (one fill, no gap) and stops at the cell's far edge.
-        for (const s of [-1, 1]) {
-          const yc = c + s * r;
-          for (let x = c - 0.5; x <= c + 1.5 * px - 0.05; x += 0.05) for (const y of [yc - px / 2 + 0.05, yc, yc + px / 2 - 0.05]) if (!inArc(x, y)) bad.push(`gap or notch in the weld at ${x},${y}`);
-          for (let x = c - 0.5; x <= c + 1.5 * px; x += 0.05) for (const y of [yc - px / 2 - 0.05, yc + px / 2 + 0.05]) if (inArc(x, y)) bad.push(`weld bulges past the cell's edge at ${x},${y}`);
-          if (inArc(c + 1.5 * px + 0.05, yc)) bad.push(`arc runs past its end cell at y ${yc}`);
+      for (const { r, n } of rings) {
+        // The band stops on x = c: nothing of it lies right of the centre line, and it is solid right up to it.
+        for (const sgn of [-1, 1]) {
+          const yc = c + sgn * r;
+          for (const y of [yc - stroke / 2 + 0.05, yc, yc + stroke / 2 - 0.05]) {
+            if (!inArc(c - 0.05, y)) bad.push(`band ends short of the centre line at y ${y}`);
+            if (inArc(c + 0.05, y)) bad.push(`band runs past the centre line at y ${y}`);
+          }
+          // A visible break: the first square starts well clear of the band's end (at least 1.5 bands).
+          const first = box.find((q) => Math.abs(q.y + q.h / 2 - yc) < r * 0.5 && q.x > c);
+          if (!first) bad.push(`no first square near ${yc}`);
+          else if (first.x - c < 1.5 * px) bad.push(`first square ${first.x},${first.y} too close to the band's end`);
         }
-        // A true circle, cut straight: the band's edges are on r ± px/2 all round the left half.
-        for (let deg = 95; deg <= 265; deg += 1) {
+        // A true circle: the band's edges are on r ± px/2 all round the left half.
+        for (let deg = 91; deg <= 269; deg += 1) {
           const a = (deg * Math.PI) / 180, X = (R: number) => c + R * Math.cos(a), Y = (R: number) => c - R * Math.sin(a);
-          for (const [R, want] of [[r + px / 2 - 0.05, true], [r + px / 2 + 0.05, false], [r - px / 2 + 0.05, true], [r - px / 2 - 0.05, false]] as const) {
+          for (const [R, want] of [[r + stroke / 2 - 0.05, true], [r + stroke / 2 + 0.05, false], [r - stroke / 2 + 0.05, true], [r - stroke / 2 - 0.05, false]] as const) {
             if (inArc(X(R), Y(R)) !== want) bad.push(`ring ${r} edge off the circle at ${deg} deg`);
           }
         }
+        void n;
       }
-      // Beyond the cut line, an arc's fill is only its welded cells.
-      for (let x = c + px / 2 + 0.05; x < 64; x += 0.25) for (let y = 0.113; y < 64; y += 0.25) {
-        const weld = rings.some(({ r }) => x < c + 1.5 * px && (Math.abs(y - (c - r)) < px / 2 || Math.abs(y - (c + r)) < px / 2));
-        if (inArc(x, y) && !weld) bad.push(`arc fill beyond the cut at ${x},${y}`);
-      }
+      // Right of the centre line there is no band at all.
+      for (let x = c + 0.05; x < 64; x += 0.25) for (let y = 0.113; y < 64; y += 0.25) if (inArc(x, y)) bad.push(`arc fill right of the centre line at ${x},${y}`);
       // Mirror-symmetric about the horizontal axis through the core.
       for (let x = 0.113; x < 64; x += 0.25) for (let y = 0.113; y < 32; y += 0.25) if (inArc(x, y) !== inArc(x, 2 * c - y)) bad.push(`asymmetric at ${x},${y}`);
       const key = (b: { x: number; y: number }) => `${b.x},${b.y}`;
-      const mirrored = new Set(box.map((b) => key({ x: b.x, y: 2 * c - b.y - px })));
-      for (const b of box) if (!mirrored.has(key(b))) bad.push(`cell ${key(b)} has no mirror`);
+      const key2 = (b: { x: number; y: number }) => `${b.x.toFixed(2)},${b.y.toFixed(2)}`;
+      const mirrored = new Set(box.map((b) => key2({ x: b.x, y: 2 * c - b.y - px })));
+      for (const b of box) if (!mirrored.has(key2(b))) bad.push(`cell ${key(b)} has no mirror`);
       // Centred: the mark's box is centred on the core in both axes.
       let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
       for (const e of [...arcs, ...rects]) {
@@ -143,7 +125,7 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
         path.setAttribute('stroke', '#000');
         path.setAttribute('stroke-width', '0.12');
         const poly = outlines[k];
-        for (let x = c - r - 3; x < c + 6; x += 0.2) for (let y = c - r - 3; y < c + r + 3; y += 0.2) {
+        for (let x = c - r - 3; x < c + 3; x += 0.2) for (let y = c - r - 3; y < c + r + 3; y += 0.2) {
           if (path.isPointInStroke(pt(x, y))) continue;
           if (path.isPointInFill(pt(x, y)) !== inPoly(poly, x - c, c - y)) bad.push(`3D outline of ring ${r} differs at ${x},${y}`);
         }
@@ -154,15 +136,18 @@ test('as drawn: upright, mirror-symmetric, centred on the core, true circles, no
     { ring: RING, outlines: RING.rings.map(({ r }) => arcOutline3d(r)) },
   );
   expect(out.bad, `${out.n} problems`).toEqual([]);
-  expect(out.rects).toBe(16);
+  expect(out.rects).toBe(11);
   expect(out.transforms).toBe(0);
   const [x0, y0, x1, y1] = out.bbox;
-  expect((x0 + x1) / 2).toBeCloseTo(c, 6);
-  expect((y0 + y1) / 2).toBeCloseTo(c, 6);
-  for (const [v, want] of [[x0, 3.5], [y0, 3.5], [x1, 60.5], [y1, 60.5]]) expect(v).toBeCloseTo(want, 4);
+  // Centred on the core: top and bottom are the outer band's edge; left is the band's edge, right the outer ring's middle
+  // square (the squares are a little wider than the band, so the mark reaches 0.4 units further right than left).
+  expect((y0 + y1) / 2).toBeCloseTo(c, 4);
+  const ext = RING.rings[0].r + RING.stroke / 2;
+  const right = RING.rings[0].r + px / 2;
+  for (const [v, want] of [[x0, c - ext], [y0, c - ext], [x1, c + right], [y1, c + ext]]) expect(v).toBeCloseTo(want, 3);
 });
 
-test('the 3D logo is built from the same mark: 2 welded arcs, 16 cells on their lattice places, the core', () => {
+test('the 3D logo is built from the same mark: 2 arcs, 11 squares on their circles, the core', () => {
   const pieces = logoPieces();
   expect(pieces.filter((p) => p.kind === 'core')).toHaveLength(1);
   const sq = pieces.filter((p) => p.kind === 'square');
@@ -175,15 +160,16 @@ test('the 3D logo is built from the same mark: 2 welded arcs, 16 cells on their 
       lo[a] = Math.min(lo[a], arc.mesh.p[i + a] + arc.center[a]);
       hi[a] = Math.max(hi[a], arc.mesh.p[i + a] + arc.center[a]);
     }
-    // From the band's far left edge to the welded cells' right edge, top cell to bottom cell: the SVG's box exactly.
-    for (const [v, want] of [[lo[0], -r - px / 2], [hi[0], (3 * px) / 2], [lo[1], -r - px / 2], [hi[1], r + px / 2]]) expect(v).toBeCloseTo(want, 4);
+    // From the band's far left edge to its flat ends on the centre line, top to bottom: the SVG's box exactly.
+    const h = RING.stroke / 2;
+    for (const [v, want] of [[lo[0], -r - h], [hi[0], 0], [lo[1], -r - h], [hi[1], r + h]]) expect(v).toBeCloseTo(want, 4);
   });
-  expect(pieces).toHaveLength(2 + 16 + 1);
+  expect(pieces).toHaveLength(2 + 11 + 1);
 });
 
 test('the favicon and the brand pages carry the current mark', () => {
   const root = join(__dirname, '..');
-  expect(readFileSync(join(root, 'public/favicon.svg'), 'utf8').trim()).toBe(splitRingSvg({ bg: '#0D0D0B' }));
+  expect(readFileSync(join(root, 'public/favicon.svg'), 'utf8').trim()).toBe(faviconSvg());
   for (const f of ['brand/og.html', 'brand/business-card.html']) {
     const marks = readFileSync(join(root, f), 'utf8').match(/<svg xmlns="http:\/\/www\.w3\.org\/2000\/svg" viewBox="0 0 64 64">[\s\S]*?<\/svg>/g) ?? [];
     expect(marks.length, f).toBeGreaterThan(0);

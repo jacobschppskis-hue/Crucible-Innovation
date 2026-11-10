@@ -1,0 +1,202 @@
+/* The world's page frame (owned by `world`): the canvas behind everything, the places' sizes, the loop copy, the
+ * still look without WebGL. Every section background is transparent: the world paints the dark itself. */
+
+canvas.world {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  user-select: none;
+  display: block;
+}
+
+/* The page liquid (lib/liquid) is the other pages' ground; on the home page the world replaces it. */
+html[data-world] canvas.liquid {
+  display: none;
+}
+
+/* The still look before the world starts, and for no JS / no WebGL: the hero frame itself, rendered by the world
+ * (lab/world/still.mjs -> public/world/hero-*.webp, ~12-26 KB) and laid out like the live camera (fixed, centred,
+ * the viewport's width: the camera keeps a phone's frame width too), so the world takes over in place. */
+html:has([data-world-root]) {
+  background: #050403;
+}
+.w-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background: url('/world/hero-landscape.webp') center / 100vw auto no-repeat;
+}
+@media (max-aspect-ratio: 3/4) {
+  .w-root::before {
+    background-image: url('/world/hero-portrait.webp');
+  }
+}
+html[data-world-on] .w-root::before {
+  display: none;
+}
+/* a sideways finger drag makes waves, never Chrome's swipe-back (x only: iOS's own edge swipe stays) */
+html:has([data-world-root]) {
+  overscroll-behavior-x: none;
+}
+html:has([data-world-root]) body {
+  background: transparent;
+}
+html[data-world-on] {
+  background: #050403;
+}
+
+/* The loop: no vertical rubber-band, no scroll anchoring (the loop drives the position). Never both axes: that would
+ * kill the back swipe. */
+html[data-loop] {
+  overscroll-behavior-y: none;
+  overflow-anchor: none;
+}
+html[data-loop] body {
+  overscroll-behavior-y: none;
+}
+
+.w-root {
+  position: relative;
+}
+.w-place {
+  position: relative;
+}
+.w-sticky {
+  position: sticky;
+  top: 0;
+  height: var(--world-vh, 100svh);
+  overflow: clip;
+}
+.w-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 1rem;
+}
+
+/* ---- places: pinned lengths (the journey keys anchor to these) ---- */
+.w-hero {
+  height: calc(var(--world-vh, 100svh) * 1.5);
+}
+.w-together {
+  height: calc(var(--world-vh, 100svh) * 2.6);
+}
+.w-paypal {
+  height: calc(var(--world-vh, 100svh) * 4.2);
+}
+.w-ventures {
+  height: calc(var(--world-vh, 100svh) * 3.2);
+}
+.w-thesis {
+  height: calc(var(--world-vh, 100svh) * 3.2);
+}
+.w-story-open,
+.w-chapter {
+  padding-block: 8rem;
+}
+
+/* ---- the hero's first screen (shared exactly by the loop copy) ---- */
+.w-hero-screen {
+  position: relative;
+  height: var(--world-vh, 100svh);
+  display: flex;
+  align-items: flex-end;
+}
+.w-hero-copy {
+  position: relative;
+  width: 100%;
+  padding-bottom: clamp(2rem, 6vh, 4rem);
+}
+.w-hero-title {
+  font-size: clamp(2.6rem, 11vw, 9.5rem);
+  line-height: 0.92;
+}
+.w-hero-line {
+  display: block;
+}
+.w-hero-meta {
+  margin-top: 1.5rem;
+  max-width: 22rem;
+}
+/* Wide screens (mark): the core sits right of centre (journey yaw 162), so the type keeps to the left, the paragraph
+   under the headline, and the sun's glitter column runs on the dark sea to their right */
+@media (min-width: 1024px) {
+  .w-hero-title {
+    font-size: clamp(4rem, 7.2vw, 7.5rem);
+  }
+  .w-hero-meta {
+    max-width: 24rem;
+  }
+}
+
+/* ---- the loop copy: only while the page loops; exactly one viewport, last on the page ---- */
+[data-place='loop'] {
+  display: none;
+}
+html[data-loop] [data-place='loop'] {
+  display: block;
+  height: var(--world-vh, 100svh);
+  overflow: clip;
+}
+
+/* ---- skeleton content placeholders (owners restyle) ---- */
+.w-chapter {
+  display: grid;
+  gap: 2.5rem;
+}
+@media (min-width: 1024px) {
+  .w-chapter {
+    grid-template-columns: minmax(0, 18rem) minmax(0, 40rem);
+    gap: 5rem;
+  }
+}
+.w-chapter-text {
+  display: grid;
+  gap: 1.25rem;
+  font-size: 1.125rem;
+  line-height: 1.6;
+  color: var(--bone);
+  grid-column: -2;
+}
+.w-portrait {
+  max-width: 14rem;
+}
+.w-breakout {
+  font-size: clamp(2rem, 5vw, 3.75rem);
+  line-height: 1.02;
+  margin-block: 1.5rem;
+}
+.w-pp-names {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin-top: 2rem;
+  font-weight: 600;
+}
+.w-v-link {
+  display: block;
+  padding-block: 1rem;
+}
+
+/* Phones (mark): the core sits right of centre (journey ph yaw 169), so the headline and paragraph keep left of the
+   sun's glitter column on the sea */
+@media (max-width: 760px) {
+  .w-hero-title {
+    font-size: 9.6vw;
+  }
+  .w-hero-meta p {
+    max-width: 56vw;
+  }
+  /* the buttons stacked on the left, on dark sea, clear of the core's glitter column (~62-72% of the width) */
+  .w-hero-meta > div {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,7 +1,8 @@
 import { expect, test, type Page } from '@playwright/test';
 
 // The liquid (components/Liquid.tsx, lib/liquid/*), the floating (lib/liquid/float.ts) and the pull on large visuals
-// (components/Magnetic.tsx, lib/liquid/lean.ts).
+// (components/Magnetic.tsx, lib/liquid/lean.ts). It runs on every page but the home page, which paints its own world
+// (lib/world, tests/world.spec.ts), so these tests use /sites.
 
 type Near = { slopeMax: number; slopeRms: number; hRms: number; cells: number };
 const near = (page: Page, x: number, y: number, r = 120) =>
@@ -10,7 +11,7 @@ const near = (page: Page, x: number, y: number, r = 120) =>
 const frames = (page: Page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
 test('the liquid starts after load, is alive on its own, and answers the cursor', async ({ page }) => {
-  await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   const liquid = page.locator('canvas.liquid');
   await expect(liquid).toHaveAttribute('data-on', '', { timeout: 10_000 });
   // One fixed full-viewport canvas behind the page.
@@ -42,6 +43,7 @@ test('the liquid starts after load, is alive on its own, and answers the cursor'
 
 test('a cursor that keeps moving without a click always has waves right at it', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
+  test.slow(); // 14 legs of real pointer input, each waiting for drawn frames: a busy CI runner takes most of 30 s
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   // Wander on a smooth closed path (no button pressed) and look at the surface around the cursor after every leg:
@@ -63,12 +65,98 @@ test('a cursor that keeps moving without a click always has waves right at it', 
   expect(kinds).not.toContain('tap');
 });
 
+type Grid = { h: number; gx: number; gy: number };
+/** Drive a straight pointer path on the paused clock: from (x0, y) to the right at v px/s, one event per 60 Hz frame. */
+async function stroke(page: Page, x0: number, y: number, v: number, secs: number, drag = false) {
+  await page.evaluate(() => (window as unknown as { __clock: { pause(): void } }).__clock.pause());
+  await page.mouse.move(x0, y);
+  if (drag) await page.mouse.down();
+  const n = Math.round(secs * 60);
+  for (let i = 1; i <= n; i++) {
+    await page.mouse.move(x0 + (v * i) / 60, y);
+    await page.evaluate(() => (window as unknown as { __clock: { step(ms: number): Promise<void> } }).__clock.step(1000 / 60));
+  }
+  if (drag) await page.mouse.up();
+  return x0 + v * secs;
+}
+/** Heights across the path (perpendicular lines), `back` px behind the pointer at (x, y). */
+const across = (page: Page, x: number, y: number, backs: number[]) =>
+  page.evaluate(
+    ([x, y, backs]) => {
+      const L = (window as unknown as { __liquid: { grid(x: number, y: number): Grid } }).__liquid;
+      return (backs as number[]).map((b) => {
+        const line: number[] = [];
+        for (let d = -160; d <= 160; d += 4) line.push(L.grid((x as number) - b, (y as number) + d + scrollY).h);
+        return line;
+      });
+    },
+    [x, y, backs] as const,
+  );
+
+test('a slow cursor leaves a boat wake: one continuous V behind it, no beads, no rings', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a mouse cursor');
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
+  await page.mouse.move(5, 5);
+  await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
+  // 100 px/s for 2.5 s, straight, through the empty band under the hero's buttons
+  const x = await stroke(page, 150, 780, 100, 2.5);
+  const backs = Array.from({ length: 18 }, (_, i) => 10 + i * 10); // (the stroke is 250 px long; its start fades in)
+  const lines = await across(page, x, 780, backs);
+  const peak = lines.map((l) => Math.max(...l.map(Math.abs)));
+  const arm = lines.map((l) => {
+    // where the strongest ridge is, off the path (|d| px)
+    let best = 0;
+    for (let k = 0; k < l.length; k++) if (Math.abs(l[k]) > Math.abs(l[best])) best = k;
+    return Math.abs(-160 + best * 4);
+  });
+  // continuous: every cross-section has a wake, and it never drops by half between neighbours 10 px apart (no beads)
+  const top = Math.max(...peak);
+  expect(top).toBeGreaterThan(0.3);
+  for (const p of peak) expect(p).toBeGreaterThan(0.07 * top);
+  for (let i = 1; i < peak.length; i++) expect(peak[i] / peak[i - 1]).toBeGreaterThan(0.5);
+  // a V: right at the pointer the wake is on the path, further back its arms have moved off it
+  expect(arm[0]).toBeLessThanOrEqual(8);
+  expect(arm[arm.length - 1]).toBeGreaterThan(20);
+  // nothing ahead of the pointer (a wake, not rings around it)
+  const ahead = await across(page, x, 780, [-60, -90]);
+  for (const l of ahead) expect(Math.max(...l.map(Math.abs))).toBeLessThan(0.15 * peak[0]);
+});
+
+test('dragging with the button held makes a more marked wake than hovering', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'a mouse cursor');
+  // 360 stepped frames, each drawn by every renderer under software GL: on CI's shared two-core runner that can pass 30 s.
+  test.slow();
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
+  await page.mouse.move(5, 5);
+  await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
+  const hx = await stroke(page, 100, 760, 400, 1);
+  const hover = Math.max(...(await across(page, hx, 760, [120]))[0].map(Math.abs));
+  // let it die away, then drag along a parallel line below
+  for (let i = 0; i < 240; i++) await page.evaluate(() => (window as unknown as { __clock: { step(ms: number): Promise<void> } }).__clock.step(1000 / 60));
+  const dx = await stroke(page, 100, 760, 400, 1, true);
+  const drag = Math.max(...(await across(page, dx, 760, [120]))[0].map(Math.abs));
+  expect(drag).toBeGreaterThan(1.4 * hover);
+});
+
+test('the idle swell rolls across the page with nobody touching it', async ({ page }) => {
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
+  await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
+  const at = (t: number) => page.evaluate((t) => (window as unknown as { __liquid: { sample(x: number, y: number, t: number): Grid } }).__liquid.sample(300, 400, t), t);
+  const a = await at(10);
+  const b = await at(12);
+  // the swell alone (no input): it moves, and it is slight (a few px)
+  expect(Math.abs(a.h - b.h) + Math.abs(a.gx - b.gx) * 100).toBeGreaterThan(0.05);
+  expect(Math.abs(a.h)).toBeLessThan(8);
+});
+
 test('at rest the text keeps rocking on the swell, and links and buttons come to an exact rest', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   const h1 = page.locator('h1').first();
   await expect(h1).toHaveAttribute('data-fl', '', { timeout: 10_000 });
+  // Floating writes its first offset a few frames after it registers (later on a busy runner): sample from there.
+  await expect.poll(() => h1.evaluate((el) => el.style.translate), { timeout: 15_000 }).not.toBe('');
   // Nobody touches the page: the heading is never exactly still (the idle swell), and it moves smoothly.
   const offsets: [number, number, number][] = [];
   for (let i = 0; i < 12; i++) {
@@ -89,16 +177,22 @@ test('at rest the text keeps rocking on the swell, and links and buttons come to
   await page.mouse.move(b.x + b.width + 60, b.y + b.height / 2, { steps: 20 });
   await page.mouse.move(b.x - 60, b.y + b.height / 2, { steps: 20 });
   await page.mouse.move(5, 5, { steps: 4 });
-  const t0 = Date.now();
-  await expect
-    .poll(() => page.evaluate(() => [...document.querySelectorAll<HTMLElement>('[data-fl-c]')].filter((el) => el.style.translate || el.style.rotate).length), { timeout: 2_500, intervals: [100] })
-    .toBe(0);
-  expect(Date.now() - t0).toBeLessThan(2_500);
+  // 2.5 s of the page's own animation time, stepped at 60 Hz: a starved CI runner draws a few frames a second and each
+  // frame advances the springs by at most 0.1 s, so wall-clock time says nothing about how far they have run.
+  const moving = await page.evaluate(async () => {
+    const c = (window as unknown as { __clock: { pause(): void; step(ms?: number): Promise<void>; resume(): void } }).__clock;
+    c.pause();
+    for (let i = 0; i < 150; i++) await c.step(1000 / 60);
+    const n = [...document.querySelectorAll<HTMLElement>('[data-fl-c]')].filter((el) => el.style.translate || el.style.rotate).length;
+    c.resume();
+    return n;
+  });
+  expect(moving, 'controls still offset 2.5 s after the last input').toBe(0);
 });
 
 test('a finger dragging the page (a native pan) still makes waves where it touches', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'touch');
-  await page.goto('/?tier=rich', { waitUntil: 'networkidle' });
+  await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   const cdp = await page.context().newCDPSession(page);
   const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', y?: number) =>
@@ -119,7 +213,7 @@ test('a finger dragging the page (a native pan) still makes waves where it touch
 test('reduced motion: plain dark ground, no liquid', async ({ browser }) => {
   const ctx = await browser.newContext({ reducedMotion: 'reduce' });
   const page = await ctx.newPage();
-  await page.goto('/', { waitUntil: 'networkidle' });
+  await page.goto('/sites', { waitUntil: 'networkidle' });
   await page.mouse.move(200, 400);
   await page.mouse.move(700, 300, { steps: 12 });
   await page.waitForTimeout(500);

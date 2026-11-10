@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { test as worldTest } from './gl';
 
 // The "unslop" rules (.claude/skills/unslop/SKILL.md) that a machine can check. The concept client sites (.ls) are
 // other businesses' designs and are exempt; so is anything marked data-unslop-ok.
@@ -52,23 +53,35 @@ for (const path of PAGES) {
   });
 }
 
-// No dead zones on the home page: at every half-viewport of scroll there is something in view that responds to the
-// scroll (a [data-scroll] element, a pinned scene driven by trackScroll(), or reading heat).
-test('home: something responds to scroll at every position', async ({ page }) => {
-  await page.goto('/?tier=light', { waitUntil: 'networkidle' });
+// No dead zones on the home page: the whole page is one world (lib/world) whose camera follows the scroll, so at
+// every half-viewport of scroll the journey's progress moves on (the world answers the scroll everywhere).
+// (worldTest: its own browser, so the hundreds of frames these steps queue go when it ends; tests/gl.ts)
+worldTest('home: the world answers the scroll at every position', async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto('/?loop=0&q=8', { waitUntil: 'load' });
+  let i = 0;
+  await expect
+    .poll(async () => {
+      i++;
+      await page.mouse.move(200 + (i % 7) * 9, 300).catch(() => {});
+      return page.evaluate(() => !!(window as unknown as { __world?: unknown }).__world);
+    }, { timeout: 30_000 })
+    .toBe(true);
   const vh = page.viewportSize()!.height;
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
   const dead: number[] = [];
+  let last = -1;
   for (let y = 0; y <= max; y += vh / 2) {
     await page.evaluate((t) => scrollTo(0, t), y);
-    const alive = await page.evaluate(() => {
-      const inView = (el: Element) => {
-        const r = el.getBoundingClientRect();
-        return r.bottom > innerHeight * 0.1 && r.top < innerHeight * 0.9;
-      };
-      return [...document.querySelectorAll('[data-scroll], .ig, .thesis, .heat-text')].some(inView);
+    // the clock is held: step frames so the world reads the scroll now (no waiting on software GL)
+    const p = await page.evaluate(() => {
+      const w = (window as unknown as { __world: { hold(): void; step(ms: number): void; state(): { progress: number } } }).__world;
+      w.hold();
+      for (let k = 0; k < 4; k++) w.step(50);
+      return w.state().progress;
     });
-    if (!alive) dead.push(Math.round(y / vh * 10) / 10);
+    if (last >= 0 && !(p > last)) dead.push(Math.round((y / vh) * 10) / 10);
+    last = p;
   }
-  expect(dead, `dead zones at these scroll positions (in viewport heights): ${dead.join(', ')}`).toEqual([]);
+  expect(dead, `the world did not move on at these scroll positions (viewport heights): ${dead.join(', ')}`).toEqual([]);
 });

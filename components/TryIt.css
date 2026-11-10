@@ -82,7 +82,7 @@
   background: var(--ground-2);
   box-shadow:
     0 0 0 1px var(--line),
-    0 40px 80px -30px #000;
+    0 40px 80px -30px rgba(0, 0, 0, 0.45);
 }
 .try-bar {
   display: flex;
@@ -133,7 +133,7 @@
   background: #1a1915;
   box-shadow:
     0 0 0 1px var(--line-strong),
-    0 30px 60px -20px #000;
+    0 30px 60px -20px rgba(0, 0, 0, 0.45);
 }
 .try-phone .try-screen {
   aspect-ratio: 390 / 780;

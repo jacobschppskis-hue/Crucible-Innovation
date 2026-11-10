@@ -1,0 +1,21 @@
+<!doctype html><html lang="en" data-world><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PayPal stage</title>
+<style>
+@font-face { font-family: Archivo; src: url(../../app/fonts/Archivo-latin-wght400-800-wdth100-125.woff2) format('woff2'); font-weight: 400 800; font-stretch: 100% 125%; }
+:root { --bone:#e8e4d8; --bone-dim:#9a978e; --ember:#ff5b1f; --nav-h:4rem; --world-vh:100svh; }
+html,body { margin:0; color:var(--bone); font-family:Archivo,system-ui,sans-serif; }
+.container-x { margin:0 auto; max-width:76rem; padding:0 1rem; box-sizing:border-box; }
+@media (min-width:1024px) { .container-x { padding:0 2rem; } }
+.wide { font-stretch:112%; font-weight:760; letter-spacing:-0.01em; }
+.h-section { font-weight:760; }
+.lab-story { height:120svh; }
+p,h2 { margin:0; }
+</style>
+<link rel="stylesheet" href="stage.css"></head><body>
+<main id="root" class="w-root">
+<section data-place="story" class="lab-story"></section>
+<section data-place="paypal" aria-labelledby="pp-h" class="w-place w-paypal"><div class="w-sticky"><div class="w-pp-caps container-x"><p data-pp-step class="w-pp-step">In 2002, eBay bought PayPal.</p><p data-pp-step class="w-pp-step">After the sale, its people went on to found YouTube, LinkedIn, Yelp and Palantir.</p><p data-pp-step class="w-pp-step">Elon used much of his share to fund SpaceX, and later to invest in Tesla.</p><h2 id="pp-h" data-pp-step class="w-pp-step w-pp-big">So much came out of a single company</h2><p data-pp-step class="w-pp-step">Not by luck. They found each other early, and kept backing one another long after PayPal itself was gone.</p></div><ul aria-hidden="true" class="w-pp-names"><li data-pp-name class=w-pp-root>PayPal</li><li data-pp-name>YouTube</li><li data-pp-name>LinkedIn</li><li data-pp-name>Yelp</li><li data-pp-name>Palantir</li><li data-pp-name>SpaceX</li><li data-pp-name>Tesla</li></ul></div></section>
+<section data-place="story-2" class="lab-story"></section>
+</main>
+<script type="module" src="stage.js"></script>
+</body></html>

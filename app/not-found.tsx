@@ -6,12 +6,12 @@ import { RING, arcOutline, cells } from '@/lib/splitRing';
 export const metadata = { title: 'Not found · Crucible' };
 
 /**
- * The Split Ring at 0 K: arcs intact (with their welded end cells), the free cells drifted loose off the lattice (outward,
- * still upright, fading), the core gone dark.
+ * The Split Ring at 0 K: arcs intact, the squares drifted loose off their circles (outward, still upright, fading), the
+ * core gone dark.
  */
 function ColdRing() {
   const { c, px, rings } = RING;
-  const free = cells().filter((q) => !q.weld);
+  const free = cells();
   return (
     <svg aria-hidden viewBox="0 0 64 64" className="cold-ring">
       {rings.map(({ r }) => (

@@ -10,7 +10,7 @@
 // elements floating owns. Applied with the individual `translate` / `rotate` properties so `transform` reveals keep
 // working; layout never changes. Loads with the liquid, never in the first-load JS. Off with reduced motion.
 
-import { activity, addSource, footprint, textMask, type Footprint } from './field';
+import { activity, addSource, footprint, type Footprint } from './field';
 import { leanOf, own } from './lean';
 import { clock, onFrame } from './loop';
 
@@ -97,13 +97,11 @@ type F = {
   dirty: boolean;
   rest: boolean; // controls: at exact rest, styles cleared
   ripT: number;
-  mask: number; // 0: not part of the text mask
-  write: boolean; // false: mask only (never moved)
+  write: boolean; // it is moved (always, since the text mask is gone)
 };
 
 const AUTO = 'h1, h2, .h-display, .h-section, main p, main li, main a, main button, [data-float]';
 const CONTAINS = 'h1, h2, .h-display, .h-section, p, li, [data-float]:not([data-float="none"])';
-const MASK_ONLY = 'footer p, footer li, footer a, main h3, main h4, main dt, main dd, main .label, main blockquote';
 const SKIP = '.nav, nav, header, form, dialog, [role="dialog"], [data-float="none"], [data-floated-off]';
 const FIELD = 'input, textarea, select, [contenteditable="true"]';
 
@@ -136,7 +134,6 @@ export function startFloat(): () => void {
           visible.delete(f);
           clear(f);
         }
-        maskDirty = true;
       }
     },
     { rootMargin: '120px 0px' },
@@ -171,7 +168,7 @@ export function startFloat(): () => void {
         if (f.write) own(f.el, false);
       }
     }
-    for (const el of document.querySelectorAll<HTMLElement>(AUTO + ', ' + MASK_ONLY)) {
+    for (const el of document.querySelectorAll<HTMLElement>(AUTO)) {
       if (all.has(el) || queued.has(el)) continue;
       queued.add(el);
       queue.push(el);
@@ -190,11 +187,6 @@ export function startFloat(): () => void {
     for (const el of batch) {
       queued.delete(el);
       if (!el.isConnected || all.has(el) || el.closest(SKIP)) continue;
-      const auto = el.matches(AUTO);
-      if (!auto) {
-        found.push([el, 'text', false]); // mask only
-        continue;
-      }
       const lv = levelOf(el);
       if (!lv || el.querySelector('form')) continue;
       if (!el.closest('main') && !el.dataset.float) continue; // auto levels live in main
@@ -213,7 +205,7 @@ export function startFloat(): () => void {
         own(el, true);
       }
       const L = LEVELS[lv];
-      const f: F = { el, level: lv, L, s: spring3(L), x: NaN, y: NaN, w: 0, h: 0, ox: 0, oy: 0, or: 0, moving: false, dirty: true, rest: lv === 'control', ripT: -9, mask: lv === 'heading' ? 150 : 255, write: wr };
+      const f: F = { el, level: lv, L, s: spring3(L), x: NaN, y: NaN, w: 0, h: 0, ox: 0, oy: 0, or: 0, moving: false, dirty: true, rest: lv === 'control', ripT: -9, write: wr };
       all.set(el, f);
       io.observe(el);
     }
@@ -222,8 +214,6 @@ export function startFloat(): () => void {
 
   // The box without our own offsets: the layout size (a rotated box's bounding rect would change every frame) around
   // the rect's centre (which rotation about the centre leaves in place), minus the offset and lean written last frame.
-  // A change that moves the box by half a pixel or more is a new mask (glints behind text are capped there).
-  let maskDirty = true;
   function measure(f: F) {
     const r = f.el.getBoundingClientRect();
     const ln = f.write ? leanOf(f.el) : null;
@@ -231,7 +221,6 @@ export function startFloat(): () => void {
     const h = f.el.offsetHeight || r.height;
     const x = (r.left + r.right) / 2 - w / 2 + scrollX - f.ox - (ln?.x ?? 0);
     const y = (r.top + r.bottom) / 2 - h / 2 + scrollY - f.oy - (ln?.y ?? 0);
-    if (f.mask && !(Math.abs(x - f.x) <= 0.5 && Math.abs(y - f.y) <= 0.5 && Math.abs(w - f.w) <= 0.5 && Math.abs(h - f.h) <= 0.5)) maskDirty = true;
     // a box whose page position changes while the page scrolls rides a pinned or scroll-driven scene: from now on it is
     // re-measured every frame while scrolling (no style walks to find out)
     if (!f.moving && !f.dirty && clock.t - scrolledAt < 0.8 && (Math.abs(x - f.x) > 1 || Math.abs(y - f.y) > 1)) f.moving = true;
@@ -305,17 +294,14 @@ export function startFloat(): () => void {
     }
   }, { early: true });
 
-  const mask: number[] = [];
   const offFrame = onFrame((t, dt) => {
     calm += (calmTo - calm) * Math.min(1, dt * 4);
     if (calmTo === 0 && calm < 0.002) calm = 0;
-    mask.length = 0;
     const since = t - activity.last;
     const u = Math.min(1, Math.max(0, (since - CTRL_HOLD) / (CTRL_FADE - CTRL_HOLD)));
     const ctrl = 1 - u * u * (3 - 2 * u);
     for (const f of visible) {
       if (Number.isNaN(f.x)) continue; // not measured yet
-      if (f.mask) mask.push(f.x, f.y, f.w, f.h, f.mask);
       if (!f.write) continue;
       const L = f.L;
       footprint(f.x, f.y, f.w, f.h, { swell: L.swell, t }, fp);
@@ -361,11 +347,6 @@ export function startFloat(): () => void {
         addSource(f.x + f.w / 2, f.y + f.h + 6, 0.12, 9, { kind: 'float' });
       }
     }
-    if (maskDirty || mask.length !== textMask.rects.length) {
-      maskDirty = false;
-      textMask.rects = mask.slice();
-      textMask.version++;
-    }
   });
 
   const api = {
@@ -383,8 +364,6 @@ export function startFloat(): () => void {
     removeEventListener('resize', flagAll);
     document.removeEventListener('focusin', focusIn);
     document.removeEventListener('focusout', focusOut);
-    textMask.rects = [];
-    textMask.version++;
     for (const f of all.values()) {
       clear(f);
       if (f.write) {

@@ -4,12 +4,18 @@ import { PortraitImg } from './PortraitImg';
 import { Reveal } from './Reveal';
 import { SplitRing } from './SplitRing';
 
-/** A builder's ASCII portrait: bone characters on transparent, straight on the page (no card), or the Split Ring when there is none. Also used by the home page Story. */
+// TODO(jakob): the photos. Until they are in public/team/src/ and run through scripts/crt-portraits.py, the tubes show
+// "No signal" and the name; set this to false once they show faces.
+const NO_SIGNAL = true;
+
+/** A builder's CRT portrait: a bone phosphor tube straight on the page (no card) that powers on as it comes into
+ * view (Crt.css), or the Split Ring when there is none. Also used by the home page Story. */
 export function Portrait({ name, src, sizes = '(min-width: 768px) 24rem, 90vw' }: { name: string; src?: string; sizes?: string }) {
   if (src) {
     return (
-      <div data-float="block" className="relative aspect-[5/6]">
-        <PortraitImg src={src} alt={`ASCII portrait of ${name}`} sizes={sizes} />
+      <div data-float="block" className="crt relative aspect-[5/6]">
+        <PortraitImg src={src} alt={NO_SIGNAL ? `CRT screen showing ${name}'s name, portrait to come` : `CRT portrait of ${name}`} sizes={sizes} />
+        <span aria-hidden className="crt-scan" />
       </div>
     );
   }

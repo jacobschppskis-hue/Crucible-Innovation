@@ -3,7 +3,7 @@
 // v2: the surface is the wave grid in sim.ts (main thread) plus the analytic idle swell in swell.ts. Everything that
 // floats reads it in CSS px through `samplePx` / `sampleGrid` / `footprint` (see .board/v2/a/API.md): the DOM floaters
 // (float.ts), and the 3D logo pieces and ingots, whose poses are computed on the main thread and posted to their
-// renderers with the clock's tick (lib/gl3d/logoScene.ts, ingotPose.ts). There is no second, interim wave model.
+// renderers with the clock's tick (lib/gl3d/ingotPose.ts). There is no second, interim wave model.
 
 import { clock } from './loop';
 import { swellAt, type HG } from './swell';
@@ -20,17 +20,13 @@ export function attachSim(s: Sim | null) {
 }
 export const simRunning = () => !!sim;
 
-/** Glints are capped behind these (page px rects [x, y, w, h, level 0..255]): text and portraits. float.ts keeps it
- *  current, render.ts rasterises it into the grid's mask. */
-export const textMask: { rects: number[]; version: number } = { rects: [], version: 0 };
-
 /** Clock time of the last wave the visitor made (move, tap, finger, scroll; not ripples of floating things). */
 export const activity = { last: -9 };
 
 const tmp: HG = { h: 0, gx: 0, gy: 0 };
 const sw: HG = { h: 0, gx: 0, gy: 0 };
 
-/** Interaction waves only (the grid), px. Zero where nothing has touched the liquid lately. */
+/** Interaction waves only (the grid: drops and the wake), px. Zero where nothing has touched the liquid lately. */
 export function sampleGrid(x: number, docY: number, out: HG = { h: 0, gx: 0, gy: 0 }): HG {
   if (!sim) {
     out.h = out.gx = out.gy = 0;

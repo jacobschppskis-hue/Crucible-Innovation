@@ -8,7 +8,10 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "playwright test",
-    "unslop": "playwright test tests/unslop.spec.ts"
+    "unslop": "playwright test tests/unslop.spec.ts",
+    "world:smoke": "node world/smoke.mjs",
+    "qa:deep": "node lab/qa/deep.mjs",
+    "world:preview": "node world/build-preview.mjs"
   },
   "dependencies": {
     "lenis": "^1.3.26",
@@ -22,6 +25,7 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
+    "esbuild": "^0.25.10",
     "serve": "^14.2.4",
     "tailwindcss": "^4.1.0",
     "typescript": "^5.8.0"

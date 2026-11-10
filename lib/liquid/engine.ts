@@ -1,4 +1,4 @@
-// The liquid's GL engine (WebGL2): compiles the shader, keeps the grid and mask textures, owns the quality steps. Used by
+// The liquid's GL engine (WebGL2): compiles the shader, keeps the grid's height texture, owns the quality steps. Used by
 // the worker (liquidWorker.ts, the normal path) and by the main-thread fallback (render.ts). Nothing here touches the
 // DOM, and nothing here keeps time: each draw is for the time the main frame says.
 //
@@ -26,8 +26,8 @@ export type GridMeta = { cols: number; rows: number; x0: number; y0: number; cel
 
 export type Engine = {
   setView(w: number, h: number, dpr: number): void;
-  /** New heights (cols x rows, px) and/or mask, or null to keep the last ones. */
-  upload(meta: GridMeta, heights: Float32Array | null, mask: Uint8Array | null): void;
+  /** New heights (cols x rows, px), or null to keep the last ones. */
+  upload(meta: GridMeta, heights: Float32Array | null): void;
   /** Draw the frame for time t (s) at scroll sy (page px). `late` = main frames that had to wait for the previous one;
    *  `hold` = a harness is stepping time (no adaptation). Returns false if the fps cap skipped it. */
   draw(t: number, sy: number, late: number, hold?: boolean): boolean;
@@ -64,8 +64,8 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
   const uOn = u('uOn');
   const uSeed = u('uSeed');
   const uSwell = u('uSwell');
+  const uSwellB = u('uSwellB');
   gl.uniform1i(u('uH'), 0);
-  gl.uniform1i(u('uM'), 1);
 
   const tex = (unit: number) => {
     const t = gl.createTexture();
@@ -78,11 +78,10 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
     return t;
   };
   const tH = tex(0);
-  const tM = tex(1);
   let tw = 0;
   let th = 0;
   const meta: GridMeta = { cols: 0, rows: 0, x0: 0, y0: 0, cell: 8, on: false };
-  const ph = new Float32Array(4);
+  const ph = new Float32Array(8);
 
   const soft = !o.full && isSoftwareGL(gl);
   let steps: Step[] = [];
@@ -99,7 +98,9 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
       [0.4, 24],
     ];
     const prev = steps[q];
-    steps = all.filter(([s], i) => i === 0 || s < all[i - 1][0]);
+    // a real GPU never goes below one canvas px per CSS px and never caps the frame rate: below that the glints are
+    // magnified texels (a phone's liquid looked blocky at the 0.4-0.6 steps); only software GL needs the low steps
+    steps = all.filter(([s], i) => (i === 0 || s < all[i - 1][0]) && (soft || s >= 1));
     // software GL: start where it still keeps up (measured: SwiftShader, 4 cores)
     qMin = soft ? Math.max(0, steps.findIndex(([s]) => s <= 0.5)) : 0;
     q = prev ? Math.min(steps.length - 1, Math.max(0, q)) : qMin;
@@ -176,7 +177,7 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
       build(Math.min(dpr || 1, 2));
       resize();
     },
-    upload(m, heights, mask) {
+    upload(m, heights) {
       const grow = m.cols !== tw || m.rows !== th;
       Object.assign(meta, m);
       if (grow) {
@@ -186,10 +187,6 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
         gl.bindTexture(gl.TEXTURE_2D, tH);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, tw, th, 0, gl.RED, gl.FLOAT, heights && heights.length >= tw * th ? heights : new Float32Array(tw * th));
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, tM);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, tw, th, 0, gl.RED, gl.UNSIGNED_BYTE, mask && mask.length >= tw * th ? mask : new Uint8Array(tw * th));
         return;
       }
       if (heights) {
@@ -197,12 +194,6 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
         gl.bindTexture(gl.TEXTURE_2D, tH);
         gl.pixelStorei(gl.UNPACK_ALIGNMENT, 4);
         gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, tw, th, gl.RED, gl.FLOAT, heights);
-      }
-      if (mask) {
-        gl.activeTexture(gl.TEXTURE1);
-        gl.bindTexture(gl.TEXTURE_2D, tM);
-        gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, tw, th, gl.RED, gl.UNSIGNED_BYTE, mask);
       }
     },
     draw(t, sy, late, hold) {
@@ -217,7 +208,9 @@ export function createEngine(gl: WebGL2RenderingContext, canvas: { width: number
       gl.uniform2i(uSize, Math.max(1, tw), Math.max(1, th));
       gl.uniform1f(uOn, meta.on && tw > 0 ? 1 : 0);
       gl.uniform1f(uSeed, (t * 60) % 97);
-      gl.uniform4fv(uSwell, swellPhases(0, sy, t, ph));
+      swellPhases(0, sy, t, ph);
+      gl.uniform4fv(uSwell, ph.subarray(0, 4));
+      gl.uniform4fv(uSwellB, ph.subarray(4, 8));
       gl.drawArrays(gl.TRIANGLES, 0, 3);
       if (o.full) gl.finish(); // screenshot mode: the frame is really done before it is acknowledged
       stats.q = q;

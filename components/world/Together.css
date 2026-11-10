@@ -1,0 +1,25 @@
+/* "Stronger together" (role: mark). One line, set where the sea is dark (beside the rivers, never over them) and never
+   on a box, scrim or glow: legibility comes from the night sea behind it. */
+.tg-stage {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 16px;
+}
+.tg-line {
+  margin: 0;
+  font-size: clamp(2.4rem, 7vw, 5.5rem);
+  line-height: 0.98;
+  color: var(--bone, #e8e4d8);
+  text-wrap: balance;
+}
+html[data-world-on] .tg-line {
+  position: absolute;
+  opacity: 0;
+  will-change: opacity, translate;
+  left: clamp(16px, 6vw, 96px);
+  bottom: 12vh;
+  max-width: 9em;
+}
