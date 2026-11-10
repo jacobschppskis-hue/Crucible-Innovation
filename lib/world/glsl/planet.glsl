@@ -130,12 +130,12 @@ float look_seaTemp(vec3 q, float fp, float land) {
     float bank = 110.0 * exp(-d / sqrt(0.0016 * wv * wv + e * e));
     float hot = (look_hot(d, 0.011 * wv, 170.0, e) + look_hot(d, 0.0028 * wv, 110.0, e)) * (0.86 + 0.3 * fl);
     // tributaries: thinner and fainter away from the rivers they feed
-    float near = 1.0 - smoothstep(0.04, 0.42, af);
+    float near = 1.0 - smoothstep(0.03, 0.28, af);
     vec3 p2 = pw * 1.9 + 7.0;
     float f2 = look_riverField(p2);
     // (no gradient here: where this field runs flat a tributary swells into a pool; cheaper, and it reads as one)
     float d2 = abs(f2) / 2.2;
-    float tr = look_hot(d2, 0.0042 * (0.5 + near), 135.0 * (0.15 + 0.85 * near), e) + 22.0 * near * exp(-d2 / (0.012 + e));
+    float tr = look_hot(d2, 0.0042 * (0.5 + near), 130.0 * near, e) + 22.0 * near * exp(-d2 / (0.012 + e));
     float F = 4.3, wk = 0.0016, Ak = 105.0, trf = 0.0;
     for (int i = 0; i < 3; i++) {
       if (e > wk * 3.5 || near < 0.02) break;
@@ -145,6 +145,8 @@ float look_seaTemp(vec3 q, float fp, float land) {
       F *= 2.6; wk *= 0.42; Ak *= 0.92;
     }
     tr = max(tr, trf * near);
+    // (the molten thesis sea: the tributaries melt into it, the rivers stay)
+    tr *= 1.0 - 0.5 * look_uCold * smoothstep(0.3, 1.0, look_uMelt);
     // where a tributary meets the river it adds a little (a junction is brighter), never a second core on top
     float riv = bank + hot + tr * (1.0 - 0.7 * min(hot / 280.0, 1.0));
     // quiet: under running text the rivers lose ~3/4 of their excess (Planck: an order of magnitude in radiance)
@@ -243,7 +245,7 @@ vec3 look_planetFarT(Ray r, Sea s, float dT) {
   // the glossy sea mirrors its own sky: toward the limb (Fresnel) it picks up the air above it, the dusk band along
   // the terminator, the airglow line on the night side, the furnace glow of the heated air in the thesis. Four samples
   // of the same air the limb is drawn with, only where the mirror is strong enough to show.
-  if (W > 0.0 && uQ > 0.4 && fres > 0.07 && land < 1.0) {
+  if (r.depth == 0 && W > 0.0 && uQ > 0.4 && fres > 0.07 && land < 1.0) {
     vec3 Lr, Tr;
     look_march(q * (look_uRg + 0.02), reflect(r.rd, q), 1e9, 4, 0.5, Lr, Tr);
     col += Lr * (fres * W * (1.0 - land));

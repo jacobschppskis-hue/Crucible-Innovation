@@ -115,7 +115,7 @@ const SKY_W = 192,
 
 type Lut = { name: string; w: number; h: number; tex: WebGLTexture; fb: WebGLFramebuffer };
 
-function airUniforms(set: (n: string, v: number | number[]) => void, K: number, glow: number[] = AIR.glow) {
+function airUniforms(set: (n: string, v: number | number[]) => void, K: number, glow: number[] = AIR.glow, ag = 1) {
   set('look_uK', K);
   set('look_uRg', AIR.Rg);
   set('look_uRt', AIR.Rt);
@@ -130,7 +130,7 @@ function airUniforms(set: (n: string, v: number | number[]) => void, K: number, 
   set('look_uOzW', AIR.ozW);
   set('look_uGroundAlb', AIR.groundAlb);
   set('look_uGroundGlow', glow.map((x) => x * UNIT));
-  set('look_uAirglow', AIR.airglow.map((x) => x * UNIT));
+  set('look_uAirglow', AIR.airglow.map((x) => x * UNIT * ag));
   set('look_uAirglowH', AIR.airglowH);
   set('look_uAirglow2', AIR.airglow2.map((x) => x * UNIT));
   set('look_uAirglowH2', AIR.airglowH2);
@@ -240,7 +240,10 @@ function makeLook(): WorldModule {
       const glow = AIR.glow.map((x) => x * gk);
       u.set('look_uCold', th.w);
       u.set('look_uMelt', th.k);
-      airUniforms((n, v) => u.set(n, v), K, glow);
+      // climbing out of ventures the camera passes THROUGH the sodium airglow layer (9 air km up: seen from inside it is
+      // a wide brown band over the horizon); it is thinned while the camera is low on that climb, and whole again in orbit
+      const ag = 1 - 0.8 * th.dim * (1 - sstep(40, 240, f.cam.h));
+      airUniforms((n, v) => u.set(n, v), K, glow, ag);
       const sun = skyLight(f);
       u.set('look_uSun', sun);
       u.set('look_uSunR', f.sun.rad);
@@ -290,7 +293,7 @@ function makeLook(): WorldModule {
       u.set('look_uBloomThresh', 0);
       // the sky-view LUT at the camera, while it is low enough to use it
       if (progs && w < 1) {
-        airUniforms(sharedSet, K, glow);
+        airUniforms(sharedSet, K, glow, ag);
         shared.look_uSun = sun;
         shared.look_uSunR = f.sun.rad;
         shared.look_uCam = cam;
