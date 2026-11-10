@@ -7,7 +7,8 @@
 .wfoot :focus-visible {
   outline-color: var(--ember);
 }
-/* shore: 2.4 screens; the contact sits pinned in the middle of the shot while the sun comes up over the limb */
+/* shore: 2.4 screens; the contact sits pinned in the upper part of the shot, in the dark sky, while the sun comes up
+   over the limb under it (lib/world/shore.ts keeps the limb below the last line) */
 .wfoot-shore {
   height: calc(var(--world-vh, 100svh) * 2.4);
 }
@@ -17,8 +18,8 @@
   height: var(--world-vh, 100svh);
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding-top: var(--nav-h);
+  justify-content: flex-start;
+  padding-top: calc(var(--nav-h) + clamp(1.5rem, 5svh, 4rem));
   padding-bottom: 1.5rem;
 }
 .wfoot-call {
@@ -26,7 +27,8 @@
   max-width: 11em;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(2.25rem, 8.6vw, 5.5rem);
+  /* (the svh term keeps the block above the limb in a short window) */
+  font-size: min(clamp(2.25rem, 8.6vw, 5.5rem), 9.5svh);
   line-height: 0.98;
   letter-spacing: -0.02em;
   text-wrap: balance;
@@ -41,7 +43,7 @@
   margin-top: 0.75rem;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(1.05rem, 4.6vw, 3.5rem);
+  font-size: min(clamp(1.05rem, 4.6vw, 3.5rem), 6.2svh);
   line-height: 1;
   letter-spacing: -0.02em;
   overflow-wrap: anywhere;
@@ -91,6 +93,21 @@
   }
 }
 @media (max-width: 639px) {
+  /* phones: a compact block, so the sunrise has the lower third of the screen to itself. The founders' line says
+     "co-founders" itself, so its label is not repeated above it */
+  .wfoot-call {
+    margin-bottom: 1.25rem;
+  }
+  .wfoot-cols {
+    margin-top: 1.75rem;
+    gap: 1.25rem 1.5rem;
+  }
+  .wfoot-cols > :last-child .wfoot-k {
+    display: none;
+  }
+  .wfoot-cols > :last-child .wfoot-f {
+    margin-top: 0;
+  }
   .wfoot-v {
     flex-direction: column;
     gap: 0;
@@ -122,6 +139,11 @@
   font-size: 0.875rem;
   opacity: 1;
 }
+@media (max-width: 639px) {
+  .wfoot-c {
+    margin-top: 0.5rem;
+  }
+}
 
 /* dawn: 4 screens; the wordmark holds over the day side (pinned) while the camera crosses it and turns back to the
    setting sun, then lifts away as the hero comes up from below */
@@ -135,7 +157,7 @@
   display: grid;
   justify-items: center;
   align-content: start;
-  /* in the upper third, over dark sky: the camera puts the dunes' skyline at ~43% and the surf under it */
+  /* in the upper third, over dark sky: the camera keeps the sun, the limb and the sea's horizon under it */
   padding-top: calc(var(--nav-h) + 9svh);
 }
 .wfoot-word {
