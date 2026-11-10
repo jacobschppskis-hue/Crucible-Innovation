@@ -1,26 +1,30 @@
 // PayPal → six companies (role `paypal`; storyboard, research and decisions in lab/paypal/NOTES.md).
 //
-// Seen from over the night side, PayPal is one hot vent on the molten planet. eBay buys it, the pressure builds and it
-// erupts: four molten embers go up on real ballistic throws over the planet's curve (a long exposure of Stromboli's lava
-// bombs: a white-gold head, a trail cooling through gold and orange to a red train that widens, drifts and fades), each
-// lands with a short flash and lights a new place with soft lava flows, like a city seen from orbit: YouTube, LinkedIn,
-// Yelp, Palantir. Then Elon's share goes up in one high throw that clears the atmosphere (SpaceX) and a later, short one
-// (Tesla). The camera rises as they spread (the scale reveal). At the end the six burn while PayPal's vent cools ("long
-// after PayPal itself was gone").
+// Seen from orbit over the night side, PayPal is one vent of molten metal in the sea: a white-hot heart, a pool cooling
+// round it. One after another it throws six beads of molten metal on ballistic arcs over the planet's curve (a small
+// white-hot head, a tail that cools from yellow through Ember to dull red as it stretches). Where a bead lands the sea
+// answers: a ring of heat runs out and fades, a molten spring stays, and a new river starts to run from it until it
+// meets the planet's own rivers. YouTube, LinkedIn, Yelp, Palantir; then Elon's share: SpaceX on one high throw that
+// clears the atmosphere, and Tesla. By the end the night side carries six new sources feeding one glowing system,
+// which is the sentence the frame is for: "So much came out of a single company". The camera never stops: a slow
+// orbital drift and push through the whole pin. At the end everything cools back into the planet's normal look.
 //
-// Everything visible is a pure function of the beat progress p = frame.at('paypal') (0..1), so it scrubs both ways and
-// any frame can be reproduced; the clock t only adds life at rest (head flicker, train drift). Nothing is left sitting:
-// every train is gone within 3·TAU_TRAIN of its landing; the lit places stay (part of the world from then on).
+// Everything visible is a pure function of the beat progress p = frame.at('paypal') (0..1), so it scrubs both ways;
+// the clock only adds life at rest (the rivers' slow flow, the vent's breathing, the beads' shimmer) and lets the new
+// rivers follow look's slowly drifting ones.
 //
 // How it draws (lib/world/ARCHITECTURE.md):
-// - `sea` hook: the places' heat on the lava (`paypal_places(q)`), from 7 small uniform arrays;
-// - `over` hook: the throws in the air, traced per pixel against their sampled paths (a float texture of short chunks,
-//   each with a tight screen box, so a pixel only walks the few segments near it); depth-tested against the scene's hit,
-//   so the planet hides what is behind its limb;
-// - `after`: the captions' opacity and the names, written on the section's own DOM (components/world/PayPal.tsx).
-// The camera move for this place is `paypalKeys()` (journey keys; the world lead splices them in).
+// - `sea` hook: TEMPERATURE added to the sea (SeaMod.heat), never a sprite: look's own Planck curve turns it into
+//   light, so a spring has a hot core and a falloff that follows the blackbody law, sits in the surface (foreshortened
+//   by the curve, dimmed toward the limb by look's Fresnel and air) and adds up with look's rivers where they meet;
+// - `crisp` hook (canvas resolution, analytic anti-aliasing): the beads and their tails, traced per pixel against
+//   their sampled paths (a float texture of short chunks, each with a tight screen box), hidden behind the planet;
+//   `over` adds each bead's soft glare to the scene so the bloom carries it;
+// - `after`: the captions' opacity and the names (small annotations on a bone hairline) on the section's own DOM.
+// The camera for this place is `paypalKeys()`.
 
-import type { Frame, V3 } from './frame';
+import { cameraFrom, rayAt, seaT } from './camera';
+import type { Channels, Frame, V3 } from './frame';
 import type { Uniforms } from './gl';
 import type { Key } from './journey';
 import type { WorldModule } from './modules';
@@ -43,138 +47,139 @@ const D2R = Math.PI / 180;
 
 // ---------------------------------------------------------------- the story
 /** When each caption shows ([in, out] in p). The words are in data/home.ts (`paypal.steps`), rendered by PayPal.tsx;
- * index 3 is the display line (the section's heading). */
+ * index 3 is the display line (the section's heading): it holds for over a fifth of the pin, with all six burning. */
 export const CAPTION_AT: [number, number][] = [
-  [0.02, 0.215],
-  [0.235, 0.455],
-  [0.475, 0.7],
-  [0.715, 0.855],
-  [0.865, 0.99], // gone just before the pin releases (it would otherwise ride up under the nav)
+  [0.012, 0.092],
+  [0.108, 0.385],
+  [0.402, 0.622],
+  [0.64, 0.868],
+  [0.884, 0.992], // gone just before the pin releases (it would otherwise ride up under the nav)
 ];
+const CAP_FADE = 0.022;
 export function captionOpacity(i: number, p: number) {
   const [a, b] = CAPTION_AT[i] ?? [2, 2];
-  return smooth(a, a + 0.03, p) * (1 - smooth(b - 0.03, b, p));
+  return smooth(a, a + CAP_FADE, p) * (1 - smooth(b - CAP_FADE, b, p));
 }
 
-/** A ballistic throw from a unit direction `o` on the planet, in the tangent frame (tf, tr) there. */
+/** Where a name sits relative to its place: at the end of a hairline going left, right, up or down. */
+type Pos = 'l' | 'r' | 'u' | 'd';
+/** A ballistic throw from the vent (unit direction `o`) along the unit tangent `t` there. */
 export interface Throw {
   o: V3;
-  tf: V3;
-  tr: V3;
-  bearing: number; // radians, 0 = tf, + = toward tr
+  t: V3;
   range: number; // radians of great circle
   apex: number; // in radii
   launch: number; // p
   flight: number; // p
   land: number; // p
   seed: number;
-  /** intensity, width and cooling-time scales (spatter is small, dim and short-lived) */
-  gain: number;
-  size: number;
-  tau: number;
-  samples: number;
 }
 export interface Site extends Throw {
   name: string;
-  /** Where the place sits in the frame once the camera has risen (p = END_P): [x, y] viewport fractions, y down. */
-  pt: [number, number]; // phones (portrait)
-  ls: [number, number]; // wide
+  /** Where the place sits in the frame at p = REF_P: [x, y] viewport fractions, y down. Phones, then wide. */
+  pt: [number, number];
+  ls: [number, number];
+  /** The throw's height as a fraction of its range. */
   loft: number;
+  /** The sides its name may take (no throw crosses them), best first; phones and wide. */
+  labP: string;
+  labD: string;
+  /** Where its river heads at first (a screen offset from the place at REF_P, viewport fractions), phones and wide. */
+  rivP: [number, number];
+  rivD: [number, number];
   dir: V3; // the landing place (unit)
 }
-const site = (name: string, pt: [number, number], ls: [number, number], launch: number, loft: number, seed: number): Site => ({
-  name, pt, ls, launch, loft, seed, dir: [0, 1, 0], o: [0, 1, 0], tf: [0, 0, 1], tr: [-1, 0, 0],
-  bearing: 0, range: 0, apex: 0, flight: 0, land: 1, gain: 1, size: 1, tau: 1, samples: 64,
+const site = (
+  name: string, pt: [number, number], ls: [number, number], launch: number, flight: number, loft: number, seed: number,
+  labP: string, labD: string, rivP: [number, number], rivD: [number, number],
+): Site => ({
+  name, pt, ls, launch, flight, land: launch + flight, loft, seed, labP, labD, rivP, rivD,
+  dir: [0, 1, 0], o: [0, 1, 0], t: [0, 0, 1], range: 0, apex: 0,
 });
-/** The six, in the order of data/home.ts `paypal.companies`. */
+/** The six, in the order of data/home.ts `paypal.companies`. The vent sits to one side and throws ACROSS the frame, so
+ * every arc is seen side-on (a throw straight away from the camera is a straight line, however high it goes). */
 export const SITES: Site[] = [
-  // one eruption: the four its people founded, a split second apart, unequal throws
-  site('YouTube', [0.2, 0.555], [0.38, 0.6], 0.23, 1.0, 0.13),
-  site('LinkedIn', [0.6, 0.47], [0.56, 0.47], 0.237, 1.25, 0.75),
-  site('Yelp', [0.84, 0.575], [0.76, 0.55], 0.243, 0.9, 0.37),
-  site('Palantir', [0.74, 0.765], [0.79, 0.76], 0.25, 1.1, 0.99),
+  // the four its people founded: one after another, unequal throws
+  site('YouTube', [0.43, 0.78], [0.56, 0.83], 0.1, 0.13, 0.75, 0.13, 'dl', 'd', [0.12, 0.02], [0.08, 0.02]),
+  site('LinkedIn', [0.7, 0.475], [0.6, 0.61], 0.135, 0.15, 0.8, 0.75, 'r', 'r', [0.02, 0.08], [0.0, 0.08]),
+  site('Yelp', [0.83, 0.655], [0.75, 0.68], 0.17, 0.15, 0.7, 0.37, 'dl', 'rd', [-0.06, 0.12], [0.08, 0.03]),
+  site('Palantir', [0.68, 0.85], [0.72, 0.87], 0.205, 0.13, 0.6, 0.99, 'rd', 'rd', [-0.08, 0.1], [0.08, 0.06]),
   // Elon's share: SpaceX first and highest (it clears the atmosphere); Tesla later and short
-  site('SpaceX', [0.15, 0.475], [0.9, 0.62], 0.492, 2.6, 0.61),
-  site('Tesla', [0.24, 0.8], [0.3, 0.8], 0.62, 0.9, 0.23),
+  site('SpaceX', [0.5, 0.405], [0.88, 0.72], 0.4, 0.19, 0.9, 0.61, 'rl', 'dl', [0.1, 0.0], [0.06, 0.05]),
+  site('Tesla', [0.15, 0.85], [0.33, 0.86], 0.49, 0.11, 0.3, 0.23, 'rd', 'ld', [0.1, 0.08], [-0.07, 0.07]),
 ];
-export const END_P = 0.78;
-export const ERUPT_P = 0.236;
-const TAU_HOT = 0.022; // p: the head's white-gold cools to orange
-const TAU_TRAIN = 0.05; // p: the red train fades (gone by 3·TAU after landing)
+/** PayPal's vent: where it sits at REF_P, its name's side, where its own river runs. */
+const VENT = {
+  pt: [0.27, 0.6] as [number, number], ls: [0.45, 0.7] as [number, number],
+  labP: 'l', labD: 'l',
+  rivP: [-0.1, 0.1] as [number, number], rivD: [-0.08, 0.1] as [number, number],
+  dir: [0, 1, 0] as V3,
+};
+/** Wide screens see the throws far more side-on (a shallower look at the planet): lower them there. */
+const LOFT_WIDE = 0.72;
+/** The frame the layout is composed for: the heading's held moment. */
+export const REF_P = 0.74;
+const TAU_HOT = 0.027; // p: the head's white-gold cools to orange
+const TAU_TRAIN = 0.036; // p: the red tail fades (gone by 3·TAU after landing)
+/** ?ppall: every throw drawn whole and every name shown, to compose the layout (lab only). */
+const DBG_ALL = typeof location !== 'undefined' && /[?&]ppall\b/.test(location.search);
+/** Everything cools back into the planet's own look over the last stretch of the pin. */
+const gone = (p: number) => 1 - smooth(0.885, 1, p);
 
-/** PayPal's vent: pressure builds, erupts (and again for Elon's throws), then cools. heat 0..1, flash ≥ 0. */
+/** PayPal's vent. heat 0..1 (it warms as the camera arrives, pulses with every throw, and cools once it has given
+ * everything away: "long after PayPal itself was gone"); flash >= 0. */
 export function vent(p: number) {
-  const swell = smooth(0.08, 0.228, p);
-  const flash =
-    0.5 * Math.exp(-(((p - ERUPT_P) / 0.008) ** 2)) +
-    0.7 * Math.exp(-(((p - 0.494) / 0.01) ** 2)) +
-    0.45 * Math.exp(-(((p - 0.622) / 0.01) ** 2));
-  const cool = smooth(0.8, 0.97, p);
-  return { heat: mix(0.55 + 0.45 * swell, 0.12, cool), flash };
+  const warm = smooth(0, 0.045, p);
+  let flash = 0;
+  for (const s of SITES) flash += Math.exp(-(((p - s.launch) / 0.012) ** 2));
+  const spent = smooth(0.52, 0.86, p);
+  return { heat: warm * mix(1, 0.5, spent) * gone(p), flash: 0.55 * flash, grow: smooth(0, 0.1, p) };
 }
 
-// ---------------------------------------------------------------- the planet frame
-/** Where PayPal is: round the journey's great circle (degrees), on its line (u = 0). */
-export const PP_DEG = 34; // the camera starts 18-21 deg behind it: just past where story leaves off (deg 12)
-export type Planet = { R: number; up: V3; fwd: V3; right: V3 };
-export function planet(R: number): Planet {
-  const th = PP_DEG * D2R;
-  const up: V3 = [0, Math.cos(th), Math.sin(th)];
-  const fwd: V3 = [0, -Math.sin(th), Math.cos(th)]; // the travel direction
-  const right = cross(fwd, up); // = (-1, 0, 0): the journey's +u
-  return { R, up, fwd, right };
+// ---------------------------------------------------------------- the camera
+// A slow orbital drift (s) and push (h) through the whole pin; the pitch follows so the planet's limb keeps its line
+// in the frame (high enough on phones that the sky is a band for the captions, not half the picture).
+const CAMS = {
+  ph: { s0: 18.4, s1: 24.2, h0: 3500, h1: 2650, fov: 60, limb0: 0.35, limb1: 0.3, roll: 0, aspect: 390 / 844 },
+  dt: { s0: 17.4, s1: 24.6, h0: 2950, h1: 2300, fov: 44, limb0: 0.5, limb1: 0.46, roll: -7, aspect: 1440 / 900 },
+};
+/** The move's own time: constant speed, eased in and out over the first and last 7% (it meets its neighbours at rest). */
+export function drive(f: number) {
+  const r = 0.07;
+  const ramp = (x: number) => {
+    const t = clamp(x / r);
+    return r * (t * t * t - 0.5 * t * t * t * t);
+  };
+  const I = f < r ? ramp(f) : f <= 1 - r ? 0.5 * r + (f - r) : 1 - r - ramp(1 - f);
+  return I / (1 - r);
 }
-/** Unit direction at great-circle angle a along bearing b (radians) from `o` in the frame (tf, tr). */
-function dirAt(o: V3, tf: V3, tr: V3, b: number, a: number): V3 {
-  const t = add(mul(tf, Math.cos(b)), mul(tr, Math.sin(b)));
-  return add(mul(o, Math.cos(a)), mul(t, Math.sin(a)));
+/** The vertical field of view cameraFrom() ends up with (portrait screens keep the frame's width). */
+const effFov = (fov: number, aspect: number) => (aspect < 0.6 ? (2 * Math.atan((Math.tan(0.5 * fov * D2R) * 0.6) / aspect)) / D2R : fov);
+/** The beat's camera as journey channels. */
+export function beatChannels(f: number, narrow: boolean, R: number): Channels {
+  const C = narrow ? CAMS.ph : CAMS.dt;
+  const k = drive(clamp(f));
+  const h = Math.exp(mix(Math.log(C.h0), Math.log(C.h1), k));
+  const dip = Math.acos(R / (R + h));
+  const L = mix(C.limb0, C.limb1, k);
+  const pitch = -(dip + Math.atan((1 - 2 * L) * Math.tan(0.5 * effFov(C.fov, C.aspect) * D2R))) / D2R;
+  // a slight bank on wide screens (the limb rises to the right, the captions have the sky on the left); it comes and
+  // goes inside the place, since the next places' keys do not set a roll
+  const roll = C.roll * smooth(0, 0.25, f) * (1 - smooth(0.82, 1, f));
+  return { s: R * D2R * mix(C.s0, C.s1, k), h, yaw: 0, pitch, roll, fov: C.fov };
 }
-/** World position on a throw at u (0..1): great circle in angle (constant horizontal speed), parabola in height. */
-export function arcPos(R: number, th: Throw, u: number): V3 {
-  const d = dirAt(th.o, th.tf, th.tr, th.bearing, th.range * u);
-  return mul(d, R * (1 + 4 * th.apex * u * (1 - u)));
-}
-
-/** The camera this beat wants. It opens low by the vent (the classic Stromboli viewpoint: the dome swells, the eruption
- * towers into the stars), then rises to orbit as the embers arc over the curve, which is the scale reveal; aimed so
- * PayPal holds its place in the frame all the way up. */
-export function beatCamera(p: number, narrow: boolean, pl: Planet) {
-  const approach = smooth(0, 0.22, p);
-  const rise = smooth(0.245, 0.37, p);
-  const lo = 0.026 + 0 * approach; // one altitude while low (its s must not drift backwards)
-  const hi = narrow ? 0.62 : 0.34;
-  const alt = Math.exp(mix(Math.log(lo), Math.log(hi), rise)); // even in log space, like the journey's h
-  // a fixed distance behind the vent (the journey's s must never run backwards): it only climbs
-  const back = mix(narrow ? 0.31 : 0.37, narrow ? 0.3 : 0.36, rise);
-  const R = pl.R;
-  const pos = add(mul(pl.up, R * (1 + alt)), mul(pl.fwd, -back * R));
-  const fov = narrow ? 64 : 48;
-  const vy = mix(narrow ? -0.26 : -0.32, narrow ? -0.34 : -0.42, rise); // PayPal's height in the frame (NDC)
-  const dv = norm(sub(mul(pl.up, R), pos));
-  const camUp = norm(pos);
-  const perp = norm(sub(camUp, mul(dv, dot(camUp, dv))));
-  const d = Math.atan(-vy * Math.tan((fov * D2R) / 2));
-  const f = norm(add(mul(dv, Math.cos(d)), mul(perp, Math.sin(d))));
-  return { pos, f, fov };
-}
-/** The same camera as journey channels (s, h, pitch, fov; yaw 0, x 0). */
-export function beatChannels(p: number, narrow: boolean, R: number) {
-  const c = beatCamera(p, narrow, planet(R));
-  const r = len(c.pos);
-  const up = mul(c.pos, 1 / r);
-  return { s: R * Math.atan2(c.pos[2], c.pos[1]), h: r - R, pitch: Math.asin(clamp(dot(c.f, up), -1, 1)) / D2R, fov: c.fov };
-}
-/** Journey keys for the `paypal` place (desktop values, phones in `ph`), sampled from beatCamera. */
+/** Journey keys for the `paypal` place (desktop values, phones in `ph`): the move, sampled densely (no kinks). */
 export function paypalKeys(R: number): Key[] {
   const out: Key[] = [];
-  const fs = [0, 0.08, 0.16, 0.22];
-  for (let k = 0; k <= 16; k++) fs.push(0.24 + (0.14 * k) / 16); // the climb, densely: no kinks between keys
-  fs.push(0.5, 0.75, 1);
+  const fs = [0, 0.0175, 0.035, 0.0525, 0.07];
+  for (let k = 1; k <= 17; k++) fs.push(0.07 + (0.86 * k) / 17);
+  fs.push(0.9475, 0.965, 0.9825, 1);
   for (const f of fs) {
     const d = beatChannels(f, false, R), m = beatChannels(f, true, R);
     const k: Key = {
-      at: ['paypal', f], s: d.s, h: d.h, yaw: 0, pitch: d.pitch, fov: d.fov,
-      ph: { s: m.s, h: m.h, pitch: m.pitch, fov: m.fov },
+      // quiet: look's own rivers at about half their radiance, so the six new sources are what burns on the night side
+      at: ['paypal', f], s: d.s, h: d.h, yaw: d.yaw, pitch: d.pitch, roll: d.roll, fov: d.fov, quiet: 0.5,
+      ph: { s: m.s, h: m.h, yaw: m.yaw, pitch: m.pitch, roll: m.roll, fov: m.fov },
     };
     if (f > 0) k.ease = 'linear';
     out.push(k);
@@ -183,50 +188,161 @@ export function paypalKeys(R: number): Key[] {
 }
 
 // ---------------------------------------------------------------- layout
-/** Every throw of the beat: the six (V2: no spatter; sub-pixel sparks flickered on phones). */
-export const THROWS: Throw[] = [];
+/** Unit direction at great-circle angle a from `o` along the unit tangent `t`. */
+const dirAt = (o: V3, t: V3, a: number): V3 => add(mul(o, Math.cos(a)), mul(t, Math.sin(a)));
+/** World position on a throw at u (0..1): great circle in angle (constant horizontal speed), parabola in height. */
+export function arcPos(R: number, th: Throw, u: number): V3 {
+  return mul(dirAt(th.o, th.t, th.range * u), R * (1 + 4 * th.apex * u * (1 - u)));
+}
+/** A river from a place. `head`: the unit tangent it leaves along by design (the layout); `far`: where the layout
+ * alone would end it; `j`: the point on one of look's own rivers it runs to (found and followed in `joinRivers`). */
+type River = { head: V3; far: V3; j: V3 | null; wait: number; e: V3; len: number; amp: number; phase: number; k: number; seed: number };
+const RIVERS: River[] = [0, 1, 2, 3, 4, 5, 6].map((i) => ({
+  head: [0, 0, 1], far: [0, 1, 0], j: null, wait: 0, e: [0, 0, 1], len: 0,
+  amp: 0.11 + 0.035 * Math.sin(i * 2.1), phase: i * 2.4, k: 4.2 + 1.9 * ((i * 0.618) % 1), seed: i * 1.7,
+}));
+/** [PayPal, ...SITES]: the sides each name may take in this layout, and the one it has. */
+const LAB_OK: string[] = ['l', 'd', 'd', 'd', 'd', 'd', 'd'];
+const LAB_POS: Pos[] = ['l', 'd', 'd', 'd', 'd', 'd', 'd'];
 let layoutKey = '';
-/** Place the six landings from their screen targets (cast onto the sphere from the beat's end camera). */
-export function layout(R: number, narrow: boolean, aspect: number) {
-  const key = `${R}|${narrow}|${aspect.toFixed(3)}`;
+let layoutVer = 0;
+/** Place the vent, the six landings and their rivers from screen targets (cast onto the sphere from the camera of the
+ * heading's moment, REF_P), for this viewport. */
+export function layout(R: number, narrow: boolean, w: number, h: number) {
+  const key = `${R}|${narrow}|${Math.round(w)}|${Math.round(h)}`;
   if (key === layoutKey) return;
   layoutKey = key;
-  const pl = planet(R);
-  const c = beatCamera(END_P, narrow, pl);
-  const cr = norm(cross(c.f, norm(c.pos))), cu = cross(cr, c.f);
-  const tan = Math.tan((c.fov * D2R) / 2);
-  for (const s of SITES) {
-    const k = narrow ? s.pt : s.ls;
-    const rd = norm(add(c.f, add(mul(cr, (k[0] * 2 - 1) * tan * aspect), mul(cu, (1 - k[1] * 2) * tan))));
-    const b = dot(c.pos, rd), cc = dot(c.pos, c.pos) - R * R, disc = b * b - cc;
-    const t = disc > 0 ? -b - Math.sqrt(disc) : -b; // a miss lands on the limb
-    s.dir = norm(add(c.pos, mul(rd, t)));
-    const d = clamp(dot(s.dir, pl.up), -1, 1);
-    s.range = Math.acos(d);
-    const tg = sub(s.dir, mul(pl.up, d));
-    s.bearing = Math.atan2(dot(tg, pl.right), dot(tg, pl.fwd));
-    s.o = pl.up;
-    s.tf = pl.fwd;
-    s.tr = pl.right;
-    // a throw at a shallow fixed angle: apex ∝ range, flight time ∝ √range (capped so the last train is gone in time)
-    s.apex = 0.12 * s.range * s.loft;
-    s.flight = Math.min(0.125 * Math.sqrt(s.range / 0.3) * Math.pow(s.loft, 0.3), 0.17);
-    s.land = s.launch + s.flight;
-  }
-  THROWS.length = 0;
+  layoutVer++;
+  const cam = cameraFrom(R, beatChannels(REF_P, narrow, R), w, h);
+  const cast = (x: number, y: number): V3 => {
+    const rd = rayAt(cam, w, h, x * w, y * h);
+    let t = seaT(R, cam, rd);
+    if (t <= 0) t = -dot(cam.pos, rd); // a miss lands on the limb
+    return norm(add(cam.pos, mul(rd, t)));
+  };
+  const river = (i: number, at: [number, number], by: [number, number], dir: V3) => {
+    const end = cast(at[0] + by[0], at[1] + by[1]);
+    const rv = RIVERS[i];
+    rv.head = norm(sub(end, mul(dir, dot(dir, end))));
+    rv.far = end;
+    rv.j = null;
+    rv.wait = 0;
+  };
+  const vp = narrow ? VENT.pt : VENT.ls;
+  VENT.dir = cast(vp[0], vp[1]);
+  river(0, vp, narrow ? VENT.rivP : VENT.rivD, VENT.dir);
+  LAB_OK[0] = narrow ? VENT.labP : VENT.labD;
+  LAB_POS[0] = LAB_OK[0][0] as Pos;
   SITES.forEach((s, i) => {
-    THROWS.push(s);
+    const k = narrow ? s.pt : s.ls;
+    s.dir = cast(k[0], k[1]);
+    const d = clamp(dot(s.dir, VENT.dir), -1, 1);
+    s.o = VENT.dir;
+    s.t = norm(sub(s.dir, mul(VENT.dir, d)));
+    s.range = Math.acos(d);
+    s.apex = s.loft * s.range * (narrow ? 1 : LOFT_WIDE);
+    river(i + 1, k, narrow ? s.rivP : s.rivD, s.dir);
+    LAB_OK[i + 1] = narrow ? s.labP : s.labD;
+    LAB_POS[i + 1] = LAB_OK[i + 1][0] as Pos;
   });
 }
 
+// ---------------------------------------------------------------- look's rivers
+// The planet's own rivers are the zero set of a field in lib/world/glsl/planet.glsl (look_seaTemp). This is that field
+// on the CPU (the same hash, value noise, meander and 3 octaves; double precision differs from the GPU's by far less
+// than a river's width), so each new river can be run to the nearest of look's rivers and follow it as it drifts:
+// the join is real, not a lucky overlap. Keep in step with planet.glsl if look changes its field.
+const fr = (x: number) => x - Math.floor(x);
+function h13(x: number, y: number, z: number) {
+  let a = fr(x * 0.1031), b = fr(y * 0.1031), c = fr(z * 0.1031);
+  const d = a * (c + 31.32) + b * (b + 31.32) + c * (a + 31.32);
+  a += d; b += d; c += d;
+  return fr((a + b) * c);
+}
+function vnoise(x: number, y: number, z: number) {
+  const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z);
+  const q = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
+  const ux = q(x - ix), uy = q(y - iy), uz = q(z - iz);
+  const l = (a: number, b: number, t: number) => a + (b - a) * t;
+  const n = (dz: number) =>
+    l(l(h13(ix, iy, iz + dz), h13(ix + 1, iy, iz + dz), ux), l(h13(ix, iy + 1, iz + dz), h13(ix + 1, iy + 1, iz + dz), ux), uy);
+  return l(n(0), n(1), uz) * 2 - 1;
+}
+/** look_riverField(look_meander(q * Rg / 700 + (t, 0, -t), q)) at unit point q; ts = uTime * 0.003. */
+export function lookField(q: V3, ts: number): number {
+  let px = q[0] * (2000 / 700) + ts, py = q[1] * (2000 / 700), pz = q[2] * (2000 / 700) - ts;
+  let g: V3 = [vnoise(px * 0.7, py * 0.7, pz * 0.7), vnoise(px * 0.7 + 17.3, py * 0.7 + 17.3, pz * 0.7 + 17.3), vnoise(px * 0.7 + 31.7, py * 0.7 + 31.7, pz * 0.7 + 31.7)];
+  let c = cross(g, q);
+  px += c[0] * 0.55; py += c[1] * 0.55; pz += c[2] * 0.55;
+  g = [vnoise(px * 1.3 + 5.1, py * 1.3 + 5.1, pz * 1.3 + 5.1), vnoise(px * 1.3 + 23.9, py * 1.3 + 23.9, pz * 1.3 + 23.9), vnoise(px * 1.3 + 41.3, py * 1.3 + 41.3, pz * 1.3 + 41.3)];
+  c = cross(g, q);
+  px += c[0] * 0.22; py += c[1] * 0.22; pz += c[2] * 0.22;
+  // look_fbm(pw * 0.8 + 2.0, 3, 0.0, 0.5)
+  let x = px * 0.8 + 2, y = py * 0.8 + 2, z = pz * 0.8 + 2, sum = 0, a = 0.5;
+  for (let i = 0; i < 3; i++) {
+    sum += a * vnoise(x, y, z);
+    const nx = (-0.8 * y - 0.6 * z) * 2.03, ny = (0.8 * x + 0.36 * y - 0.48 * z) * 2.03, nz = (0.6 * x - 0.48 * y + 0.64 * z) * 2.03;
+    x = nx; y = ny; z = nz;
+    a *= 0.5;
+  }
+  return sum;
+}
+/** Newton steps from unit point q toward the field's zero set (a river's centre line). Returns the point and |f| there. */
+function toRiver(q: V3, ts: number, steps: number): { q: V3; f: number } {
+  let f = lookField(q, ts);
+  for (let k = 0; k < steps && Math.abs(f) > 1e-4; k++) {
+    const tA = norm(cross(q, Math.abs(q[1]) < 0.95 ? [0, 1, 0] : [1, 0, 0])), tB = cross(q, tA);
+    const h = 0.003;
+    const ga = (lookField(norm(add(q, mul(tA, h))), ts) - f) / h, gb = (lookField(norm(add(q, mul(tB, h))), ts) - f) / h;
+    const g2 = Math.max(ga * ga + gb * gb, 0.3);
+    let sa = (-f * ga) / g2, sb = (-f * gb) / g2;
+    const sl = Math.hypot(sa, sb);
+    if (sl > 0.035) { sa *= 0.035 / sl; sb *= 0.035 / sl; }
+    q = norm(add(q, add(mul(tA, sa), mul(tB, sb))));
+    f = lookField(q, ts);
+  }
+  return { q, f: Math.abs(f) };
+}
+const JOIN_MIN = 0.075, JOIN_MAX = 0.3; // radians: how short and how long a new river may be
+/** Runs river i (from unit point `from`) to one of look's rivers at field time ts. A river that is showing (`shown`)
+ * only follows its meeting point as look's rivers drift (continuous); one that is not may pick a new one. */
+function joinRiver(i: number, from: V3, ts: number, shown: boolean) {
+  const rv = RIVERS[i];
+  const ok = (j: V3) => {
+    const a = Math.acos(clamp(dot(from, j), -1, 1));
+    return a >= JOIN_MIN && a <= JOIN_MAX;
+  };
+  if (rv.j) {
+    const r = toRiver(rv.j, ts, 3);
+    if (r.f < 0.02 && (shown || ok(r.q))) rv.j = r.q;
+    else rv.j = null;
+  }
+  if (!rv.j && --rv.wait < 0) {
+    rv.wait = 40; // frames before another search, should none of look's rivers be in reach
+    const side = cross(from, rv.head);
+    for (const deg of [0, 45, -45, 90, -90, 135, -135, 180]) {
+      const hd = add(mul(rv.head, Math.cos(deg * D2R)), mul(side, Math.sin(deg * D2R)));
+      const r = toRiver(dirAt(from, hd, 0.15), ts, 14);
+      if (r.f < 0.004 && ok(r.q)) { rv.j = r.q; break; }
+    }
+  }
+  const end = rv.j ?? rv.far;
+  const c = clamp(dot(from, end), -1, 1);
+  rv.e = norm(sub(end, mul(from, c)));
+  rv.len = Math.acos(c);
+}
+
 // ---------------------------------------------------------------- per frame: the trails texture
-// Rows of TW texels (RGBA32F): [0] screen box (NDC x0, y0, x1, y1, padded), [1] (points, throw id, head intensity, 0),
-// then per point two texels: (position relative to the camera xyz, K) and (intensity, half-width in world units, 0, 0).
+// Rows of TW texels (RGBA32F): [0] screen box (tangent space x0, y0, x1, y1, padded), [1] (points, throw id, head
+// intensity, head radius in world units), then per point two texels: (position relative to the camera xyz, K) and
+// (intensity, half-width in world units, 0, 0).
 export const CH_PTS = 9; // points per chunk (8 segments)
 export const TW = 2 + 2 * CH_PTS;
-export const ROWS = 64;
+export const ROWS = 40;
+const SAMPLES = 44; // fixed grid points along a throw
 const trail = new Float32Array(TW * ROWS * 4);
 const boxes = new Float32Array(ROWS * 4);
+const heads = new Float32Array(6 * 4);
 /** The union of this frame's trail boxes (viewport CSS px): the crisp pass's box. */
 const cssBox: [number, number, number, number] = [1e9, 1e9, -1e9, -1e9];
 type Pt = { P: V3; K: number; I: number; w: number };
@@ -240,40 +356,55 @@ export interface Cam {
   focal: number; // CSS px
 }
 
-/** Fills the trails texture for beat progress p; returns the number of rows used. */
+/** Fills the trails texture (and the heads) for beat progress p; returns the number of rows used. */
 export function packTrails(p: number, t: number, cam: Cam, R: number): number {
   let row = 0;
   cssBox[0] = cssBox[1] = 1e9;
   cssBox[2] = cssBox[3] = -1e9;
-  THROWS.forEach((s, id) => {
+  heads.fill(0);
+  const out = gone(p);
+  SITES.forEach((s, id) => {
+    if (DBG_ALL) p = s.land - 1e-4;
     const uHead = (p - s.launch) / s.flight;
-    const TH = TAU_HOT * s.tau, TT = TAU_TRAIN * s.tau;
-    if (uHead < 0 || p > s.land + 3 * TT || row >= ROWS) return;
+    const TH = TAU_HOT, TT = DBG_ALL ? 1 : TAU_TRAIN;
+    if (uHead < 0 || p > s.land + 3 * TT || row >= ROWS || out <= 0) return;
     const pHead = Math.min(p, s.land);
     const after = Math.max(0, p - s.land); // after landing there is no head: everything ages on
     const span = Math.min(3 * TT, pHead - s.launch);
     const pts: Pt[] = [];
     // Points on a FIXED grid along the arc (plus the exact head and tail), so the drawn line never crawls as p moves:
     // scrolling only changes where it starts and ends and how hot each point is, never the polyline itself.
-    const G = s.samples;
+    const G = SAMPLES;
     const uH = (pHead - s.launch) / s.flight;
     const uT = Math.max(0, (pHead - span - s.launch) / s.flight);
     const us: number[] = [uH];
     for (let k = Math.ceil(uH * G) - 1; k / G > uT; k--) if (k / G < uH - 1e-6) us.push(k / G);
     us.push(uT);
+    // the bead leaves the vent's pool and sinks into its spring: no pop at either end
+    const lift = smooth(0, 0.035, uHead);
     for (const u of us) {
       const a = (uH - u) * s.flight; // how long ago the head was here
       const age = a + after;
       const P = arcPos(R, s, u);
       const hot = Math.exp(-age / TH);
-      const K = 900 + 1350 * hot + 200 * Math.exp(-age / (0.03 * s.tau));
-      const fade = Math.exp(-age / TT) * (1 - smooth(2 * TT, 3 * TT, age)) * smooth(0, 0.004 * s.tau, a + 0.0005);
-      const I = (0.9 + 3 * hot) * s.gain * fade;
-      const w = (0.0003 + 0.0012 * (1 - Math.exp(-age / 0.04))) * R * s.size * 1.6; // half-width (world): ~2 m bombs, trains that spread
+      // white-hot at the bead, through yellow and Ember to a dull red as the tail stretches and thins
+      const K = 900 + 1500 * hot;
+      const fade = Math.exp(-age / TT) * (1 - smooth(2 * TT, 3 * TT, age));
+      const I = (0.7 + 4.2 * hot) * fade * out * lift;
+      const w = (0.0009 + 0.0027 * Math.exp(-age / 0.014)) * R; // half-width (world): thick by the bead, a thread behind
       pts.push({ P, K, I, w });
     }
     if (pts.length < 2) return;
-    const flick = after > 0 ? 0 : (0.92 + 0.08 * Math.sin(t * 9 + s.seed * 9) * Math.sin(t * 5.3 + s.seed * 50)) * 2 * s.gain;
+    const shimmer = 0.9 + 0.1 * Math.sin(t * 2.3 + s.seed * 9) * Math.sin(t * 1.3 + s.seed * 50);
+    const flying = after <= 0 && uHead <= 1;
+    const headI = flying ? shimmer * 3.4 * out * lift * (1 - smooth(0.985, 1, uHead)) : 0;
+    if (headI > 0) {
+      const P = pts[0].P;
+      heads[id * 4] = P[0] - cam.pos[0];
+      heads[id * 4 + 1] = P[1] - cam.pos[1];
+      heads[id * 4 + 2] = P[2] - cam.pos[2];
+      heads[id * 4 + 3] = headI;
+    }
     // chunks of CH_PTS points sharing their end points
     for (let c0 = 0; c0 < pts.length - 1 && row < ROWS; c0 += CH_PTS - 1) {
       const c1 = Math.min(c0 + CH_PTS, pts.length);
@@ -283,7 +414,7 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
         const q = pts[j];
         const pr = cam.project(q.P);
         if (pr) {
-          const pad = ((q.w * cam.focal) / pr[2]) * 2.5 + 4;
+          const pad = ((q.w * cam.focal) / pr[2]) * 2.5 + 5;
           x0 = Math.min(x0, pr[0] - pad);
           x1 = Math.max(x1, pr[0] + pad);
           y0 = Math.min(y0, pr[1] - pad);
@@ -310,8 +441,8 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
       cssBox[2] = Math.max(cssBox[2], x1); cssBox[3] = Math.max(cssBox[3], y1);
       trail[base + 4] = c1 - c0;
       trail[base + 5] = id;
-      trail[base + 6] = c0 === 0 && uHead <= 1 ? flick : 0;
-      trail[base + 7] = 0;
+      trail[base + 6] = c0 === 0 ? headI : 0;
+      trail[base + 7] = 0.0044 * R; // the bead's radius (world): bigger near the camera, a point far away
       row++;
     }
   });
@@ -320,15 +451,18 @@ export function packTrails(p: number, t: number, cam: Cam, R: number): number {
 
 // ---------------------------------------------------------------- GLSL
 export const PAYPAL_GLSL = /* glsl */ `
+uniform float paypal_uOn;       // 0: nothing of the beat is on screen (every hook returns at once)
+uniform float paypal_uT;        // the clock, for the rivers' slow flow
 uniform vec4 paypal_uSpot[7];   // xyz unit direction of the place (0 = PayPal), w heat 0..1
-uniform vec4 paypal_uSpotB[7];  // x age since landing (p), y ripple age (p), z flash, w seed
-uniform vec4 paypal_uDome;      // x dome height, y dome radius, z wave radius, w wave height (world units)
-uniform vec2 paypal_uVentW;     // PayPal's surface coords (u across, v along)
+uniform vec4 paypal_uSpotB[7];  // x ring radius (rad), y ring strength, z flash, w how far its river has run (0..1)
+uniform vec4 paypal_uRiv[7];    // xyz the river's heading at the place (unit tangent), w its length (rad)
+uniform vec4 paypal_uRivB[7];   // x meander amplitude (of its length), y phase, z turns, w flow phase
+uniform vec4 paypal_uHead[6];   // the beads in the air: xyz relative to the camera, w intensity
 uniform float paypal_uRows;     // rows used in the trails texture
 uniform float paypal_uMinPx;    // thinnest line (render px)
 uniform float paypal_uMinPxCrisp; // thinnest line in the crisp pass (canvas px)
 uniform highp sampler2D paypal_uTrail;
-uniform vec4 paypal_uBox[${ROWS}]; // each row's screen box (NDC x0, y0, x1, y1), so a pixel only reads rows it is inside
+uniform vec4 paypal_uBox[${ROWS}]; // each row's screen box (tangent space x0, y0, x1, y1), so a pixel only reads rows it is inside
 #define PAYPAL_ROWS ${ROWS}
 
 // blackbody: linear sRGB chroma (unit luminance) x a compressed power curve relative to 1500 K
@@ -341,61 +475,82 @@ vec3 paypal_bbChroma(float K){
   return c / max(dot(c, vec3(.2126,.7152,.0722)), 1e-4);
 }
 vec3 paypal_bb(float K){ return paypal_bbChroma(max(K, 700.)) * pow(K/1500., 4.5); }
-float paypal_hash(vec3 p){ p = fract(p*0.3183099+.1); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
-float paypal_noise(vec3 x){ vec3 i=floor(x), f=fract(x); f=f*f*(3.-2.*f);
-  return mix(mix(mix(paypal_hash(i),paypal_hash(i+vec3(1,0,0)),f.x),mix(paypal_hash(i+vec3(0,1,0)),paypal_hash(i+vec3(1,1,0)),f.x),f.y),
-             mix(mix(paypal_hash(i+vec3(0,0,1)),paypal_hash(i+vec3(1,0,1)),f.x),mix(paypal_hash(i+vec3(0,1,1)),paypal_hash(i+vec3(1,1,1)),f.x),f.y),f.z); }
 
-// The places on the lava: a hot core, a soft halo, and a few soft flows that meander out from the new vent as it ages
-// (like lava running out, or a city's lights seen from orbit). No spikes, no crust, no outlines. q: unit sphere point.
-vec3 paypal_places(vec3 q){
-  vec3 emit = vec3(0);
-  float ripple = 0.;
-  for (int i=0;i<7;i++){
-    float heat = paypal_uSpot[i].w, flash = paypal_uSpotB[i].z;
-    if (heat <= 0.001 && flash <= 0.001) continue;
-    vec3 sd = paypal_uSpot[i].xyz;
-    float cs = dot(q, sd);
-    if (cs < 0.99) continue; // beyond ~8 deg nothing of this place reaches
-    float ang = acos(min(cs, 1.));
-    float age = paypal_uSpotB[i].x, seed = paypal_uSpotB[i].w;
-    float grow = 1. - exp(-age*14.);
-    // V2: a round glow only (the meandering flows read as X/Y-shaped smears on phones)
-    float spread = 1. + 1.6 * grow; // it grows after the landing
-    float core = exp(-pow(ang/0.005, 2.));
-    float mid = exp(-pow(ang/(0.012*spread), 2.));
-    float halo = exp(-ang/(0.025*spread)) * smoothstep(0.14, 0.07, ang); // to zero well inside the cut-off: no edge
-    float Ks = mix(900., 1650., core) + 250.*mid;
-    emit += paypal_bb(Ks) * heat * (2.2*core + 0.6*mid + 0.12*halo);
-    emit += vec3(1.,.93,.82) * flash * 1.5 * exp(-pow(ang/0.005, 2.));
-    float ra = paypal_uSpotB[i].y; // a faint heat ripple running out from a landing, gone fast
-    if (ra > 0. && ra < 0.12) ripple += exp(-pow((ang - ra*0.55)/(0.004 + ra*0.05), 2.)) * exp(-ra*60.) * 0.12;
+// Kelvin added to the sea at unit point q (fpr: the pixel's footprint in radians). Each place is a spring (a hot core
+// in a cooling pool), the ring of heat its landing sent out, and the river that runs from it: a meander with a hot
+// core, cooler banks and slow pulses moving downstream. Features thinner than a pixel are spread over it (energy
+// kept), so nothing aliases toward the limb. No sprite, no outline: only temperature, which look's Planck curve turns
+// into light.
+float paypal_kelvin(vec3 q, float fpr){
+  float K = 0.;
+  for (int i = 0; i < 7; i++){
+    vec4 sp = paypal_uSpot[i];
+    vec4 sb = paypal_uSpotB[i];
+    if (sp.w <= 0.001 && sb.z <= 0.001 && sb.y <= 0.001) continue;
+    float cs = dot(q, sp.xyz);
+    if (cs < 0.9) continue;                       // beyond ~26 deg nothing of this place reaches
+    vec3 d = q - sp.xyz * cs;
+    float rr = length(d);
+    float big = i == 0 ? 1.7 : 1.;
+    float rc = 0.0058 * big, rcE = max(rc, 1.2 * fpr);
+    float core = exp(-rr*rr/(rcE*rcE)) * (rc/rcE);
+    float pool = exp(-rr/(0.021 * big)) * (1. - smoothstep(0.08, 0.2, rr));
+    K += sp.w * ((i == 0 ? 560. : 400.) * core + 125. * big * pool);
+    K += sb.z * 240. * exp(-rr*rr/(0.018*0.018));           // the landing (or the throw): a brief wide flush
+    if (sb.y > 0.001){                                       // the ring of heat running out
+      float rw = max(0.007 + 0.34 * sb.x, 1.5 * fpr);
+      float x = (rr - sb.x) / rw;
+      K += sb.y * 105. * exp(-x*x);
+    }
+    vec4 rv = paypal_uRiv[i];
+    float L = rv.w;
+    if (L > 0.004 && sb.w > 0.001){
+      float a = dot(d, rv.xyz), b = dot(d, cross(sp.xyz, rv.xyz));
+      float u = a / L;
+      if (u > -0.1 && u < 1.2 && abs(b) < 0.35 * L + 0.09){
+        vec4 rb = paypal_uRivB[i];
+        float uc = clamp(u, 0., 1.);
+        float se = sin(PI*uc), ce = cos(PI*uc), ph = rb.z*uc + rb.y;
+        float M = rb.x * L * se * sin(ph);
+        float dM = rb.x * (PI*ce*sin(ph) + rb.z*se*cos(ph));
+        float dist = abs(b - M) / sqrt(1. + dM*dM);
+        float tip = (L + 0.014) * sb.w;
+        float along = smoothstep(-0.004, 0.008, a) * (1. - smoothstep(tip - 0.04, tip, a));
+        // a tributary: finer than look's rivers at its spring, nearly their width where it meets them
+        float wc = mix(0.0034, 0.0066, uc), wcE = max(wc, 1.2 * fpr);
+        float wh = max(mix(0.009, 0.019, uc), 2. * fpr);
+        float flow = 0.78 + 0.22 * sin(a*95. - paypal_uT*0.8 + rb.w);   // slow pulses of hotter metal running downstream
+        // it runs into one of look's own rivers at its end: there look's heat takes over (two full rivers would add
+        // up to a white knot at every confluence)
+        float meet = 1. - 0.82 * smoothstep(0.66, 1., u);
+        K += sp.w * along * meet * (mix(190., 130., uc) * exp(-dist*dist/(wcE*wcE)) * (wc/wcE) * flow + mix(95., 100., uc) * exp(-dist/wh));
+      }
+    }
   }
-  return emit + paypal_bb(1250.) * ripple * 0.9;
+  return K;
 }
 
 void paypal_sea(Ray r, Sea s, inout SeaMod m){
-  m.emit += paypal_places(s.q);
-  // before the eruption the lava over the vent swells into a smooth dome; after it, one wave runs out on the sea
-  vec2 d = s.w - paypal_uVentW;
-  float r2 = dot(d, d);
-  if (r2 < 4e6 && (paypal_uDome.x > 0.001 || paypal_uDome.w > 0.001)){
-    float rr = sqrt(r2) + 1e-3;
-    float sg = paypal_uDome.y;
-    float h = paypal_uDome.x * exp(-r2/(sg*sg));
-    float dh = -2.*rr/(sg*sg) * h; // dh/dr
-    float rw = paypal_uDome.z, ww = 6. + 0.06*rw;
-    float x = (rr - rw)/ww;
-    float hw = paypal_uDome.w * (exp(-x*x) - 0.45*exp(-pow(x + 1.6, 2.))); // a crest with a shallow trough behind
-    dh += paypal_uDome.w * (-2.*x/ww*exp(-x*x) + 0.45*2.*(x + 1.6)/ww*exp(-pow(x + 1.6, 2.)));
-    m.g += vec3(h + hw, dh * d / rr);
-    m.heat += 0.06 * h; // the dome warms a little; the wave is shape only (no glowing ring)
+  if (paypal_uOn < 0.5) return;
+  m.heat += paypal_kelvin(s.q, s.fw * sqrt(s.graz) / uR) / 850.;   // SeaMod.heat: 850 K per unit (lava.glsl)
+  // a bead in the air lights the sea under it: a soft pool of its glow that travels with it and tightens as it comes
+  // down (inverse square), which is what tells the eye how high it flies
+  if (paypal_uRows > 0.5){
+    vec3 P = s.p - uCamPos;
+    for (int i = 0; i < 6; i++){
+      vec4 hd = paypal_uHead[i];
+      if (hd.w <= 0.) continue;
+      vec3 v = hd.xyz - P;
+      float d2 = dot(v, v);
+      if (d2 > 6.0e6) continue;
+      m.emit += paypal_bb(1750.) * hd.w * 2800. * max(dot(v, s.up), 0.) / ((d2 + 1.2e5) * sqrt(d2 + 1.));
+    }
   }
 }
 
 // The throws in the air: per pixel, the nearest point of each throw's sampled path (ray-segment closest approach),
-// a gaussian cross-section in pixels (never thinner than paypal_uMinPx; a widened line keeps its energy), coloured by
-// the blackbody of that point. One contribution per throw (no double counting at joints); hidden behind the planet.
+// a gaussian cross-section in pixels (never thinner than minPx; a widened line keeps its energy), coloured by the
+// blackbody of that point. One contribution per throw (no double counting at joints); hidden behind the planet.
 vec3 paypal_trails(Ray r, float tMax, float minPx){
   int rows = int(paypal_uRows + 0.5);
   if (rows <= 0) return vec3(0);
@@ -414,12 +569,13 @@ vec3 paypal_trails(Ray r, float tMax, float minPx){
     int n = int(info.x + 0.5);
     vec4 a0 = texelFetch(paypal_uTrail, ivec2(2, i), 0);
     vec4 a1 = texelFetch(paypal_uTrail, ivec2(3, i), 0);
-    if (info.z > 0.){ // the head: a tight white-gold point (bloom carries its glare)
+    if (info.z > 0.){ // the bead: a small white-hot drop with its real size (bigger near the camera)
       vec3 w = a0.xyz - ro; float t = dot(w, r.rd);
       if (t > 0. && t < tMax){
         float dpx = length(w - r.rd*t) / (t * r.pa);
-        float v = info.z * exp(-4.*pow(dpx/(minPx*0.8), 2.));
-        if (v > bestV){ bestV = v; bestK = 2500.; }
+        float rpx = max(info.w / (t * r.pa), minPx * 0.8);
+        float v = info.z * exp(-2.8*pow(dpx/rpx, 2.));
+        if (v > bestV){ bestV = v; bestK = 2450.; }
       }
     }
     for (int j = 1; j < ${CH_PTS}; j++){
@@ -448,13 +604,24 @@ vec3 paypal_trails(Ray r, float tMax, float minPx){
   return acc + paypal_bb(bestK) * bestV;
 }
 
-// scene pass: only when there is no crisp pass this frame (it draws them at the screen's own resolution)
+// scene pass: each bead's soft glare (the bloom carries it; the crisp pass has no bloom of its own), and the trails
+// themselves only when there is no crisp pass this frame
 void paypal_over(Ray r, Hit h, inout vec3 col){
+  if (paypal_uOn < 0.5 || paypal_uRows < 0.5) return;
+  for (int i = 0; i < 6; i++){
+    vec4 hd = paypal_uHead[i];
+    if (hd.w <= 0.) continue;
+    float t = dot(hd.xyz, r.rd);
+    if (t <= 0. || t > h.t) continue;
+    float dpx = length(hd.xyz - r.rd*t) / (t * r.pa);
+    if (dpx < 10.) col += paypal_bb(2100.) * hd.w * 0.55 * exp(-dpx*dpx/7.);
+  }
   if (uCrispOn > 0.5) return;
   col += paypal_trails(r, h.t, paypal_uMinPx);
 }
 // crisp pass: light adds (an emitter covers nothing), hidden behind the planet by the exact sea sphere
 vec4 paypal_crisp(Ray r, float tScene){
+  if (paypal_uRows < 0.5) return vec4(0.);
   float ts = world_seaT(r);
   return vec4(paypal_trails(r, ts > 0. ? ts : 1e30, paypal_uMinPxCrisp), 0.);
 }
@@ -465,15 +632,17 @@ const S = {
   section: null as HTMLElement | null,
   caps: [] as HTMLElement[],
   names: [] as HTMLElement[],
-  labels: [0, 1, 2, 3, 4, 5, 6].map(() => ({ x: 0, y: 0, o: 0 })), // [PayPal, ...SITES]
+  labels: [0, 1, 2, 3, 4, 5, 6].map(() => ({ x: 0, y: 0, o: 0, po: 0 })), // [PayPal, ...SITES]; po: o of the frame before
   caps01: [0, 0, 0, 0, 0],
   rows: 0,
   ver: 0,
+  on: false,
+  posVer: -1,
   box: null as DOMRect | null,
 };
-const SPOT = new Float32Array(28), SPOTB = new Float32Array(28); // reused every frame (no garbage while scrolling)
+const SPOT = new Float32Array(28), SPOTB = new Float32Array(28), RIV = new Float32Array(28), RIVB = new Float32Array(28); // reused every frame
 /** The beat's labels, captions and trail rows of the last frame (tests, lab). */
-export const paypalDebug = () => ({ rows: S.rows, labels: S.labels.map((l) => ({ ...l })), caps: [...S.caps01] });
+export const paypalDebug = () => ({ rows: S.rows, labels: S.labels.map((l) => ({ ...l })), caps: [...S.caps01], box: [...cssBox] });
 
 export const paypal: WorldModule = {
   id: 'paypal',
@@ -492,57 +661,105 @@ export const paypal: WorldModule = {
   },
   update(f: Frame, u: Uniforms) {
     const R = f.R;
-    const pl = planet(R);
-    layout(R, f.narrow, f.w / f.h);
     const p = f.places.paypal ? f.at('paypal') : 0;
+    const on = p > 0 && p < 1;
+    if (on !== S.on || !S.ver) u.set('paypal_uOn', on ? 1 : 0);
+    S.on = on;
+    S.caps01 = S.caps01.map((_, i) => captionOpacity(i, p));
+    if (!on) {
+      if (S.rows || !S.ver) {
+        S.rows = 0;
+        u.set('paypal_uRows', 0);
+        u.tex('paypal_uTrail', { w: TW, h: ROWS, data: trail, format: 'rgba32f' }, ++S.ver);
+      } else u.tex('paypal_uTrail', { w: TW, h: ROWS, data: trail, format: 'rgba32f' }, S.ver);
+      for (const L of S.labels) L.o = L.po = 0;
+      return;
+    }
+    layout(R, f.narrow, f.w, f.h);
     const t = f.still ? 0 : f.t;
-    // the places
+    const out = gone(p);
+    // the places: PayPal's vent, then the six
     const v = vent(p);
-    const spot = SPOT, spotB = SPOTB;
-    // everything of the beat sinks back into the sea by the end of the place, so the next places show only the
-    // planet's own rivers (smooth, reversible: a function of p)
-    const gone = 1 - smooth(0.9, 1, p);
-    spot.set([...pl.up, v.heat * gone], 0);
-    spotB.set([1, p - ERUPT_P, v.flash, 0.42], 0);
+    const breathe = 1 + 0.035 * Math.sin(t * 0.9) * Math.sin(t * 0.37 + 1);
+    SPOT.set([...VENT.dir, v.heat * breathe], 0);
+    SPOTB.set([0, 0, v.flash * out, v.grow], 0);
     SITES.forEach((s, i) => {
       const age = p - s.land;
-      spot.set([...s.dir, smooth(0, 0.012, age) * gone], (i + 1) * 4);
-      spotB.set([Math.max(age, 0), age, age > 0 ? Math.exp(-age / 0.008) : 0, s.seed], (i + 1) * 4);
+      const lit = smooth(-0.004, 0.03, age) * out * (1 + 0.03 * Math.sin(t * 0.8 + s.seed * 20));
+      const flash = age > -0.004 ? smooth(-0.004, 0.002, age) * Math.exp(-Math.max(age, 0) / 0.016) * out : 0;
+      // the ring: out fast, then it slows and settles as it fades
+      const ringR = age > 0 ? 0.075 * (1 - Math.exp(-age / 0.04)) : 0;
+      const ringS = age > 0 ? smooth(0, 0.006, age) * Math.exp(-age / 0.04) * (1 - smooth(0.1, 0.17, age)) * out : 0;
+      // the river: off quickly, then slower and slower as it nears the network
+      const g = clamp((age - 0.012) / 0.2);
+      SPOT.set([...s.dir, lit], (i + 1) * 4);
+      SPOTB.set([ringR, ringS, flash, 1 - (1 - g) ** 2.5], (i + 1) * 4);
     });
-    u.set('paypal_uSpot', spot);
-    // the dome over the vent (grows with the pressure, gone in the burst) and the one wave the burst sends out
-    const age = p - ERUPT_P;
-    const domeH = 5 * smooth(0.06, 0.228, p) * (1 - smooth(-0.004, 0.004, age));
-    const waveR = age > 0 ? 9000 * age : 0;
-    const waveH = age > 0 ? 1.2 * Math.exp(-age / 0.04) * smooth(0, 0.004, age) : 0;
-    u.set('paypal_uDome', [domeH, 40, waveR, waveH]);
-    u.set('paypal_uVentW', [0, R * PP_DEG * D2R]);
-    u.set('paypal_uSpotB', spotB);
+    RIVERS.forEach((rv, i) => {
+      joinRiver(i, i ? SITES[i - 1].dir : VENT.dir, t * 0.003, SPOTB[i * 4 + 3] > 0.001 && SPOT[i * 4 + 3] > 0.001);
+      RIV.set([...rv.e, rv.len], i * 4);
+      RIVB.set([rv.amp, rv.phase, rv.k, rv.seed], i * 4);
+    });
+    u.set('paypal_uSpot', SPOT);
+    u.set('paypal_uSpotB', SPOTB);
+    u.set('paypal_uRiv', RIV);
+    u.set('paypal_uRivB', RIVB);
+    u.set('paypal_uT', t % 1e4);
     // the throws (uploaded only while some are in the air, and once more to clear)
     const cam: Cam = { pos: f.cam.pos, project: (q) => f.project(q), w: f.w, h: f.h, focal: f.cam.focal };
-    const rows = p > 0 && p < 1 ? packTrails(p, t, cam, R) : 0;
+    const rows = packTrails(p, t, cam, R);
     if (rows || S.rows || !S.ver) u.tex('paypal_uTrail', { w: TW, h: ROWS, data: trail, format: 'rgba32f' }, ++S.ver);
     else u.tex('paypal_uTrail', { w: TW, h: ROWS, data: trail, format: 'rgba32f' }, S.ver);
+    if (rows || S.rows) {
+      u.set('paypal_uBox', boxes);
+      u.set('paypal_uHead', heads);
+    }
     S.rows = rows;
     u.set('paypal_uRows', rows);
-    if (rows || S.rows) u.set('paypal_uBox', boxes);
     u.set('paypal_uMinPx', Math.max(1.2, 0.75 * f.quality.scale));
     u.set('paypal_uMinPxCrisp', 1.6); // canvas px: ~0.55 CSS px at dpr 3, a hairline that stays solid
-    // captions and names
-    S.caps01 = S.caps01.map((_, i) => captionOpacity(i, p));
     // read layout here, before any module writes the DOM this frame (a read in after() would force a layout)
     S.box = S.names[0]?.parentElement?.getBoundingClientRect() ?? null;
     const lab = (dir: V3, o: number, k: number) => {
       const pr = f.project(mul(dir, R));
       const L = S.labels[k];
+      L.po = L.o;
       if (pr) {
         L.x = pr[0];
         L.y = pr[1];
         L.o = o;
       } else L.o = 0;
     };
-    lab(pl.up, smooth(0.03, 0.08, p) * (1 - 0.85 * smooth(0.2, 0.232, p) * (1 - smooth(0.3, 0.34, p))) * (1 - 0.55 * smooth(0.82, 0.97, p)) * gone, 0);
-    SITES.forEach((s, i) => lab(s.dir, smooth(s.land + 0.004, s.land + 0.03, p) * gone, i + 1));
+    // a name that is not showing yet takes, of the sides no throw crosses, the one that lies darkest: away from look's
+    // rivers (they drift) and from the place's own new river. Legibility by composition, nothing behind the text.
+    const side = (k: number, from: V3) => {
+      const L = S.labels[k], ok = LAB_OK[k];
+      if (L.po > 0.001 || ok.length < 2) return; // it was showing: it keeps its side
+      const tw = (f.narrow ? 7.4 : 8.6) * (k ? SITES[k - 1].name.length : 6), off = (f.narrow ? 35 : 43) + 8;
+      const rv = RIVERS[k];
+      let best = -1e9, pick = ok[0] as Pos;
+      for (let n = 0; n < ok.length; n++) {
+        const c = ok[n] as Pos;
+        const cx = L.x + (c === 'r' ? off + tw / 2 - 8 : c === 'l' ? -off - tw / 2 + 8 : 0), cy = L.y + (c === 'd' ? off : c === 'u' ? -off : 0);
+        let sc = 1e9;
+        for (const dx of [-0.45, 0, 0.45]) {
+          const hit = f.hitSea(cx + dx * tw, cy);
+          if (!hit) { sc = Math.min(sc, 0.05); continue; }
+          const q = norm(hit.p);
+          sc = Math.min(sc, Math.abs(lookField(q, t * 0.003)));
+          for (let m = 1; m <= 4; m++) if (dot(q, dirAt(from, rv.e, (rv.len * m) / 4)) > Math.cos(0.035)) sc -= 1;
+        }
+        sc -= 0.04 * n;
+        if (sc > best) { best = sc; pick = c; }
+      }
+      if (pick !== LAB_POS[k]) { LAB_POS[k] = pick; layoutVer++; }
+    };
+    const labOut = 1 - smooth(0.9, 0.985, p);
+    lab(VENT.dir, smooth(0.012, 0.05, p) * labOut, 0);
+    SITES.forEach((s, i) => {
+      lab(s.dir, DBG_ALL ? 1 : smooth(s.land + 0.03, s.land + 0.075, p) * labOut, i + 1);
+      side(i + 1, s.dir);
+    });
   },
   after() {
     S.caps.forEach((c, i) => {
@@ -551,16 +768,24 @@ export const paypal: WorldModule = {
       c.style.translate = `0 ${((1 - o) * 10).toFixed(1)}px`;
       c.style.visibility = o > 0.001 ? 'visible' : 'hidden';
     });
+    if (S.posVer !== layoutVer) {
+      S.posVer = layoutVer;
+      S.names.forEach((n, i) => (n.dataset.pos = LAB_POS[i] ?? 'd'));
+    }
     // the names' container scrolls away with the section once the pin releases; the labels are in viewport px
     const box = S.box;
     const ox = box ? box.left : 0, oy = box ? box.top : 0;
     // all the names leave together as the pin releases (rather than being clipped one by one)
     const leave = box ? Math.min(1, Math.max(0, 1 + box.top / (0.25 * window.innerHeight))) : 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const snap = (x: number) => Math.round(x * dpr) / dpr; // hairlines stay on the pixel grid
     S.names.forEach((n, i) => {
       const L = S.labels[i];
       if (!L) return;
-      n.style.translate = `${(L.x - ox).toFixed(1)}px ${(L.y - oy - 12).toFixed(1)}px`;
-      n.style.opacity = (L.o * leave).toFixed(3);
+      const o = L.o * leave;
+      n.style.translate = `${snap(L.x - ox)}px ${snap(L.y - oy)}px`;
+      n.style.opacity = o.toFixed(3);
+      n.style.visibility = o > 0.001 ? 'visible' : 'hidden';
     });
   },
   dispose() {
@@ -573,6 +798,8 @@ export const paypal: WorldModule = {
     S.names.forEach((n) => {
       n.style.opacity = '';
       n.style.translate = '';
+      n.style.visibility = '';
     });
   },
 };
+
