@@ -304,7 +304,7 @@ vec3 ventures_surface(VenturesHit h, vec3 rd, float pixAng) {
   float rough = ventures_uD[i].z;
   float edgeL = smoothstep(0.92, 0.6, max(abs(nl.x), max(abs(nl.y), abs(nl.z))));
   float n2 = ventures_noised(fuv * vec2(0.23, 0.11) + seed * 1.7 + 3.1).x;
-  rough += (0.07 * n1.x + 0.09 * n2) * wav - 0.06 * edgeL;
+  rough += (0.1 * n1.x + 0.13 * n2) * wav - 0.06 * edgeL;
 
   // --- the mark, cut into the live monolith's front face ---
   float markIn = 0.0, coreIn = 0.0, coreR = 1.0, cutLit = 0.0;
@@ -322,9 +322,13 @@ vec3 ventures_surface(VenturesHit h, vec3 rd, float pixAng) {
       float kb = smoothstep(62.0, 46.0, ringPx);
       vec2 d0 = ventures_markMix(q, kb);
       float e = max(0.12, fw * 0.5);                   // the gradient's step grows with the pixel: no aliased normals
-      float dx = ventures_markMix(q + vec2(e, 0.0), kb).x - ventures_markMix(q - vec2(e, 0.0), kb).x;
-      float dy = ventures_markMix(q + vec2(0.0, e), kb).x - ventures_markMix(q - vec2(0.0, e), kb).x;
-      vec2 gd = vec2(dx, dy) / (2.0 * e);
+      // (the gradient only where a wall is: four more evaluations of the mark, on its edges alone)
+      vec2 gd = vec2(0.0);
+      if (abs(d0.x) < wch + e || abs(d0.y + 0.6) < max(0.6, fw) + e) {
+        float dx = ventures_markMix(q + vec2(e, 0.0), kb).x - ventures_markMix(q - vec2(e, 0.0), kb).x;
+        float dy = ventures_markMix(q + vec2(0.0, e), kb).x - ventures_markMix(q - vec2(0.0, e), kb).x;
+        gd = vec2(dx, dy) / (2.0 * e);
+      }
       // the cut's chamfered wall tilts the normal toward the cut's centre: the walls under each bar and square face up
       // and out (they catch the moon and the sky), the walls over them face down (they catch the sea's glow). Once the
       // chamfer is under about a pixel its tilt fades (a sub-pixel wall would flip the shading from pixel to pixel) and
@@ -490,7 +494,7 @@ vec3 ventures_streak(Ray r, Sea s) {
       float wI = Lw / (2.0 * sy) * (exp(-ya / Lw) - exp(-yb / Lw));
       vec3 F0 = kind < 0.5 ? vec3(0.80, 0.76, 0.68) : vec3(0.56, 0.57, 0.58);
       // (the live one's face stands in the moon: its upper part mirrors as a pale length nearer the camera)
-      vec3 face = F0 * (vec3(dot(look_moonLight(), vec3(0.2126, 0.7152, 0.0722))) * (kind < 0.5 ? 1.5 : 0.35) * smoothstep(0.2 * H, 0.75 * H, y0) + ventures_uHorC * 0.06);
+      vec3 face = F0 * (vec3(dot(look_moonLight(), vec3(0.2126, 0.7152, 0.0722))) * (kind < 0.5 ? 1.0 : 0.3) * smoothstep(0.2 * H, 0.75 * H, y0) + ventures_uHorC * 0.06);
       col = glow * gI * 2.2 + ventures_uPool * F0 * 0.7 * wI + face * (yb - ya) / (2.0 * sy);
     }
     // the bulge of melt over a rising casting mirrors too: a short bright smear under it
@@ -515,6 +519,9 @@ float ventures_seaGlow(vec3 p) {
     float fresh = 1.0 - smoothstep(0.3, 1.0, rise);
     g += exp(-rr * 1.5 / (1.0 + 1.2 * fresh)) * (0.6 + 0.4 * ventures_uK[i].z + 0.5 * fresh) * smoothstep(0.0, 0.04, rise)
        * (1.0 + ventures_uK[i].y * 0.8 + ventures_uK[i].w);
+    // ...and the sea is a little hotter for a few hundred metres round each standing casting: they stand in a
+    // clearing of brighter metal, the foreground darker (depth across the sea)
+    g += 0.2 * exp(-rr * 0.14) * smoothstep(0.0, 0.5, rise);
   }
   return g;
 }

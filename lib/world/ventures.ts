@@ -284,13 +284,16 @@ export function venturesKeys(R: number): Key[] {
   const deg = (a: number) => (a * Math.PI * R) / 180;
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
   // look's cold moon, low behind the camera's left shoulder (fades in from story-3 and out into the thesis)
-  const MOON = { 'look.moon': 0.6, 'look.moonAz': 150, 'look.moonEl': 6.5 };
+  // (it drifts round and down through the shot, as the camera's arc would have it: the sheen passes from Trellis to
+  // Crucible Sites and sinks down their faces)
+  const MOON = { 'look.moon': 0.6, 'look.moonAz': 141, 'look.moonEl': 8.5 };
+  const MOON2 = { 'look.moon': 0.6, 'look.moonAz': 158, 'look.moonEl': 5.8 };
   const s = deg(150);
   return [
     { at: ['ventures', 0], s, h: 24, x: -30, yaw: 2.3, pitch: 0.4, fov: 30, ...FAR, ...MOON, ph: { fov: 31, pitch: 4.4, x: -24, yaw: 1.9 } },
-    { at: ['ventures', 0.84], s: s + PEAK, h: 14, x: 30, yaw: -2.6, pitch: 0.85, fov: 26, ...FAR, ...MOON, ph: { fov: 25, pitch: 3.7, x: 24, yaw: -2.2 } },
+    { at: ['ventures', 0.84], s: s + PEAK, h: 14, x: 30, yaw: -2.6, pitch: 0.85, fov: 26, ...FAR, ...MOON2, ph: { fov: 25, pitch: 3.7, x: 24, yaw: -2.2 } },
     // = the thesis' first key (lib/world/thesis.ts): the lift and the widening lens are the start of its climb
-    { at: ['ventures', 1], s: deg(151.5), h: 30, x: 0, yaw: 0, pitch: -2, fov: 50, ...FAR, ...MOON, ph: { fov: 64, pitch: -3, x: 0, yaw: 0 } },
+    { at: ['ventures', 1], s: deg(151.5), h: 30, x: 0, yaw: 0, pitch: -2, fov: 50, ...FAR, ...MOON2, ph: { fov: 64, pitch: -3, x: 0, yaw: 0 } },
   ];
 }
 
