@@ -68,15 +68,15 @@ several elements spans all of them. `frame.at(name)` = a place's pin progress 0.
 | place | owner | pin (viewports) | camera (first pass) |
 |---|---|---|---|
 | `hero` | mark | 1.5 | low over the sea at sunset (h 1.6), facing the sun on the horizon, stars above |
-| `together` | mark | 2.6 | slow rise on the sunset: the "stronger together" moment, the mark has the sky |
+| `together` | mark | 2.6 | staying low on the sunset: the mark hangs whole under the nav, two snaking rivers join below it |
 | `story` | story | auto | turning away from the sun to the night sea; intro + Jacob's paragraphs 1-2 |
-| `paypal` | paypal | 4.2 | high orbit over the night side (h ~2600-2900), looking down: cosmic scale (inside Jacob's chapter) |
-| `story-2` | story | auto | the limb and the stars from orbit; Jacob's paragraphs 3-6 (break-out once, in place) |
+| `paypal` | paypal | 5.2 | high orbit over the night side (h ~2700-3500), drifting and pushing in: a white-hot vent throws six sparks, each lands as a spring whose river joins look's (inside Jacob's chapter) |
+| `story-2` | story | auto | the limb low under the type on phones, the planet banked to the right on desktop; Jacob's paragraphs 3-6 (break-out once, in place) |
 | `story-3` | story | auto | Charlie: coming down over the night side |
-| `ventures` | ventures | 3.2 | skimming the night sea (h ~3.2): monoliths rise; cursor/finger waves here |
-| `thesis` | story | 3.2 | climbing; the planet heats 293 K -> 1811 K |
-| `shore` | story | auto | the footer: sunrise over the limb from orbit, the day side |
-| `dawn` | story | auto | the footer's giant wordmark: coming down to the evening terminator |
+| `ventures` | ventures | 3.2 | low over the night sea on a long lens (h 24 -> 14, the castings 600-750 units off and ~140 tall): they break the surface and drain; one slow push and arc; cursor/finger waves here |
+| `thesis` | thesis | 3.2 | in orbit from the pin's first frame; one glowing river on a cold world, then the sea heats from its banks, 293 K -> 1811 K; it cools again as the pin lets go |
+| `shore` | shore | auto | the footer: the limb ignites and the sun clears it (the sky's own disc, `look.sunDisc`) |
+| `dawn` | shore | auto | the footer's giant wordmark: flying with the sun, then the turn and the descent past a cape of black sand; on the last screen the sky's disc goes out under the arrival's glare and the mark resolves out of it (`mark.ts presence()`) |
 | `loop` | world | 1 (exactly the viewport) | the hero's first key, one lap on: the seam |
 
 A module may own the camera through its place: `keys: (R) => Key[]` on the module replaces the lead's keys for every
