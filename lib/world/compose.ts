@@ -183,13 +183,41 @@ ${dispatch('shade')}
   return vec3(1.0, 0.0, 1.0);
 }
 out vec4 fragColor;
-void main(){
-  Ray r = world_ray(gl_FragCoord.xy);
-  Hit h = world_trace(r);
+vec3 world_px(Ray r, out Hit h){
+  h = world_trace(r);
   vec3 col = world_shadeHit(r, h);
 ${each('over', (id) => `${id}_over(r, h, col);`)}
-  col = look_atmo(col, r, h);
-  col = max(col, vec3(0.0)) * exp2(uExposure);
+  return look_atmo(col, r, h);
+}
+void main(){
+  Ray r = world_ray(gl_FragCoord.xy);
+  // The planet's limb from altitude: whether a ray hits the sea or the sky is a step, and the air's bright line sits on
+  // it, so one sample per render pixel leaves stairs that the upscale to a phone's 3x screen magnifies. Within two
+  // render pixels of the limb the pixel is shaded 4 times, spread across it at right angles to the limb (a box filter);
+  // everywhere else once, exactly as before. The sample count is not a constant, so the loop is never unrolled and the
+  // shading code is compiled once.
+  int n = 1;
+  vec3 across = vec3(0.0);
+  float D = length(r.ro);
+  if (D > uR + 20.0) {
+    vec3 toC = -r.ro / D;
+    float cd = dot(r.rd, toC);
+    float e = (asin(uR / D) - acos(clamp(cd, -1.0, 1.0))) / r.pa; // render px inside the limb
+    if (abs(e) < 2.0) {
+      n = 4;
+      across = normalize(toC - r.rd * cd) * r.pa;
+    }
+  }
+  Hit h;
+  vec3 col = vec3(0.0);
+  for (int k = 0; k < n; k++) {
+    Ray rk = r;
+    rk.rd = normalize(r.rd + across * ((float(k) + 0.5) / float(n) - 0.5));
+    Hit hk;
+    col += world_px(rk, hk);
+    if (k == 0 || hk.t < h.t) h = hk;
+  }
+  col = max(col / float(n), vec3(0.0)) * exp2(uExposure);
 #ifdef WORLD_LDR
   col = col / (1.0 + col); // no float targets: the post pass undoes this in world_scene()
 #endif
