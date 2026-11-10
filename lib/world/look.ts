@@ -53,6 +53,16 @@ export const AIR = {
 /** look's radiance unit: the sun's illuminance above the air, in the scene's linear units (the post is neutral, so every
  *  module's radiance means the same thing; the sky, the far planet and look_sunLight are all in this unit). */
 export const UNIT = 3;
+/** The lens (post.glsl). `?lens=0` turns it off, `?lens=h,s,t` sets halation, streak and the streak's threshold. */
+const LENS = (() => {
+  const d = { halation: 0.06, streak: 0.6, streakThresh: 1.6 };
+  if (typeof location === 'undefined') return d;
+  const q = new URLSearchParams(location.search).get('lens');
+  if (q == null) return d;
+  const v = q.split(',').map(Number);
+  if (v.length === 1 && v[0] === 0) return { halation: 0, streak: 0, streakThresh: d.streakThresh };
+  return { halation: v[0] ?? d.halation, streak: v[1] ?? d.streak, streakThresh: v[2] ?? d.streakThresh };
+})();
 
 /** The moon's light colour: Quench (#8DB6F2) in linear, unit luminance. */
 const MOON = [0.266 / 0.44, 0.468 / 0.44, 0.887 / 0.44];
@@ -274,6 +284,10 @@ function makeLook(): WorldModule {
       u.set('look_uGrain', f.quality.software ? 0.012 : 0.02);
       u.set('look_uVignette', 1);
       u.set('look_uBloomThresh', 0);
+      // the lens: halation and the streak through the brightest things (?lens=0: off)
+      u.set('look_uHalation', LENS.halation);
+      u.set('look_uStreak', LENS.streak);
+      u.set('look_uStreakThresh', LENS.streakThresh / Math.max(ch['look.gain'] ?? 1, 0.05));
       // the sky-view LUT at the camera, while it is low enough to use it
       if (progs && w < 1) {
         airUniforms(sharedSet, K);

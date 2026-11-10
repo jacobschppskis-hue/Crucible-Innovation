@@ -282,3 +282,26 @@ void main(){
 }`,
   map: [[1, 'bloom-up']],
 };
+
+/**
+ * The lens's horizontal streak (an anamorphic flare): the brightest things in a quarter-size bloom level, smeared
+ * sideways with a long exponential tail. Float targets only (the LDR path stores a compressed scene).
+ */
+export const LENS_STREAK: Source = {
+  text: `#version 300 es
+precision highp float;
+uniform sampler2D uSrc; uniform vec2 uTexel; uniform float uThresh;
+out vec4 o;
+vec3 tap(vec2 uv){ vec3 c = texture(uSrc, uv).rgb; float br = max(c.r, max(c.g, c.b)); return c * max(br - uThresh, 0.0) / max(br, 1e-4); }
+void main(){
+  vec2 uv = gl_FragCoord.xy * uTexel; // the destination is the source's size
+  vec3 s = tap(uv); float ws = 1.0;
+  for (int i = 1; i <= 16; i++) {
+    float fi = float(i), w = exp(-fi * 0.19);
+    vec2 d = vec2((fi * 3.0 - 0.5) * uTexel.x, 0.0);
+    s += (tap(uv + d) + tap(uv - d)) * w; ws += 2.0 * w;
+  }
+  o = vec4(s / ws, 1.0);
+}`,
+  map: [[1, 'lens-streak']],
+};

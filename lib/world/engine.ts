@@ -5,7 +5,7 @@
 
 import { clock, clockHeld, onFrame, renderer } from '@/lib/liquid/loop';
 import { cameraFrom, hitSea, project, rayAt, sunFrom, surf, surfOf } from './camera';
-import { BLOOM_DOWN, BLOOM_UP, compose, type Composed } from './compose';
+import { BLOOM_DOWN, BLOOM_UP, compose, LENS_STREAK, type Composed } from './compose';
 import { clamp, type Channels, type Frame, type PlaceInfo, type V3 } from './frame';
 import { FULLSCREEN_VS, program, target, Uniforms, type Target } from './gl';
 import { evaluate, keys as defaultKeys, LAP, lastSeg, mergeKeys, R, resolve, type Anchor, type Key } from './journey';
@@ -130,6 +130,15 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
   } catch (e) {
     return fail(`shader: ${(e as Error).message}`);
   }
+  // the lens's streak is optional: without float targets, or if it can't compile, the post pass simply has none
+  let streakP: WebGLProgram | null = null;
+  if (floatOk) {
+    try {
+      streakP = program(gl, FULLSCREEN_VS, LENS_STREAK);
+    } catch (e) {
+      console.warn('[world] lens streak off\n' + (e as Error).message);
+    }
+  }
   const extras: Channels = {};
   for (const m of mods) Object.assign(extras, m.channels ?? {});
   const vao = gl.createVertexArray();
@@ -189,6 +198,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
   let sceneT: Target | null = null;
   let crispT: Target | null = null;
   let bloom: Target[] = [];
+  let streakT: Target | null = null;
   let cw = 0,
     ch = 0;
   function resizeCanvas() {
@@ -222,6 +232,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
       gl!.deleteTexture(bloom[i].tex);
     }
     bloom = next;
+    if (streakP && bloom.length >= 2) streakT = target(gl!, bloom[1].w, bloom[1].h, floatOk, streakT ?? undefined);
   }
 
   // ---- pointer (raw; lava's input.ts keeps its own richer trails) ----
@@ -409,6 +420,7 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     u.apply(sceneP);
     g.drawArrays(g.TRIANGLES, 0, 3);
     // bloom: down chain from the scene, then up, adding into each larger level
+    let streakOn = false;
     if (bloom.length) {
       g.useProgram(downP);
       let src = sceneT!;
@@ -423,6 +435,18 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
         u.apply(downP);
         g.drawArrays(g.TRIANGLES, 0, 3);
         src = dst;
+      }
+      // the lens's streak, from the quarter-size level before the up chain adds the wider levels into it
+      if (streakP && streakT && bloom.length >= 2 && ((u.get('look_uStreak') as number | undefined) ?? 0) > 0) {
+        g.useProgram(streakP);
+        g.bindFramebuffer(g.FRAMEBUFFER, streakT.fb);
+        g.viewport(0, 0, streakT.w, streakT.h);
+        u.bindTex('uSrc', bloom[1].tex, 0);
+        u.set('uTexel', [1 / bloom[1].w, 1 / bloom[1].h]);
+        u.set('uThresh', (u.get('look_uStreakThresh') as number | undefined) ?? 2.5);
+        u.apply(streakP);
+        g.drawArrays(g.TRIANGLES, 0, 3);
+        streakOn = true;
       }
       g.useProgram(upP);
       g.enable(g.BLEND);
@@ -452,6 +476,8 @@ export async function createEngine(canvas: HTMLCanvasElement, root: HTMLElement,
     u.set('uBloomOn', bloom.length ? 1 : 0);
     if (crispOn) u.bindTex('uCrisp', crispT!.tex, 2);
     u.set('uCrispOn', crispOn ? 1 : 0);
+    if (streakOn) u.bindTex('uStreak', streakT!.tex, 3);
+    u.set('uStreakOn', streakOn ? 1 : 0);
     u.apply(postP);
     g.drawArrays(g.TRIANGLES, 0, 3);
   }
