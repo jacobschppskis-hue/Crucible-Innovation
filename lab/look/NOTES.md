@@ -85,3 +85,27 @@ sky never band.
 - Not done: a sunrise-over-the-limb tune (the shore camera doesn't frame the limb on phones yet), a measured iPhone
   cost of the far field (~60-100 noise evaluations per planet pixel at orbit, fewer with footprint early-outs).
 - Frames: `shots/engine-v2-hero.webp`, `shots/engine-v3-phone.webp`.
+
+## Nov 10 overnight: the orbit planet gets depth; the Thesis is filmed from orbit (role: planet)
+Verdict on the V2 frames: "soft orange neon squiggles on a flat maroon ball" (the disk WAS flat: the never-black floor
+was brighter than Planck at the sea's 1060 K, so every sea pixel outside a river was the same colour).
+- `planet.glsl` `look_seaTemp`: from ~60 units of altitude up (`look_orbitW`; below 24 it is the V2 field exactly, so
+  the hero, the swoops, ventures and the beach are untouched) the sea is ~1140 K with basins (+-tens of K, very low
+  frequency) and warm river valleys; a river is banks (110 K) + a core (170 K) + a white-yellow thread (110 K) on the
+  analytic distance to its centre line, its width breathing along the course, pooling at the field's saddles; three
+  footprint-gated families of thinner tributaries near the rivers; a brightness variation carried ALONG the river
+  (noise advected along the level sets of the river field, two blended phases, period 22 s: no pop, still when the
+  clock is). `look_hot` keeps a sub-pixel line's radiance (Planck: -80 K per e-fold of widening), so far threads stay.
+- The network no longer drifts (it slid ~3 km/s under everything, the hero included).
+- `look_planetFarT`: the sea is seen through its skin (up to -75 K at the limb: limb darkening), and mirrors its own
+  sky by Fresnel (4 samples of the limb's own air march, gated on `uQ` and on the mirror's strength). The sand's fbm no
+  longer runs when there is no land (it ran for every sea pixel).
+- Quiet (`quiet` channel): the rivers keep 40% of their excess, the sea drops 14 K.
+- The Thesis (`thesis.ts`, `look_thesisT`): no sea hook any more. `thesisHeat(f)` gives k (293 -> 1811 K), w (how far
+  the world is the thesis's) and dim; `look.ts` sets `look_uCold` / `look_uMelt` and scales the air's ground glow
+  (x0.22 cold, x23 at 1811 K). Cold: sea -55 K, rivers at 60%. Then the rivers blaze and widen, the heated zone grows
+  from the banks outward (the river field's own |f| is the distance), then the whole sea climbs (+125 K), the valleys
+  hottest and the hearts of the basins coolest. Camera: in orbit from the pin's first frame (h 800 -> 1800), turned 26
+  deg left (the shore's own yaw), the limb ~61% down a phone.
+- Lab tip: `node world/build-preview.mjs` rebuilds the world bundle in 0.1 s; shoot `world/dist/crucible.html`
+  instead of rebuilding `out/` for every shader edit.

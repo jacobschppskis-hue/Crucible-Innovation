@@ -1,12 +1,14 @@
 import './Thesis.css';
 
 /**
- * The Thesis: as you scroll, the planet's sea under the type heats from room temperature (293 K) to iron's melting
- * point (1811 K). Static markup only: the world module `thesis` (lib/world/thesis.ts) draws the metal and writes the
- * readout and the line crossfade every frame (--k, --xa, --xb). Cold, the sea is a dark mirror of the stars; hot, it
- * glows from within and flows. The readout reads Quench while cold and Ember once hot. Nothing behind any of it: the
- * camera keeps the metal low in frame and the type in the sky. Without the world (no JS, no WebGL, reduced motion):
- * the hot end, as the old site did.
+ * The Thesis: as you scroll, the planet under the type heats from room temperature (293 K) to iron's melting point
+ * (1811 K), filmed from orbit. Static markup only: the world module `thesis` (lib/world/thesis.ts) writes the readout
+ * and the line crossfade every frame (--k, --xa, --xb); look's planet (lib/world/glsl/planet.glsl) draws the metal.
+ * Cold, the world is dark, its rivers faint veins under the limb's glow and the stars; heating, the rivers blaze first,
+ * heat spreads from their banks across the basins, and the whole sea turns yellow-white. The readout reads Quench
+ * while cold and Ember once hot. Nothing behind any of it: the camera keeps the limb ~60% down the frame, the planet
+ * large under the type and the type in the black sky. Without the world (no JS, no WebGL, reduced motion): the hot
+ * end, as the old site did.
  */
 export function Thesis() {
   return (
