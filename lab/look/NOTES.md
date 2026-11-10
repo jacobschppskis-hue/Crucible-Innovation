@@ -103,9 +103,10 @@ was brighter than Planck at the sea's 1060 K, so every sea pixel outside a river
 - Quiet (`quiet` channel): the rivers keep 40% of their excess, the sea drops 14 K.
 - The Thesis (`thesis.ts`, `look_thesisT`): no sea hook any more. `thesisHeat(f)` gives k (293 -> 1811 K), w (how far
   the world is the thesis's) and dim; `look.ts` sets `look_uCold` / `look_uMelt` and scales the air's ground glow
-  (x0.22 cold, x23 at 1811 K). Cold: sea -55 K, rivers at 60%. Then the rivers blaze and widen, the heated zone grows
+  (x0.22 cold, x23 at 1811 K; the sodium airglow layer is thinned while the camera climbs through it out of ventures: seen
+  from inside it was the "muddy brown haze"). Cold: sea -28 K, basins x2.2, rivers at 60%. Then the rivers blaze and widen, the heated zone grows
   from the banks outward (the river field's own |f| is the distance), then the whole sea climbs (+125 K), the valleys
-  hottest and the hearts of the basins coolest. Camera: in orbit from the pin's first frame (h 800 -> 1800), turned 26
-  deg left (the shore's own yaw), the limb ~61% down a phone.
+  hottest and the hearts of the basins coolest. Camera: in orbit from the pin's first frame (h 800 -> 1800), turned 32
+  deg left (toward a river system, and toward the shore's own yaw), the limb ~61% down a phone.
 - Lab tip: `node world/build-preview.mjs` rebuilds the world bundle in 0.1 s; shoot `world/dist/crucible.html`
   instead of rebuilding `out/` for every shader edit.
