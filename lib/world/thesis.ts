@@ -1,23 +1,29 @@
-// The Thesis heat (owner: story). V2 (Jacob, Nov 8 evening: "after it gets black, when the temperature is rising from
-// 293 to 1,811, there's the base part, and then only at the front part of the planet, there's a bunch of stuff moving
-// around, it just doesn't look good"; "Always make it so that you can see the planet").
+// The Thesis heat (owner: planet). Jacob, Nov 8 evening: "after it gets black, when the temperature is rising from 293
+// to 1,811, there's the base part, and then only at the front part of the planet, there's a bunch of stuff moving
+// around, it just doesn't look good"; "Always make it so that you can see the planet"; later: "That animation is okay,
+// but see if you can change it out for something else that fits better".
 //
-// Rebuilt as the simplest thing that reads: the whole visible planet heats evenly. As the visitor scrolls the Thesis
-// (components/world/Thesis.tsx, place `thesis`), the readout climbs from room temperature (293 K) to iron's melting point
-// (1811 K) and the planet's own molten sea climbs with it, everywhere at once, through the lava's own material (one
-// temperature offset, SeaMod.heat, in lava's 850 K-per-unit scale, so the near sea and the far disk are one material):
-// - at 293 K nothing new happens: the planet is exactly the reference look (a dark red disk, its rivers, the limb);
-//   never darker, never black;
-// - heating, the dark sea between the rivers comes up toward the rivers' own glow, until the disk is one molten surface
-//   that runs orange toward yellow (the metals become one material: the alloy), on a true Planck curve;
-// - no pattern of our own, no screen-space pooling, nothing local "at the front": one number for the whole planet;
-// - the camera (keys below) climbs from the sea into an orbit view like the reference frame, the limb low in the frame
-//   and the type above it in the black sky, so the type never sits on the hot disk.
-// It eases in over the last stretch of ventures and back out by shore 0.45 (as the sunrise arc begins), so the loop is untouched.
+// V3: the heating is an event you can read in the picture at every scroll position, across the whole visible planet,
+// filmed from orbit. As the visitor scrolls the Thesis (components/world/Thesis.tsx, place `thesis`) the readout climbs
+// from room temperature (293 K) to iron's melting point (1811 K) and the planet goes with it, through its own
+// temperature field (look_thesisT in lib/world/glsl/planet.glsl; one material with the near sea):
+// - cold: the world has cooled on the climb out of ventures: a dark, barely glowing sea, the rivers faint veins; the
+//   limb's airglow, its sheen on the sea and the stars carry the frame (never black);
+// - the rivers come up first, brightening to yellow-white and widening;
+// - heat spreads from their banks across the basins, everywhere at once (the front is a distance from the nearest
+//   river, the same rule over the whole planet: nothing local, nothing "at the front");
+// - the whole sea passes dull red, Ember and orange to yellow-white as its skin thins, the river network still its
+//   hottest lines, its flow carried along them; the limb blazes and the air over it warms (look.ts scales the air's
+//   own glow by the same heat).
+// - the camera (keys below) is in orbit from the first frame of the pin: the limb ~60% down, the planet large under the
+//   type, the type in the black sky above it, so the type never sits on the hot disk.
+// The world cools over the climb out of ventures and is the normal planet again 60% of the way from the pin's end to
+// the shore (before the footer's lines are over it), so the loop is untouched.
 // The DOM (readout, the two lines' crossfade) is written here too, so the single-file preview behaves like the site.
 
 import type { WorldModule } from './modules';
 import type { Key } from './journey';
+import type { Frame } from './frame';
 
 const ROOM = 293;
 const IRON = 1811;
@@ -27,35 +33,57 @@ export const kelvin = (k: number) => ROOM + k * (IRON - ROOM);
 const clamp = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 const seg = (p: number, a: number, b: number) => clamp((p - a) / (b - a));
 const smooth = (t: number) => t * t * (3 - 2 * t);
-const smoother = (t: number) => t * t * t * (t * (t * 6 - 15) + 10);
 
 /** The live state (tests, other modules): heat k 0..1, how much the thesis owns the sea (w). */
 export const thesisState = { k: 0, w: 0, kelvin: ROOM };
 
-/** How far the planet's sea heats at 1811 K, in lava's heat units (850 K each). */
-const HEAT = 0.24;
-
-const GLSL = /* glsl */ `
-uniform float thesis_uHeat;  // the whole planet's added heat (lava's units), already weighted
-void thesis_sea(Ray r, Sea s, inout SeaMod m){
-  // the same heat everywhere, seen through the skin: a hot surface at a grazing angle shows less of its glow, so the
-  // disk darkens toward the limb (tonal depth, not a flat disk); the lava's own rivers and swell ride on top
-  float limb = 0.72 + 0.28 * smoothstep(0.03, 0.4, s.graz);
-  m.heat += thesis_uHeat * limb;
+/**
+ * The thesis at this frame: k (0..1: 293 K -> 1811 K) and w (0..1: how far the world is the thesis's: cooled to its
+ * cold state at k 0, molten at k 1) and dim (0..1: how far the air's own glow has gone out, a little ahead of w on the
+ * way in). look.ts reads it for the planet's shader and the air's glow.
+ */
+export function thesisHeat(f: Frame): { k: number; w: number; dim: number } {
+  const p = f.at('thesis');
+  // the heat starts with the first scroll into the pin and eases out at the top
+  const k = smooth(seg(p, 0.02, 0.82));
+  // the world cools over the climb out of ventures (from its pin's end to the thesis's start, one screen of scroll)...
+  let into = 0,
+    dim = 0;
+  const pv = f.places['ventures'],
+    pt = f.places['thesis'];
+  if (pv && pt) {
+    const y0 = pv.top + pv.h - f.h;
+    into = pt.top > y0 + 1 ? smooth(seg(f.y, y0 + 0.15 * (pt.top - y0), pt.top)) : f.y >= pt.top ? 1 : 0;
+    // the air's glow from below goes first (the first 40% of the climb), so the climb is through a clear dark sky
+    dim = pt.top > y0 + 1 ? smooth(seg(f.y, y0, y0 + 0.4 * (pt.top - y0))) : into;
+  }
+  // ... and cools back to the normal planet as the pin lets go: the footer's lines scroll in over the lower frame right
+  // behind the thesis, and bone type on a yellow-white sea does not read. Done 60% of the way to the shore's first
+  // frame (it used to last until shore 0.45, when the hot sea was a dull orange), so the loop is untouched.
+  let away = 1 - smooth(seg(f.at('shore'), 0, 0.45));
+  const ps = f.places['shore'];
+  if (pt && ps) {
+    const y1 = pt.top + pt.h - f.h;
+    if (ps.top > y1 + 1) away = 1 - smooth(seg(f.y, y1, y1 + 0.6 * (ps.top - y1)));
+  }
+  const w = p > 0 ? (p < 1 ? 1 : away) : into;
+  return { k, w, dim: p > 0 ? w : dim };
 }
-`;
 
-/** Camera keys for the Thesis: from the sea up into an orbit view like the reference frame. */
+/** Camera keys for the Thesis: in orbit from its first frame, the planet large under the type. The limb sits ~61% down
+ * a phone and ~64% down a desktop the whole way (pitch = -(dip - offset), dip = acos(R / (R + h))), while the camera
+ * climbs and drifts on, so the heating sea slides slowly under it. It looks left of the track (phones 32 deg, toward
+ * a river system; desktop 48 deg: from this high the limb straight ahead is already past the morning terminator, and
+ * the first sliver of the shore's sunrise showed there as a broken dash; the shore then pans right to reveal it). */
 export function thesisKeys(R: number): Key[] {
   const deg = (a: number) => (a * Math.PI * R) / 180;
   const FAR = { sunU: 0, sunV: -deg(80), sunY: 1e6, sunR: 1.2e4 };
   return [
-    // leaving the sea where ventures ends: the horizon low in the frame, the glowing sea under it (never a black frame)
-    { at: ['thesis', 0], s: deg(151.5), h: 30, yaw: 0, pitch: -2, fov: 50, ...FAR, ph: { fov: 64, pitch: -3 } },
-    // climbing: the horizon drops, the sea below opens out
-    { at: ['thesis', 0.4], s: deg(153.8), h: 360, yaw: 0, pitch: -12, fov: 48, ...FAR, ph: { fov: 62, pitch: -5 } },
-    // in orbit: the limb in the lower part of the frame (~73% down), the disk under it, the type in the sky above
-    { at: ['thesis', 1], s: deg(156.5), h: 850, yaw: 0, pitch: -19, fov: 46, ...FAR, ph: { fov: 60, pitch: -10 } },
+    // the climb out of ventures ends here: already in low orbit (the screen of scroll before the pin is the climb)
+    { at: ['thesis', 0], s: deg(152.2), h: 800, yaw: -48, pitch: -21, fov: 48, ...FAR, ph: { fov: 60, pitch: -18.7, yaw: -32 } },
+    { at: ['thesis', 0.45], s: deg(154.2), h: 1400, yaw: -48, pitch: -28.9, fov: 47, ...FAR, ph: { fov: 60, pitch: -26.4, yaw: -32 } },
+    // (the shore's first key is at h 900, turned toward the sunrise: the camera comes down into it as the sea cools)
+    { at: ['thesis', 1], s: deg(156.5), h: 1800, yaw: -48, pitch: -32.9, fov: 46, ...FAR, ph: { fov: 60, pitch: -30.3, yaw: -32 } },
   ];
 }
 
@@ -65,26 +93,17 @@ let wrote = '';
 
 export const thesis: WorldModule & { keys: (R: number) => Key[] } = {
   id: 'thesis',
-  glsl: GLSL,
-  hooks: ['sea'],
   keys: thesisKeys,
   init({ root }) {
     const el = root.querySelector<HTMLElement>('[data-place="thesis"]');
     if (el) els = { root: el, num: el.querySelector('[data-thesis-num]'), cap: el.querySelector('[data-thesis-cap]') };
   },
-  update(f, u) {
+  update(f) {
     const p = f.at('thesis');
-    // the heat starts with the first scroll into the pin and eases out at the top (smoother at both ends)
-    const k = smoother(seg(p, 0.02, 0.82));
-    // the thesis owns the sea's heat from the last stretch of ventures until the sunrise arc begins in the shore
-    const into = smooth(seg(f.at('ventures'), 0.85, 1));
-    const away = 1 - smooth(seg(f.at('shore'), 0, 0.45));
-    const w = p > 0 ? (p < 1 ? 1 : away) : into;
+    const { k, w } = thesisHeat(f);
     thesisState.k = k;
     thesisState.w = w;
     thesisState.kelvin = kelvin(k);
-    // a warm floor from the moment the thesis owns the sea (the night sea after ventures is close to black otherwise)
-    u.set('thesis_uHeat', HEAT * (0.22 + 0.78 * k) * w);
     if (!els) return;
     // the DOM: temperature, and the two lines' crossfade (a long, eased hand-over around the middle of the climb)
     const xa = smooth(seg(p, 0.26, 0.44));

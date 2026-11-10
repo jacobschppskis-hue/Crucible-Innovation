@@ -9,11 +9,13 @@
 //
 // Journey channels (keys may set them): look.sunDisc (0..1, the sky's own sun disc; the mark's core may replace it),
 // look.gain (linear, extra exposure in the post, 1 = neutral), look.stars, look.lava (the sea's
-// emitted radiance scale), look.heat (0..1, the planet heats: the thesis), look.land (0..1 how much land).
+// emitted radiance scale), look.heat (0..1, extra heat), look.land (0..1 how much land). The thesis (thesis.ts) is not a
+// channel: look reads thesisHeat(f) and sets look_uCold / look_uMelt for the planet and scales the air's glow.
 
 import type { WorldModule } from './modules';
 import type { Frame } from './frame';
 import type { Uniforms } from './gl';
+import { thesisHeat } from './thesis';
 import atmoGlsl from './glsl/atmosphere.glsl';
 import lutGlsl from './glsl/atmosphere-luts.glsl';
 import sunGlsl from './glsl/sun.glsl';
@@ -115,12 +117,15 @@ function skyLight(f: Frame): number[] {
 }
 const DUSK_EL = 1.5 * (Math.PI / 180);
 
+/** How much brighter the air glows from below when the thesis has the sea at 1811 K (x AIR.glow). */
+const GLOW_HOT = 22;
+
 const SKY_W = 192,
   SKY_H = 108;
 
 type Lut = { name: string; w: number; h: number; tex: WebGLTexture; fb: WebGLFramebuffer };
 
-function airUniforms(set: (n: string, v: number | number[]) => void, K: number) {
+function airUniforms(set: (n: string, v: number | number[]) => void, K: number, glow: number[] = AIR.glow, ag = 1) {
   set('look_uK', K);
   set('look_uRg', AIR.Rg);
   set('look_uRt', AIR.Rt);
@@ -134,8 +139,8 @@ function airUniforms(set: (n: string, v: number | number[]) => void, K: number) 
   set('look_uOzC', AIR.ozC);
   set('look_uOzW', AIR.ozW);
   set('look_uGroundAlb', AIR.groundAlb);
-  set('look_uGroundGlow', AIR.glow.map((x) => x * UNIT));
-  set('look_uAirglow', AIR.airglow.map((x) => x * UNIT));
+  set('look_uGroundGlow', glow.map((x) => x * UNIT));
+  set('look_uAirglow', AIR.airglow.map((x) => x * UNIT * ag));
   set('look_uAirglowH', AIR.airglowH);
   set('look_uAirglow2', AIR.airglow2.map((x) => x * UNIT));
   set('look_uAirglowH2', AIR.airglowH2);
@@ -236,7 +241,19 @@ function makeLook(): WorldModule {
       const hAir = f.cam.h / K;
       const w = sstep(12, 30, hAir);
       const ch = f.ch;
-      airUniforms((n, v) => u.set(n, v), K);
+      // the thesis (thesis.ts): the planet's shader cools and melts the sea (look_uCold, look_uMelt), and the air the sea
+      // lights from below goes with it: nearly dark over the cold world (no brown haze on the climb), a furnace glow on
+      // the limb as the sea turns yellow-white (the sea's own colour: a whiter glow veiled the disk like dust)
+      const th = thesisHeat(f);
+      const hot = th.w * sstep(0.35, 1, th.k) ** 1.5;
+      const gk = 1 - 0.78 * th.dim * (1 - sstep(0.1, 0.6, th.k)) + GLOW_HOT * hot;
+      const glow = AIR.glow.map((x) => x * gk);
+      u.set('look_uCold', th.w);
+      u.set('look_uMelt', th.k);
+      // climbing out of ventures the camera passes THROUGH the sodium airglow layer (9 air km up: seen from inside it is
+      // a wide brown band over the horizon); it is thinned while the camera is low on that climb, and whole again in orbit
+      const ag = 1 - 0.8 * th.dim * (1 - sstep(40, 240, f.cam.h));
+      airUniforms((n, v) => u.set(n, v), K, glow, ag);
       const sun = skyLight(f);
       u.set('look_uSun', sun);
       u.set('look_uSunR', f.sun.rad);
@@ -294,7 +311,7 @@ function makeLook(): WorldModule {
       u.set('look_uStreakThresh', LENS.streakThresh / Math.max(ch['look.gain'] ?? 1, 0.05));
       // the sky-view LUT at the camera, while it is low enough to use it
       if (progs && w < 1) {
-        airUniforms(sharedSet, K);
+        airUniforms(sharedSet, K, glow, ag);
         shared.look_uSun = sun;
         shared.look_uSunR = f.sun.rad;
         shared.look_uCam = cam;

@@ -1,6 +1,6 @@
 /* The Thesis in the world (components/world/Thesis.tsx). --k is temperature (0 = 293 K, 1 = 1811 K); --xa moves the
-   first line out, then --xb brings the second in. The metal is the world's sea (lib/world/thesis.ts), kept low in
-   frame by the camera; the type sits in the sky above it with nothing behind it. Without JS / reduced motion: hot end,
+   first line out, then --xb brings the second in. The metal is the planet from orbit (lib/world/thesis.ts keys the
+   camera: the limb ~60% down); the type sits in the sky above it with nothing behind it. Without JS / reduced motion: hot end,
    second line. */
 .wthesis {
   --k: 1;
@@ -28,7 +28,7 @@ html[data-world]:not([data-world-fail]) .wthesis-pin {
   display: grid;
   align-content: start;
   gap: 2.25rem;
-  /* the type stays in the top of the frame: the camera puts the horizon below it (phones ~66%, desktop ~62%) */
+  /* the type stays in the top of the frame: the camera puts the limb below it (phones ~61%, desktop ~64% down) */
   padding-top: calc(var(--nav-h) + clamp(2.5rem, 9svh, 6rem));
 }
 @media (min-width: 1024px) {
