@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { test as worldTest } from './gl';
 
 const pages = [
   { path: '/', h1: /Intelligence, alloyed/ },
@@ -34,8 +35,10 @@ for (const { path, h1 } of pages) {
   });
 }
 
-test('no horizontal scroll anywhere down the page, once every effect canvas has been created', async ({ page }) => {
-  test.setTimeout(120_000); // the home page's world draws through software GL here
+// It scrolls three pages whose canvases draw through software GL here, so it queues frames for a long time: a browser of
+// its own (tests/gl.ts), or the next test in this worker times out just opening its context.
+worldTest('no horizontal scroll anywhere down the page, once every effect canvas has been created', async ({ page }) => {
+  worldTest.setTimeout(180_000);
   for (const { path } of pages) {
     await page.goto(path, { waitUntil: 'networkidle' });
     const H = await page.evaluate(() => document.documentElement.scrollHeight);

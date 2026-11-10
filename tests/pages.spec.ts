@@ -29,7 +29,8 @@ test('every other page ends on a dark footer, and no page has a bone one', async
   }
 });
 
-test('/work leads with the live client site: a real link, and its film plays with the scroll', async ({ page, request }) => {
+// It scrolls /work, which starts the page liquid: software GL queues frames here, so a browser of its own (tests/gl.ts).
+worldTest('/work leads with the live client site: a real link, and its film plays with the scroll', async ({ page, request }) => {
   await page.goto('/work', { waitUntil: 'networkidle' });
   await expect(page.locator('h1')).toHaveText(/Out of the\s*crucible/);
   const plate = page.locator('article.wk-plate').first();
