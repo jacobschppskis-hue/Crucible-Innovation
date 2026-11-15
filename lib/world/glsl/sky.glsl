@@ -79,23 +79,27 @@ vec3 look_starLayer(vec3 d, float pa, float n, float p, float fmin, float fmax, 
   return mix(vec3(1.0), look_bbColor(T), 0.55) * F * exp(-0.5 * ang * ang / (sig * sig)) / (6.2831853 * sig * sig);
 }
 
+// the Milky Way's diffuse glow: smooth (filtered by the pixel's footprint), so the render scale is right for it and it
+// stays in the scene pass on primary rays when the post pass draws the points (stars.glsl)
+vec3 look_starBand(vec3 d, float pa) {
+  float band = look_band(d);
+  if (band <= 0.002) return vec3(0.0);
+  vec3 q = d * 6.0;
+  float fp = pa * 24.0;
+  float clump = 0.55 + 0.45 * look_fbm(q, 5, fp, 0.5);
+  float lane = smoothstep(0.05, 0.45, look_fbm(q * 1.7 + 3.1, 5, fp * 1.7, 0.5) + 0.25);
+  float zc = dot(d, LOOK_GAL_N);
+  float lane2 = 1.0 - 0.7 * exp(-zc * zc / 0.0016) * smoothstep(-0.1, 0.3, look_fbm(q * 2.3 + 7.0, 4, fp * 2.3, 0.5));
+  float bulge = 1.0 + 2.2 * pow(max(0.0, dot(d, LOOK_GAL_C)), 6.0);
+  vec3 tint = mix(vec3(0.86, 0.9, 1.0), vec3(1.0, 0.9, 0.76), smoothstep(0.2, 0.9, dot(d, LOOK_GAL_C)));
+  return tint * 2.2e-5 * band * clump * lane * lane2 * bulge * look_uStarGain;
+}
+
 vec3 look_stars(vec3 d, float pa) {
   vec3 c = look_starLayer(d, pa, 128.0, 0.16, 1.2e-8, 6.0e-7, 1.0, 1.8);
   c += look_starLayer(d, pa, 52.0, 0.22, 4.0e-8, 9.0e-7, 2.0, 0.8);
   c += look_starLayer(d, pa, 18.0, 0.3, 1.5e-7, 3.0e-6, 3.0, 0.3);
-  float band = look_band(d);
-  if (band > 0.002) {
-    vec3 q = d * 6.0;
-    float fp = pa * 24.0;
-    float clump = 0.55 + 0.45 * look_fbm(q, 5, fp, 0.5);
-    float lane = smoothstep(0.05, 0.45, look_fbm(q * 1.7 + 3.1, 5, fp * 1.7, 0.5) + 0.25);
-    float zc = dot(d, LOOK_GAL_N);
-    float lane2 = 1.0 - 0.7 * exp(-zc * zc / 0.0016) * smoothstep(-0.1, 0.3, look_fbm(q * 2.3 + 7.0, 4, fp * 2.3, 0.5));
-    float bulge = 1.0 + 2.2 * pow(max(0.0, dot(d, LOOK_GAL_C)), 6.0);
-    vec3 tint = mix(vec3(0.86, 0.9, 1.0), vec3(1.0, 0.9, 0.76), smoothstep(0.2, 0.9, dot(d, LOOK_GAL_C)));
-    c += tint * 2.2e-5 * band * clump * lane * lane2 * bulge;
-  }
-  return c * look_uStarGain;
+  return c * look_uStarGain + look_starBand(d, pa);
 }
 
 // ---- transmittance from a point along a ray to space (1 outside the air) --------------------------------------------
@@ -147,10 +151,11 @@ vec3 look_sky(Ray r) {
   float prim = 1.0;
 #else
   float prim = look_uStarPrim;
-  if (r.depth == 0) world_skyT = dot(T, vec3(0.2126, 0.7152, 0.0722));
+  if (r.depth == 0) world_skyT = T.g; // the post pass rebuilds the other channels from it (stars.glsl)
 #endif
   float sk = r.depth == 0 ? prim : 0.6;
-  return L + T * (look_sunDisc(rd, r.pa) * look_uSunDisc + (sk > 0.0 ? look_stars(rd, r.pa) * sk : vec3(0.0)));
+  vec3 st = sk > 0.0 ? look_stars(rd, r.pa) * sk : look_starBand(rd, r.pa);
+  return L + T * (look_sunDisc(rd, r.pa) * look_uSunDisc + st);
 }
 
 vec3 look_atmo(vec3 col, Ray r, Hit h) {

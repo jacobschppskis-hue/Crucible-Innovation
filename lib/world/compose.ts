@@ -213,12 +213,14 @@ void main(){
   }
   Hit h;
   vec3 col = vec3(0.0);
+  float skyT = 1.0;
   for (int k = 0; k < n; k++) {
     Ray rk = r;
     rk.rd = normalize(r.rd + across * ((float(k) + 0.5) / float(n) - 0.5));
     Hit hk;
+    world_skyT = 1.0;
     col += world_px(rk, hk);
-    if (k == 0 || hk.t < h.t) h = hk;
+    if (k == 0 || hk.t < h.t) { h = hk; skyT = world_skyT; }
   }
   col = max(col / float(n), vec3(0.0)) * exp2(uExposure);
 #ifdef WORLD_LDR
@@ -229,7 +231,7 @@ void main(){
 #ifdef WORLD_LDR
   fragColor = vec4(col, 1.0);
 #else
-  fragColor = vec4(col, h.id == ID_SKY ? 60000.0 + 4000.0 * clamp(world_skyT, 0.0, 1.0) : min(h.t, 60000.0));
+  fragColor = vec4(col, h.id == ID_SKY ? 60000.0 + 4000.0 * clamp(skyT, 0.0, 1.0) : min(h.t, 60000.0));
 #endif
 }
 `,
