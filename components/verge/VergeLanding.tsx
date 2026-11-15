@@ -2,7 +2,7 @@
 //
 // Converted from Verge's landing page in preview mode (the Verge repo's components/landing/Landing.tsx, rendered at
 // /dev/reserve) so the page looks exactly like Verge. Its classes are Verge's, styled only by ./verge.css, which is
-// scoped to .verge-page (see README.md). Copy edits for this site: no prices, no device or service names, one waitlist
+// scoped to .verge-page, the class on /verge's <html> (see README.md). Copy edits for this site: no prices, no device or service names, one waitlist
 // form (./WaitlistForm.tsx) with a link back to it at the end, and the site's own screens and footer.
 import { VergeFooter } from './VergeFooter';
 import { VergeScreens } from './VergeScreens';

@@ -1,7 +1,7 @@
 /* Verge's styles for /verge, generated from the Verge repo's Tailwind 3 setup (tailwind.config.ts and app/globals.css)
-   for the classes in components/verge, and scoped to .verge-page so nothing here reaches the rest of the site.
+   for the classes in components/verge and app/(verge), and scoped to .verge-page (the class on /verge's <html>).
    Do not edit by hand: see components/verge/README.md. Hand-written additions go in ./verge-extra.css. */
-.verge-page *, .verge-page ::before, .verge-page ::after {
+.verge-page, .verge-page *, .verge-page::before, .verge-page ::before, .verge-page::after, .verge-page ::after {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -55,7 +55,7 @@
   --tw-contain-style:  ;
 }
 
-.verge-page ::backdrop {
+.verge-page::backdrop, .verge-page ::backdrop {
   --tw-border-spacing-x: 0;
   --tw-border-spacing-y: 0;
   --tw-translate-x: 0;
@@ -109,8 +109,11 @@
   --tw-contain-style:  ;
 }
 
+.verge-page,
 .verge-page *,
+.verge-page::before,
 .verge-page ::before,
+.verge-page::after,
 .verge-page ::after {
   box-sizing: border-box;
   border-width: 0;
@@ -118,7 +121,9 @@
   border-color: #e5e7eb;
 }
 
+.verge-page::before,
 .verge-page ::before,
+.verge-page::after,
 .verge-page ::after {
   --tw-content: '';
 }
@@ -135,7 +140,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-.verge-page {
+.verge-page body {
   margin: 0;
   line-height: inherit;
 }
@@ -250,7 +255,9 @@
   vertical-align: baseline;
 }
 
+.verge-page::-webkit-inner-spin-button,
 .verge-page ::-webkit-inner-spin-button,
+.verge-page::-webkit-outer-spin-button,
 .verge-page ::-webkit-outer-spin-button {
   height: auto;
 }
@@ -260,11 +267,11 @@
   outline-offset: -2px;
 }
 
-.verge-page ::-webkit-search-decoration {
+.verge-page::-webkit-search-decoration, .verge-page ::-webkit-search-decoration {
   -webkit-appearance: none;
 }
 
-.verge-page ::-webkit-file-upload-button {
+.verge-page::-webkit-file-upload-button, .verge-page ::-webkit-file-upload-button {
   -webkit-appearance: button;
   font: inherit;
 }
@@ -356,8 +363,11 @@
   display: none;
 }
 
-.verge-page *,
+.verge-page,
+  .verge-page *,
+  .verge-page::before,
   .verge-page ::before,
+  .verge-page::after,
   .verge-page ::after {
   border-color: var(--hairline);
 }
@@ -1140,11 +1150,11 @@
   color: var(--ink);
 }
 
-.verge-page * {
+.verge-page, .verge-page * {
   box-sizing: border-box;
 }
 
-.verge-page {
+.verge-page body {
   background-color: var(--ground);
   color: var(--ink);
   font-family: var(--font-body);
@@ -1152,16 +1162,16 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-.verge-page ::-webkit-scrollbar {
+.verge-page::-webkit-scrollbar, .verge-page ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.verge-page ::-webkit-scrollbar-track {
+.verge-page::-webkit-scrollbar-track, .verge-page ::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.verge-page ::-webkit-scrollbar-thumb {
+.verge-page::-webkit-scrollbar-thumb, .verge-page ::-webkit-scrollbar-thumb {
   background: var(--hairline);
 }
 
@@ -1235,15 +1245,20 @@
   outline-offset: 3px;
 }
 
+.verge-page::view-transition-old(root),
 .verge-page ::view-transition-old(root),
+.verge-page::view-transition-new(root),
 .verge-page ::view-transition-new(root) {
   animation-duration: 150ms;
   animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .verge-page,
   .verge-page *,
+  .verge-page::before,
   .verge-page ::before,
+  .verge-page::after,
   .verge-page ::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
@@ -1251,7 +1266,9 @@
     scroll-behavior: auto !important;
   }
 
+  .verge-page::view-transition-old(root),
   .verge-page ::view-transition-old(root),
+  .verge-page::view-transition-new(root),
   .verge-page ::view-transition-new(root) {
     animation: none !important;
   }

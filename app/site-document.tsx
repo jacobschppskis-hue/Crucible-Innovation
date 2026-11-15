@@ -15,6 +15,9 @@ import './globals.css';
 // (or the page) that uses it, so a route only ships the CSS it renders.
 import '@/components/Sites.css';
 
+// Crucible's document: what every Crucible page shares. app/(site)/layout.tsx and app/global-not-found.tsx both render
+// it. /verge is Verge's own page and has its own document (app/(verge)/layout.tsx), so none of this reaches it.
+
 // One family for the whole site. The width axis does the display work: Expanded (wdth 125) for display type, normal
 // width for text. The concept sites on /sites bring their own faces (lib/conceptFonts.ts).
 // Self-hosted: Archivo's variable font (OFL) cut to the Latin glyphs and punctuation we set, wght 400-800 and wdth
@@ -30,7 +33,7 @@ const archivo = localFont({
   declarations: [{ prop: 'font-stretch', value: '100% 125%' }],
 });
 
-export const metadata: Metadata = {
+export const siteMetadata: Metadata = {
   metadataBase: new URL(site.url),
   title: { default: 'Crucible: a studio that ships ventures', template: '%s' },
   description: 'Crucible is a studio that builds and ships ventures. Exceptional people, serious machines, new things.',
@@ -41,10 +44,9 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image' },
 };
 
-export const viewport: Viewport = { themeColor: '#0D0D0B', colorScheme: 'dark' };
+export const siteViewport: Viewport = { themeColor: '#0D0D0B', colorScheme: 'dark' };
 
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export function SiteDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={archivo.variable}>
       <head>
