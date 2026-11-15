@@ -22,6 +22,7 @@ import sunGlsl from './glsl/sun.glsl';
 import skyGlsl from './glsl/sky.glsl';
 import planetGlsl from './glsl/planet.glsl';
 import postGlsl from './glsl/post.glsl';
+import starsGlsl from './glsl/stars.glsl';
 
 /** The air, in air km (the planet is 2000 air km in radius whatever the world's R; look_uK scales). */
 export const AIR = {
@@ -55,6 +56,13 @@ export const AIR = {
 /** look's radiance unit: the sun's illuminance above the air, in the scene's linear units (the post is neutral, so every
  *  module's radiance means the same thing; the sky, the far planet and look_sunLight are all in this unit). */
 export const UNIT = 3;
+/** Where the point stars are drawn: the post pass at the canvas's resolution (stars.glsl), or `?stars=scene` the scene
+ *  pass at the render scale (the old, soft ones: for comparison). */
+const STARS_IN_SCENE = typeof location !== 'undefined' && new URLSearchParams(location.search).get('stars') === 'scene';
+
+/** The post pass's stars: brightness (1 = the same flux as the scene's), how much blackbody colour shows, spread (px). */
+const STARS = { gain: 1, tint: 0.3, sigma: 0.5 };
+
 /** Halation (post.glsl): the red-orange halo film gives its brightest highlights. `?lens=0` turns it off, `?lens=<n>` sets it. */
 const HALATION = (() => {
   if (typeof location === 'undefined') return 0.06;
@@ -215,7 +223,7 @@ function makeLook(): WorldModule {
     id: 'look',
     provides: ['look_sky', 'look_atmo', 'look_post'],
     glsl: [atmoGlsl, sunGlsl, skyGlsl, planetGlsl].join('\n'),
-    post: postGlsl,
+    post: [starsGlsl, postGlsl].join('\n'),
     channels: { 'look.sunDisc': 0, 'look.dusk': -1, 'look.gain': 1, 'look.stars': 1, 'look.lava': 1, 'look.heat': 0, 'look.land': 0, 'look.quiet': 0, 'look.moon': 0, 'look.moonAz': 150, 'look.moonEl': 14 },
     init({ gl: g, u }) {
       gl = g;
@@ -263,6 +271,12 @@ function makeLook(): WorldModule {
       // reads dim once upscaled) and are a little more present on phones (Jacob: 'slightly more prevalent for iPhone')
       const sc = f.quality.scale || 1;
       u.set('look_uStarGain', (ch['look.stars'] ?? 1) * UNIT * Math.min(2.5, Math.pow(1.25 / Math.min(sc, 1.25), 0.8)) * (f.narrow ? 1.35 : 1));
+      // the primary rays' stars at the canvas's resolution (stars.glsl): sharp points that never blink; no render-scale
+      // compensation (they are not upscaled), a point spread a little wider on dense screens so a dim star is still seen
+      u.set('look_uStarPrim', STARS_IN_SCENE ? 1 : 0);
+      u.set('look_uStarGainPost', STARS_IN_SCENE ? 0 : (ch['look.stars'] ?? 1) * UNIT * STARS.gain * (f.narrow ? 1.35 : 1));
+      u.set('look_uStarTint', STARS.tint);
+      u.set('look_uStarSigma', STARS.sigma * Math.max(1, (f.dpr || 1) / 2));
       // on the last screen before the loop the sun comes near again (the mark's core): the sky's far disc and the near
       // core part ways there, so the disc goes out under the arrival's glare as it swells (mark.ts presence())
       const lp = f.places.loop;

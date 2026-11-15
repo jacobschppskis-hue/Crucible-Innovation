@@ -10,6 +10,7 @@
 uniform float look_uStarGain;
 uniform float look_uHighW;      // 0: the sky-view LUT (camera low), 1: the per-pixel march (camera high)
 uniform int look_uSteps;        // march steps
+uniform float look_uStarPrim;   // 1: the scene draws the primary rays' stars (?stars=scene), 0: the post pass does
 uniform float look_uLimb;       // extra width of the orbital limb line (0..1, art direction)
 
 // ---- noise (also used by planet.glsl) -------------------------------------------------------------------------------
@@ -140,7 +141,16 @@ vec3 look_sky(Ray r) {
     if (w > 0.0) L += look_skyCheap(ro, rd) * w;
   }
   vec3 T = look_Tray(ro, rd);
-  return L + T * (look_sunDisc(rd, r.pa) * look_uSunDisc + look_stars(rd, r.pa) * (r.depth == 0 ? 1.0 : 0.6));
+  // the stars on primary rays are drawn by the post pass at the canvas's resolution (stars.glsl): here only where
+  // there are no float targets to hand over to it, and in reflections (soft there anyway)
+#ifdef WORLD_LDR
+  float prim = 1.0;
+#else
+  float prim = look_uStarPrim;
+  if (r.depth == 0) world_skyT = dot(T, vec3(0.2126, 0.7152, 0.0722));
+#endif
+  float sk = r.depth == 0 ? prim : 0.6;
+  return L + T * (look_sunDisc(rd, r.pa) * look_uSunDisc + (sk > 0.0 ? look_stars(rd, r.pa) * sk : vec3(0.0)));
 }
 
 vec3 look_atmo(vec3 col, Ray r, Hit h) {
