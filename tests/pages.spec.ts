@@ -14,6 +14,46 @@ test('venture pages: the metal monolith still (or the ingot still), and the shar
   }
 });
 
+test('the Verge teaser links to /verge, Verge’s own page with its waitlist', async ({ page, request }) => {
+  await page.goto('/ventures/verge', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('link', { name: 'See the preview' })).toHaveAttribute('href', '/verge');
+  await page.goto('/verge', { waitUntil: 'networkidle' });
+  await expect(page.locator('h1')).toHaveText('What to train today, and why');
+  // Verge's own type, from its own font file.
+  expect(await page.evaluate(() => getComputedStyle(document.querySelector('h1')!).fontFamily)).toMatch(/schibsted/i);
+  const form = page.locator('form[name="verge-waitlist"]');
+  await expect(form).toHaveCount(1);
+  await expect(form.locator('input[name="email"]')).toHaveAttribute('required', '');
+  await expect(form.locator('input[name="_gotcha"]')).toHaveCount(1);
+  await expect(form.locator('input[name="form"]')).toHaveValue('verge-waitlist');
+  expect(await form.locator('select[name="sport"] option').allTextContents()).toEqual(['Choose one', 'Running', 'Cycling', 'Triathlon', 'Cross-country skiing', 'Cyclocross', 'Other']);
+  expect(await form.locator('select[name="wears"] option').allTextContents()).toEqual(['Choose one', 'Garmin', 'Apple Watch', 'Coros', 'Polar', 'Oura', 'Whoop', 'Other', 'None']);
+  await expect(form.getByLabel('I’d like to be considered for the private beta.')).toHaveAttribute('type', 'checkbox');
+  await expect(form.getByText('We’ll only email you about Verge.')).toBeVisible();
+  // No prices on the preview, and every picture it shows is there.
+  expect(await page.locator('main').innerText()).not.toMatch(/\$\d/);
+  const urls = await page.evaluate(() => [...document.images].flatMap((img) => [img.getAttribute('src')!, ...img.srcset.split(',').map((s) => s.trim().split(' ')[0])]));
+  for (const url of new Set(urls.filter((u) => u.startsWith('/')))) expect((await request.get(url)).status(), url).toBe(200);
+});
+
+test('the Verge waitlist, with no Formspree id, writes the request as an email for the visitor', async ({ page }) => {
+  await page.goto('/verge', { waitUntil: 'networkidle' });
+  const form = page.locator('form[name="verge-waitlist"]');
+  test.skip(/formspree\.io/.test((await form.getAttribute('action')) ?? ''), 'Built with FORMSPREE_ID: the form posts to Formspree instead.');
+  await form.locator('input[name="email"]').fill('runner@example.com');
+  await form.locator('select[name="sport"]').selectOption('Cross-country skiing');
+  await form.locator('select[name="wears"]').selectOption('Coros');
+  await form.getByLabel('I’d like to be considered for the private beta.').check();
+  // Phones open the mail app straight away; that navigation is stopped here so the panel can be checked.
+  await page.route('mailto:*', (route) => route.abort());
+  await form.getByRole('button', { name: 'Get early access' }).click();
+  const link = page.getByRole('link', { name: 'Open the email' });
+  await expect(link).toBeVisible();
+  const href = decodeURIComponent((await link.getAttribute('href'))!);
+  expect(href).toMatch(/^mailto:[^?]+@crucibleinnovation\.com\?subject=Verge waitlist/);
+  for (const line of ['Email: runner@example.com', 'Main sport: Cross-country skiing', 'Wears: Coros', 'Private beta: Yes']) expect(href).toContain(line);
+});
+
 test('every other page ends on a dark footer, and no page has a bone one', async ({ page }) => {
   for (const path of ['/sites', '/ventures', '/ventures/verge', '/work']) {
     await page.goto(path, { waitUntil: 'domcontentloaded' });

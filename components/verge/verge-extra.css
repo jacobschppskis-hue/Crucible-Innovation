@@ -1,0 +1,13 @@
+/* Hand-written additions to the generated ./verge.css, scoped the same way. */
+
+/* The site's focus ring is Ember everywhere (CLAUDE.md), so Verge's ink ring gives way to it here. */
+.verge-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ember);
+  outline-offset: 3px;
+}
+
+/* The ground behind the page while it loads and past its edges is Verge's, not the site's. */
+.verge-page {
+  min-height: 100vh;
+  background-color: var(--ground);
+}

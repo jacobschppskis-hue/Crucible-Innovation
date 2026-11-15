@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+/* /verge brings Verge's own styles (components/verge/verge.css, Tailwind 3 classes with Verge's scale), so this
+   site's Tailwind must not read those components and add its own meaning for the same class names. */
+@source not '../components/verge';
 
 :root {
   --ground: #0d0d0b;

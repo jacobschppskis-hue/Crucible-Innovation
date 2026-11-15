@@ -1,0 +1,1653 @@
+/* Verge's styles for /verge, generated from the Verge repo's Tailwind 3 setup (tailwind.config.ts and app/globals.css)
+   for the classes in components/verge, and scoped to .verge-page so nothing here reaches the rest of the site.
+   Do not edit by hand: see components/verge/README.md. Hand-written additions go in ./verge-extra.css. */
+.verge-page *, .verge-page ::before, .verge-page ::after {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+  --tw-contain-size:  ;
+  --tw-contain-layout:  ;
+  --tw-contain-paint:  ;
+  --tw-contain-style:  ;
+}
+
+.verge-page ::backdrop {
+  --tw-border-spacing-x: 0;
+  --tw-border-spacing-y: 0;
+  --tw-translate-x: 0;
+  --tw-translate-y: 0;
+  --tw-rotate: 0;
+  --tw-skew-x: 0;
+  --tw-skew-y: 0;
+  --tw-scale-x: 1;
+  --tw-scale-y: 1;
+  --tw-pan-x:  ;
+  --tw-pan-y:  ;
+  --tw-pinch-zoom:  ;
+  --tw-scroll-snap-strictness: proximity;
+  --tw-gradient-from-position:  ;
+  --tw-gradient-via-position:  ;
+  --tw-gradient-to-position:  ;
+  --tw-ordinal:  ;
+  --tw-slashed-zero:  ;
+  --tw-numeric-figure:  ;
+  --tw-numeric-spacing:  ;
+  --tw-numeric-fraction:  ;
+  --tw-ring-inset:  ;
+  --tw-ring-offset-width: 0px;
+  --tw-ring-offset-color: #fff;
+  --tw-ring-color: rgb(59 130 246 / 0.5);
+  --tw-ring-offset-shadow: 0 0 #0000;
+  --tw-ring-shadow: 0 0 #0000;
+  --tw-shadow: 0 0 #0000;
+  --tw-shadow-colored: 0 0 #0000;
+  --tw-blur:  ;
+  --tw-brightness:  ;
+  --tw-contrast:  ;
+  --tw-grayscale:  ;
+  --tw-hue-rotate:  ;
+  --tw-invert:  ;
+  --tw-saturate:  ;
+  --tw-sepia:  ;
+  --tw-drop-shadow:  ;
+  --tw-backdrop-blur:  ;
+  --tw-backdrop-brightness:  ;
+  --tw-backdrop-contrast:  ;
+  --tw-backdrop-grayscale:  ;
+  --tw-backdrop-hue-rotate:  ;
+  --tw-backdrop-invert:  ;
+  --tw-backdrop-opacity:  ;
+  --tw-backdrop-saturate:  ;
+  --tw-backdrop-sepia:  ;
+  --tw-contain-size:  ;
+  --tw-contain-layout:  ;
+  --tw-contain-paint:  ;
+  --tw-contain-style:  ;
+}
+
+.verge-page *,
+.verge-page ::before,
+.verge-page ::after {
+  box-sizing: border-box;
+  border-width: 0;
+  border-style: solid;
+  border-color: #e5e7eb;
+}
+
+.verge-page ::before,
+.verge-page ::after {
+  --tw-content: '';
+}
+
+.verge-page {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -moz-tab-size: 4;
+  -o-tab-size: 4;
+     tab-size: 4;
+  font-family: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.verge-page {
+  margin: 0;
+  line-height: inherit;
+}
+
+.verge-page hr {
+  height: 0;
+  color: inherit;
+  border-top-width: 1px;
+}
+
+.verge-page abbr:where([title]) {
+  -webkit-text-decoration: underline dotted;
+          text-decoration: underline dotted;
+}
+
+.verge-page h1,
+.verge-page h2,
+.verge-page h3,
+.verge-page h4,
+.verge-page h5,
+.verge-page h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+.verge-page a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+.verge-page b,
+.verge-page strong {
+  font-weight: bolder;
+}
+
+.verge-page code,
+.verge-page kbd,
+.verge-page samp,
+.verge-page pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-feature-settings: normal;
+  font-variation-settings: normal;
+  font-size: 1em;
+}
+
+.verge-page small {
+  font-size: 80%;
+}
+
+.verge-page sub,
+.verge-page sup {
+  font-size: 75%;
+  line-height: 0;
+  position: relative;
+  vertical-align: baseline;
+}
+
+.verge-page sub {
+  bottom: -0.25em;
+}
+
+.verge-page sup {
+  top: -0.5em;
+}
+
+.verge-page table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+}
+
+.verge-page button,
+.verge-page input,
+.verge-page optgroup,
+.verge-page select,
+.verge-page textarea {
+  font-family: inherit;
+  font-feature-settings: inherit;
+  font-variation-settings: inherit;
+  font-size: 100%;
+  font-weight: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin: 0;
+  padding: 0;
+}
+
+.verge-page button,
+.verge-page select {
+  text-transform: none;
+}
+
+.verge-page button,
+.verge-page input:where([type='button']),
+.verge-page input:where([type='reset']),
+.verge-page input:where([type='submit']) {
+  -webkit-appearance: button;
+  background-color: transparent;
+  background-image: none;
+}
+
+.verge-page :-moz-focusring {
+  outline: auto;
+}
+
+.verge-page :-moz-ui-invalid {
+  box-shadow: none;
+}
+
+.verge-page progress {
+  vertical-align: baseline;
+}
+
+.verge-page ::-webkit-inner-spin-button,
+.verge-page ::-webkit-outer-spin-button {
+  height: auto;
+}
+
+.verge-page [type='search'] {
+  -webkit-appearance: textfield;
+  outline-offset: -2px;
+}
+
+.verge-page ::-webkit-search-decoration {
+  -webkit-appearance: none;
+}
+
+.verge-page ::-webkit-file-upload-button {
+  -webkit-appearance: button;
+  font: inherit;
+}
+
+.verge-page summary {
+  display: list-item;
+}
+
+.verge-page blockquote,
+.verge-page dl,
+.verge-page dd,
+.verge-page h1,
+.verge-page h2,
+.verge-page h3,
+.verge-page h4,
+.verge-page h5,
+.verge-page h6,
+.verge-page hr,
+.verge-page figure,
+.verge-page p,
+.verge-page pre {
+  margin: 0;
+}
+
+.verge-page fieldset {
+  margin: 0;
+  padding: 0;
+}
+
+.verge-page legend {
+  padding: 0;
+}
+
+.verge-page ol,
+.verge-page ul,
+.verge-page menu {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.verge-page dialog {
+  padding: 0;
+}
+
+.verge-page textarea {
+  resize: vertical;
+}
+
+.verge-page input::-moz-placeholder, .verge-page textarea::-moz-placeholder {
+  opacity: 1;
+  color: #9ca3af;
+}
+
+.verge-page input::placeholder,
+.verge-page textarea::placeholder {
+  opacity: 1;
+  color: #9ca3af;
+}
+
+.verge-page button,
+.verge-page [role="button"] {
+  cursor: pointer;
+}
+
+.verge-page :disabled {
+  cursor: default;
+}
+
+.verge-page img,
+.verge-page svg,
+.verge-page video,
+.verge-page canvas,
+.verge-page audio,
+.verge-page iframe,
+.verge-page embed,
+.verge-page object {
+  display: block;
+  vertical-align: middle;
+}
+
+.verge-page img,
+.verge-page video {
+  max-width: 100%;
+  height: auto;
+}
+
+.verge-page [hidden]:where(:not([hidden="until-found"])) {
+  display: none;
+}
+
+.verge-page *,
+  .verge-page ::before,
+  .verge-page ::after {
+  border-color: var(--hairline);
+}
+
+.verge-page table,
+  .verge-page time,
+  .verge-page input:is([type='number'], [type='time'], [type='date'], [type='datetime-local'], [type='month']),
+  .verge-page output {
+  font-variant-numeric: tabular-nums;
+}
+
+.verge-page .font-display {
+  font-weight: var(--display-weight);
+  letter-spacing: var(--display-tracking);
+  text-wrap: balance;
+}
+
+.verge-page p,
+  .verge-page li,
+  .verge-page dd {
+  text-wrap: pretty;
+}
+
+.verge-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.verge-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.verge-page .pointer-events-none {
+  pointer-events: none;
+}
+
+.verge-page .absolute {
+  position: absolute;
+}
+
+.verge-page .relative {
+  position: relative;
+}
+
+.verge-page .inset-x-0 {
+  left: 0px;
+  right: 0px;
+}
+
+.verge-page .-left-\[9999px\] {
+  left: -9999px;
+}
+
+.verge-page .left-0 {
+  left: 0px;
+}
+
+.verge-page .right-0 {
+  right: 0px;
+}
+
+.verge-page .right-16 {
+  right: 16px;
+}
+
+.verge-page .top-1\/2 {
+  top: 50%;
+}
+
+.verge-page .col-span-2 {
+  grid-column: span 2 / span 2;
+}
+
+.verge-page .col-start-2 {
+  grid-column-start: 2;
+}
+
+.verge-page .row-start-2 {
+  grid-row-start: 2;
+}
+
+.verge-page .mx-auto {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.verge-page .ml-8 {
+  margin-left: 8px;
+}
+
+.verge-page .mt-12 {
+  margin-top: 12px;
+}
+
+.verge-page .mt-16 {
+  margin-top: 16px;
+}
+
+.verge-page .mt-24 {
+  margin-top: 24px;
+}
+
+.verge-page .mt-32 {
+  margin-top: 32px;
+}
+
+.verge-page .mt-4 {
+  margin-top: 4px;
+}
+
+.verge-page .mt-48 {
+  margin-top: 48px;
+}
+
+.verge-page .mt-8 {
+  margin-top: 8px;
+}
+
+.verge-page .block {
+  display: block;
+}
+
+.verge-page .flex {
+  display: flex;
+}
+
+.verge-page .inline-flex {
+  display: inline-flex;
+}
+
+.verge-page .table {
+  display: table;
+}
+
+.verge-page .grid {
+  display: grid;
+}
+
+.verge-page .hidden {
+  display: none;
+}
+
+.verge-page .h-12 {
+  height: 12px;
+}
+
+.verge-page .h-16 {
+  height: 16px;
+}
+
+.verge-page .h-24 {
+  height: 24px;
+}
+
+.verge-page .h-\[1px\] {
+  height: 1px;
+}
+
+.verge-page .h-\[20px\] {
+  height: 20px;
+}
+
+.verge-page .h-\[2px\] {
+  height: 2px;
+}
+
+.verge-page .h-auto {
+  height: auto;
+}
+
+.verge-page .min-h-48 {
+  min-height: 48px;
+}
+
+.verge-page .min-h-\[56px\] {
+  min-height: 56px;
+}
+
+.verge-page .min-h-screen {
+  min-height: 100vh;
+}
+
+.verge-page .min-h-target {
+  min-height: 44px;
+}
+
+.verge-page .w-16 {
+  width: 16px;
+}
+
+.verge-page .w-48 {
+  width: 48px;
+}
+
+.verge-page .w-\[1px\] {
+  width: 1px;
+}
+
+.verge-page .w-\[20px\] {
+  width: 20px;
+}
+
+.verge-page .w-\[220px\] {
+  width: 220px;
+}
+
+.verge-page .w-\[2px\] {
+  width: 2px;
+}
+
+.verge-page .w-\[30\%\] {
+  width: 30%;
+}
+
+.verge-page .w-\[35\%\] {
+  width: 35%;
+}
+
+.verge-page .w-full {
+  width: 100%;
+}
+
+.verge-page .min-w-0 {
+  min-width: 0px;
+}
+
+.verge-page .min-w-\[4px\] {
+  min-width: 4px;
+}
+
+.verge-page .max-w-\[1200px\] {
+  max-width: 1200px;
+}
+
+.verge-page .max-w-\[12em\] {
+  max-width: 12em;
+}
+
+.verge-page .max-w-\[14em\] {
+  max-width: 14em;
+}
+
+.verge-page .max-w-\[31em\] {
+  max-width: 31em;
+}
+
+.verge-page .max-w-\[34em\] {
+  max-width: 34em;
+}
+
+.verge-page .max-w-measure {
+  max-width: 34em;
+}
+
+.verge-page .shrink-0 {
+  flex-shrink: 0;
+}
+
+.verge-page .border-collapse {
+  border-collapse: collapse;
+}
+
+.verge-page .-translate-x-1\/2 {
+  --tw-translate-x: -50%;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.verge-page .-translate-y-1\/2 {
+  --tw-translate-y: -50%;
+  transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
+}
+
+.verge-page .select-none {
+  -webkit-user-select: none;
+     -moz-user-select: none;
+          user-select: none;
+}
+
+.verge-page .snap-x {
+  scroll-snap-type: x var(--tw-scroll-snap-strictness);
+}
+
+.verge-page .snap-mandatory {
+  --tw-scroll-snap-strictness: mandatory;
+}
+
+.verge-page .snap-start {
+  scroll-snap-align: start;
+}
+
+.verge-page .scroll-mt-32 {
+  scroll-margin-top: 32px;
+}
+
+.verge-page .scroll-px-16 {
+  scroll-padding-left: 16px;
+  scroll-padding-right: 16px;
+}
+
+.verge-page .appearance-none {
+  -webkit-appearance: none;
+     -moz-appearance: none;
+          appearance: none;
+}
+
+.verge-page .grid-cols-\[3\.25em_minmax\(0\2c 1fr\)_auto\] {
+  grid-template-columns: 3.25em minmax(0,1fr) auto;
+}
+
+.verge-page .flex-col {
+  flex-direction: column;
+}
+
+.verge-page .items-center {
+  align-items: center;
+}
+
+.verge-page .items-baseline {
+  align-items: baseline;
+}
+
+.verge-page .justify-center {
+  justify-content: center;
+}
+
+.verge-page .justify-between {
+  justify-content: space-between;
+}
+
+.verge-page .gap-12 {
+  gap: 12px;
+}
+
+.verge-page .gap-16 {
+  gap: 16px;
+}
+
+.verge-page .gap-24 {
+  gap: 24px;
+}
+
+.verge-page .gap-32 {
+  gap: 32px;
+}
+
+.verge-page .gap-8 {
+  gap: 8px;
+}
+
+.verge-page .gap-x-16 {
+  -moz-column-gap: 16px;
+       column-gap: 16px;
+}
+
+.verge-page .space-y-12 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(12px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(12px * var(--tw-space-y-reverse));
+}
+
+.verge-page .space-y-16 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(16px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(16px * var(--tw-space-y-reverse));
+}
+
+.verge-page .space-y-8 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(8px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(8px * var(--tw-space-y-reverse));
+}
+
+.verge-page .divide-y > :not([hidden]) ~ :not([hidden]) {
+  --tw-divide-y-reverse: 0;
+  border-top-width: calc(1px * calc(1 - var(--tw-divide-y-reverse)));
+  border-bottom-width: calc(1px * var(--tw-divide-y-reverse));
+}
+
+.verge-page .divide-hairline > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--hairline);
+}
+
+.verge-page .self-center {
+  align-self: center;
+}
+
+.verge-page .overflow-hidden {
+  overflow: hidden;
+}
+
+.verge-page .overflow-x-auto {
+  overflow-x: auto;
+}
+
+.verge-page .whitespace-nowrap {
+  white-space: nowrap;
+}
+
+.verge-page .rounded-\[20px\] {
+  border-radius: 20px;
+}
+
+.verge-page .border {
+  border-width: 1px;
+}
+
+.verge-page .border-\[1\.5px\] {
+  border-width: 1.5px;
+}
+
+.verge-page .border-y {
+  border-top-width: 1px;
+  border-bottom-width: 1px;
+}
+
+.verge-page .border-t {
+  border-top-width: 1px;
+}
+
+.verge-page .border-hairline {
+  border-color: var(--hairline);
+}
+
+.verge-page .border-muted {
+  border-color: var(--ink-muted);
+}
+
+.verge-page .bg-accent {
+  background-color: var(--accent);
+}
+
+.verge-page .bg-ground {
+  background-color: var(--ground);
+}
+
+.verge-page .bg-ground-2 {
+  background-color: var(--ground-2);
+}
+
+.verge-page .bg-ink {
+  background-color: var(--ink);
+}
+
+.verge-page .bg-transparent {
+  background-color: transparent;
+}
+
+.verge-page .bg-zone-1 {
+  background-color: var(--zone-1);
+}
+
+.verge-page .bg-zone-2 {
+  background-color: var(--zone-2);
+}
+
+.verge-page .bg-zone-3 {
+  background-color: var(--zone-3);
+}
+
+.verge-page .bg-zone-4 {
+  background-color: var(--zone-4);
+}
+
+.verge-page .bg-zone-5 {
+  background-color: var(--zone-5);
+}
+
+.verge-page .stroke-accent {
+  stroke: var(--accent);
+}
+
+.verge-page .stroke-ink {
+  stroke: var(--ink);
+}
+
+.verge-page .stroke-muted {
+  stroke: var(--ink-muted);
+}
+
+.verge-page .px-12 {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.verge-page .px-16 {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+
+.verge-page .px-24 {
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.verge-page .py-12 {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+.verge-page .py-16 {
+  padding-top: 16px;
+  padding-bottom: 16px;
+}
+
+.verge-page .py-24 {
+  padding-top: 24px;
+  padding-bottom: 24px;
+}
+
+.verge-page .py-64 {
+  padding-top: 64px;
+  padding-bottom: 64px;
+}
+
+.verge-page .py-8 {
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+.verge-page .pb-16 {
+  padding-bottom: 16px;
+}
+
+.verge-page .pb-24 {
+  padding-bottom: 24px;
+}
+
+.verge-page .pb-48 {
+  padding-bottom: 48px;
+}
+
+.verge-page .pb-64 {
+  padding-bottom: 64px;
+}
+
+.verge-page .pb-8 {
+  padding-bottom: 8px;
+}
+
+.verge-page .pl-16 {
+  padding-left: 16px;
+}
+
+.verge-page .pr-16 {
+  padding-right: 16px;
+}
+
+.verge-page .pr-48 {
+  padding-right: 48px;
+}
+
+.verge-page .pt-12 {
+  padding-top: 12px;
+}
+
+.verge-page .pt-16 {
+  padding-top: 16px;
+}
+
+.verge-page .pt-48 {
+  padding-top: 48px;
+}
+
+.verge-page .pt-64 {
+  padding-top: 64px;
+}
+
+.verge-page .text-left {
+  text-align: left;
+}
+
+.verge-page .text-center {
+  text-align: center;
+}
+
+.verge-page .text-right {
+  text-align: right;
+}
+
+.verge-page .align-baseline {
+  vertical-align: baseline;
+}
+
+.verge-page .font-display {
+  font-family: var(--font-display);
+}
+
+.verge-page .text-\[20px\] {
+  font-size: 20px;
+}
+
+.verge-page .text-\[24px\] {
+  font-size: 24px;
+}
+
+.verge-page .text-\[26px\] {
+  font-size: 26px;
+}
+
+.verge-page .text-body {
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.verge-page .text-decision {
+  font-size: clamp(34px, 4.4vw, 56px);
+  line-height: 1.04;
+}
+
+.verge-page .text-display {
+  font-size: clamp(42px, 5.2vw, 76px);
+  line-height: 1;
+}
+
+.verge-page .text-headline {
+  font-size: clamp(26px, 2.6vw, 34px);
+  line-height: 1.12;
+}
+
+.verge-page .text-lead {
+  font-size: 19px;
+  line-height: 1.45;
+}
+
+.verge-page .text-small {
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.verge-page .text-title {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.verge-page .font-bold {
+  font-weight: 700;
+}
+
+.verge-page .font-medium {
+  font-weight: 500;
+}
+
+.verge-page .font-normal {
+  font-weight: 400;
+}
+
+.verge-page .normal-nums {
+  font-variant-numeric: normal;
+}
+
+.verge-page .tabular-nums {
+  --tw-numeric-spacing: tabular-nums;
+  font-variant-numeric: var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction);
+}
+
+.verge-page .leading-\[1\.08\] {
+  line-height: 1.08;
+}
+
+.verge-page .leading-none {
+  line-height: 1;
+}
+
+.verge-page .leading-tight {
+  line-height: 1.25;
+}
+
+.verge-page .text-danger {
+  color: var(--danger);
+}
+
+.verge-page .text-ground {
+  color: var(--ground);
+}
+
+.verge-page .text-ink {
+  color: var(--ink);
+}
+
+.verge-page .text-muted {
+  color: var(--ink-muted);
+}
+
+.verge-page .underline {
+  text-decoration-line: underline;
+}
+
+.verge-page .line-through {
+  text-decoration-line: line-through;
+}
+
+.verge-page .decoration-1 {
+  text-decoration-thickness: 1px;
+}
+
+.verge-page .underline-offset-4 {
+  text-underline-offset: 4px;
+}
+
+.verge-page .accent-\[var\(--ink\)\] {
+  accent-color: var(--ink);
+}
+
+.verge-page .outline-none {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+}
+
+.verge-page .transition-\[opacity\2c background-color\] {
+  transition-property: opacity,background-color;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.verge-page .transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.verge-page,
+.verge-page .surface-field {
+  color-scheme: var(--f-scheme);
+  --ground: var(--f-ground);
+  --ground-2: var(--f-ground-2);
+  --ink: var(--f-ink);
+  --ink-muted: var(--f-ink-muted);
+  --hairline: var(--f-hairline);
+  --accent: var(--f-accent);
+  --accent-text: var(--f-accent-text);
+  --on-accent: var(--f-on-accent);
+  --success: var(--f-success);
+  --warning: var(--f-warning);
+  --danger: var(--f-danger);
+  --zone-1: var(--f-zone-1);
+  --zone-2: var(--f-zone-2);
+  --zone-3: var(--f-zone-3);
+  --zone-4: var(--f-zone-4);
+  --zone-5: var(--f-zone-5);
+}
+
+.verge-page .surface-reading {
+  color-scheme: var(--r-scheme);
+  --ground: var(--r-ground);
+  --ground-2: var(--r-ground-2);
+  --ink: var(--r-ink);
+  --ink-muted: var(--r-ink-muted);
+  --hairline: var(--r-hairline);
+  --accent: var(--r-accent);
+  --accent-text: var(--r-accent-text);
+  --on-accent: var(--r-on-accent);
+  --success: var(--r-success);
+  --warning: var(--r-warning);
+  --danger: var(--r-danger);
+  --zone-1: var(--r-zone-1);
+  --zone-2: var(--r-zone-2);
+  --zone-3: var(--r-zone-3);
+  --zone-4: var(--r-zone-4);
+  --zone-5: var(--r-zone-5);
+}
+
+.verge-page {
+  --font-display: var(--font-schibsted), system-ui, sans-serif;
+  --font-body: var(--font-schibsted), system-ui, sans-serif;
+  --display-weight: 800;
+  --display-tracking: -0.02em;
+}
+
+.verge-page .surface-reading,
+.verge-page .surface-field {
+  background-color: var(--ground);
+  color: var(--ink);
+}
+
+.verge-page * {
+  box-sizing: border-box;
+}
+
+.verge-page {
+  background-color: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.verge-page ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.verge-page ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.verge-page ::-webkit-scrollbar-thumb {
+  background: var(--hairline);
+}
+
+.verge-page .streaming-text {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.verge-page .draw-once {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: draw-once 900ms cubic-bezier(0.3, 0, 0.2, 1) 150ms forwards;
+}
+
+.verge-page .draw-once-late {
+  animation-delay: 1000ms;
+  animation-duration: 350ms;
+}
+
+@keyframes draw-once {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.verge-page .stop-range {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+       appearance: none;
+  background: transparent;
+  cursor: grab;
+  margin: 0;
+  opacity: 0;
+  touch-action: pan-y;
+}
+
+.verge-page .stop-range:active {
+  cursor: grabbing;
+}
+
+.verge-page .stop-range::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+
+.verge-page .stop-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 44px;
+  height: 44px;
+}
+
+.verge-page .stop-range::-moz-range-track {
+  height: 100%;
+  background: transparent;
+}
+
+.verge-page .stop-range::-moz-range-thumb {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+}
+
+.verge-page .stop-knob {
+  background: var(--accent);
+  transition: left 150ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.verge-page .stop-range:focus-visible ~ .stop-visual .stop-knob {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.verge-page ::view-transition-old(root),
+.verge-page ::view-transition-new(root) {
+  animation-duration: 150ms;
+  animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .verge-page *,
+  .verge-page ::before,
+  .verge-page ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .verge-page ::view-transition-old(root),
+  .verge-page ::view-transition-new(root) {
+    animation: none !important;
+  }
+
+  .verge-page .draw-once {
+    animation: none !important;
+    stroke-dashoffset: 0;
+  }
+}
+
+.verge-page .skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 12px 16px;
+  background: var(--ink);
+  color: var(--ground);
+  font-size: 17px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.verge-page .skip-link:focus,
+.verge-page .skip-link:focus-visible {
+  left: 16px;
+  top: 16px;
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.verge-page .leaflet-container .leaflet-bar.leaflet-bar a {
+  width: 44px;
+  height: 44px;
+  line-height: 44px;
+  font-size: 22px;
+  color: var(--ink);
+  background-color: var(--ground);
+  border-color: var(--hairline);
+}
+
+.verge-page .leaflet-container .leaflet-control-attribution {
+  font-size: 13px;
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ground) 90%, transparent);
+}
+
+.verge-page .leaflet-container .leaflet-control-attribution a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+@media (min-width: 640px) {
+  .verge-page .sm\:font-display {
+    font-weight: var(--display-weight);
+    letter-spacing: var(--display-tracking);
+    text-wrap: balance;
+  }
+}
+
+.verge-page .placeholder\:text-muted::-moz-placeholder {
+  color: var(--ink-muted);
+}
+
+.verge-page .placeholder\:text-muted::placeholder {
+  color: var(--ink-muted);
+}
+
+.verge-page .before\:absolute::before {
+  content: var(--tw-content);
+  position: absolute;
+}
+
+.verge-page .before\:left-0::before {
+  content: var(--tw-content);
+  left: 0px;
+}
+
+.verge-page .before\:top-\[0\.62em\]::before {
+  content: var(--tw-content);
+  top: 0.62em;
+}
+
+.verge-page .before\:h-4::before {
+  content: var(--tw-content);
+  height: 4px;
+}
+
+.verge-page .before\:w-4::before {
+  content: var(--tw-content);
+  width: 4px;
+}
+
+.verge-page .before\:bg-muted::before {
+  content: var(--tw-content);
+  background-color: var(--ink-muted);
+}
+
+.verge-page .first\:border-t-0:first-child {
+  border-top-width: 0px;
+}
+
+.verge-page .first\:pt-0:first-child {
+  padding-top: 0px;
+}
+
+.verge-page .last\:pb-0:last-child {
+  padding-bottom: 0px;
+}
+
+.verge-page .hover\:border-ink:hover {
+  border-color: var(--ink);
+}
+
+.verge-page .hover\:decoration-2:hover {
+  text-decoration-thickness: 2px;
+}
+
+.verge-page .hover\:opacity-85:hover {
+  opacity: 0.85;
+}
+
+.verge-page .focus\:border-ink:focus {
+  border-color: var(--ink);
+}
+
+.verge-page .active\:opacity-75:active {
+  opacity: 0.75;
+}
+
+.verge-page .disabled\:cursor-not-allowed:disabled {
+  cursor: not-allowed;
+}
+
+.verge-page .disabled\:opacity-50:disabled {
+  opacity: 0.5;
+}
+
+@media (min-width: 640px) {
+  .verge-page .sm\:col-span-1 {
+    grid-column: span 1 / span 1;
+  }
+
+  .verge-page .sm\:col-start-3 {
+    grid-column-start: 3;
+  }
+
+  .verge-page .sm\:row-start-1 {
+    grid-row-start: 1;
+  }
+
+  .verge-page .sm\:mt-0 {
+    margin-top: 0px;
+  }
+
+  .verge-page .sm\:mt-24 {
+    margin-top: 24px;
+  }
+
+  .verge-page .sm\:mt-32 {
+    margin-top: 32px;
+  }
+
+  .verge-page .sm\:block {
+    display: block;
+  }
+
+  .verge-page .sm\:inline {
+    display: inline;
+  }
+
+  .verge-page .sm\:table {
+    display: table;
+  }
+
+  .verge-page .sm\:grid {
+    display: grid;
+  }
+
+  .verge-page .sm\:hidden {
+    display: none;
+  }
+
+  .verge-page .sm\:h-12 {
+    height: 12px;
+  }
+
+  .verge-page .sm\:w-\[240px\] {
+    width: 240px;
+  }
+
+  .verge-page .sm\:w-auto {
+    width: auto;
+  }
+
+  .verge-page .sm\:min-w-\[224px\] {
+    min-width: 224px;
+  }
+
+  .verge-page .sm\:flex-1 {
+    flex: 1 1 0%;
+  }
+
+  .verge-page .sm\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .verge-page .sm\:grid-cols-\[3\.25em_minmax\(0\2c 1fr\)_minmax\(0\2c 1fr\)_5em\] {
+    grid-template-columns: 3.25em minmax(0,1fr) minmax(0,1fr) 5em;
+  }
+
+  .verge-page .sm\:grid-cols-\[minmax\(0\2c 2fr\)_minmax\(0\2c 5fr\)\] {
+    grid-template-columns: minmax(0,2fr) minmax(0,5fr);
+  }
+
+  .verge-page .sm\:flex-row {
+    flex-direction: row;
+  }
+
+  .verge-page .sm\:gap-32 {
+    gap: 32px;
+  }
+
+  .verge-page .sm\:gap-48 {
+    gap: 48px;
+  }
+
+  .verge-page .sm\:px-24 {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+
+  .verge-page .sm\:px-32 {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .verge-page .sm\:pt-24 {
+    padding-top: 24px;
+  }
+
+  .verge-page .sm\:pt-32 {
+    padding-top: 32px;
+  }
+
+  .verge-page .sm\:font-display {
+    font-family: var(--font-display);
+  }
+
+  .verge-page .sm\:text-\[21px\] {
+    font-size: 21px;
+  }
+
+  .verge-page .sm\:text-\[28px\] {
+    font-size: 28px;
+  }
+
+  .verge-page .sm\:text-body {
+    font-size: 17px;
+    line-height: 1.5;
+  }
+
+  .verge-page .sm\:text-lead {
+    font-size: 19px;
+    line-height: 1.45;
+  }
+
+  .verge-page .sm\:text-title {
+    font-size: 22px;
+    line-height: 1.2;
+  }
+
+  .verge-page .sm\:leading-\[1\.4\] {
+    line-height: 1.4;
+  }
+
+  .verge-page .sm\:leading-tight {
+    line-height: 1.25;
+  }
+}
+
+@media (min-width: 768px) {
+  .verge-page .md\:scroll-px-48 {
+    scroll-padding-left: 48px;
+    scroll-padding-right: 48px;
+  }
+
+  .verge-page .md\:px-48 {
+    padding-left: 48px;
+    padding-right: 48px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .verge-page .lg\:absolute {
+    position: absolute;
+  }
+
+  .verge-page .lg\:sticky {
+    position: sticky;
+  }
+
+  .verge-page .lg\:left-0 {
+    left: 0px;
+  }
+
+  .verge-page .lg\:top-32 {
+    top: 32px;
+  }
+
+  .verge-page .lg\:top-full {
+    top: 100%;
+  }
+
+  .verge-page .lg\:-mr-\[41px\] {
+    margin-right: -41px;
+  }
+
+  .verge-page .lg\:-mt-8 {
+    margin-top: -8px;
+  }
+
+  .verge-page .lg\:mt-0 {
+    margin-top: 0px;
+  }
+
+  .verge-page .lg\:mt-64 {
+    margin-top: 64px;
+  }
+
+  .verge-page .lg\:block {
+    display: block;
+  }
+
+  .verge-page .lg\:flex {
+    display: flex;
+  }
+
+  .verge-page .lg\:grid {
+    display: grid;
+  }
+
+  .verge-page .lg\:grid-cols-\[minmax\(0\2c 1fr\)_minmax\(0\2c 1fr\)\] {
+    grid-template-columns: minmax(0,1fr) minmax(0,1fr);
+  }
+
+  .verge-page .lg\:grid-cols-\[minmax\(0\2c 1fr\)_minmax\(0\2c 2fr\)\] {
+    grid-template-columns: minmax(0,1fr) minmax(0,2fr);
+  }
+
+  .verge-page .lg\:grid-cols-\[minmax\(0\2c 1fr\)_minmax\(0\2c 460px\)\] {
+    grid-template-columns: minmax(0,1fr) minmax(0,460px);
+  }
+
+  .verge-page .lg\:flex-row {
+    flex-direction: row;
+  }
+
+  .verge-page .lg\:flex-col {
+    flex-direction: column;
+  }
+
+  .verge-page .lg\:items-end {
+    align-items: flex-end;
+  }
+
+  .verge-page .lg\:items-center {
+    align-items: center;
+  }
+
+  .verge-page .lg\:justify-between {
+    justify-content: space-between;
+  }
+
+  .verge-page .lg\:gap-64 {
+    gap: 64px;
+  }
+
+  .verge-page .lg\:self-start {
+    align-self: flex-start;
+  }
+
+  .verge-page .lg\:py-96 {
+    padding-top: 96px;
+    padding-bottom: 96px;
+  }
+
+  .verge-page .lg\:pb-96 {
+    padding-bottom: 96px;
+  }
+
+  .verge-page .lg\:pt-48 {
+    padding-top: 48px;
+  }
+
+  .verge-page .lg\:pt-96 {
+    padding-top: 96px;
+  }
+}

@@ -12,6 +12,9 @@ export type Venture = {
   description?: string;
   /** The venture's mark (public/ventures/<slug>.svg), if it has one. */
   mark?: string;
+  /** The venture's own page before it ships, with its own waitlist (Verge: app/verge). Its teaser links there instead of
+   *  asking for an email. */
+  preview?: string;
   /** Its metal monolith, rendered by the home page's world (public/film/monoliths/<name>-{600,1200,2400}.webp,
    *  scripts/monolith-stills.mjs): shown on /ventures and its own page. */
   monolith?: string;
@@ -39,6 +42,7 @@ export const ventures = [
       'Verge is an AI coach for endurance athletes, built on the training data they already have. It tracks training load and recovery, using sleep, heart rate variability and resting heart rate to score how ready the body is each morning, that score deciding how hard the day’s session should be. A run-down day gets a lighter workout. The plan adjusts day by day and every session comes back with written feedback. The algorithms underneath took a long time to get right. It is made for runners, cyclists and triathletes.',
     mark: '/ventures/verge.svg',
     monolith: 'verge',
+    preview: '/verge',
   },
   {
     slug: 'trellis',
