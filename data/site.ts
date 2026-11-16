@@ -18,4 +18,9 @@ export const site = {
   ],
   // TODO(jakob): create a Formspree form and add its ID as the FORMSPREE_ID repo variable (see README).
   formspreeId: process.env.NEXT_PUBLIC_FORMSPREE_ID ?? '',
+  // The Verge waitlist's own Formspree form, kept apart from the quote form's. Until it is set, /verge sign-ups arrive as
+  // emails the visitor sends.
+  // TODO(jakob): when Verge needs a list, create a Formspree form for the waitlist and add its ID as the
+  // FORMSPREE_WAITLIST_ID repo variable (see README).
+  formspreeWaitlistId: process.env.NEXT_PUBLIC_FORMSPREE_WAITLIST_ID ?? '',
 } as const;

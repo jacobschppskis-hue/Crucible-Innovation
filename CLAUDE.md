@@ -6,7 +6,7 @@ Marketing site for Crucible (studio, `/`) and Crucible Sites (websites for local
 - Next.js 15 App Router, **static export** (`output: 'export'` → `out/`), TypeScript, Tailwind CSS v4. No server: no API routes, no `next/headers`, no runtime redirects, no image optimizer.
 - `npm run dev` · `npm run build` · `npm run typecheck` · `npm test` (Playwright against `out/`, so build first; locally set `PW_CHROMIUM_PATH` to a Chromium binary if the pinned browser is missing; run the GL-heavy specs with `--workers=2` on a GPU-less machine) · `npm run world:smoke` (fast check that the home page's world starts and draws) · `npm run world:preview` (after a build: the home page as ONE self-contained file, `world/dist/crucible.html`, that renders inside the claude.ai artifact frame).
 - Deploy: push to `main` → `.github/workflows/deploy.yml` builds and publishes to GitHub Pages (custom domain via `CNAME`). PRs run `.github/workflows/ci.yml` (typecheck, build, Playwright, Lighthouse CI with `lighthouserc.json`).
-- Repo variables (optional): `UMAMI_WEBSITE_ID` (analytics), `FORMSPREE_ID` (in-page form posting; without it the form composes an email via mail app/Gmail/Outlook).
+- Repo variables (optional): `UMAMI_WEBSITE_ID` (analytics), `FORMSPREE_ID` (in-page form posting; without it the form composes an email via mail app/Gmail/Outlook), `FORMSPREE_WAITLIST_ID` (the Verge waitlist's own form; never the quote form's).
 
 ## Where things live
 - Copy and content: `data/*.ts` (`home.ts` the home page's own lines, `story.ts` the founders' accounts (word for word), `site.ts` founder/email/Formspree, `ventures.ts`, `work.ts`, `pricing.ts`, `faq.ts`, `team.ts`). Prefer editing data over components.

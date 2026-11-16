@@ -37,7 +37,7 @@ export function WorldVentures() {
           <ul className="wv-list container-x" role="list">
             {all.map((v, i) => (
               <li key={v.slug} className="wv-item" data-v={i} data-kind={v.status}>
-                <Link className="wv-link" href={ventureHref(v)} data-v={i}>
+                <Link className="wv-link" href={v.preview ?? ventureHref(v)} data-v={i}>
                   {/* the monolith's own hit area: positioned by the world over the monolith's projection */}
                   <span className="wv-hit" aria-hidden />
                   {/* without the world (no WebGL): the monolith as a still from the same shader */}

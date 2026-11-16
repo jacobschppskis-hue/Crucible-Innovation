@@ -20,6 +20,8 @@ jobs:
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+          # Built the way the live site is, so the tests check the Verge waitlist as it ships.
+          NEXT_PUBLIC_FORMSPREE_WAITLIST_ID: ${{ vars.FORMSPREE_WAITLIST_ID }}
       - run: npx playwright install --with-deps chromium
       - run: npm test
       - name: Lighthouse (performance is a warning; accessibility, SEO and best practices must pass)

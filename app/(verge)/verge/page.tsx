@@ -4,12 +4,14 @@ import { VergeLanding } from '@/components/verge/VergeLanding';
 // Verge's own page before launch: its landing page with a waitlist in place of sign-up. The document around it (type,
 // palette, CSS) is app/(verge)/layout.tsx.
 
-const title = 'Verge: what to train today, and why';
+// Verge's own title and description (the Verge repo's PRODUCT_NAME and PRODUCT_DESCRIPTION).
+const title = 'Verge';
 const description =
-  'Verge reads your sleep, heart rate variability and resting heart rate against your own usual, then tells you what to train today. Join the waitlist.';
+  'Every morning Verge reads your sleep, heart rate variability and resting heart rate, then tells you what to do that day and why.';
 
 export const metadata: Metadata = {
-  title,
+  // absolute: the page's title is Verge's, with nothing added by a template.
+  title: { absolute: title },
   description,
   alternates: { canonical: '/verge' },
   openGraph: {

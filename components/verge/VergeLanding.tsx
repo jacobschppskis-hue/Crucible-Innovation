@@ -1,11 +1,12 @@
 // Verge's own landing page, before launch, on the Crucible site (/verge).
 //
-// Converted from Verge's landing page in preview mode (the Verge repo's components/landing/Landing.tsx, rendered at
-// /dev/reserve) so the page looks exactly like Verge. Its classes are Verge's, styled only by ./verge.css, which is
-// scoped to .verge-page, the class on /verge's <html> (see README.md). Copy edits for this site: no prices, no device or service names, one waitlist
-// form (./WaitlistForm.tsx) with a link back to it at the end, and the site's own screens and footer.
+// Converted from Verge's landing page (the Verge repo's components/landing/Landing.tsx) so the page looks exactly like
+// Verge, in Verge's own words. Its classes are Verge's, styled only by ./verge.css, which is scoped to .verge-page, the
+// class on /verge's <html> (see README.md). What changed for the page before launch is listed in README.md: in short,
+// the waitlist form (./WaitlistForm.tsx) is where Create account was, everything that would sign up or sign in goes to
+// it, the Today screen (./VergeToday.tsx) is shown in a phone, and there are no prices and no pages this site lacks.
 import { VergeFooter } from './VergeFooter';
-import { VergeScreens } from './VergeScreens';
+import { VergeToday } from './VergeToday';
 import { WaitlistForm } from './WaitlistForm';
 
 export function VergeLanding() {
@@ -14,14 +15,17 @@ export function VergeLanding() {
       <div className="surface-field">
         <div className="mx-auto w-full px-16 md:px-48 max-w-[1200px]">
           <header className="flex items-center justify-between gap-16 py-16">
-            <a aria-label="Verge, top of the page" className="flex min-h-target items-center gap-8 font-display text-[24px] leading-none" href="/verge">
+            <a aria-label="Verge, home" className="flex min-h-target items-center gap-8 font-display text-[24px] leading-none" href="/verge">
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="32" height="32" aria-hidden="true">
                 <path d="M99 147.5 71.9 58.8H43.6L92.2 218 175.1 62.2H144.4Z" fill="var(--ink)" />
                 <path d="M178.7 55.4 196.4 22H165.7L148 55.4Z" fill="var(--accent)" />
               </svg>
               Verge
             </a>
-            <a href="/ventures/verge" className="inline-flex min-h-target items-center text-small underline decoration-1 underline-offset-4 hover:decoration-2">A Crucible venture</a>
+            <nav aria-label="Account" className="-mr-12 flex items-center gap-4 sm:mr-0">
+              <a href="#waitlist" className="inline-flex shrink-0 select-none items-center justify-center text-center transition-[opacity,background-color] min-h-target gap-8 text-small font-medium text-ink underline decoration-1 underline-offset-4 hover:decoration-2 px-12">Sign in</a>
+              <a href="#waitlist" className="shrink-0 select-none items-center justify-center text-center font-bold transition-[opacity,background-color] min-h-target gap-8 px-16 text-small border-[1.5px] border-ink text-ink hover:bg-ground-2 active:bg-ground-2 hidden sm:inline-flex">Create account</a>
+            </nav>
           </header>
         </div>
       </div>
@@ -36,7 +40,12 @@ export function VergeLanding() {
                   <span className="hidden sm:inline">, and moves a hard session to a better day when you need the recovery</span>
                   .
                 </p>
-                <WaitlistForm className="mt-24 sm:mt-32" />
+                <WaitlistForm
+                  className="mt-24 sm:mt-32"
+                  beside={
+                    <a href="#decides" className="shrink-0 select-none items-center justify-center text-center font-bold transition-[opacity,background-color] min-h-[56px] gap-12 px-24 text-lead sm:px-32 border-[1.5px] border-ink text-ink hover:bg-ground-2 active:bg-ground-2 hidden sm:inline-flex">See how it decides</a>
+                  }
+                />
               </div>
               <p className="mt-32 hidden text-body text-muted sm:block lg:mt-0">For runners, cyclists, triathletes and Nordic skiers.</p>
             </div>
@@ -124,7 +133,7 @@ export function VergeLanding() {
             <p className="mt-24 text-body text-muted sm:hidden">For runners, cyclists, triathletes and Nordic skiers.</p>
           </div>
         </div>
-        <VergeScreens />
+        <VergeToday />
         <section aria-labelledby="idea-title" className="surface-field">
           <div className="bg-ground-2">
             <div className="mx-auto w-full px-16 md:px-48 max-w-[1200px] py-64 lg:py-96">
@@ -501,7 +510,7 @@ export function VergeLanding() {
                       <li className="relative pl-16 before:absolute before:left-0 before:top-[0.62em] before:h-4 before:w-4 before:bg-muted">Weight, body fat and other body measurements</li>
                       <li className="relative pl-16 before:absolute before:left-0 before:top-[0.62em] before:h-4 before:w-4 before:bg-muted">Injury reports and the notes you write on your profile</li>
                       <li className="relative pl-16 before:absolute before:left-0 before:top-[0.62em] before:h-4 before:w-4 before:bg-muted">Session names and titles</li>
-                      <li className="relative pl-16 before:absolute before:left-0 before:top-[0.62em] before:h-4 before:w-4 before:bg-muted">Data from a service whose terms do not allow AI use</li>
+                      <li className="relative pl-16 before:absolute before:left-0 before:top-[0.62em] before:h-4 before:w-4 before:bg-muted">Data from a service whose terms do not allow AI use, such as Strava</li>
                     </ul>
                   </div>
                 </div>
@@ -512,11 +521,12 @@ export function VergeLanding() {
         <section aria-labelledby="start-title" className="surface-field">
           <div className="mx-auto w-full px-16 md:px-48 max-w-[1200px] flex flex-col gap-32 py-64 lg:flex-row lg:items-center lg:justify-between lg:gap-64 lg:py-96">
             <div>
-              <h2 id="start-title" className="max-w-[14em] font-display text-decision">Be one of the first</h2>
+              <h2 id="start-title" className="max-w-[14em] font-display text-decision">Start with the training you already have</h2>
               <p className="mt-16 max-w-measure text-body sm:text-lead">
-                Verge is being tested now. The more people sign up, the sooner it opens, because every email shows there are athletes waiting to use it.
+                Create an account, then connect a device or import your FIT files. The morning read needs sleep and heart rate variability from a watch or ring. Without them Verge works from your training alone.
               </p>
-              <a href="#waitlist" className="mt-32 inline-flex min-h-[56px] w-full items-center justify-center gap-12 bg-ink px-24 text-lead font-medium text-ground hover:opacity-85 active:opacity-75 sm:w-auto sm:min-w-[224px] sm:px-32">Get early access</a>
+              <p className="mt-12 max-w-measure text-body text-muted">The more people sign up, the sooner it opens, because every email shows there are athletes waiting to use it.</p>
+              <a href="#waitlist" className="inline-flex shrink-0 select-none items-center justify-center text-center font-bold transition-[opacity,background-color] min-h-[56px] gap-12 px-24 text-lead sm:px-32 bg-ink text-ground hover:opacity-85 active:opacity-75 mt-32 w-full sm:w-auto sm:min-w-[224px]">Create account</a>
             </div>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="224" height="224" className="hidden shrink-0 lg:-mr-[41px] lg:block" aria-hidden="true">
               <path d="M99 147.5 71.9 58.8H43.6L92.2 218 175.1 62.2H144.4Z" fill="var(--ink)" />
