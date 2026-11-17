@@ -1,8 +1,12 @@
 import { expect, test, type Page } from '@playwright/test';
+import { test as glTest } from './gl';
 
 // The liquid (components/Liquid.tsx, lib/liquid/*), the floating (lib/liquid/float.ts) and the pull on large visuals
 // (components/Magnetic.tsx, lib/liquid/lean.ts). It runs on every page but the home page, which paints its own world
 // (lib/world, tests/world.spec.ts), so these tests use /sites.
+// The tests that start the liquid draw it through software GL here (CI, cloud sessions), which queues frames in the
+// browser's GPU process: each gets a browser of its own (tests/gl.ts), or the next test in its worker can time out
+// just opening its context.
 
 type Near = { slopeMax: number; slopeRms: number; hRms: number; cells: number };
 const near = (page: Page, x: number, y: number, r = 120) =>
@@ -10,7 +14,7 @@ const near = (page: Page, x: number, y: number, r = 120) =>
 // two frames of the one clock (the grid steps in the frame after the events arrive)
 const frames = (page: Page) => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
 
-test('the liquid starts after load, is alive on its own, and answers the cursor', async ({ page }) => {
+glTest('the liquid starts after load, is alive on its own, and answers the cursor', async ({ page }) => {
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   const liquid = page.locator('canvas.liquid');
   await expect(liquid).toHaveAttribute('data-on', '', { timeout: 10_000 });
@@ -41,7 +45,7 @@ test('the liquid starts after load, is alive on its own, and answers the cursor'
   expect(clock!.names).toContain('liquid');
 });
 
-test('a cursor that keeps moving without a click always has waves right at it', async ({ page, isMobile }) => {
+glTest('a cursor that keeps moving without a click always has waves right at it', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
   test.slow(); // 14 legs of real pointer input, each waiting for drawn frames: a busy CI runner takes most of 30 s
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
@@ -93,7 +97,7 @@ const across = (page: Page, x: number, y: number, backs: number[]) =>
     [x, y, backs] as const,
   );
 
-test('a slow cursor leaves a boat wake: one continuous V behind it, no beads, no rings', async ({ page, isMobile }) => {
+glTest('a slow cursor leaves a boat wake: one continuous V behind it, no beads, no rings', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await page.mouse.move(5, 5);
@@ -122,7 +126,7 @@ test('a slow cursor leaves a boat wake: one continuous V behind it, no beads, no
   for (const l of ahead) expect(Math.max(...l.map(Math.abs))).toBeLessThan(0.15 * peak[0]);
 });
 
-test('dragging with the button held makes a more marked wake than hovering', async ({ page, isMobile }) => {
+glTest('dragging with the button held makes a more marked wake than hovering', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
   // 360 stepped frames, each drawn by every renderer under software GL: on CI's shared two-core runner that can pass 30 s.
   test.slow();
@@ -138,7 +142,7 @@ test('dragging with the button held makes a more marked wake than hovering', asy
   expect(drag).toBeGreaterThan(1.4 * hover);
 });
 
-test('the idle swell rolls across the page with nobody touching it', async ({ page }) => {
+glTest('the idle swell rolls across the page with nobody touching it', async ({ page }) => {
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
   const at = (t: number) => page.evaluate((t) => (window as unknown as { __liquid: { sample(x: number, y: number, t: number): Grid } }).__liquid.sample(300, 400, t), t);
@@ -149,7 +153,7 @@ test('the idle swell rolls across the page with nobody touching it', async ({ pa
   expect(Math.abs(a.h)).toBeLessThan(8);
 });
 
-test('at rest the text keeps rocking on the swell, and links and buttons come to an exact rest', async ({ page, isMobile }) => {
+glTest('at rest the text keeps rocking on the swell, and links and buttons come to an exact rest', async ({ page, isMobile }) => {
   test.skip(isMobile, 'a mouse cursor');
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
@@ -190,7 +194,7 @@ test('at rest the text keeps rocking on the swell, and links and buttons come to
   expect(moving, 'controls still offset 2.5 s after the last input').toBe(0);
 });
 
-test('a finger dragging the page (a native pan) still makes waves where it touches', async ({ page, isMobile }) => {
+glTest('a finger dragging the page (a native pan) still makes waves where it touches', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'touch');
   await page.goto('/sites?tier=rich', { waitUntil: 'networkidle' });
   await expect(page.locator('canvas.liquid')).toHaveAttribute('data-on', '', { timeout: 10_000 });
