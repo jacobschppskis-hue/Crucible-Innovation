@@ -347,7 +347,12 @@ void mark_overMark(Ray r, Hit h, inout vec3 col) {
   mark_gGeom = mark_uBrand > 0.5 ? 1 : 0;
   vec3 ro, rd, pL; mark_local(r, ro, rd);
   vec2 c = mark_coreHit(ro, rd, r.pa);
-  if (c.y > 0. && c.x * mark_uC.w < h.t) col = mix(col, mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd), c.y * mark_uLook.x);
+  // (each mix over the sky also takes that much of the sky away from the post pass's stars: world_skyT, stars.glsl)
+  if (c.y > 0. && c.x * mark_uC.w < h.t) {
+    float kc = c.y * mark_uLook.x;
+    col = mix(col, mark_coreShade(normalize(ro + rd * c.x) * MARK_RC, rd), kc);
+    world_skyT *= 1. - kc;
+  }
   int steps = 24 + int(24. * uQ);
   vec4 m = mark_march(ro, rd, r.pa, steps, pL, 1.9);
   if (m.w <= 0.) return;
@@ -368,11 +373,17 @@ void mark_overMark(Ray r, Hit h, inout vec3 col) {
       acc += mark_shadeL(pk, rk, mk.y, mk.x * r.pa, false) * mk.w;
       cs += mk.w;
     }
-    if (cs > 0.) col = mix(col, acc / cs, cs * 0.25 * mark_uLook.x * mark_reveal(pL));
+    if (cs > 0.) {
+      float ks = cs * 0.25 * mark_uLook.x * mark_reveal(pL);
+      col = mix(col, acc / cs, ks);
+      world_skyT *= 1. - ks;
+    }
     return;
   }
   vec3 s = mark_shadeL(pL, rd, m.y, m.x * r.pa, false);
-  col = mix(col, s, m.w * mark_uLook.x * mark_reveal(pL));
+  float km = m.w * mark_uLook.x * mark_reveal(pL);
+  col = mix(col, s, km);
+  world_skyT *= 1. - km;
 }
 void mark_over(Ray r, Hit h, inout vec3 col) {
   // the crisp pass draws the mark at the screen's resolution; here only where there is none

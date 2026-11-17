@@ -75,6 +75,8 @@ vec3 look_sky(Ray r) {
   return mix(still_uSky[i0], still_uSky[i1], y - floor(y));
 }
 ${mono}
+// the post pass's stars (stars.glsl): a still has no sky
+vec3 look_postStars(vec2 fc) { return vec3(0.0); }
 ${post}
 // ---- the still ----
 uniform float still_uFocal; uniform vec2 still_uShift; uniform vec2 still_uAnchor; uniform int still_uI;
