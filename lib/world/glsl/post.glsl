@@ -58,7 +58,8 @@ vec3 look_sceneCR(vec2 uv) {
 }
 
 vec3 look_post(vec2 uv, vec2 fc) {
-  vec3 c = world_crisp(look_sceneCR(uv), uv); // the crisp pass (world) over the upscaled scene
+  // the stars at the canvas's resolution over the upscaled scene, then the crisp pass (world) over both
+  vec3 c = world_crisp(look_sceneCR(uv) + look_postStars(fc), uv);
   if (uBloomOn > 0.5) {
     vec3 b = texture(uBloom, uv).rgb * 0.2; // 5 levels summed -> mean
     c = mix(c, b, look_uBloomAmt);

@@ -23,6 +23,9 @@ uniform float uDt;
 uniform vec3 uCamPos;     // camera world position (planet centre = origin)
 uniform mat3 uCam;        // columns: right, up, forward
 uniform float uFocal;     // focal length in render px
+// the air's transmittance (luminance) along the last primary sky ray: look_sky sets it, the scene pass hands it to
+// the post pass's stars in its alpha (stars.glsl)
+float world_skyT = 1.0;
 uniform float uR;         // planet radius
 uniform float uCamH;      // camera altitude above the sea (exact, from the CPU)
 uniform vec3 uCamUp;      // the planet normal under the camera
@@ -210,22 +213,25 @@ void main(){
   }
   Hit h;
   vec3 col = vec3(0.0);
+  float skyT = 1.0;
   for (int k = 0; k < n; k++) {
     Ray rk = r;
     rk.rd = normalize(r.rd + across * ((float(k) + 0.5) / float(n) - 0.5));
     Hit hk;
+    world_skyT = 1.0;
     col += world_px(rk, hk);
-    if (k == 0 || hk.t < h.t) h = hk;
+    if (k == 0 || hk.t < h.t) { h = hk; skyT = world_skyT; }
   }
   col = max(col / float(n), vec3(0.0)) * exp2(uExposure);
 #ifdef WORLD_LDR
   col = col / (1.0 + col); // no float targets: the post pass undoes this in world_scene()
 #endif
-  // alpha carries the hit distance (capped), for the crisp pass's depth test
+  // alpha carries the hit distance (capped), for the crisp pass's depth test; on the sky also the air's transmittance
+  // for the post pass's stars (stars.glsl): 60000 + 4000 T, still "farther than anything" for the depth test
 #ifdef WORLD_LDR
   fragColor = vec4(col, 1.0);
 #else
-  fragColor = vec4(col, min(h.t, 60000.0));
+  fragColor = vec4(col, h.id == ID_SKY ? 60000.0 + 4000.0 * clamp(skyT, 0.0, 1.0) : min(h.t, 60000.0));
 #endif
 }
 `,
