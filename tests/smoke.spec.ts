@@ -5,6 +5,7 @@ const pages = [
   { path: '/', h1: /Intelligence, alloyed/ },
   { path: '/sites', h1: /actually looks good/ },
   { path: '/work', h1: /Out of the\s*crucible/ },
+  { path: '/verge', h1: /What to train today, and why/ },
 ];
 
 async function loadClean(page: Page, path: string) {

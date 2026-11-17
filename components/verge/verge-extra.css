@@ -1,0 +1,68 @@
+/* Hand-written additions to the generated ./verge.css, scoped the same way (under .verge-page, the class on /verge's
+   <html>). /verge uses Verge's own styles as they are, focus ring and colours included; this file only adds what the
+   Verge app has no class for. */
+
+/* Verge's controls are square, so their focus ring is too, whatever the element. The ring itself is Verge's
+   (verge.css): 2px of --ink, which on the light reading ground is Verge's dark ink. */
+.verge-page :where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  border-radius: 0;
+}
+
+/* Verge's translate utilities are Tailwind 3's (a transform). The individual translate property comes only from
+   another stylesheet, and would move the readiness markers a second time, so it is never used here. */
+.verge-page [class*='translate-'] {
+  translate: none;
+}
+
+/* The phone the Today screen sits in (VergeToday.tsx). Its screen is 390 px wide, an iPhone's, and the whole phone
+   narrows with the column on a narrow phone so the page never scrolls sideways. The screen scrolls inside the phone;
+   the tab bar stays at its foot, as in the app. */
+.verge-page .vg-phone {
+  width: 406px;
+  max-width: 100%;
+  margin-inline: auto;
+  border: 8px solid var(--ink);
+  border-radius: 48px;
+  background: var(--ink);
+}
+
+/* An iPhone's 844 px tall where the window has room, and never taller than the window, so all of the phone is in view. */
+.verge-page .vg-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: min(844px, max(480px, calc(100svh - 96px)));
+  overflow: hidden;
+  border-radius: 40px;
+  container-type: inline-size;
+}
+
+.verge-page .vg-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.verge-page .vg-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* The screen is clipped to its rounded corners, so its focus ring goes round the phone instead. */
+.verge-page .vg-scroll:focus-visible {
+  outline: none;
+}
+
+.verge-page .vg-phone:has(.vg-scroll:focus-visible) {
+  outline: 2px solid var(--ink);
+  outline-offset: 4px;
+}
+
+/* The tab bar's labels are 13 px on a phone under 375 px wide and 15 px from there, as in the app (min-[375px]). */
+@container (min-width: 375px) {
+  .verge-page .vg-tab {
+    padding-inline: 8px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+}

@@ -6,7 +6,8 @@
         "http://localhost/index.html",
         "http://localhost/sites.html",
         "http://localhost/work.html",
-        "http://localhost/ventures.html"
+        "http://localhost/ventures.html",
+        "http://localhost/verge.html"
       ],
       "numberOfRuns": 3,
       "settings": {

@@ -33,6 +33,7 @@ jobs:
           NEXT_TELEMETRY_DISABLED: 1
           # Settings → Secrets and variables → Actions → Variables
           NEXT_PUBLIC_FORMSPREE_ID: ${{ vars.FORMSPREE_ID }}
+          NEXT_PUBLIC_FORMSPREE_WAITLIST_ID: ${{ vars.FORMSPREE_WAITLIST_ID }}
           NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${{ vars.UMAMI_WEBSITE_ID }}
       - uses: actions/upload-pages-artifact@v3
         with:

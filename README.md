@@ -64,7 +64,7 @@ The mark is the Split Ring from Jacob's logo family, one geometry for every copy
 
 ## Fonts
 
-Archivo is self-hosted as one variable file, `app/fonts/Archivo-latin-wght400-800-wdth100-125.woff2` (loaded in `app/layout.tsx`). To regenerate it from the full variable font: instance it with `fontTools.varLib.instancer` (`wght=400:800`, `wdth=100:125`), then subset with `pyftsubset` to Latin, Latin-1 punctuation and common accents, keeping `kern`, `liga` and `tnum`, output woff2. The concept sites' Instrument Serif is not preloaded; it is released after load + idle (`html[data-fonts]`) with a metric-matched fallback until then. Component CSS is imported by the component or page that uses it (not the layout); a class used on another route needs that CSS imported there too.
+Archivo is self-hosted as one variable file, `app/fonts/Archivo-latin-wght400-800-wdth100-125.woff2` (loaded in `app/site-document.tsx`). To regenerate it from the full variable font: instance it with `fontTools.varLib.instancer` (`wght=400:800`, `wdth=100:125`), then subset with `pyftsubset` to Latin, Latin-1 punctuation and common accents, keeping `kern`, `liga` and `tnum`, output woff2. The concept sites' Instrument Serif is not preloaded; it is released after load + idle (`html[data-fonts]`) with a metric-matched fallback until then. Component CSS is imported by the component or page that uses it (not the layout); a class used on another route needs that CSS imported there too.
 
 ## Business card
 
@@ -86,12 +86,14 @@ By default the form writes the request as an email for the visitor: subject, bod
 
 If you'd rather receive requests without the visitor sending an email, add a Formspree form ID as the repo variable `FORMSPREE_ID`. The form then posts in place and still falls back to the email route if Formspree fails.
 
+The Verge waitlist on `/verge` works the same way with a form of its own: until the repo variable `FORMSPREE_WAITLIST_ID` is set, each sign-up is an email the visitor sends. It never posts to the quote form's `FORMSPREE_ID`. See `components/verge/README.md`.
+
 ## Deploy (GitHub Pages)
 
 `.github/workflows/deploy.yml` builds the site and publishes `out/` on every push to `main`.
 
 1. **One time:** Settings → Pages → Build and deployment → Source: **GitHub Actions**. Keep the custom domain `crucibleinnovation.com` and tick *Enforce HTTPS*.
-2. Optional repo variables: `UMAMI_WEBSITE_ID` (analytics) and `FORMSPREE_ID` (in-page form posting). Re-run the workflow after adding them (Actions → Deploy to GitHub Pages → Run workflow).
+2. Optional repo variables: `UMAMI_WEBSITE_ID` (analytics), `FORMSPREE_ID` (in-page posting for the quote form) and `FORMSPREE_WAITLIST_ID` (the same for the Verge waitlist). Re-run the workflow after adding them (Actions → Deploy to GitHub Pages → Run workflow).
 3. For `www`, add a `CNAME` DNS record `www → jacobschppskis-hue.github.io`. GitHub Pages then redirects it to the apex.
 
 The root `index.html` is the old "coming soon" page. It is only shown while Pages is still set to deploy from a branch, and can be deleted once the source is switched to GitHub Actions.

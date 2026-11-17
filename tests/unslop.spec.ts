@@ -4,7 +4,7 @@ import { test as worldTest } from './gl';
 // The "unslop" rules (.claude/skills/unslop/SKILL.md) that a machine can check. The concept client sites (.ls) are
 // other businesses' designs and are exempt; so is anything marked data-unslop-ok.
 
-const PAGES = ['/', '/sites', '/work', '/ventures', '/ventures/verge'];
+const PAGES = ['/', '/sites', '/work', '/ventures', '/ventures/verge', '/verge'];
 
 type Finding = { rule: string; text: string };
 

@@ -51,7 +51,7 @@ worldTest('the world starts: one fixed canvas behind the page, on the one clock,
 
 worldTest('the loop: scrolling past the bottom with the wheel or keys comes back to the top, and progress runs on', async ({ page, isMobile }) => {
   test.skip(isMobile, 'wheel and keyboard');
-  test.setTimeout(150_000); // software GL handles one wheel tick per drawn frame: draw at the cheapest step
+  test.setTimeout(200_000); // software GL handles one wheel tick per drawn frame: draw at the cheapest step
   await start(page, '/?q=8');
   expect((await state(page)).looping).toBe(true);
   const max = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
@@ -75,7 +75,9 @@ worldTest('the loop: scrolling past the bottom with the wheel or keys comes back
     await expect.poll(() => page.evaluate(() => (window as unknown as { __world: W }).__world.state().y), { timeout: 15_000 }).not.toBe(-1);
     await page.waitForTimeout(1500);
   }
-  expect(await page.evaluate(() => scrollY)).toBeLessThan(max / 2);
+  // each press is a smooth scroll that software GL draws a frame at a time, and a busy runner can take seconds a frame:
+  // the last one may still be on its way, so wait for it to land (the wrap itself is what is checked)
+  await expect.poll(() => page.evaluate(() => scrollY), { timeout: 45_000 }).toBeLessThan(max / 2);
 });
 
 test('reduced motion: a still world, no loop, the page simply ends', async ({ browser }) => {

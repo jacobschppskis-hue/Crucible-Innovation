@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { test as glTest } from './gl';
 
 // The /sites opening (components/BuildStage.tsx): a live concept site that is cast, turned into a phone and recast.
 
@@ -13,7 +14,8 @@ test('one h1 on /sites (the live concept sites are decorative)', async ({ page }
   await expect(page.locator('.bs-screen')).toHaveAttribute('aria-hidden', 'true');
 });
 
-test('scrolling turns the frame into a phone, then recasts it as other businesses', async ({ page }) => {
+// scrolling /sites starts the page liquid (software GL here): a browser of its own (tests/gl.ts)
+glTest('scrolling turns the frame into a phone, then recasts it as other businesses', async ({ page }) => {
   await page.goto('/sites', { waitUntil: 'networkidle' });
   const scene = page.locator('section.bs');
   const device = page.locator('.bs-device');

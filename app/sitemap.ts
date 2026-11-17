@@ -5,7 +5,8 @@ import { ventures, type Venture } from '@/data/ventures';
 export const dynamic = 'force-static';
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const extra = (ventures as readonly Venture[]).filter((v) => !v.href).map((v) => `/ventures/${v.slug}`);
+  const list = ventures as readonly Venture[];
+  const extra = [...list.filter((v) => !v.href).map((v) => `/ventures/${v.slug}`), ...list.flatMap((v) => (v.preview ? [v.preview] : []))];
   return [
     { url: `${site.url}/`, priority: 0.8 },
     { url: `${site.url}/sites`, priority: 1 },

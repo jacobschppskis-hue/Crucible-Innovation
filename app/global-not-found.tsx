@@ -2,8 +2,12 @@ import Link from 'next/link';
 import { Footer } from '@/components/Footer';
 import { Nav } from '@/components/Nav';
 import { RING, arcOutline, cells } from '@/lib/splitRing';
+import { SiteDocument, siteMetadata, siteViewport } from './site-document';
 
-export const metadata = { title: 'Not found · Crucible' };
+// Every URL that isn't a page (out/404.html). It brings Crucible's own document, since the site has two root layouts
+// (app/(site) and Verge's app/(verge)) and no layout above them (next.config.ts experimental.globalNotFound).
+export const metadata = { ...siteMetadata, title: 'Not found · Crucible' };
+export const viewport = siteViewport;
 
 /**
  * The Split Ring at 0 K: arcs intact, the squares drifted loose off their circles (outward, still upright, fading), the
@@ -39,9 +43,9 @@ function ColdRing() {
   );
 }
 
-export default function NotFound() {
+export default function GlobalNotFound() {
   return (
-    <>
+    <SiteDocument>
       <Nav />
       <main id="main" className="container-x flex min-h-[85svh] flex-col items-center justify-center pt-[var(--nav-h)] text-center">
         <ColdRing />
@@ -57,6 +61,6 @@ export default function NotFound() {
         </div>
       </main>
       <Footer />
-    </>
+    </SiteDocument>
   );
 }

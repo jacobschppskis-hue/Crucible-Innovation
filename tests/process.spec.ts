@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { test as glTest } from './gl';
 
 // Process on /sites (components/Process.tsx): seven days you can scrub, a site building itself in a browser frame.
 
@@ -8,7 +9,8 @@ const opacity = (l: Locator) => l.evaluate((el) => Number(getComputedStyle(el).o
 /** Which step is being read (the others stay in the accessibility tree at opacity 0). */
 const reading = (page: Page, i: number) => expect.poll(() => opacity(page.locator('.days-step').nth(i))).toBeGreaterThan(0.9);
 
-test('scrolling runs the week: the call, the first draft, then the site goes live', async ({ page }) => {
+// scrolling /sites starts the page liquid (software GL here): a browser of its own (tests/gl.ts)
+glTest('scrolling runs the week: the call, the first draft, then the site goes live', async ({ page }) => {
   await page.goto('/sites', { waitUntil: 'networkidle' });
   await expect(page.getByRole('heading', { name: 'From first call to live site in about a week' })).toBeVisible();
   const pin = page.locator('.days-pin');

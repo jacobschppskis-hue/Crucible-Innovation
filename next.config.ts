@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     config.module.rules.push({ test: /\.glsl$/, type: 'asset/source' });
     return config;
   },
+  // Two root layouts (Crucible's app/(site) and Verge's app/(verge)), so the 404 page is app/global-not-found.tsx.
+  experimental: { globalNotFound: true },
   images: { loader: 'custom', loaderFile: './lib/imageLoader.ts', deviceSizes: [640, 960, 1440], imageSizes: [320, 480] },
 };
 

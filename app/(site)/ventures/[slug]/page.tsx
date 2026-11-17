@@ -72,10 +72,16 @@ export default async function VenturePage({ params }: Props) {
             {v.tagline && <p className="vx-tagline">{v.tagline}</p>}
             <p className="vx-desc">{v.description ?? v.blurb}</p>
             <div className="vx-actions">
-              {!live && (
-                <a href={notify} className="btn btn-primary">
-                  Tell me when it ships
-                </a>
+              {v.preview ? (
+                <Link href={v.preview} className="btn btn-primary">
+                  See the preview
+                </Link>
+              ) : (
+                !live && (
+                  <a href={notify} className="btn btn-primary">
+                    Tell me when it ships
+                  </a>
+                )
               )}
               <Link href="/ventures" className="vf-link">
                 All ventures
